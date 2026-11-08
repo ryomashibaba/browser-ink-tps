@@ -523,6 +523,9 @@ async function main(){
      id:c.id,lifeState:c.lifeState,mobilityState:c.mobilityState,
      rejoined:c.rejoined,physicalFoot:c.physicalFoot
     }))??[],humanFoot:n.player?.position,
+    humanGrounded:n.b112OriginalHumanGround?.genuineKccGrounded??null,
+    humanOriginalSupport:n.b112OriginalHumanGround?.lastOriginalSourceHitId??null,
+    humanSupportGap:n.b112OriginalHumanGround?.lastOriginalSourceGapMeters??null,
     originalStage:[n.originalSourceSolids,n.originalPaintSurfaces,
      n.originalSourceNavigationLinks,n.sourceScoreablePromotions]};
    proof.p0Timeline??=[];
@@ -544,8 +547,29 @@ async function main(){
       n.sourceScoreablePromotions!==0||n.cpu?.cpu?.length!==7)
     fail('P0_ORIGINAL_SOURCE_AUTHORITY_CHANGED');
   };
-  let real=await until(async()=>{
-   const n=await snap();await inspect(n,'NATIVE_REJOIN');
+  // Owner's failed normal play involved real human movement while the
+  // seven CPU actors were still joining. Prior P0 held the human still
+  // until 7/7, so it could not reproduce this real input/collision race.
+  const earlyKey={key:'w',code:'KeyW',windowsVirtualKeyCode:87,
+   nativeVirtualKeyCode:87};
+  await cdp('Input.dispatchKeyEvent',{type:'keyDown',...earlyKey});
+  let earlyHeld=true;
+  proof.p0EarlyUserMovement='REAL_KEYW_DURING_CPU_STAGING_NO_QA_TICKS';save();
+  let real;
+  try{
+   real=await until(async()=>{
+   const n=await snap();await inspect(n,'CPU_STAGING_REAL_USER_W');
+   if(earlyHeld&&n.tick>=240){
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',...earlyKey});
+    earlyHeld=false;proof.p0EarlyPlayerWReleasedAtTick=n.tick;
+    record(n,'EARLY_NATIVE_W_RELEASED');
+    const png=await cdp('Page.captureScreenshot',{
+     format:'png',captureBeyondViewport:false});
+    if(typeof png?.data==='string'&&png.data.length>100)
+     writeFileSync(resolve(out,'p0-early-user-w-original-stage.png'),
+      Buffer.from(png.data,'base64'));
+   }
+
    // Native source first-drop is intentionally staggered: 4/7 at tick
    // 720 is observable PROGRESS, not a CPU failure. Wait for the true
    // original physical seven-rejoin event, never free-advance the clock.
@@ -555,7 +579,11 @@ async function main(){
    }
    return n.cpu?.physicalRejoins?.length===7&&
       n.matchState==='PLAYING'&&n.paused===false?n:false;
-  },540000,280);
+   },540000,280);
+  }finally{
+   if(earlyHeld)await cdp('Input.dispatchKeyEvent',{
+    type:'keyUp',...earlyKey}).catch(()=>{});
+  }
   record(real,'AFTER_GENUINE_SEVEN_NATIVE_REJOINS');
   // Seven authentic drop -> rejoin prerequisites are checked BEFORE any
   // ordinary W movement; no CPU is snapped or unblocked by this script.
@@ -577,7 +605,7 @@ async function main(){
    if(held)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
   }
   record(real,'AFTER_REAL_KEYW');
-  proof.p0Verdict='PASS_HEADLESS_CANONICAL_SOURCE_FIRST_720_AND_REAL_W_ONLY';
+  proof.p0Verdict='PASS_HEADLESS_CANONICAL_SOURCE_EARLY_REAL_W_SEVEN_CPU_AND_POST_W';
   proof.stage='P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
   proof.verdict=proof.p0Verdict;
   save();
