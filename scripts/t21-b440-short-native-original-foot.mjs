@@ -634,6 +634,18 @@ async function main(){
   try{
    real=await until(async()=>{
    const n=await snap();
+   if(n.matchState==='STAGING'&&n.tick>=30){
+    const current=n.player?.position;
+    const starting=boot.player?.position;
+    const distance=current&&starting?
+     Math.hypot(current[0]-starting[0],current[2]-starting[2]):Infinity;
+    if(distance>.22){
+     proof.p0PrestartMovementRegression={tick:n.tick,
+      distance,starting,current,stage:'STAGING'};save();
+     fail('P0_STAGING_MOVED_HUMAN_BEFORE_SEVEN_CPU');
+    }
+    proof.p0BlockedStagingRealWVerified=true;
+   }
    const outcome=await inspect(n,'CPU_STAGING_REAL_USER_W');
    if(outcome==='RECOVERED')return {recovered:true};
    if(earlyHeld&&n.tick>=480){
@@ -683,7 +695,16 @@ async function main(){
    if(held)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
   }
   record(real,'AFTER_REAL_KEYW');
-  proof.p0Verdict='PASS_HEADLESS_CANONICAL_SOURCE_EARLY_REAL_W_SEVEN_CPU_AND_POST_W';
+  const start=proof.p0Timeline?.find(x=>
+   x.stage==='AFTER_GENUINE_SEVEN_NATIVE_REJOINS');
+  const after=real.player?.position;
+  const before=start?.humanFoot;
+  const actualMovement=after&&before?
+   Math.hypot(after[0]-before[0],after[2]-before[2]):0;
+  if(!proof.p0BlockedStagingRealWVerified||actualMovement<.3)
+   fail('P0_PRESTART_BLOCK_OR_POSTJOIN_GENUINE_MOVEMENT_NOT_PROVEN');
+  proof.p0PostJoinActualHumanTravelMeters=actualMovement;
+  proof.p0Verdict='PASS_CANONICAL_SOURCE_PRESTART_W_BLOCKED_AND_7CPU_POSTJOIN_W';
   proof.stage='P0_NO_SAFE_STOP_IN_BOUNDED_HEADLESS_PATH';
   proof.verdict=proof.p0Verdict;
   save();

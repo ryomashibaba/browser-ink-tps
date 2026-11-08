@@ -1,5 +1,12 @@
+/** A native SOURCE pre-round blocks player locomotion until 7/7 true CPU
+ * rejoins; no physics/Actor, collision, stage, or game-clock modification. */
+const SOURCE_PRESTART_MOVEMENT_CODES=new Set([
+ 'KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyF','KeyG'
+]);
 export class PlayerInput {
   private readonly keys = new Set<string>();
+  private sourcePrestartBlocked=false;
+  private readonly sourcePrestartHeldKeys=new Set<string>();
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
   private fire = false;
@@ -23,6 +30,16 @@ export class PlayerInput {
   ) {
     window.addEventListener('keydown', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
+      // Ignore actual held keys from STAGING even if the OS sends repeats
+      // after genuine 7/7. A fresh keyup+keydown is required to walk.
+      if(SOURCE_PRESTART_MOVEMENT_CODES.has(event.code)&&
+         (this.sourcePrestartBlocked||
+          this.sourcePrestartHeldKeys.has(event.code))){
+       if(this.sourcePrestartBlocked)
+        this.sourcePrestartHeldKeys.add(event.code);
+       if(event.code==='Space')event.preventDefault();
+       return;
+      }
       // Space is one physical jump/charge intent. A held key across death
       // must be released before a new life can arm jump or wall surge.
       if(event.code==='Space' &&
@@ -46,6 +63,7 @@ export class PlayerInput {
     });
     window.addEventListener('keyup', (event) => {
       this.keys.delete(event.code);
+      this.sourcePrestartHeldKeys.delete(event.code);
       if(event.code==='Space')this.jumpRequiresRelease=false;
     });
 
@@ -58,6 +76,7 @@ export class PlayerInput {
 
     const clearGameplayState = (): void => {
       this.keys.clear();
+      this.sourcePrestartHeldKeys.clear();
       clearPointerState();
       this.jumpQueued = false;
       this.subPressedQueued = false;
@@ -74,6 +93,7 @@ export class PlayerInput {
     });
 
     canvas.addEventListener('pointerdown', (event) => {
+      if(this.sourcePrestartBlocked)return;
       // The first left click is reserved for acquiring pointer lock.
       // Fire only once the game already owns the mouse.
       if (
@@ -110,6 +130,23 @@ export class PlayerInput {
     canvas.addEventListener('pointercancel', clearPointerState);
   }
 
+  /** Only canonical live SOURCE STAGING may use this. Deterministic/QA
+   * input is untouched. No position, velocity, Rapier, Ink or clock write.
+   * Pending human inputs cannot leak across 7/7, even from a held key. */
+  public setSourcePrestartMovementBlocked(blocked:boolean):void{
+    if(this.deterministicQaEnabled||this.sourcePrestartBlocked===blocked)return;
+    this.sourcePrestartBlocked=blocked;
+    if(!blocked)return;
+    for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
+     if(this.keys.has(code))this.sourcePrestartHeldKeys.add(code);
+     this.keys.delete(code);
+    }
+    this.fire=false;this.secondary=false;
+    this.primaryPressedQueued=false;this.secondaryPressedQueued=false;
+    this.jumpQueued=false;this.subPressedQueued=false;
+    this.specialPressedQueued=false;
+  }
+
   /** Only the actual native human HP=0 and 150-tick life recovery call this.
    * Preserve user movement, mouse lock and actual Rapier pose. */
   public setCombatInputActive(active:boolean):void {
@@ -144,21 +181,24 @@ export class PlayerInput {
   }
 
   public get moveX(): number {
+    if(this.sourcePrestartBlocked)return 0;
     return this.qaAxis?.x ??
       ((this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0));
   }
 
   public get moveY(): number {
+    if(this.sourcePrestartBlocked)return 0;
     return this.qaAxis?.y ??
       ((this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0));
   }
 
   public get squidHeld(): boolean {
-    return this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    return !this.sourcePrestartBlocked&&
+     (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
   }
 
   public get fireHeld(): boolean {
-    return this.combatInputActive&&this.fire;
+    return !this.sourcePrestartBlocked&&this.combatInputActive&&this.fire;
   }
 
   /** Consume once per physics tick, including short real pointer taps. */
@@ -169,7 +209,7 @@ export class PlayerInput {
   }
 
   public get secondaryHeld(): boolean {
-    return this.combatInputActive&&this.secondary;
+    return !this.sourcePrestartBlocked&&this.combatInputActive&&this.secondary;
   }
 
   public consumeSecondaryPressed(): boolean {
@@ -191,10 +231,11 @@ export class PlayerInput {
   }
 
   public get jumpHeld(): boolean {
-    return this.keys.has('Space');
+    return !this.sourcePrestartBlocked&&this.keys.has('Space');
   }
 
   public consumeJump(): boolean {
+    if(this.sourcePrestartBlocked){this.jumpQueued=false;return false;}
     const queued = this.jumpQueued;
     this.jumpQueued = false;
     return queued;

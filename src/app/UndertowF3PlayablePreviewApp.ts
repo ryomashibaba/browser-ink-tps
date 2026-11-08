@@ -4888,6 +4888,13 @@ export class UndertowF3PlayablePreviewApp{
     // CPU collision -> actual Recast/CpuAgentSystem -> projectiles and ink.
     const alive=this.resources.currentHp>0;
     const playerStart=this.b20ProfileStart();
+    // A genuine 180s SOURCE round starts only AFTER real 7/7 physical
+    // CPU rejoin. Prevent human input from walking off an original floor
+    // while the clock is still 3:00 / STAGING. This changes no floor,
+    // collision, movement threshold, CPU, spawn, actor pose or native time.
+    // Normal non-SOURCE and deterministic QA paths remain unchanged.
+    this.input.setSourcePrestartMovementBlocked(
+     this.b203FullRound&&this.matchState==='STAGING');
     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
     applyB379NativePlayerWeaponMobility({

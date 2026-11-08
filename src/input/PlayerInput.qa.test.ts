@@ -194,3 +194,43 @@ test('unlocked and alt-modified left clicks never queue primary fire',()=>{
   expect([input.fireHeld,input.secondaryHeld]).toEqual([false,false]);
   expect([input.consumePrimaryPressed(),input.consumeSecondaryPressed()]).toEqual([false,false]);
 });
+
+
+test('normal SOURCE STAGING blocks early real WASD/squid/jump/fire without a fake floor',()=>{
+ const {input,emit}=lockedInput();
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ expect(input.moveY).toBe(1);
+ input.setSourcePrestartMovementBlocked(true);
+ for(const code of ['KeyW','KeyD','Space','ShiftLeft','KeyF','KeyG'])
+  emit('window','keydown',{code,repeat:false});
+ emit('canvas','pointerdown',{button:0});
+ emit('canvas','pointerdown',{button:2});
+ expect([input.moveX,input.moveY,input.squidHeld,input.jumpHeld,
+  input.fireHeld,input.secondaryHeld,input.consumeJump(),
+  input.consumePrimaryPressed(),input.consumeSecondaryPressed(),
+  input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([0,0,false,false,false,false,false,false,false,false,false]);
+ input.setSourcePrestartMovementBlocked(false);
+ // A physical key held through 7/7 cannot suddenly move the human.
+ emit('window','keydown',{code:'KeyW',repeat:true});
+ expect(input.moveY).toBe(0);
+ emit('window','keyup',{code:'KeyW'});
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ expect(input.moveY).toBe(1);
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.moveY).toBe(0);
+ // Fresh live controls after real CPU7/7 are unaffected.
+ emit('window','keyup',{code:'Space'});
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect(input.consumeJump()).toBe(true);
+ emit('canvas','pointerdown',{button:0});
+ expect(input.consumePrimaryPressed()).toBe(true);
+});
+
+test('QA-only deterministic source input keeps its existing authoritative axis',()=>{
+ const {input}=createInput(true);
+ input.setSourcePrestartMovementBlocked(true);
+ input.setQaAxis(-.4,1);
+ expect([input.moveX,input.moveY]).toEqual([-.4,1]);
+ input.clearQaAxis();
+});
