@@ -560,17 +560,27 @@ async function main(){
       nativeVirtualKeyCode:82};
      await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});
      await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+     let lastRecoveryProbe=null;
      const fresh=await until(async()=>{
-      try{return await evaluate(`(() => {
-       const n=window.__t21F3?.snapshot?.();
-       return n?{origin:performance.timeOrigin,href:location.href,
-        ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
-        tick:n.tick,phase:n.matchState,stopReason:n.stopReason,
-        actors:n.cpu?.cpu?.length,rejoins:n.cpu?.physicalRejoins?.length,
-        stage:[n.originalSourceSolids,n.originalPaintSurfaces,
-         n.originalSourceNavigationLinks,n.sourceScoreablePromotions]}:null;
-      })()`);}catch{return null;}
-     },120000,350);
+      try{
+       const n=await evaluate(`(() => {
+        const s=window.__t21F3?.snapshot?.();
+        return s?{origin:performance.timeOrigin,href:location.href,
+         ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+         tick:s.tick,phase:s.matchState,stopReason:s.stopReason,
+         actors:s.cpu?.cpu?.length,rejoins:s.cpu?.physicalRejoins?.length,
+         stage:[s.originalSourceSolids,s.originalPaintSurfaces,
+          s.originalSourceNavigationLinks,s.sourceScoreablePromotions]}:null;
+       })()`);
+       lastRecoveryProbe=n;
+       return n?.origin>previousOrigin&&n.href===previousHref&&
+        n.ready==='READY'&&n.tick===0&&n.phase==='STAGING'&&
+        !n.stopReason&&n.actors===7&&n.rejoins===0&&
+        JSON.stringify(n.stage)==='[25,17,26,0]'?n:null;
+      }catch{return null;}
+     },120000,350).catch(error=>{
+      proof.p0RecoveryLastProbe=lastRecoveryProbe;save();throw error;
+     });
      if(!fresh||fresh.origin<=previousOrigin||
         fresh.href!==previousHref||fresh.ready!=='READY'||
         fresh.tick!==0||fresh.phase!=='STAGING'||fresh.stopReason||
