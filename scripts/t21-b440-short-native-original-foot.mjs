@@ -729,13 +729,23 @@ async function main(){
        text:w?.textContent??'',hidden:w?.hidden,
        display:w?.style.display};
      })()`);
-     if(ui.state==='REGISTERED_EDGE_NO_NEAR_HEIGHT_NEXT_RAY'&&
+     const supported=n.b112OriginalHumanGround?.genuineKccGrounded===true&&
+       n.b112OriginalHumanGround?.lastOriginalSourceHitId===
+        'UndertowT21D:first-drop-landing-positive-z';
+     // Read-only source proof: first safe grounded lower landing inside
+     // Z48..51, release the actual W before the lip. The older harness
+     // only stopped for a 30-tick-spaced visual warning, which can be
+     // skipped; it also expected the obsolete literal "STOP / TURN".
+     if(p1RampOnce&&supported&&n.player?.position?.[2]<=51&&
+        n.player.position[2]>=48)
+      return {n,ui,realPreEdgeWRelease:true};
+     if(!p1RampOnce&&supported&&
+        ui.state==='REGISTERED_EDGE_NO_NEAR_HEIGHT_NEXT_RAY'&&
         ui.hidden===false&&ui.display==='block'&&
-        ui.text.includes('STOP / TURN')&&
-        n.b112OriginalHumanGround?.genuineKccGrounded===true&&
-        n.b112OriginalHumanGround?.lastOriginalSourceHitId===
-         'UndertowT21D:first-drop-landing-positive-z')
+        ui.text.includes('STOP W'))
       return {n,ui};
+     if(p1RampOnce&&n.player?.position?.[2]<48)
+      fail('P1_REAL_W_OVERSTEPPED_CERTIFIED_PREEDGE_STOP');
      if(n.tick>=real.tick+420)
       fail('P1_NO_NATIVE_GROUNDED_EDGE_WARNING_WITHIN_BOUND');
      return false;
@@ -757,13 +767,33 @@ async function main(){
     writeFileSync(resolve(out,'p1-genuine-lower-edge-warning.png'),
      Buffer.from(png.data,'base64'));
    }
-   proof.p1NativeLowerEdge={tick:n.tick,actualBody:n.player?.position,
-    grounded:n.b112OriginalHumanGround.genuineKccGrounded,
-    actualOriginalId:n.b112OriginalHumanGround.lastOriginalSourceHitId,
-    physicalCpuRejoins:n.cpu.physicalRejoins.length,
-    ui:found.ui,stopReason:n.stopReason,geometryWrites:0,actorWrites:0};
-   save();
-   console.log('P1_REAL_LANDING_EDGE_WARNING',JSON.stringify(proof.p1NativeLowerEdge));
+   if(p1RampOnce){
+    if(found.realPreEdgeWRelease!==true||
+       n.b112OriginalHumanGround?.genuineKccGrounded!==true||
+       n.b112OriginalHumanGround?.lastOriginalSourceHitId!==
+        'UndertowT21D:first-drop-landing-positive-z'||
+       z<48||z>51)
+     fail('P1_ACTUAL_SUPPORTED_PREEDGE_W_RELEASE_NOT_PROVEN');
+    proof.p1RealSafePreEdgeWRelease={
+     tick:n.tick,actualBody:n.player?.position,
+     originalSupport:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+     nativeGrounded:true,physicalCpuRejoins:n.cpu.physicalRejoins.length,
+     actualKeyWReleased:true,warningRequiredBeforeRelease:false,
+     originalStage:'25/17/26/0',actorOrColliderWrites:0,stopReason:n.stopReason
+    };
+    save();
+    console.log('P1_REAL_SUPPORTED_W_KEY_RELEASE_BEFORE_LIP',
+     JSON.stringify(proof.p1RealSafePreEdgeWRelease));
+   }else{
+    proof.p1NativeLowerEdge={tick:n.tick,actualBody:n.player?.position,
+     grounded:n.b112OriginalHumanGround.genuineKccGrounded,
+     actualOriginalId:n.b112OriginalHumanGround.lastOriginalSourceHitId,
+     physicalCpuRejoins:n.cpu.physicalRejoins.length,
+     ui:found.ui,stopReason:n.stopReason,geometryWrites:0,actorWrites:0};
+    save();
+    console.log('P1_REAL_LANDING_EDGE_WARNING',
+     JSON.stringify(proof.p1NativeLowerEdge));
+   }
    if(p1InputDiagnosticOnce){
     // Same true seven-CPU world: one bounded physical CDP D-key.
     // Observe accepted native axes, yaw and real pointer lock, not just
