@@ -3,7 +3,7 @@ import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
  b388VisibleNativeDescentWarning,
- b388SuppressDuplicateRampWarning} from './B245SourcePresentation';
+ b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourceCoopEligible,sourceCoopNavigationUrl}
  from './B193SourceCoopMode';
@@ -174,5 +174,49 @@ describe('existing A1 co-op choice available on normal SOURCE 180s READY',()=>{
    base.replace('t21Play=preview','t21Play=production'),
    't21Play=preview'])
    expect(b245SourceFullRoundA1Choice(new URLSearchParams(s))).toBe(false);
+ });
+});
+
+describe('B245 original registered source landing-to-ramp PLAYER cue',()=>{
+ const base=()=>({stage:[25,17,26,0] as const,tick:1300,
+  phase:'PLAYING',paused:false,stopReason:null,humanAlive:true,
+  humanMode:true,grounded:true,surveying:false,
+  body:[-.0544,3.8977,47.6779] as const,
+  supportId:'UndertowT21D:first-drop-landing-positive-z',
+  footGap:.0277,yawDegrees:0});
+ it('uses only live landing for S backstep then D across known KCC footprint',()=>{
+  const s=b245RealSourceLocalRampGuide(base());
+  expect(s.state).toBe('BACKSTEP_S');
+  expect(s.text).toContain('STOP W');
+  const d=b245RealSourceLocalRampGuide({...base(),tick:1342,
+   body:[-.05449,3.895,49.32492]});
+  expect(d.state).toBe('STRAFE_D');
+  expect(d.geometryOrActorWrites).toBe(0);
+  expect(d.fullStageTraversalCertified).toBe(false);
+ });
+ it('one true registered ramp foot contact does not certify onward route',()=>{
+  const c=b245RealSourceLocalRampGuide({...base(),tick:1372,
+   body:[2.0517,3.9383,49.8099],
+   supportId:'UndertowT21D:right-low-route-ramp-positive-z',
+   footGap:.04255});
+  expect(c.state).toBe('REGISTERED_RAMP_CONTACT');
+  expect(c.text).toContain('NOT CERTIFIED');
+ });
+ it('nonzero yaw fails safe to camera alignment rather than wrong key',()=>{
+  const c=b245RealSourceLocalRampGuide({...base(),yawDegrees:90});
+  expect(c.state).toBe('ALIGN_CAMERA');
+ });
+ it('other side, no Rapier support, other stage and inactive phase are OFF',()=>{
+  const b=base();
+  for(const f of [
+   {...b,stage:[26,17,26,0] as const},
+   {...b,grounded:false},{...b,footGap:.5},
+   {...b,paused:true},{...b,phase:'STAGING'},
+   {...b,stopReason:'SAFE STOP'},
+   {...b,humanAlive:false},{...b,humanMode:false},
+   {...b,surveying:true},
+   {...b,body:[-.054,3.89,45] as const},
+   {...b,supportId:'UndertowT21D:first-drop-landing-negative-z'}
+  ])expect(b245RealSourceLocalRampGuide(f).state).toBe('OFF');
  });
 });

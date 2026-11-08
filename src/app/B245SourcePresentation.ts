@@ -234,3 +234,38 @@ export function b388SuppressDuplicateRampWarning(f:{
   f.footId==='UndertowT21D:right-low-team-a'&&f.circuitCleared&&
   f.rampState==='ADJACENT_TO_ORIGINAL_RAMP';
 }
+
+/** Narrow single-trajectory ORIGINAL SOURCE player guidance (positive Z only).
+ * Real 7 CPU native HUMAN: supported landing Z47.68 -> S to Z49.325
+ * -> D to right-low FloorConcrete03 X2.052/Z49.810. This is a cue,
+ * not full-source navigation, a new floor, altered collision or a winner. */
+export function b245RealSourceLocalRampGuide(f:{
+ stage:readonly number[];tick:number;phase:string;paused:boolean;
+ stopReason:string|null;humanAlive:boolean;humanMode:boolean;
+ grounded:boolean;surveying:boolean;body:readonly [number,number,number];
+ supportId:string|null;footGap:number|null;yawDegrees:number;
+}){
+ const off={state:'OFF',text:'',originalSourceOnly:true as const,
+  fullStageTraversalCertified:false as const,geometryOrActorWrites:0 as const};
+ if(f.stage.join(',')!=='25,17,26,0'||f.phase!=='PLAYING'||
+    f.paused||!!f.stopReason||!f.humanAlive||!f.humanMode||
+    !f.grounded||f.surveying||!Number.isSafeInteger(f.tick)||f.tick<0||
+    !f.body.every(Number.isFinite)||!Number.isFinite(f.yawDegrees)||
+    f.footGap===null||!Number.isFinite(f.footGap)||
+    Math.abs(f.footGap)>.22)return off;
+ const [x,,z]=f.body;
+ const lower='UndertowT21D:first-drop-landing-positive-z';
+ const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+ if(f.supportId===ramp&&x>=1.7&&x<=4&&z>=45&&z<=54)
+  return {...off,state:'REGISTERED_RAMP_CONTACT',
+   text:'ORIGINAL RAMP FOOT REGISTERED · local contact only · onward route NOT CERTIFIED'};
+ if(f.supportId!==lower||x<-.5||x>1.8||z<47||z>50.2)return off;
+ const yaw=((f.yawDegrees+180)%360+360)%360-180;
+ if(Math.abs(yaw)>8)return {...off,state:'ALIGN_CAMERA',
+  text:'SOURCE LANDING · camera not aligned: face centre (-Z) before tested S → D · avoid unsupported edge'};
+ if(z<49.3&&x<=.6)return {...off,state:'BACKSTEP_S',
+  text:'SOURCE LANDING · STOP W · S back toward Z≈49.3m · then D toward original ramp'};
+ if(z>=49.3)return {...off,state:'STRAFE_D',
+  text:'SOURCE LANDING · D toward registered FloorConcrete03 ramp · STOP if physical support is lost'};
+ return off;
+}

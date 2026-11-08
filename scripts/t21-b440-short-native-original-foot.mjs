@@ -865,7 +865,8 @@ async function main(){
       inputAxes:input?.nativeInputAxes??null,
       yawDegrees:input?.yawDegrees??null,
       cameraPointerLocked:input?.realPointerLockAtSampling??false,
-      nativeDesiredXZ:input?.projectedWorldIntent??null};
+      nativeDesiredXZ:input?.projectedWorldIntent??null,
+      realLocalPlayerCue:n.p1RealLocalRampPlayerCue?.state??'OFF'};
      if(!trace.some(t=>t.nativeTick===n.tick&&t.phase===phase)){
       trace.push(row);traceSave('IN_PROGRESS');
      }
@@ -935,6 +936,30 @@ async function main(){
     if(!registeredRamp)
      fail('P1_RAMP_UNOBSERVED_REAL_RAPIER_GROUNDED_ENTRY');
     const final=registeredRamp.player.position;
+    // Independent, SAME-world route proof must also show the normal
+    // SOURCE PLAYER cue at the actual supported S and D stages.
+    const sCue=trace.some(x=>x.phase==='REAL_S_KEY_SAFE_BACKSTEP'&&
+     x.realLocalPlayerCue==='BACKSTEP_S');
+    const dCue=trace.some(x=>x.phase==='REAL_D_KEY_TO_PINNED_SOURCE_RAMP'&&
+     x.realLocalPlayerCue==='STRAFE_D');
+    const hud=await evaluate(`(() => {
+     const w=document.querySelector('#t21-f3-b113-ground-warning');
+     const c=document.querySelector('#app-canvas');
+     return {text:w?.textContent??'',hidden:w?.hidden,
+      display:w?.style.display,phase:c?.dataset.t21P1LocalRampCue};
+    })()`);
+    if(!sCue||!dCue||hud.hidden!==false||
+       hud.display!=='block'||!
+       (hud.text.includes('SOURCE LANDING')||
+        hud.text.includes('ORIGINAL RAMP FOOT'))){
+     traceSave('HOLD_REAL_LOCAL_PLAYER_CUE_NOT_VISIBLE',{
+      sCue,dCue,hud});
+     fail('P1_REAL_S_D_REGISTERED_RAMP_PLAYER_CUE_NOT_VISIBLE');
+    }
+    proof.p1SourceLocalPlayerGuide={
+     sCue,dCue,hud,stage:'25/17/26/0',newColliders:0,
+     genuineSourceHumanMovement:true,
+     fullStageTraversalCertified:false};
     traceSave('PASS_REAL_KCC_LANDING_TO_EXISTING_REGISTERED_SOURCE_RAMP',{
      originalLandingSample:initial,
      registeredLandingBackstep:beforeStrafe,
