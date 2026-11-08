@@ -3,6 +3,10 @@
  * No injected ticks, time, CPU positions, ink, damage, floor or scoring.
  * Called only by B385's genuine user-started Chromium world. */
 import {setTimeout as sleep} from 'node:timers/promises';
+import {b413RealOriginalMainFireBurst}
+ from './t21-b413-native-source-fire-refill-reshoot.mjs';
+import {b412NativeSquidOwnInkRound}
+ from './t21-b412-native-original-squid-ink-swim.mjs';
 /**
  * Verify B402 against a SAME-CDP-evaluation native snapshot. The previous
  * checkpoint tick was read before the next Runtime.evaluate and is not a
@@ -113,6 +117,10 @@ export function b390NativeCpuLifeAndOriginalReturnConsistent(
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  fail,report,persist,picture,clickButton}){
  const began=Date.now(),maxWallMs=62*60*1000;
+ // One explicit P1 milestone: existing real CDP user inputs in the SAME
+ // B385 Twin Comets + Snap Bomb + 180s + replay SOURCE world. No fake ink.
+ const p1OwnOnce=process.env.T21_P1_OWN_ONCE==='1';
+ let p1OwnDone=false;
  let prior=done,final=null,nextSample=20,lastTickWall=began;
  const opening={phase:'B390_TRUE_180S_STARTED',tick:done.tick,
   trueTimeRemaining:done.timeRemainingSeconds,
@@ -153,6 +161,101 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
     genuineNativeCpuSplats:n.cpuSplats,
     authenticOriginalReturn:n.cpu.sourcePatrol?.respawnPendingCpuIds});
   const elapsed=180-n.timeRemainingSeconds;
+  // The previous B385/B390 180s already proved sub + replay. Connect
+  // pre-shot, real original OWN squid refill, and re-shot IN THIS WORLD
+  // only for the single explicit P1 acceptance. Reuse B412/B413 native
+  // proof functions, source ownerGrid and actual Rapier support unchanged.
+  if(p1OwnOnce&&!p1OwnDone&&elapsed>=89.5&&elapsed<92){
+   const verify=x=>original(x,'P1_SAME_NATIVE_SOURCE');
+   const nativeLedger=()=>evalPage(
+    'window.__t21F3.auditB312NativeHumanOwnerLedger()');
+   const locked=()=>evalPage(
+    'document.pointerLockElement===document.querySelector("#app-canvas")');
+   const entry=await until(async()=>{
+    const x=verify(await state());
+    return x.matchState==='PLAYING'&&!x.paused&&
+     x.timeRemainingSeconds<=90&&x.timeRemainingSeconds>=88?x:false;
+   },12000);
+   const origin=await evalPage('performance.timeOrigin');
+   const floor='UndertowT21D:right-low-team-a';
+   const entryFoot=await nativeLedger();
+   if(entryFoot.source!=='25/17/26/0'||
+      entryFoot.realHumanOriginalFootSupported!==true||
+      entryFoot.genuineHumanOriginalFootSolid!==floor||
+      entry.player.mode!=='HUMAN'||!(await locked()))
+    fail('P1_SOURCE_UPPER_OR_REAL_POINTER_NOT_READY',{
+     tick:entry.tick,foot:entryFoot.genuineHumanOriginalFootSolid,
+     mode:entry.player.mode});
+   const bridge={send:cmd,snapshot:state,ledger:nativeLedger,
+    verify,locked,wait:until};
+   const pre=await b413RealOriginalMainFireBurst({
+    ...bridge,phase:'BEFORE_SQUID'
+   });
+   report.p1ActualPreRefillShot=pre;persist();
+   // Only ORIGINAL B337 ownerGrid=OWN cells are permissible targets.
+   // No authored ink, relocation, aim teleport or inferred source floor.
+   const beforeSwimLedger=await nativeLedger();
+   const nearby=beforeSwimLedger.originalRows?.find(row=>
+    row.surfaceId===floor+':paint')?.originalB337NearbyActiveCells;
+   const own=nearby?.find(cell=>cell.originalOwner===1&&
+    cell.realCellProvenance==='B337_NATIVE_LOCAL_ACTIVE_GRID'&&
+    Array.isArray(cell.world)&&cell.world.length===3&&
+    cell.world.every(Number.isFinite));
+   if(!own)fail('P1_NO_REAL_OWN_SOURCE_CELL_NEAR_ACTUAL_FOOT',{
+    tick:pre.after.tick,originalCellWitnesses:nearby??null});
+   const swim=await b412NativeSquidOwnInkRound({
+    remaining:90,target:own.world,expectedFoot:floor,
+    ...bridge,
+    onEvidence:async evidence=>{
+     if(String(evidence.lastPhase).startsWith('HOLD')){
+      report.p1RealSourceHold=evidence;persist();
+     }
+    }
+   });
+   report.p1ActualOwnSquidSwim=swim;persist();
+   const post=await b413RealOriginalMainFireBurst({
+    ...bridge,phase:'AFTER_SQUID'
+   });
+   const current=verify(await state());
+   const sameWorld=await evalPage('performance.timeOrigin')===origin;
+   if(!sameWorld||swim.ownDwell?.physicallyVerified!==true||
+      pre.actualShotsPaid<5||post.actualShotsPaid<5||
+      pre.actualOriginalImpactEvents<1||post.actualOriginalImpactEvents<1||
+      post.before.shots!==swim.final?.humanShots||
+      swim.initial?.tick<pre.after.tick||
+      current.tick<post.after.tick||
+      current.matchState!=='PLAYING'||current.player.mode!=='HUMAN'||
+      current.cpu.physicalRejoins.length!==7)
+    fail('P1_REAL_SHOT_OWN_REFILL_RESHOT_SAME_WORLD_HOLD',{
+     sameWorld,preShots:pre.actualShotsPaid,
+     postShots:post.actualShotsPaid,ownDwell:swim.ownDwell,
+     currentTick:current.tick,realCpu:current.cpu.physicalRejoins.length});
+   const playerHud=await evalPage(`(()=>{
+    const e=document.querySelector('#t21-f3-hud-practice');
+    return {stage:e?.dataset.t21B415CanonicalNativeStage??'NOT_VISIBLE',
+     text:e?.textContent??'',nativeTick:e?.dataset.t21B415NativeTick??'-1'};
+   })()`);
+   const p1={phase:'P1_SAME_REAL_SOURCE_PLAYER_SHOT_OWN_REFILL_RESHOT',
+    originalSource:'25/17/26/0',oldOrigin:origin,
+    samePhysicalBrowserWorld:sameWorld,actualSevenCpuRejoined:7,
+    originalFoot:floor,preShotNativeInkSpent:pre.sourceInkDifference,
+    preRealHumanShots:pre.actualShotsPaid,
+    preOriginalProjectileImpactEvents:pre.actualOriginalImpactEvents,
+    ownGridCell:own.grid,actualSquidInkBefore:swim.ownDwell.inkBefore,
+    actualSquidInkAfter:swim.ownDwell.inkAfter,
+    ownDwellVerified:swim.ownDwell.physicallyVerified,
+    actualKccSquidTravelMeters:swim.totalRealKccMeters,
+    originalHumanReturnMeters:swim.final.netReturnMeters,
+    postRealHumanShots:post.actualShotsPaid,
+    postShotNativeInkSpent:post.sourceInkDifference,
+    postOriginalProjectileImpactEvents:post.actualOriginalImpactEvents,
+    playerHud,syntheticShotWrites:0,syntheticInkWrites:0,
+    syntheticClockWrites:0,syntheticActorWrites:0,scoreable:0,
+    officialWinner:'NONE',formal4v4Certified:false};
+   report.phases.push(p1);persist();p1OwnDone=true;
+   console.log('P1_TRUE_NATIVE_SAME_WORLD_OWN_REFILL_RESHOT',JSON.stringify(p1));
+   await picture('p1-same-real-source-own-refill-reshoot');
+  }
   if(elapsed>=nextSample){
    // Real native match checkpoint -> actual on-screen live ownership.
    const live=await evalPage(`(() => {
@@ -259,6 +362,8 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   }
   prior=n;
  }
+ if(p1OwnOnce&&!p1OwnDone)
+  fail('P1_REQUIRED_OWN_REFILL_RESHOT_NOT_NATIVE_CONFIRMED');
  if(!final)fail('B390_REAL_180S_HOST_TIMEOUT',{
   wallMs:Date.now()-began,lastTick:prior.tick,
   secondsRemaining:prior.timeRemainingSeconds});

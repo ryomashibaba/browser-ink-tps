@@ -47,6 +47,7 @@ jobs:
         env:
           T21_B390_TRUE_180S: ${{ contains(github.event.head_commit.message, '[b415-short]') && '0' || '1' }}
           T21_B415_SHORT_CANONICAL: ${{ contains(github.event.head_commit.message, '[b415-short]') && '1' || '0' }}
+          T21_P1_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[p1-own-once]') && '1' || '0' }}
         run: node scripts/t21-b385-native-selectable-circuit.mjs
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
         if: always()
