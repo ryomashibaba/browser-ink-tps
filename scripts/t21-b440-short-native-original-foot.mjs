@@ -514,7 +514,18 @@ async function runK3CanonicalOneWorld(actualHref){
  };
  k.nativeOwnGridObservations=[];
  let ownMap=await readOwn();
- k.nativeOwnGridObservations.push(ownMap);persist();
+ k.nativeOwnGridObservations.push(ownMap);
+ // First genuine native ownerGrid witness, never a synthetic ink grant.
+ k.firstRealNativeOwnerScan={
+  tick:ownMap.tick,
+  lastActualHumanPaintSurface:
+   firstPaint.b23HumanInkFeedback?.lastPaintedSurface??null,
+  realOriginalRampOwnedCells:ownMap.actualOwnedCells,
+  genuineSupportedOwnedTargets:ownMap.verifiedOwnedTargets.length,
+  actualFootOwner:ownMap.actualFootOwner,
+  actualFootInkRelation:ownMap.actualNativeInkRelation,
+  originalSource:'25/17/26/0'};
+ persist();
  // If actual native projectile hits did not leave reachable OWN on the
  // registered ramp, use at most two different *real human mouse aims*.
  // Actual CPU ink grids, collision, actor position and time are not edited.
