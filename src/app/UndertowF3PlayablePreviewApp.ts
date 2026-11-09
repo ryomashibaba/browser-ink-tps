@@ -121,7 +121,8 @@ import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceStoppedWorldMenuHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice,b245RealSourceLocalRampGuide,
- b245NativeStopReason} from './B245SourcePresentation';
+ b245NativeStopReason,b245LocalSourceBuildProvenance}
+ from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -6110,7 +6111,9 @@ export class UndertowF3PlayablePreviewApp{
    browser:{sourcePage:window.location.href,
     userAgent:navigator.userAgent,
     pixelRatio:window.devicePixelRatio,
-    loadedResearchGitSha:'UNKNOWN_IN_BROWSER'},
+    sourceBuild:b245LocalSourceBuildProvenance(
+     import.meta.env.VITE_T21_LOCAL_SOURCE_HEAD,
+     import.meta.env.VITE_T21_LOCAL_TRACKED_DIRTY)},
    stopReason:this.stopReason,
    tick:this.clock.tick,
    phase:this.matchState,

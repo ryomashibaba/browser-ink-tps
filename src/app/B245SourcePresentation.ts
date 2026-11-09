@@ -290,3 +290,20 @@ export function b245NativeStopReason(error:unknown):string{
   return 'UNKNOWN_NATIVE_SOURCE_EXCEPTION';
  }
 }
+
+/** Only one-click Windows SOURCE build provenance; not source authority.
+ * Exact 40-hex checkout HEAD and tracked diff are separate observations.
+ * Untracked build inputs remain UNKNOWN: do not call this a clean build hash. */
+export function b245LocalSourceBuildProvenance(
+ rawHead:unknown,rawDirty:unknown
+):Readonly<{localCheckoutHead:string|null;
+ trackedChangesPresent:boolean|null;untrackedInputsChecked:false;
+ claim:'LOCAL_CHECKOUT_METADATA_NOT_EXACT_BUILT_CONTENT_SHA'}>{
+ const localCheckoutHead=typeof rawHead==='string'&&
+  /^[a-f0-9]{40}$/i.test(rawHead)?rawHead.toLowerCase():null;
+ const trackedChangesPresent=rawDirty==='TRUE'?true:
+  rawDirty==='FALSE'?false:null;
+ return {localCheckoutHead,trackedChangesPresent,
+  untrackedInputsChecked:false,
+  claim:'LOCAL_CHECKOUT_METADATA_NOT_EXACT_BUILT_CONTENT_SHA'};
+}

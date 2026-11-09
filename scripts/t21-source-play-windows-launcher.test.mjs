@@ -14,6 +14,11 @@ test('the one-click Windows launcher uses only the genuine SOURCE portal',()=>{
  assert.match(batch,/if not exist "play-source.html" goto :FAIL/);
  assert.match(batch,/if not exist "src\\source-play-main.ts" goto :FAIL/);
  assert.match(batch,/call npm\.cmd run build -- --base=\/browser-ink-tps\//);
+ assert.match(batch,/git rev-parse --verify HEAD/);
+ assert.match(batch,/git diff --quiet HEAD -- \./);
+ assert.match(batch,/set "VITE_T21_LOCAL_SOURCE_HEAD=UNKNOWN"/);
+ assert.match(batch,/set "VITE_T21_LOCAL_TRACKED_DIRTY=UNKNOWN"/);
+ assert.match(batch,/LOCAL SOURCE CHECKOUT HEAD/);
  assert.match(batch,/if not exist "dist\\play-source.html" goto :FAIL/);
  assert.match(batch,/call npm\.cmd run preview -- --host 127\.0\.0\.1 --port 4173 --strictPort --base=\/browser-ink-tps\/ --open=\/browser-ink-tps\/play-source\.html/);
  assert.match(portal,/id="play-circuit"/);
@@ -25,7 +30,7 @@ test('the one-click Windows launcher uses only the genuine SOURCE portal',()=>{
 
 test('no unintended LAN/production/GitHub/actor permissions in launcher',()=>{
  assert.doesNotMatch(batch,/--host\s+(?:0\.0\.0\.0|::)(?:\s|$)/);
- assert.doesNotMatch(batch,/\bgit\s+(?:push|merge|reset|checkout|rebase)\b/i);
+ assert.doesNotMatch(batch,/\bgit\s+(?:push|merge|reset|checkout|rebase|pull|fetch)\b/i);
  assert.doesNotMatch(batch,/\b(?:gh|docker|ssh|scp|curl|wget)\s+/i);
  assert.doesNotMatch(batch,/\b(?:setx|powershell|reg\.exe|schtasks)\b/i);
  assert.match(batch,/--strictPort/);

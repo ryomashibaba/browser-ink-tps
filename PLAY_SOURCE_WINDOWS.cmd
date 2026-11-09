@@ -21,6 +21,28 @@ REM Vite 7 requires supported Node 20.19+, 22.12+, or 24+.
 node -e "const [m,n]=process.versions.node.split('.').map(Number);process.exit((m===20&&n>=19)||(m===22&&n>=12)||m>=24?0:1)"
 if errorlevel 1 goto :NODE_VERSION
 
+REM Read-only checkout provenance for the ONE local build. Do not fetch,
+REM update or write back to Git. A Git HEAD alone is not the exact
+REM content when tracked/untracked local modifications exist.
+set "VITE_T21_LOCAL_SOURCE_HEAD=UNKNOWN"
+set "VITE_T21_LOCAL_TRACKED_DIRTY=UNKNOWN"
+where git.exe >nul 2>nul
+if not errorlevel 1 (
+  for /f "delims=" %%G in ('git rev-parse --verify HEAD 2^>nul') do set "VITE_T21_LOCAL_SOURCE_HEAD=%%G"
+)
+if not "%VITE_T21_LOCAL_SOURCE_HEAD%"=="UNKNOWN" (
+  git diff --quiet HEAD -- .
+  if errorlevel 1 (
+    set "VITE_T21_LOCAL_TRACKED_DIRTY=TRUE"
+  ) else (
+    set "VITE_T21_LOCAL_TRACKED_DIRTY=FALSE"
+  )
+)
+echo.
+echo LOCAL SOURCE CHECKOUT HEAD: %VITE_T21_LOCAL_SOURCE_HEAD%
+echo TRACKED LOCAL MODIFICATIONS: %VITE_T21_LOCAL_TRACKED_DIRTY%
+echo Source checkout HEAD is NOT a checksum of the built files.
+echo No source checkout or Git state was changed.
 echo.
 echo [1/3] SOURCE research dependencies
 if not exist "node_modules\.bin\vite.cmd" (

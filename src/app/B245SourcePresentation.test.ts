@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,b245NativeStopReason,
+ b245LocalSourceBuildProvenance,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
@@ -260,5 +261,25 @@ describe('real SOURCE first STOP must remain truthy even on malformed exceptions
  it('does not throw if the original non-error exception cannot be stringified',()=>{
   expect(b245NativeStopReason(Object.create(null)))
    .toBe('UNKNOWN_NATIVE_SOURCE_EXCEPTION');
+ });
+});
+
+describe('one-click Windows local SOURCE build provenance stays honest',()=>{
+ const full='0123456789abcdef0123456789abcdef01234567';
+ it('records only locally inspected Git HEAD and tracked-modification flag',()=>{
+  const meta=b245LocalSourceBuildProvenance(full.toUpperCase(),'FALSE');
+  expect(meta.localCheckoutHead).toBe(full);
+  expect(meta.trackedChangesPresent).toBe(false);
+  expect(meta.untrackedInputsChecked).toBe(false);
+  expect(meta.claim).toBe('LOCAL_CHECKOUT_METADATA_NOT_EXACT_BUILT_CONTENT_SHA');
+  expect(b245LocalSourceBuildProvenance(full,'TRUE').trackedChangesPresent)
+   .toBe(true);
+ });
+ it('never invents a Git SHA for copied, stale or invalid checkouts',()=>{
+  for(const candidate of ['UNKNOWN','',full.slice(1),full+'0',null,42]){
+   const row=b245LocalSourceBuildProvenance(candidate,'UNKNOWN');
+   expect(row.localCheckoutHead).toBeNull();
+   expect(row.trackedChangesPresent).toBeNull();
+  }
  });
 });
