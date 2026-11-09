@@ -9,7 +9,7 @@ describe('verified optical-only original model stage placement',()=>{
  it('matches actual PlayCanvas vertex transform to existing registered floor frame',()=>{
   const pose=originalVisualRegistration(q)!;expect(pose).not.toBeNull();
   const e=new Entity('OPTICAL_ONLY');applyOriginalVisualRegistration(e,pose);
-  for(const [mx,my,mz] of [[0,3,0],[1,6,50],[-8,10.5,40],[12,3,-6],[3,7.5,-47]]){
+  for(const [mx,my,mz] of ([[0,3,0],[1,6,50],[-8,10.5,40],[12,3,-6],[3,7.5,-47]] as const)){
    const world=e.getWorldTransform().transformPoint(new Vec3(mx,my,mz));
    const [x,z]=undertowTemple01ModelXZToProjectXZ([mx,mz]);
    expect(world.x).toBeCloseTo(x,4);
