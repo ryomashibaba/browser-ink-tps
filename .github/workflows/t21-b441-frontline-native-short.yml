@@ -84,9 +84,31 @@ concurrency:
   group: t21-b441-short-frontline-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # P0 gameplay hot-path candidate: TYPECHECK + browser BUNDLE ONLY.
+  # Never launch native 7-CPU Chromium, read protected Windows files,
+  # alter stage physics, or rerun the already-proven 180s K3.
+  p0-radar-build-only:
+    if: ${{ github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && contains(github.event.head_commit.message, '[p0-radar-build-only]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install exact source dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Focused original SOURCE traffic regression
+        run: npx vitest run src/app/UndertowF3SourceTraffic.test.ts
+      - name: TypeScript check and real browser bundle compilation only
+        run: npm run build -- --base=/browser-ink-tps/
   real-native-original-frontline:
     # B385 already runs real 7CPU for this one camera-input milestone.
-    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') }}
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
     timeout-minutes: ${{ (contains(github.event.head_commit.message, '[true-full-replay]') || contains(github.event.head_commit.message, '[k3-one-world]')) && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[real-charger-once]')) && 35 || 15) }}
