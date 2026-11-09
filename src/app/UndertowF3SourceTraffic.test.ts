@@ -206,6 +206,15 @@ describe('F3B playable 8-actor original source runtime',()=>{
    expect(traffic.nativeSourceFreeCombatEnabled()).toBe(state.freeCombatEnabled);
    expect(traffic.nativeSourceAllSevenLiveRejoined())
     .toBe(state.physicalRejoins.length===7);
+   // Compare genuine native 7-CPU live roster, physical feet and only
+   // certified real goal positions; never trust a synthetic HUD count.
+   expect(traffic.nativeSourceLiveRejoinedIds()).toEqual(state.physicalRejoins);
+   expect(traffic.nativeSourceRadarView().cpu).toEqual(state.cpu.map(c=>({
+    id:c.id,mobilityState:c.mobilityState,rejoined:c.rejoined,
+    physicalFoot:c.physicalFoot
+   })));
+   expect(traffic.nativeSourceRadarView().sourcePatrol.activeTargets)
+    .toEqual(state.sourcePatrol.activeTargets);
    console.log('T21_F3B_NATIVE_PLAYABLE_8_ACTOR_DIAGNOSTIC',JSON.stringify({
     done,stop,overlap,minimumSeparation,maxGroundStep,
     physicalFirstDrops:state.physicalFirstDrops,
@@ -331,6 +340,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
      lifeState:'SPLATTED',hp:0,rejoined:false
     });
     expect(splatted.physicalRejoins).not.toContain('B1');
+    expect(traffic.nativeSourceLiveRejoinedIds()).toEqual(splatted.physicalRejoins);
+    expect(traffic.nativeSourceRadarView().cpu.find(c=>c.id==='B1'))
+     .toMatchObject({id:'B1',rejoined:false});
     expect(splatted.physicalFirstDrops).not.toContain('B1');
     expect(splatted.freeCombatEnabled).toBe(true);
     // A fake on-floor ACTIVE recovery is NOT an original high-spawn
@@ -341,6 +353,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     const unsafe=traffic.snapshot();
     expect(traffic.nativeSourceAllSevenLiveRejoined()).toBe(false);
     expect(unsafe.physicalRejoins).not.toContain('B1');
+    expect(traffic.nativeSourceLiveRejoinedIds()).toEqual(unsafe.physicalRejoins);
     expect(unsafe.sourcePatrol.respawnUnsafeReturnHolds).toBeGreaterThan(0);
     expect(unsafe.sourcePatrol.respawnPendingCpuIds).not.toContain('B1');
     expect(unsafe.sourcePatrol.respawnOriginalRejoins).toBe(0);

@@ -2513,6 +2513,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return this.bots.length===7&&this.bots.every(bot=>
    sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined));
  }
+ /** Exact same live-rejoined IDs and actor order as snapshot() for
+  * true PLAYER READY. Never count SPLATTED/stale rejoin CPU or clone
+  * unrelated QA patrol ledgers just to show the seven-actor roster. */
+ nativeSourceLiveRejoinedIds():readonly string[]{
+  return this.bots.filter(b=>
+   sourceNativeLiveRejoinedCpu(b,this.physicallyRejoined)).map(b=>b.id);
+ }
  /** Native radar needs only the real 7 actor feet and actual approved
   * patrol goals. The previous every-third-render traffic.snapshot()
   * also cloned unrelated QA ledgers and route audits. No game writes.

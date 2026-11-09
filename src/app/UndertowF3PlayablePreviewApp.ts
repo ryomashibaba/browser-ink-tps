@@ -6719,9 +6719,9 @@ export class UndertowF3PlayablePreviewApp{
   // No proposed route, inferred floor or CPU command is ever constructed.
   const b166Card=b165('t21-f3-b166-tactics');
   if(run.practiceVariant==='ALLY_SYNC'){
-   const traffic=this.traffic.snapshot();
+   const cpuActorFeet=this.traffic.nativeSourceRadarView().cpu;
    const realBody=this.player.getPosition(this.p);
-   const cpuA1=traffic.cpu.find(c=>c.id==='A1');
+   const cpuA1=cpuActorFeet.find(c=>c.id==='A1');
    const sourceCoopOptIn=
     this.canvas.dataset.t21B150AllyInk==='SOURCE_ONLY_OPT_IN'&&
     this.canvas.dataset.t21B137AllyRally===
@@ -6852,7 +6852,7 @@ export class UndertowF3PlayablePreviewApp{
      this.b45SourceSurfaces.filter(s=>s.isScoreable).length],
     nativeTick:this.clock.tick,matchState:this.matchState,
     practiceStatus:run.status,stopReason:this.stopReason,
-    physicallyRejoined:this.traffic.snapshot().physicalRejoins
+    physicallyRejoined:this.traffic.nativeSourceLiveRejoinedIds()
    });
    if(b477){
     this.b25RunCard.dataset.t21B477RealSourceCpuJoined=String(b477.joined);
