@@ -4,7 +4,10 @@ import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,b245NativeStopReason,
  b245LocalSourceBuildProvenance,
  b388VisibleNativeDescentWarning,
- b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
+ b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide,
+ b245OriginalLandingRimWarning} from './B245SourcePresentation';
+import {inspectB120OriginalFirstDropBoundary}
+ from './W10B120OriginalSourceBoundary';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourceCoopEligible,sourceCoopNavigationUrl}
  from './B193SourceCoopMode';
@@ -281,5 +284,62 @@ describe('one-click Windows local SOURCE build provenance stays honest',()=>{
    expect(row.localCheckoutHead).toBeNull();
    expect(row.trackedChangesPresent).toBeNull();
   }
+ });
+});
+
+
+describe('P1 source-only real Windows landing-rim native foot protection',()=>{
+ const mk=(tick:number,body:readonly [number,number,number])=>{
+  const b=inspectB120OriginalFirstDropBoundary({
+   nativeTick:tick,actualRapierBody:body,side:'positive-z'});
+  return {stage:[25,17,26,0] as const,nativeTick:tick,
+   phase:'PLAYING',paused:false,stopReason:null,
+   grounded:true,humanMode:true,humanAlive:true,
+   actualOriginalSupportId:b.originalSourceSolidId,
+   actualFootGapMeters:b.actualFootVerticalToSourceTopMeters,
+   originalBoundary:b,originalNextFootSupportedAtSameY:false as boolean|null};
+ };
+ it('detects true Windows 1498 floor trace last grounded rim overhang',()=>{
+  // The actual 1355 source-support body precedes the 1356 unsupported tick.
+  const row=mk(1355,[-.9098284840583801,3.8951027393341064,
+   46.98916244506836]);
+  expect(row.originalBoundary.originalFootInsideXZ).toBe(false);
+  expect(row.originalBoundary.actualHorizontalDistanceToOriginalPolygonEdgeMeters)
+   .toBeGreaterThan(0);
+  expect(row.originalBoundary.actualHorizontalDistanceToOriginalPolygonEdgeMeters)
+   .toBeLessThan(.32);
+  const decision=b245OriginalLandingRimWarning(row);
+  expect(decision.state).toBe('ACTUAL_FOOT_OUTSIDE_REGISTERED_LANDING');
+  expect(decision.sourceFloorHoleCertified).toBe(false);
+  expect(decision.sourceRouteCertified).toBe(false);
+  expect(decision.actualKccMoved).toBe(false);
+  expect(decision.originalSourceGeometryModified).toBe(false);
+  expect(decision.originalSevenCpuModified).toBe(false);
+ });
+ it('inside but true 1.5m SAME-HEIGHT ray missing warns without inventing ground',()=>{
+  const row=mk(258,[-.1739107072353363,3.895097494125366,
+   47.10128402709961]);
+  expect(row.originalBoundary.originalFootInsideXZ).toBe(true);
+  expect(b245OriginalLandingRimWarning(row).state)
+   .toBe('NO_VERIFIED_SAME_HEIGHT_SUPPORT_1_5M_CENTREWARD');
+  expect(b245OriginalLandingRimWarning({
+   ...row,originalNextFootSupportedAtSameY:true}).state).toBe('OFF');
+ });
+ it('withholds any advice for nonphysical, untrusted or stale evidence',()=>{
+  const row=mk(1355,[-.9098284840583801,3.8951027393341064,
+   46.98916244506836]);
+  for(const other of [
+   {...row,grounded:false},
+   {...row,actualOriginalSupportId:null},
+   {...row,actualFootGapMeters:null},
+   {...row,actualFootGapMeters:.5},
+   {...row,stage:[25,17,27,0]},
+   {...row,paused:true},
+   {...row,phase:'STAGING'},
+   {...row,humanMode:false},
+   {...row,humanAlive:false},
+   {...row,nativeTick:1354},
+   {...row,stopReason:'SAFE_STOP'}
+  ])expect(b245OriginalLandingRimWarning(other).state).toBe('OFF');
  });
 });

@@ -1,6 +1,7 @@
 /** B245: display-only reversible SOURCE round / diagnostic HUD. */
 import {b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b475RealFrontlineReadyMode} from './B475RealFrontlineReadyChallenge';
+import type {B120OriginalBoundaryWitness} from './W10B120OriginalSourceBoundary';
 export type B245View='PLAYER'|'QA';
 export function b245InitialSourceView(search:string):B245View {
  const q=new URLSearchParams(search);
@@ -239,6 +240,63 @@ export function b388SuppressDuplicateRampWarning(f:{
  * Real 7 CPU native HUMAN: supported landing Z47.68 -> S to Z49.325
  * -> D to right-low FloorConcrete03 X2.052/Z49.810. This is a cue,
  * not full-source navigation, a new floor, altered collision or a winner. */
+/**
+ * P1 landing-rim PLAYER warning from the actual Windows first floor TRACE.
+ * Native tick 1355: the real grounded HUMAN at (-0.9098, 3.8951, 46.9892)
+ * had original landing Rapier ray support despite the FOOT CENTER being
+ * ~0.026m OUTSIDE that exact registered source slab. The prior in-polygon
+ * check hid the important warning just before a genuine unrecovered fall.
+ *
+ * Only observe the true KCC grounded state, actual near-height Rapier ray
+ * and the immutable B120 source polygon. A ray near an edge is NOT proof
+ * of a safe next step, a missing floor, or corridor completion.
+ */
+export function b245OriginalLandingRimWarning(input:{
+ stage:readonly number[];nativeTick:number;
+ phase:string;paused:boolean;stopReason:string|null;
+ grounded:boolean;humanMode:boolean;humanAlive:boolean;
+ actualOriginalSupportId:string|null;actualFootGapMeters:number|null;
+ originalBoundary:B120OriginalBoundaryWitness|null;
+ originalNextFootSupportedAtSameY:boolean|null;
+}){
+ const none={state:'OFF' as const,edgeMeters:null,
+  sourceFloorHoleCertified:false as const,sourceRouteCertified:false as const,
+  actualKccMoved:false as const,originalSourceGeometryModified:false as const,
+  originalSevenCpuModified:false as const};
+ const w=input.originalBoundary;
+ if(input.stage.join(',')!=='25,17,26,0'||input.phase!=='PLAYING'||
+    input.paused||!!input.stopReason||input.grounded!==true||
+    !input.humanAlive||!input.humanMode||
+    !Number.isSafeInteger(input.nativeTick)||input.nativeTick<0||
+    input.actualFootGapMeters===null||
+    !Number.isFinite(input.actualFootGapMeters)||
+    Math.abs(input.actualFootGapMeters)>.22||!w||
+    w.nativeTick!==input.nativeTick||w.originalStageGeometryModified!==false||
+    w.originalHumanKccMovedByObservation!==false||
+    w.originalSourceAuthority.join(',')!=='25,17,26,0'||
+    w.originalSourceSolidId!==input.actualOriginalSupportId||
+    !['UndertowT21D:first-drop-landing-positive-z',
+      'UndertowT21D:first-drop-landing-negative-z'].includes(
+      w.originalSourceSolidId)||
+    !Number.isFinite(w.actualHorizontalDistanceToOriginalPolygonEdgeMeters)||
+    w.actualHorizontalDistanceToOriginalPolygonEdgeMeters<0)
+  return none;
+ const d=w.actualHorizontalDistanceToOriginalPolygonEdgeMeters;
+ // Genuine short capsule overhang beyond THIS actual source polygon:
+ // warn even while its real near-height Rapier ray still catches the rim.
+ // Never claim there is no OTHER source solid in the surrounding world.
+ if(!w.originalFootInsideXZ&&d<=.32)
+  return {...none,state:'ACTUAL_FOOT_OUTSIDE_REGISTERED_LANDING' as const,
+   edgeMeters:d};
+ // Still inside the original landing: warn only if a separate REAL
+ // Rapier look-ahead ray failed to find SAME-HEIGHT original support.
+ if(w.originalFootInsideXZ&&d<=1.8&&
+    input.originalNextFootSupportedAtSameY===false)
+  return {...none,state:'NO_VERIFIED_SAME_HEIGHT_SUPPORT_1_5M_CENTREWARD' as const,
+   edgeMeters:d};
+ return none;
+}
+
 export function b245RealSourceLocalRampGuide(f:{
  stage:readonly number[];tick:number;phase:string;paused:boolean;
  stopReason:string|null;humanAlive:boolean;humanMode:boolean;

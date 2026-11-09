@@ -122,6 +122,7 @@ import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceStoppedWorldMenuHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245SourceFullRoundA1Choice,b245RealSourceLocalRampGuide,
+ b245OriginalLandingRimWarning,
  b245NativeStopReason,b245LocalSourceBuildProvenance}
  from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
@@ -429,7 +430,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b112GroundLedger=new W10B112HumanGroundLedger();
  private b113FloorWarning:HTMLElement|null=null;
  // Observed native lower landing boundary; read-only visual truth.
- private p1LowerEdgeRisk:{distance:number;solidId:string}|null=null;
+ private p1LowerEdgeRisk:{distance:number;solidId:string;
+  state:'ACTUAL_FOOT_OUTSIDE_REGISTERED_LANDING'|
+   'NO_VERIFIED_SAME_HEIGHT_SUPPORT_1_5M_CENTREWARD'}|null=null;
  private p1LiveLocalRampCue:ReturnType<typeof b245RealSourceLocalRampGuide>|null=null;
  private readonly b112GroundEnabled=(()=>{
   const q=new URL(location.href).searchParams;
@@ -5700,15 +5703,31 @@ export class UndertowF3PlayablePreviewApp{
        side:physical.z>=0?'positive-z':'negative-z'
       });
       if(rampRealRay&&Math.abs(foot-rampRealRay.point.y)<=.22&&
-         original.originalFootInsideXZ&&
          original.actualHorizontalDistanceToOriginalPolygonEdgeMeters<=1.8){
-       const next=this.physics.castCharacterFootSupport(new Vec3(
+       // The previous inside-only test missed the real native tick-1355
+       // KCC rim overhang; its original Rapier ray still caught the slab
+       // while the foot center was 0.026m OUTSIDE the registered polygon.
+       const nearInside=original.originalFootInsideXZ;
+       const next=nearInside?this.physics.castCharacterFootSupport(new Vec3(
         physical.x,physical.y,physical.z+(physical.z>=0?-1.5:1.5)),
-        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
-       if(!next||Math.abs(foot-next.point.y)>.22)
+        PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
+       const state=b245OriginalLandingRimWarning({
+        stage:[this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+         this.rawStage.navigationLinks?.length??0,0],
+        nativeTick:frame,phase:this.matchState,paused:this.paused,
+        stopReason:this.stopReason,grounded:this.stats.playerGrounded,
+        humanMode:this.player.currentMode==='HUMAN',
+        humanAlive:this.resources.currentHp>0,
+        actualOriginalSupportId:rampRealRay.solidId,
+        actualFootGapMeters:foot-rampRealRay.point.y,
+        originalBoundary:original,
+        originalNextFootSupportedAtSameY:nearInside?
+         !!next&&Math.abs(foot-next.point.y)<=.22:null
+       });
+       if(state.state!=='OFF')
         this.p1LowerEdgeRisk={
-         distance:Number(original.actualHorizontalDistanceToOriginalPolygonEdgeMeters.toFixed(3)),
-         solidId:id!
+         distance:Number(state.edgeMeters!.toFixed(3)),
+         solidId:id!,state:state.state
         };
       }
      }
@@ -5740,8 +5759,11 @@ export class UndertowF3PlayablePreviewApp{
        this.canvas.dataset.t21P1LowerLandingEdge;
       if(risk||local.state!=='OFF'){
        this.b113FloorWarning.textContent=risk?
+        (risk.state==='ACTUAL_FOOT_OUTSIDE_REGISTERED_LANDING'?
+        'DANGER · HUMAN FOOT AT OUTSIDE RIM OF REGISTERED LANDING · '+
+        risk.distance+'m PAST BORDER · STOP AND CHECK FLOOR':
         'REGISTERED LOWER LANDING EDGE · '+risk.distance+
-        'm TO BOUNDARY · NO VERIFIED FLOOR 1.5m AHEAD · STOP W'+
+        'm TO BOUNDARY · NO VERIFIED FLOOR 1.5m CENTREWARD · STOP MOVING')+
         (local.state!=='OFF'?'\n'+local.text:''):local.text;
        this.b113FloorWarning.hidden=false;
        this.b113FloorWarning.style.display='block';
