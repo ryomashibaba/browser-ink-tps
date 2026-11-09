@@ -78,7 +78,7 @@ echo.
 if /I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" (
   REM Separate loopback port preserves any running ordinary SOURCE game.
   echo Original UV source architecture review on 127.0.0.1:4174. Optical only.
-  call npm.cmd run preview -- --host 127.0.0.1 --port 4174 --strictPort --base=/browser-ink-tps/ --open="/browser-ink-tps/?t21Play=preview&t21FullSource=review"
+  call npm.cmd run preview -- --host 127.0.0.1 --port 4174 --strictPort --base=/browser-ink-tps/ --open="/browser-ink-tps/?t21Play=preview&t21FullSource=review&t21F3Registration=project"
 ) else (
   call npm.cmd run preview -- --host 127.0.0.1 --port 4173 --strictPort --base=/browser-ink-tps/ --open=/browser-ink-tps/play-source.html
 )

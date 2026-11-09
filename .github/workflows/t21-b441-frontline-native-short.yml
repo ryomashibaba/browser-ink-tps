@@ -8,6 +8,8 @@ on:
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
       - 'scripts/t21-f3gl-restore.test.mjs'
+      - 'src/app/UndertowF3OriginalVisualRegistration.ts'
+      - 'src/app/UndertowF3OriginalVisualRegistration.test.ts'
       - 'play-source.html'
       - 'src/main.ts'
       - 'src/app/B286SourceCompactTeam.ts'
@@ -112,7 +114,7 @@ jobs:
       - name: Focused original SOURCE traffic regression
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
-          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts
+          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
   real-native-original-frontline:

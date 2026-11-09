@@ -12,7 +12,7 @@ test('original stage is explicit, local, and separate from normal game',()=>{
  assert.match(view,/set "T21_LOCAL_ORIGINAL_REVIEW=1"/);
  assert.match(view,/call "%~dp0PLAY_SOURCE_WINDOWS\.cmd"/);
  assert.match(normal,/node scripts\/t21-f3gl-restore\.mjs/);
- assert.match(normal,/--port 4174 --strictPort --base=\/browser-ink-tps\/ --open="\/browser-ink-tps\/\?t21Play=preview&t21FullSource=review"/);
+ assert.match(normal,/--port 4174 --strictPort --base=\/browser-ink-tps\/ --open="\/browser-ink-tps\/\?t21Play=preview&t21FullSource=review&t21F3Registration=project"/);
  assert.match(normal,/--port 4173 --strictPort --base=\/browser-ink-tps\/ --open=\/browser-ink-tps\/play-source\.html/);
  assert.doesNotMatch(view,/\bgit\s+(push|merge|reset|pull)\b/i);
  assert.match(ignore,/public\/t21-f3g-source\//);

@@ -174,6 +174,8 @@ import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
  from './UndertowF3GWholeSourcePreview';
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
+import {originalVisualRegistration,applyOriginalVisualRegistration}
+ from './UndertowF3OriginalVisualRegistration';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
  type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
@@ -477,6 +479,8 @@ export class UndertowF3PlayablePreviewApp{
   new URL(location.href).searchParams.get('t21FullSource')==='review';
  private readonly b29PreferFlat=
   new URL(location.href).searchParams.get('t21F3lPref')==='flat';
+ private readonly b29OriginalVisualPose=originalVisualRegistration(
+  new URL(location.href).searchParams);
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -2676,6 +2680,8 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
   try{
    const installed=await loadF3gWholeSource(this.app);
+   if(this.b29OriginalVisualPose)
+    applyOriginalVisualRegistration(installed.root,this.b29OriginalVisualPose);
    this.wholeSourceRoot=installed.root;
    this.wholeSourceTriangles=installed.manifest.includedOriginalTriangles;
    this.wholeSourceGroups=installed.manifest.groups.length;
@@ -2697,6 +2703,8 @@ export class UndertowF3PlayablePreviewApp{
    try{
     const environment=await loadF3iEnvironmentReview(this.app);
     if(environment){
+     if(this.b29OriginalVisualPose)
+      applyOriginalVisualRegistration(environment.root,this.b29OriginalVisualPose);
      this.environmentRoot=environment.root;
      this.environmentManifest=environment.manifest;
      // F3J scenery is visible BY DEFAULT only inside the existing
@@ -2725,6 +2733,8 @@ export class UndertowF3PlayablePreviewApp{
     this.texturedF3l=await loadF3lTexturedSource(this.app,
       new URL(location.href).searchParams.get('t21B256')==='opticalAperture',
       new URL(location.href).searchParams.get('t21B257')==='depthAudit');
+    if(this.texturedF3l&&this.b29OriginalVisualPose)
+     applyOriginalVisualRegistration(this.texturedF3l.root,this.b29OriginalVisualPose);
     this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
     const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
     if(button&&this.texturedF3l)button.hidden=false;
