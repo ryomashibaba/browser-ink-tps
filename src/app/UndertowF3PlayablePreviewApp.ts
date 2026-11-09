@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * F3 source-grounded PLAYABLE LAB PREVIEW. Deliberately unreachable from
  * production/default routes. Genuine human input/KCC, original 25 source
