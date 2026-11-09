@@ -3954,6 +3954,7 @@ export class UndertowF3PlayablePreviewApp{
   const n=this.snapshot();
   const rampId='UndertowT21D:right-low-route-ramp-positive-z';
   const paintId=rampId+':paint';
+  const ground=n.b112OriginalHumanGround;
   if(sourceCanonicalPlayableMode(location.href)===null||
      !this.b203FullRound||this.matchState!=='PLAYING'||
      this.paused||this.stopReason||
@@ -3964,8 +3965,11 @@ export class UndertowF3PlayablePreviewApp{
      n.unrestricted4v4Certified!==false||
      n.cpu.cpu.length!==7||n.cpu.freeCombatEnabled!==true||
      n.cpu.physicalFootRelocations!==0||
-     n.b112OriginalHumanGround?.genuineKccGrounded!==true||
-     n.b112OriginalHumanGround?.lastOriginalSourceHitId!==rampId)
+     // The snapshot has a genuine union: enabled:false has no KCC
+     // witness fields. Narrow to enabled:true before accessing them.
+     ground.enabled!==true||
+     ground.genuineKccGrounded!==true||
+     ground.lastOriginalSourceHitId!==rampId)
     throw Error('K3_REAL_NATIVE_RAMP_OWNER_READ_FORBIDDEN');
   const surface=this.b45SourceSurfaces.find(x=>x.id===paintId);
   if(!surface||surface.isScoreable||
