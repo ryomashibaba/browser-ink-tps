@@ -16,6 +16,7 @@ import {undertowT21dConnectivityQaStage}
 import {PLAYER_CHARACTER_PHYSICS,
  createConfiguredPlayerCharacterController} from '../player/PlayerCharacterPhysics';
 import {pointInStageFootprint} from '../stage/StageFootprint';
+import {originalVisualRegistration} from './UndertowF3OriginalVisualRegistration';
 import {undertowProjectXZToTemple01ModelXZ,
  undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
@@ -183,9 +184,8 @@ export async function loadF3gWholeSource(app:AppBase){
  // mismatch. Never modify the live SOURCE stage, 25 solids, nav or score.
  let v23Evidence:unknown=null;
  const q=new URL(location.href).searchParams;
- if(q.get('t21Play')==='preview'&&q.get('t21FullSource')==='review'&&
-    q.get('t21F3Registration')==='project'&&!q.has('production')&&
-    !q.has('scoreable')&&!q.has('t21QaInput')){
+ // Same gate as the optical model-to-project pose, including duplicate flags.
+ if(originalVisualRegistration(q)){
   try{
    const stage=undertowT21dConnectivityQaStage();
    const real=new RapierStagePhysics(1/60,stage);
@@ -349,6 +349,11 @@ export function auditF3gOriginalFloorAgainstRapier(
     closestOriginalVisualKind:nearest?.kind??null,
     closestOriginalVisualY:nearest?.y??null,
     sourceMinusRecordedFootMeters:nearest?.delta??null,
+    // Unlike foot-to-visual error, this compares actual near-height Rapier.
+    // Missing registered support is UNKNOWN (null), never a claimed 0m gap.
+    sourceMinusRegisteredRapierMeters:nearest!==null&&
+     rapier.originalRapierHitFootGapMeters!==null?
+      nearest.delta+rapier.originalRapierHitFootGapMeters:null,
     sourceWithinExistingFootTolerance:nearest!==null&&
      Math.abs(nearest.delta)<=.22,
     rapierSupportId:rapier.originalRapierSupportId,
@@ -358,6 +363,64 @@ export function auditF3gOriginalFloorAgainstRapier(
    };
   })
  };
+}
+
+/** Entire ORIGINAL face must stay within the registered landing outline.
+ * Checking seven discrete edge points can jump a narrow source-owned notch.
+ * No triangle clipping, fabricated vertices or live SOURCE collision.
+ */
+function triangleInsideRegisteredLanding(
+ tri:readonly StageVector3[],
+ solid:StageDefinition['solids'][number],
+ footprint:NonNullable<StageDefinition['solids'][number]['footprint']>
+):boolean{
+ type XZ=readonly [number,number];
+ const x0=solid.center[0]-solid.size[0]/2;
+ const z0=solid.center[2]-solid.size[2]/2;
+ const pts=tri.map(p=>[p[0]-x0,p[2]-z0] as const);
+ if(pts.length!==3)return false;
+ const cross=(a:XZ,b:XZ,c:XZ)=>
+  (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+ const rings=[footprint.outer,...(footprint.holes??[])];
+ const insideTri=(p:XZ)=>{
+  const a=cross(pts[0]!,pts[1]!,p);
+  const b=cross(pts[1]!,pts[2]!,p);
+  const c=cross(pts[2]!,pts[0]!,p);
+  return (a>1e-9&&b>1e-9&&c>1e-9)||
+   (a< -1e-9&&b< -1e-9&&c< -1e-9);
+ };
+ // Reject any boundary/concavity or full hole swallowed by a source face.
+ if(rings.some(r=>r.some(insideTri)))return false;
+ for(let edge=0;edge<3;edge++){
+  const a=pts[edge]!,b=pts[(edge+1)%3]!;
+  const vx=b[0]-a[0],vz=b[1]-a[1],lenSq=vx*vx+vz*vz;
+  if(lenSq<1e-12)return false;
+  const cuts=[0,1];
+  for(const ring of rings)for(let j=0;j<ring.length;j++){
+   const c=ring[j]!,d=ring[(j+1)%ring.length]!;
+   const wx=c[0]-a[0],wz=c[1]-a[1];
+   const ux=d[0]-c[0],uz=d[1]-c[1],den=vx*uz-vz*ux;
+   if(Math.abs(den)>1e-10){
+    const t=(wx*uz-wz*ux)/den;
+    const u=(wx*vz-wz*vx)/den;
+    if(t>=0&&t<=1&&u>=0&&u<=1)cuts.push(t);
+   }else if(Math.abs(wx*vz-wz*vx)<1e-8){
+    for(const p of [c,d]){
+     const t=((p[0]-a[0])*vx+(p[1]-a[1])*vz)/lenSq;
+     if(t>0&&t<1)cuts.push(t);
+    }
+   }
+  }
+  cuts.sort((x,y)=>x-y);
+  for(let j=0;j+1<cuts.length;j++){
+   const lo=cuts[j]!,hi=cuts[j+1]!;
+   if(hi-lo<=1e-10)continue;
+   const t=(lo+hi)/2;
+   if(!pointInStageFootprint(a[0]+vx*t,a[1]+vz*t,footprint))
+    return false;
+  }
+ }
+ return true;
 }
 
 const TARGET='UndertowT21D:first-drop-landing-positive-z';
@@ -402,18 +465,8 @@ export function buildIsolatedFirstDropOriginalTriangleStage(
   const area=Math.abs((b![0]-a![0])*(c![2]-a![2])-
     (b![2]-a![2])*(c![0]-a![0]));
   if(area<1e-6)continue;
-  // No clipping across a concave registered boundary or existing hole.
-  for(let j=0;j<3;j++){
-   const p=tri[j]!,q=tri[(j+1)%3]!;
-   for(let t=1;t<=7;t++){
-    const f=t/8;
-    if(!inside(p[0]+(q[0]-p[0])*f,p[2]+(q[2]-p[2])*f))
-     valid=false;
-   }
-  }
-  if(!inside((a![0]+b![0]+c![0])/3,(a![2]+b![2]+c![2])/3))
-   valid=false;
-  if(!valid)continue;
+  // Exact boundary crossings, not seven approximate samples.
+  if(!triangleInsideRegisteredLanding(tri,registered,footprint))continue;
   vertices.push(...tri);
   if(vertices.length>24000)
    return {status:'HOLD_ISOLATED_TRIANGLE_LIMIT' as const,stage:null,

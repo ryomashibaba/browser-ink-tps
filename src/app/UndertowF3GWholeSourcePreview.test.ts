@@ -46,6 +46,22 @@ describe('F3G whole-original source pack source authority',()=>{
  });
 });
 
+// Exact first-drop outline has a narrow notch missed by the old 7 probes.
+describe('V23 isolated original floor does not bridge a narrow source notch',()=>{
+ it('keeps an entirely visual crossing triangle out of Rapier',()=>{
+  const original=undertowT21dConnectivityQaStage();
+  const bins=new Map<OriginalF3gKind,Float32Array>([['FLOOR',new Float32Array([
+   -20.236309557423198,6,41.95787529719732,
+   -19.80742768402166,6,40.13979829501014,
+   -25.064128761291794,6,44.671345133447424
+  ])]]);
+  const candidate=buildIsolatedFirstDropOriginalTriangleStage(bins,original);
+  expect(candidate.status).toBe('HOLD_NO_ENTIRELY_INSIDE_ORIGINAL_TRIANGLES');
+  expect(candidate.stage).toBeNull();
+  expect(original.solids).toHaveLength(25);
+ });
+});
+
 // This is an isolated physics replacement, never a runtime SOURCE promotion.
 describe('V23 original first-drop isolated Rapier candidate',()=>{
  it('replaces only the registered landing and excludes optical-only outside floor',()=>{
