@@ -490,6 +490,8 @@ export class UndertowF3PlayablePreviewApp{
    p.get('t21KccAudit')==='readOnly'&&p.get('t21QaPauseOnBoot')==='1');
  })();
  private stopReason:string|null=null;
+ /** FIRST true native PLAYER STOP only; local manual export, never upload. */
+ private firstNativeStopReceipt:Record<string,unknown>|null=null;
  private respawnFrames=0;
  // B201: full native-world mission pause, resumed only on real pointer relock.
  private resumeAfterRealPointerLock=false;
@@ -1718,6 +1720,35 @@ export class UndertowF3PlayablePreviewApp{
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
   pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
+  // The original STOP overlay now saves its FIRST causal witness in one
+  // local user click. No new HUD, automatic upload, gameplay restart,
+  // source authority or diagnostic tick is created.
+  if(this.b203FullRound){
+   const stopSave=document.createElement('button');
+   stopSave.id='t21-f3-first-native-stop-save';
+   stopSave.type='button';stopSave.hidden=true;
+   stopSave.textContent='SAVE FIRST SAFE STOP DETAILS · LOCAL JSON';
+   stopSave.style.cssText='display:none;width:100%;margin-top:8px;'+
+    'padding:10px;border-radius:8px;border:1px solid #eebc79;'+
+    'background:#513820;color:#fff0d4;font:750 11px system-ui;'+
+    'cursor:pointer;pointer-events:auto';
+   stopSave.addEventListener('click',()=>{
+    if(!this.paused||!this.stopReason||!this.firstNativeStopReceipt||
+       document.pointerLockElement===this.canvas)return;
+    const evidence=this.firstNativeStopReceipt;
+    const file=new Blob([JSON.stringify(evidence,null,2)+'\\n'],
+     {type:'application/json'});
+    const href=URL.createObjectURL(file);
+    const link=document.createElement('a');
+    link.href=href;
+    link.download='T21_FIRST_NATIVE_SAFE_STOP_TICK_'+
+     String(evidence.tick??'UNKNOWN')+'.json';
+    link.style.display='none';
+    document.body.appendChild(link);link.click();link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(href),15000);
+   });
+   pauseOverlay.insertBefore(stopSave,pauseHint);
+  }
   // The actual READY/PAUSE dialog is visible in PLAYER view (F8 not needed).
   // Real user choice on the current SOURCE world; never changes the 60Hz clock.
   if(this.b203FullRound){
@@ -5942,6 +5973,9 @@ export class UndertowF3PlayablePreviewApp{
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
    this.stopReason??=error instanceof Error?error.message:String(error);
+   // Preserve first true SOURCE exception BEFORE subsequent HUD refresh,
+   // camera unlock and fallback UI can change the visible state.
+   this.captureFirstNativeStopReceipt(error);
    this.paused=true;
    console.error('T21_F3_FAIL_CLOSED',error);
    // A fail-closed STOP cannot stay pointer-locked with no clickable exit.
@@ -5997,6 +6031,77 @@ export class UndertowF3PlayablePreviewApp{
    }
   }
  }
+ /** On the first genuine human SOURCE failure, snapshot only existing
+  * evidence. None of these read-only probes can replace the first Error.
+  * Keep the report strictly browser-local until the human clicks SAVE.
+  */
+ private captureFirstNativeStopReceipt(error:unknown){
+  if(!this.b203FullRound||this.firstNativeStopReceipt)return;
+  const name=error instanceof Error?error.name:'NonErrorThrow';
+  const message=(error instanceof Error?error.message:String(error)).slice(0,700);
+  const stack=error instanceof Error?error.stack?.slice(0,3200)??null:null;
+  let body:[number,number,number]|null=null;
+  let registeredFootId:string|null=null;
+  let footGapMeters:number|null=null;
+  let groundProbeStatus='UNAVAILABLE';
+  let nativeCpu:ReturnType<UndertowF3SourceTraffic['nativeSourceRadarView']>|null=null;
+  try{
+   const p=this.player.getPosition(new Vec3());
+   if([p.x,p.y,p.z].every(Number.isFinite))body=[p.x,p.y,p.z];
+  }catch{/* never override first exception */}
+  try{
+   if(body){
+    const support=this.physics.castCharacterFootSupport(
+     new Vec3(...body),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+    registeredFootId=support?.solidId??null;
+    groundProbeStatus=registeredFootId&&this.rawStage.solids.some(
+     s=>s.id===registeredFootId)?'ORIGINAL_REGISTERED':'NOT_REGISTERED_OR_MISSING';
+    if(support){
+     const originalFootY=body[1]-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+     footGapMeters=Number((originalFootY-support.point.y).toFixed(5));
+    }
+   }
+  }catch{groundProbeStatus='PROBE_THREW';}
+  try{nativeCpu=this.traffic.nativeSourceRadarView();}
+  catch{/* CPU witness unavailable is not a claim of missing CPUs */}
+  this.firstNativeStopReceipt={
+   schema:'T21_FIRST_GENUINE_SOURCE_NATIVE_STOP_LOCAL_V1',
+   firstCausePreserved:true,
+   error:{name,message,stack},
+   stopReason:this.stopReason,
+   tick:this.clock.tick,
+   phase:this.matchState,
+   pausedAtFailure:this.paused,
+   truePointerLockedAtFailure:document.pointerLockElement===this.canvas,
+   remainingSeconds:this.remainingSeconds,
+   originalStage:{
+    solids:this.rawStage.solids.length,
+    paint:this.rawStage.paintSurfaces.length,
+    navigationLinks:this.rawStage.navigationLinks?.length??0,
+    scoreable:this.b45SourceSurfaces.filter(x=>x.isScoreable).length,
+    winner:'NONE',productionAuthorized:false
+   },
+   human:{
+    body,realKccGrounded:this.stats.playerGrounded,
+    originalRapierFootId:registeredFootId,
+    originalRapierFootGapMeters:footGapMeters,
+    originalRapierFootProbe:groundProbeStatus,
+    life:this.resources.currentHp,mode:this.player.currentMode
+   },
+   cpu: nativeCpu?{
+    actualActorCount:nativeCpu.cpu.length,
+    actors:nativeCpu.cpu,
+    activePatrolGoals:nativeCpu.sourcePatrol.activeTargets
+   }:null,
+   nativeWorldRewound:false,gameplayWrites:0,
+   automaticallyUploaded:false,
+   noFloorOrCpuRepairImplied:true
+  };
+  const save=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+   '#t21-f3-first-native-stop-save');
+  if(save){save.hidden=false;save.style.display='block';}
+ }
+
  private resetW10B27KineticLens(){
   this.b27KineticView.resetVisual();
   const camera=this.playerCameraEntity.camera;
@@ -6391,6 +6496,14 @@ export class UndertowF3PlayablePreviewApp{
    !this.survey.snapshot().active&&this.galleryIndex<0;
   this.b202PauseOverlay.hidden=!actuallyPaused;
   this.b202PauseOverlay.style.display=actuallyPaused?'block':'none';
+  const nativeStopSave=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+   '#t21-f3-first-native-stop-save');
+  if(nativeStopSave){
+   const canSave=actuallyPaused&&!!this.stopReason&&
+    !!this.firstNativeStopReceipt;
+   nativeStopSave.hidden=!canSave;
+   nativeStopSave.style.display=canSave?'block':'none';
+  }
   const b389ReplayButton=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-b389-new-source-round');
   if(b389ReplayButton){
