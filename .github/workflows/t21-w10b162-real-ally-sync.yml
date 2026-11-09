@@ -36,7 +36,7 @@ jobs:
     # Already genuine PASS on prior HEAD. Run one B448-only short A3
     # research case without redundantly repeating the unrelated A1
     # cooperative 5-minute browser run; manual dispatch still allowed.
-    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 48
     steps:

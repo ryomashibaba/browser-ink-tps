@@ -9,7 +9,8 @@ import {b402OriginalSourceInkRadarSamples,b402NativeRadarProofIsFresh,
  type B402RadarProof} from './B402NativeSourceInkRadarSamples';
 import {b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu} from './B245SourcePresentation';
-import {sourceRadarHeightBand} from './UndertowF3RadarElevation';
+import {sourceRadarHeightBand,sourceRadarOffscreenFootMarker}
+ from './UndertowF3RadarElevation';
 
 type Actor={id:string;physicalFoot:[number,number,number];mobilityState:string;rejoined:boolean};
 type View={player:{position:number[]};cpu:{cpu:readonly Actor[];
@@ -93,7 +94,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   const showActor=(id:string)=>
    b245VisibleNativeSourceRadarCpu(id,playerView,inspectingQa);
   radarKey.textContent=playerView&&!inspectingQa?
-   '25 original solids · ● real ALLIES only / ENEMY feet hidden · NO TURF SCORE':
+   '● REAL ALLY FEET · ▶ OFF-MAP DIRECT BEARING, NOT A PATH · NO SCORE':
    '25 original solids · ● real feet / ◌ audited goals · no cross-gap route';
   canvas.setAttribute('aria-label',playerView&&!inspectingQa?
    'Real original source teammate positions and original floor bounds':
@@ -178,12 +179,34 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   }
   const hy=view.player.position[1]??0;
   const bands={ABOVE:0,LEVEL:0,BELOW:0};
-  let visibleCpu=0;
+  let visibleCpu=0,offscreenLiveAllies=0;
   for(const a of view.cpu.cpu){
    if(!showActor(a.id))continue;
    visibleCpu++;
    const band=sourceRadarHeightBand(hy,a.physicalFoot[1]);
    bands[band]++;
+   // In normal PLAYER view a genuinely live A1/A2/A3 beyond ±32m
+   // previously vanished from the radar, despite still existing.
+   // Mark only its real bearing on the radar BORDER; never invent a
+   // movement route, enemy location, extra actor or floor connection.
+   const outside=playerView&&!inspectingQa&&a.rejoined&&
+    (a.id==='A1'||a.id==='A2'||a.id==='A3')?
+    sourceRadarOffscreenFootMarker(x,z,a.physicalFoot[0],a.physicalFoot[2]):
+    null;
+   if(outside){
+    offscreenLiveAllies++;
+    ctx.save();ctx.translate(outside.x,outside.y);
+    ctx.rotate(outside.angle);
+    ctx.fillStyle='#38e4f3';
+    ctx.beginPath();ctx.moveTo(6,0);ctx.lineTo(-5,-5);
+    ctx.lineTo(-5,5);ctx.closePath();ctx.fill();
+    ctx.restore();
+    ctx.font='bold 9px ui-monospace,monospace';
+    ctx.fillStyle='#c4ffff';
+    ctx.fillText(a.id,outside.x-7,
+     outside.y<32?outside.y+16:outside.y-9);
+    continue;
+   }
    const xx=px(a.physicalFoot[0]),zz=pz(a.physicalFoot[2]);
    const color=a.id.startsWith('A')?'#38e4f3':'#ff448d';
    ctx.shadowColor=color;ctx.shadowBlur=a.rejoined?13:5;
@@ -213,6 +236,8 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
    'ALLY FOOT Y · ':'REAL FOOT Y · ')+'↑'+bands.ABOVE+' ABOVE / '+
    bands.LEVEL+' LEVEL / ↓'+bands.BELOW+' BELOW · ±2m';
   canvas.dataset.t21F3VisibleActorFootCount=String(visibleCpu);
+  canvas.dataset.t21F3ActualOffscreenLiveAllies=String(offscreenLiveAllies);
+  canvas.dataset.t21F3OffscreenMarkerIsNotRoute='true';
   canvas.dataset.t21F3EnemyFootPositionsHidden=String(
    playerView&&!inspectingQa);
   canvas.dataset.t21B52Above=String(bands.ABOVE);
