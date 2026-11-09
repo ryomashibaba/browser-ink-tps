@@ -61,12 +61,17 @@ export function auditB119OriginalFirstDropLanding(
 // intra-tick jump of ONLY the passive eighth HUMAN Crowd steering agent.
 // Existing first-drop and registered uphill-ramp guards do not cover this
 // frozen Y=7.5 region. Withhold ONLY that nonphysical proxy on the two
-// original high-spawn polygons: never move HUMAN, CPU7, source NavMesh or
-// weaken the strict 2m post-Crowd failure fence.
+// original high-spawn polygon NEAR AN ORIGINAL BOUNDARY: never move HUMAN,
+// CPU7, source NavMesh or weaken the strict 2m post-Crowd failure fence.
+// Whole-spawn suppression changed the seven-CPU first-drop outcome in the
+// existing 180-input regression. Source rim proximity, not a broad stage
+// suppression, is the only bounded candidate justified by the real foot.
 export type OriginalHighSpawnPassiveDecision=Readonly<{
  withheld:boolean;
  originalSourceSolidId:string|null;
  sourceTopYMeters:number|null;
+ originalSourceEdgeDistanceMeters:number|null;
+ sourceEdgeWithholdDistanceMeters:1.25;
  originalAuthority:readonly [25,17,26,0];
  passiveEighthCrowdProxyOnly:true;
  rapierHumanMoved:false;
@@ -84,6 +89,7 @@ export function auditOriginalHighSpawnPassiveGuard(
     frozen.navigationLinks.length!==26)
   throw Error('T21_HIGH_SPAWN_FROZEN_SOURCE_REQUIRED');
  let id:string|null=null,top:number|null=null;
+ let originalEdgeDistanceMeters:number|null=null;
  for(const sourceId of [
   'UndertowT21D:spawn-high-positive-z',
   'UndertowT21D:spawn-high-negative-z'
@@ -96,11 +102,34 @@ export function auditOriginalHighSpawnPassiveGuard(
   const u=foot.x-(solid.center[0]-solid.size[0]/2);
   const v=foot.z-(solid.center[2]-solid.size[2]/2);
   if(pointInStageFootprint(u,v,solid.footprint)){
-   id=sourceId;top=y;break;
+   // Only the audited source polygon boundaries are used: no invented
+   // collision, new NavMesh, teleport, or unsafe 2m post-tick bypass.
+   let distance=Number.POSITIVE_INFINITY;
+   for(const ring of [solid.footprint.outer,...(solid.footprint.holes??[])]){
+    for(let i=0;i<ring.length;i++){
+     const [ax,az]=ring[i]!,[bx,bz]=ring[(i+1)%ring.length]!;
+     const dx=bx-ax,dz=bz-az,lengthSquared=dx*dx+dz*dz;
+     if(lengthSquared<=0)continue;
+     const t=Math.max(0,Math.min(1,
+      ((u-ax)*dx+(v-az)*dz)/lengthSquared));
+     distance=Math.min(distance,Math.hypot(
+      u-(ax+t*dx),v-(az+t*dz)));
+    }
+   }
+   if(!Number.isFinite(distance))
+    throw Error('T21_HIGH_SPAWN_ORIGINAL_BOUNDARY_NOT_MEASURABLE');
+   originalEdgeDistanceMeters=distance;
+   // At the actual 111.76m incident foot, original source nearest-edge
+   // clearance is ~1.0m. The 1.25m observation band is a conservative
+   // withhold-only rim, not a source-authority or collision promotion.
+   if(distance<=1.25){id=sourceId;top=y;}
+   break;
   }
  }
  return {
   withheld:id!==null,originalSourceSolidId:id,sourceTopYMeters:top,
+  originalSourceEdgeDistanceMeters:originalEdgeDistanceMeters,
+  sourceEdgeWithholdDistanceMeters:1.25,
   originalAuthority:[25,17,26,0],
   passiveEighthCrowdProxyOnly:true,rapierHumanMoved:false,
   sevenCpuActorsModified:false,sourceNavmeshModified:false,

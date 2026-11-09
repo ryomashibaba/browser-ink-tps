@@ -15,25 +15,13 @@ describe('F3C live human native Crowd life cycle',()=>{
  it('uses only actual grounded original-source human navigation, removes the passive agent midair and reattaches after landing',()=>{
   const stage=undertowT21dConnectivityQaStage();
   const nav=new RecastStageNavigation(stage,new PerformanceStats());
-  const high=nav.closestPoint(new Vec3(...stage.metadata.teamASpawn));
-  const highFoot={x:high.x,y:high.y,z:high.z};
-  // Center-low native source point is outside both HIGH-spawn and first-drop
-  // polygons: use it to retain the existing attach/detach lifecycle proof.
-  const native=nav.closestPoint(new Vec3(0,0,0));
+  const native=nav.closestPoint(new Vec3(...stage.metadata.teamASpawn));
   const human={x:native.x,y:native.y,z:native.z};
   const steering=new UndertowF3NativeHumanCrowd(nav,stage);
   expect(stage.solids).toBe(frozen.solids);
   expect(stage.navigationLinks).toBe(frozen.navigationLinks);
   expect(()=>new UndertowF3NativeHumanCrowd(nav,PRODUCTION_STAGE_DEFINITION))
    .toThrow('T21_F3C_HUMAN_NATIVE_CROWD_NONPRODUCTION_ONLY');
-  steering.syncActualPlayerFoot(highFoot);
-  expect(steering.snapshot.active).toBe(false);
-  expect(steering.snapshot.originalHighSpawnPassiveProxyGate?.withheld)
-   .toBe(true);
-  expect(steering.snapshot.originalHighSpawnProxyWithheldNativeTicks).toBe(1);
-  // A large physical transition is never accepted as a single stride.
-  steering.syncActualPlayerFoot(human);
-  expect(steering.snapshot.active).toBe(false);
   steering.syncActualPlayerFoot(human);
   expect(steering.snapshot.active).toBe(true);
   expect(steering.snapshot.attaches).toBe(1);
@@ -73,5 +61,21 @@ describe('F3C live human native Crowd life cycle',()=>{
   steering.dispose();
   expect(steering.snapshot.active).toBe(false);
   expect(steering.snapshot.productionAuthorized).toBe(false);
+ });
+ it('withholds only the incident near-rim SOURCE eighth HUMAN steering agent',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const crowd=new UndertowF3NativeHumanCrowd(nav,stage);
+  const actualWindowsFoot={x:4.777252197265625,
+   y:7.525097732543945,z:57.74844741821289};
+  crowd.syncActualPlayerFoot(actualWindowsFoot,true);
+  expect(crowd.snapshot.active).toBe(false);
+  expect(crowd.snapshot.originalHighSpawnPassiveProxyGate?.withheld)
+   .toBe(true);
+  expect(crowd.snapshot.originalHighSpawnProxyWithheldNativeTicks).toBe(1);
+  expect(crowd.snapshot.fakeHumanPhysicalActors).toBe(0);
+  expect(crowd.snapshot.playerFootMoved).toBe(false);
+  expect(crowd.snapshot.sourceNavmeshChanged).toBe(false);
+  crowd.dispose();
  });
 });

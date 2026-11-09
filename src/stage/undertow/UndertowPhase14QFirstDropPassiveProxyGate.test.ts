@@ -53,6 +53,9 @@ describe('original HIGH spawn passive human proxy source-only safety',()=>{
   expect(guard.originalSourceSolidId)
    .toBe('UndertowT21D:spawn-high-positive-z');
   expect(guard.sourceTopYMeters).toBeCloseTo(7.5,6);
+  expect(guard.originalSourceEdgeDistanceMeters).toBeGreaterThan(.5);
+  expect(guard.originalSourceEdgeDistanceMeters).toBeLessThan(1.25);
+  expect(guard.sourceEdgeWithholdDistanceMeters).toBe(1.25);
   const mirrored=auditOriginalHighSpawnPassiveGuard({
    x:-realWindowsFoot.x,y:realWindowsFoot.y,z:-realWindowsFoot.z
   },frozen.solids);
@@ -64,6 +67,12 @@ describe('original HIGH spawn passive human proxy source-only safety',()=>{
   expect(guard.sevenCpuActorsModified).toBe(false);
   expect(guard.sourceNavmeshModified).toBe(false);
   expect(guard.productionAuthorized).toBe(false);
+ });
+ it('keeps the high spawn interior proxy live for genuine CPU7 drop timing',()=>{
+  const interior={x:0.01693030074238777,y:7.525,z:67.87103271484375};
+  const guard=auditOriginalHighSpawnPassiveGuard(interior,frozen.solids);
+  expect(guard.withheld).toBe(false);
+  expect(guard.originalSourceEdgeDistanceMeters).toBeGreaterThan(1.25);
  });
  it('does not hide off-layer, off-polygon or untrusted-stage agents',()=>{
   expect(auditOriginalHighSpawnPassiveGuard(
