@@ -5,6 +5,9 @@ on:
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'PLAY_SOURCE_WINDOWS.cmd'
+      - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
+      - 'scripts/t21-f3gl-restore.mjs'
+      - 'scripts/t21-f3gl-restore.test.mjs'
       - 'play-source.html'
       - 'src/main.ts'
       - 'src/app/B286SourceCompactTeam.ts'
@@ -108,7 +111,7 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Focused original SOURCE traffic regression
         run: |
-          node --test scripts/t21-source-play-windows-launcher.test.mjs
+          node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
@@ -132,7 +135,7 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[k3-one-world]') }}
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
-          node --test scripts/t21-source-play-windows-launcher.test.mjs
+          node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           node --check scripts/t21-b452-native-foot-vs-recast-audit.mjs
           node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs
           node --check scripts/t21-b454-real-native-full-rate-source-foot.mjs

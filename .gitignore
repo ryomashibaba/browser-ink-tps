@@ -6,3 +6,6 @@ dist/
 
 # F3G generated derived geometry stays LOCAL, never committed as game assets.
 public/t21-f3g-source/
+
+# Local atomic original-stage restoration; never commit derived asset stages.
+public/.t21-stage-*/

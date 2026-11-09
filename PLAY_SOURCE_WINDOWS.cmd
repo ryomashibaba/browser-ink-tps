@@ -53,6 +53,14 @@ if not exist "node_modules\.bin\vite.cmd" (
   echo Existing local dependencies found.
 )
 
+REM Explicit opt-in review launcher ONLY: verified original F3G/F3L data.
+REM Normal SOURCE play never downloads or promotes original assets.
+if /I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" (
+  echo.
+  echo Preparing verified original visual stage locally. No physical floor additions.
+  node scripts/t21-f3gl-restore.mjs
+  if errorlevel 1 goto :FAIL
+)
 echo.
 echo [2/3] Building genuine SOURCE gameplay and 3-mode portal
 call npm.cmd run build -- --base=/browser-ink-tps/
@@ -67,7 +75,13 @@ echo Official scoreable=0, winner=NONE; cross-team route NOT certified.
 echo No GitHub push, no Pages deploy, no paid API, no actor teleport.
 echo Browser will open automatically. Close this window to stop server.
 echo.
-call npm.cmd run preview -- --host 127.0.0.1 --port 4173 --strictPort --base=/browser-ink-tps/ --open=/browser-ink-tps/play-source.html
+if /I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" (
+  REM Separate loopback port preserves any running ordinary SOURCE game.
+  echo Original UV source architecture review on 127.0.0.1:4174. Optical only.
+  call npm.cmd run preview -- --host 127.0.0.1 --port 4174 --strictPort --base=/browser-ink-tps/ --open="/browser-ink-tps/?t21Play=preview&t21FullSource=review"
+) else (
+  call npm.cmd run preview -- --host 127.0.0.1 --port 4173 --strictPort --base=/browser-ink-tps/ --open=/browser-ink-tps/play-source.html
+)
 if errorlevel 1 goto :FAIL
 popd
 exit /b 0
@@ -87,7 +101,7 @@ goto :FAIL
 :FAIL
 echo.
 echo SOURCE PLAY NOT STARTED. The original game and GitHub are unchanged.
-echo If port 4173 is in use, close the other local preview first.
+echo If port 4173/4174 is in use, close that local preview first.
 echo No network service was made public.
 if "%T21_PUSHED%"=="1" popd
 pause
