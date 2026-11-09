@@ -280,6 +280,7 @@ if(f.supportId!==lower||x<-.5||x>2.1||z<47||z>50.8)return off;
  * JS Error.message must NEVER become falsy stopReason and allow a paused
  * unsafe world to resume. Exact nonempty first reason stays unchanged. */
 export function b245NativeStopReason(error:unknown):string{
+ if(error===null||error===undefined)return 'UNKNOWN_NATIVE_SOURCE_EXCEPTION';
  try{
   const raw=error instanceof Error?error.message:String(error);
   return typeof raw==='string'&&raw.trim().length>0?
