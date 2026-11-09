@@ -55,3 +55,55 @@ export function auditB119OriginalFirstDropLanding(
  }
  return make(null,null);
 }
+
+// Original HIGH spawn source floor: an actual Windows first SAFE STOP at
+// Rapier foot (4.777252,7.525098,+57.748447) recorded a 111.76m native
+// intra-tick jump of ONLY the passive eighth HUMAN Crowd steering agent.
+// Existing first-drop and registered uphill-ramp guards do not cover this
+// frozen Y=7.5 region. Withhold ONLY that nonphysical proxy on the two
+// original high-spawn polygons: never move HUMAN, CPU7, source NavMesh or
+// weaken the strict 2m post-Crowd failure fence.
+export type OriginalHighSpawnPassiveDecision=Readonly<{
+ withheld:boolean;
+ originalSourceSolidId:string|null;
+ sourceTopYMeters:number|null;
+ originalAuthority:readonly [25,17,26,0];
+ passiveEighthCrowdProxyOnly:true;
+ rapierHumanMoved:false;
+ sevenCpuActorsModified:false;
+ sourceNavmeshModified:false;
+ productionAuthorized:false;
+}>;
+export function auditOriginalHighSpawnPassiveGuard(
+ foot:B119OriginalFoot,solids:readonly StageSolidDefinition[]
+):OriginalHighSpawnPassiveDecision{
+ if(![foot.x,foot.y,foot.z].every(Number.isFinite))
+  throw Error('T21_HIGH_SPAWN_NONFINITE_REAL_HUMAN_FOOT');
+ if(solids!==frozen.solids||frozen.activationReady!==false||
+    frozen.solids.length!==25||frozen.paintSurfaces.length!==17||
+    frozen.navigationLinks.length!==26)
+  throw Error('T21_HIGH_SPAWN_FROZEN_SOURCE_REQUIRED');
+ let id:string|null=null,top:number|null=null;
+ for(const sourceId of [
+  'UndertowT21D:spawn-high-positive-z',
+  'UndertowT21D:spawn-high-negative-z'
+ ]){
+  const solid=solids.find(s=>s.id===sourceId);
+  if(!solid?.footprint||solid.triangleMesh||solid.rotationEulerDegrees)
+   throw Error('T21_HIGH_SPAWN_ORIGINAL_FLAT_SOLID_MISSING');
+  const y=solid.center[1]+solid.size[1]/2;
+  if(Math.abs(foot.y-y)>.22)continue;
+  const u=foot.x-(solid.center[0]-solid.size[0]/2);
+  const v=foot.z-(solid.center[2]-solid.size[2]/2);
+  if(pointInStageFootprint(u,v,solid.footprint)){
+   id=sourceId;top=y;break;
+  }
+ }
+ return {
+  withheld:id!==null,originalSourceSolidId:id,sourceTopYMeters:top,
+  originalAuthority:[25,17,26,0],
+  passiveEighthCrowdProxyOnly:true,rapierHumanMoved:false,
+  sevenCpuActorsModified:false,sourceNavmeshModified:false,
+  productionAuthorized:false
+ };
+}

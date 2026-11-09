@@ -29,6 +29,10 @@ on:
       - 'src/app/B441OriginalSourceFrontline.ts'
       - 'src/app/B441OriginalSourceFrontline.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3NativeHumanCrowd.ts'
+      - 'src/app/UndertowF3NativeHumanCrowd.test.ts'
+      - 'src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.ts'
+      - 'src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.ts'
       - 'src/app/UndertowF3PaintAwarePatrol.test.ts'
       - 'src/app/B450OriginalRouteWitness.ts'
@@ -105,7 +109,7 @@ jobs:
       - name: Focused original SOURCE traffic regression
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs
-          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3RadarElevation.test.ts
+          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
   real-native-original-frontline:

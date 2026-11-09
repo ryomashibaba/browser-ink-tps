@@ -16,8 +16,8 @@ import {UndertowPhase14QHumanCrowdAnchor}
  from '../stage/undertow/UndertowPhase14QHumanCrowdAnchor';
 import type {B118NativeCrowdDriftWitness}
  from '../stage/undertow/UndertowPhase14QRealCrowdDriftWitness';
-import {auditB119OriginalFirstDropLanding,
- type B119OriginalLandingDecision}
+import {auditB119OriginalFirstDropLanding,auditOriginalHighSpawnPassiveGuard,
+ type B119OriginalLandingDecision,type OriginalHighSpawnPassiveDecision}
  from '../stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate';
 import {auditB123RegisteredOriginalUphillPassiveGuard,
  type B123NativePassiveRampGate}
@@ -31,6 +31,8 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  private b118Witness:B118NativeCrowdDriftWitness|null=null;
  private b119LastGate:B119OriginalLandingDecision|null=null;
  private b119PassiveProxyWithheldTicks=0;
+ private originalHighSpawnLastGuard:OriginalHighSpawnPassiveDecision|null=null;
+ private originalHighSpawnProxyWithheldTicks=0;
  private b123LastRealSourceRampGuard:B123NativePassiveRampGate|null=null;
  private b123OriginalRampPassiveProxyWithheldNativeTicks=0;
  readonly sourceOnly=true;
@@ -59,6 +61,19 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   if(rapierGrounded!==true){
    this.suspend();
    this.excluded++;
+   this.previous={...foot};
+   return;
+  }
+  // In Windows the passive eighth HUMAN proxy jumped 111.76m at tick 121
+  // while the real Rapier human remained grounded on the HIGH spawn.
+  // Suppress only the eighth NONPHYSICAL agent on the two exact source
+  // spawn polygons. Retain CPU7, Rapier authority and the 2m safety stop.
+  this.originalHighSpawnLastGuard=
+   auditOriginalHighSpawnPassiveGuard(foot,this.stage.solids);
+  if(this.originalHighSpawnLastGuard.withheld){
+   this.suspend();
+   this.excluded++;
+   this.originalHighSpawnProxyWithheldTicks++;
    this.previous={...foot};
    return;
   }
@@ -130,6 +145,10 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   return {active:!!this.anchor,attaches:this.attaches,
    detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,
    b118LastRealCrowdDriftWitness:this.b118Witness,
+   originalHighSpawnPassiveProxyGate:this.originalHighSpawnLastGuard,
+   originalHighSpawnProxyWithheldNativeTicks:
+    this.originalHighSpawnProxyWithheldTicks,
+   originalHighSpawnHumanCpuAvoidanceCertified:false,
    b119OriginalFirstDropPassiveProxyGate:this.b119LastGate,
    b119FirstDropProxyWithheldNativeTicks:this.b119PassiveProxyWithheldTicks,
    b119HumanCpuCrowdAvoidanceCertifiedAtLanding:false,
