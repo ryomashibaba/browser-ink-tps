@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
- b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
+ b245SourceFullRoundA1Choice,b245PlayerSightlineCss,b245NativeStopReason,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
@@ -240,5 +240,25 @@ describe('B245 original registered source landing-to-ramp PLAYER cue',()=>{
    {...b,body:[-.054,3.89,45] as const},
    {...b,supportId:'UndertowT21D:first-drop-landing-negative-z'}
   ])expect(b245RealSourceLocalRampGuide(f).state).toBe('OFF');
+ });
+});
+
+describe('real SOURCE first STOP must remain truthy even on malformed exceptions',()=>{
+ it('preserves the original nonempty native cause',()=>{
+  expect(b245NativeStopReason(new Error('ORIGINAL_RAPIER_FAILURE')))
+   .toBe('ORIGINAL_RAPIER_FAILURE');
+  expect(b245NativeStopReason('real native failure'))
+   .toBe('real native failure');
+ });
+ it('never returns a falsy reason for empty, missing or whitespace-only throws',()=>{
+  for(const e of [new Error(''),new Error('   '),'',null,undefined]){
+   const reason=b245NativeStopReason(e);
+   expect(reason).toBe('UNKNOWN_NATIVE_SOURCE_EXCEPTION');
+   expect(Boolean(reason)).toBe(true);
+  }
+ });
+ it('does not throw if the original non-error exception cannot be stringified',()=>{
+  expect(b245NativeStopReason(Object.create(null)))
+   .toBe('UNKNOWN_NATIVE_SOURCE_EXCEPTION');
  });
 });

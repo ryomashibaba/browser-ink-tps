@@ -120,7 +120,8 @@ import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourcePausedFreshRoundHref,sourceOriginalFallFreshWorldHref,
  sourceStoppedWorldMenuHref} from './SourcePlayPortal';
 import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
- b245SourceFullRoundA1Choice,b245RealSourceLocalRampGuide} from './B245SourcePresentation';
+ b245SourceFullRoundA1Choice,b245RealSourceLocalRampGuide,
+ b245NativeStopReason} from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -5972,11 +5973,35 @@ export class UndertowF3PlayablePreviewApp{
   }catch(error){
    // Never hide an unsafe source collision or guess a navigation patch.
    // The visible session freezes, preserving the exact failing actor foot.
-   this.stopReason??=error instanceof Error?error.message:String(error);
-   // Preserve first true SOURCE exception BEFORE subsequent HUD refresh,
-   // camera unlock and fallback UI can change the visible state.
-   this.captureFirstNativeStopReceipt(error);
+   // Empty Error.message previously set stopReason='' (falsy), allowing
+   // later source pause/resume gates to think this unsafe world was live.
+   if(!this.stopReason)this.stopReason=b245NativeStopReason(error);
+   const pausedBeforeFailure=this.paused;
+   // FAIL CLOSED FIRST. Evidence collection is best effort and MUST NOT
+   // throw out of this safety handler or advance the native clock.
    this.paused=true;
+   try{this.captureFirstNativeStopReceipt(error,pausedBeforeFailure);}
+   catch(receiptError){
+    console.error('T21_F3_FIRST_STOP_CAPTURE_FAILED',receiptError);
+    if(this.b203FullRound&&!this.firstNativeStopReceipt){
+     this.firstNativeStopReceipt={
+      schema:'T21_FIRST_GENUINE_SOURCE_NATIVE_STOP_LOCAL_FALLBACK_V1',
+      firstCausePreserved:true,stopReason:this.stopReason,tick:this.clock.tick,
+      phase:this.matchState,collection:'FAILED',
+      originalErrorType:typeof error,
+      originalStage:{solids:this.rawStage.solids.length,
+       paint:this.rawStage.paintSurfaces.length,
+       navigationLinks:this.rawStage.navigationLinks?.length??0,
+       scoreable:0,winner:'NONE'},
+      nativeWorldRewound:false,gameplayWrites:0,automaticallyUploaded:false
+     };
+     try{
+      const save=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+       '#t21-f3-first-native-stop-save');
+      if(save){save.hidden=false;save.style.display='block';}
+     }catch{/* still keep original STOP and fallback receipt */}
+    }
+   }
    console.error('T21_F3_FAIL_CLOSED',error);
    // A fail-closed STOP cannot stay pointer-locked with no clickable exit.
    // Preserve the original reason even if the browser refuses unlock.
@@ -6035,7 +6060,7 @@ export class UndertowF3PlayablePreviewApp{
   * evidence. None of these read-only probes can replace the first Error.
   * Keep the report strictly browser-local until the human clicks SAVE.
   */
- private captureFirstNativeStopReceipt(error:unknown){
+ private captureFirstNativeStopReceipt(error:unknown,pausedBeforeFailure:boolean){
   if(!this.b203FullRound||this.firstNativeStopReceipt)return;
   const name=error instanceof Error?error.name:'NonErrorThrow';
   const message=(error instanceof Error?error.message:String(error)).slice(0,700);
@@ -6045,6 +6070,8 @@ export class UndertowF3PlayablePreviewApp{
   let footGapMeters:number|null=null;
   let groundProbeStatus='UNAVAILABLE';
   let nativeCpu:ReturnType<UndertowF3SourceTraffic['nativeSourceRadarView']>|null=null;
+  let cpuLife:ReturnType<UndertowF3SourceTraffic['nativeCpuLifecycleFrames']>|null=null;
+  let actualSourceVisual:Record<string,unknown>|null=null;
   try{
    const p=this.player.getPosition(new Vec3());
    if([p.x,p.y,p.z].every(Number.isFinite))body=[p.x,p.y,p.z];
@@ -6064,14 +6091,30 @@ export class UndertowF3PlayablePreviewApp{
   }catch{groundProbeStatus='PROBE_THREW';}
   try{nativeCpu=this.traffic.nativeSourceRadarView();}
   catch{/* CPU witness unavailable is not a claim of missing CPUs */}
+  try{cpuLife=this.traffic.nativeCpuLifecycleFrames();}
+  catch{/* no claim of seven ACTIVE actors when lifecycle is unreadable */}
+  try{
+   actualSourceVisual={
+    registeredFloorReadability:this.b250SourceView?.snapshot()??null,
+    structuralOpticsVisible:this.structures.root.enabled,
+    sourceReviewOpticsVisible:this.sourceCompletion.root.enabled,
+    originalVisualMode:this.sourceCompletion.getVisualMode(),
+    currentPresentation:document.querySelector<HTMLElement>('#ui-root')
+     ?.dataset.t21B245Presentation??null
+   };
+  }catch{/* render witness unavailable; do not infer a missing floor */}
   this.firstNativeStopReceipt={
    schema:'T21_FIRST_GENUINE_SOURCE_NATIVE_STOP_LOCAL_V1',
    firstCausePreserved:true,
    error:{name,message,stack},
+   browser:{sourcePage:window.location.href,
+    userAgent:navigator.userAgent,
+    pixelRatio:window.devicePixelRatio,
+    loadedResearchGitSha:'UNKNOWN_IN_BROWSER'},
    stopReason:this.stopReason,
    tick:this.clock.tick,
    phase:this.matchState,
-   pausedAtFailure:this.paused,
+   pausedAtFailure:pausedBeforeFailure,
    truePointerLockedAtFailure:document.pointerLockElement===this.canvas,
    remainingSeconds:this.remainingSeconds,
    originalStage:{
@@ -6091,8 +6134,10 @@ export class UndertowF3PlayablePreviewApp{
    cpu: nativeCpu?{
     actualActorCount:nativeCpu.cpu.length,
     actors:nativeCpu.cpu,
-    activePatrolGoals:nativeCpu.sourcePatrol.activeTargets
+    activePatrolGoals:nativeCpu.sourcePatrol.activeTargets,
+    actualLifeStates:cpuLife
    }:null,
+   actualSourceRendering:actualSourceVisual,
    nativeWorldRewound:false,gameplayWrites:0,
    automaticallyUploaded:false,
    noFloorOrCpuRepairImplied:true

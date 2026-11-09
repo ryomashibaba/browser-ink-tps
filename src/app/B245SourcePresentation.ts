@@ -275,3 +275,17 @@ if(f.supportId!==lower||x<-.5||x>2.1||z<47||z>50.8)return off;
   text:'SOURCE LANDING · D toward registered FloorConcrete03 ramp · STOP if physical support is lost'};
  return off;
 }
+
+/** Stop is a boolean authority throughout the real game. An empty
+ * JS Error.message must NEVER become falsy stopReason and allow a paused
+ * unsafe world to resume. Exact nonempty first reason stays unchanged. */
+export function b245NativeStopReason(error:unknown):string{
+ try{
+  const raw=error instanceof Error?error.message:String(error);
+  return typeof raw==='string'&&raw.trim().length>0?
+   raw:'UNKNOWN_NATIVE_SOURCE_EXCEPTION';
+ }catch{
+  // Non-Error throws can have hostile/throwing toString getters.
+  return 'UNKNOWN_NATIVE_SOURCE_EXCEPTION';
+ }
+}
