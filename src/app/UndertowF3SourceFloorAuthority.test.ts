@@ -103,3 +103,55 @@ describe('F4 real original source floor / visible optical gap classification',()
  });
 
 });
+
+
+describe('Windows native 1498 unsupported fall / existing exact optical floor candidate decision',()=>{
+ it('classifies the actual recorded human foot positions at their ORIGINAL surface height, never creates a floor',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const old=[stage.solids,stage.paintSurfaces,stage.navigationLinks];
+  const physics=new RapierStagePhysics(1/60,stage);
+  physics.step();
+  // REAL Windows 2026-11-09 source T21_W10B113_ORIGINAL_FLOOR_TRACE_TICK_1498.
+  // Human KCC capsule centre offset is .87m. Airborne positions can have
+  // no ray even though a floor exists *below* the capsule: use separate
+  // reference-top checks instead of labeling all absence as a floor hole.
+  const samples=[
+   {id:'HIGH_LAST_SUPPORTED_1270',x:-4.770392417907715,
+    z:52.723026275634766,footY:7.525381927490234},
+   {id:'HIGH_FIRST_UNSUPPORTED_1271_AT_HIGH_FLOOR',x:-4.92443323135376,
+    z:52.41347122192383,footY:7.5},
+   {id:'HIGH_DETECTED_1299_AT_HIGH_FLOOR',x:-3.9042558670043945,
+    z:50.34474563598633,footY:7.5},
+   {id:'LOW_LAST_SUPPORTED_1355',x:-.9098284840583801,
+    z:46.98916244506836,footY:3.0251027393341064},
+   {id:'LOW_FIRST_UNSUPPORTED_1356_AT_LOW_FLOOR',x:-.674686849117279,
+    z:46.629432678222656,footY:3},
+   {id:'LOW_DETECTED_1390_AT_LOW_FLOOR',x:.8204801082611084,
+    z:44.09070587158203,footY:3},
+   {id:'LOW_UNSUPPORTED_APPROACH_1368_AT_LOW_FLOOR',x:-.13194848597049713,
+    z:45.74237060546875,footY:3},
+   {id:'KNOWN_ORIGINAL_RAMP_CONTACT',x:2.0517,
+    z:49.8099,footY:3.0683}
+  ];
+  const rows=inspectF4OriginalSourceFloorCorridor(stage,physics,samples);
+  expect(rows).toHaveLength(samples.length);
+  expect(rows.every(r=>r.originalStage==='25/17/26/0'&&
+   !r.inferredFloorAuthorized&&!r.originalVersionCollisionCertified&&
+   r.runtimeAddedSolids===0)).toBe(true);
+  expect(rows.find(r=>r.id==='HIGH_LAST_SUPPORTED_1270')?.originalRapierSupportId)
+   .toBe('UndertowT21D:spawn-high-positive-z');
+  expect(rows.find(r=>r.id==='KNOWN_ORIGINAL_RAMP_CONTACT')?.originalRapierSupportId)
+   .toBe('UndertowT21D:right-low-route-ramp-positive-z');
+  expect(rows.find(r=>r.id==='LOW_DETECTED_1390_AT_LOW_FLOOR')?.originalRapierSupportId)
+   .toBeNull();
+  expect([stage.solids,stage.paintSurfaces,stage.navigationLinks])
+   .toEqual(old);
+  console.log('WINDOWS_1498_REGISTERED_VS_VISIBLE_THIN_FLOOR',
+   JSON.stringify(rows.map(r=>({
+    point:r.id,x:r.point[0],z:r.point[2],atOriginalSurfaceY:r.point[1],
+    classification:r.classification,actualRapier:r.originalRapierSupportId,
+    visibleExactSourceCandidates:r.opticalOnlySourceComponents.slice(0,4),
+    originalCollisionAuthorized:false
+   }))));
+ });
+});
