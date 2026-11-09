@@ -8,11 +8,13 @@
  */
 import {BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,Mesh,MeshInstance,
  StandardMaterial,Vec3,type AppBase} from 'playcanvas';
+import RAPIER from '@dimforge/rapier3d-compat';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {PLAYER_CHARACTER_PHYSICS,
+ createConfiguredPlayerCharacterController} from '../player/PlayerCharacterPhysics';
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {undertowProjectXZToTemple01ModelXZ,
  undertowTemple01ModelXZToProjectXZ}
@@ -194,16 +196,20 @@ export async function loadF3gWholeSource(app:AppBase){
     const isolated=buildIsolatedFirstDropOriginalTriangleStage(
      verifiedTriangles,stage);
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
+    let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
     if(isolated.stage){
      const lab=new RapierStagePhysics(1/60,isolated.stage);
      try{lab.step();isolationHits=probeIsolatedFirstDropRapier(
-      isolated.stage,lab);}
+      isolated.stage,lab);
+      isolationWalk=probeV23FirstDropHumanKcc(lab);}
      finally{lab.world.free();}
     }
-    v23Evidence={alignment,isolation:{status:isolated.status,
+    // Both KCC worlds are new temporary review instances; gameplay is inert.
+    const registeredWalk=probeV23FirstDropHumanKcc(real);
+    v23Evidence={alignment,registeredWalk,isolation:{status:isolated.status,
      originalSourceTriangles:isolated.triangles,
      originalCollisionFlags:isolated.sourceCollisionFlags,
-     isolatedRapierFeet:isolationHits,
+     isolatedRapierFeet:isolationHits,isolatedHumanKccWalk:isolationWalk,
      liveOriginalStageModified:false,
      naturalHumanCpuRouteCertified:false}};
    }finally{real.world.free();}
@@ -438,4 +444,101 @@ export function probeIsolatedFirstDropRapier(
    actualHumanKccCertified:false as const,
    originalGameCollisionFlagsCertified:false as const};
  });
+}
+
+/**
+ * Run the EXACT shared production HUMAN capsule/KCC on a temporary Rapier
+ * world across the Windows-recorded LOW_SUPPORTED_1355 -> LOW_UNSUPPORTED_1390
+ * corridor. Call once on the frozen 25-solid review clone and once on the
+ * independent original-triangle candidate, never on a live gameplay world.
+ *
+ * Both the start and the original material's collision semantics may be
+ * unknown. No success result authorizes collision promotion, Recast links,
+ * CPU crossing, or final original Turf collision flags.
+ */
+export function probeV23FirstDropHumanKcc(physics:RapierStagePhysics){
+ const start=WINDOWS.find(p=>p.id==='LOW_SUPPORTED_1355')!;
+ const target=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const supportAtStart=physics.castCharacterFootSupport(
+  new Vec3(start.x,start.footY+footOffset,start.z),footOffset,'HUMAN');
+ const startGap=supportAtStart?
+  start.footY-supportAtStart.point.y:null;
+ const scope={
+  fromWindowsTick:1355 as const,toWindowsTick:1390 as const,
+  start:[start.x,start.footY,start.z] as const,
+  target:[target.x,target.footY,target.z] as const,
+  profile:'PRODUCTION_HUMAN_CAPSULE_KCC' as const,
+  stageAlteredForLiveGameplay:false as const,
+  sourceCollisionFlagsCertified:false as const,
+  realPlayerInputCertified:false as const,
+  cpuRecastCrossingCertified:false as const
+ };
+ // An unsupported candidate must NOT be given an artificial starting slab.
+ if(!supportAtStart||startGap===null||Math.abs(startGap)>.22){
+  return {...scope,status:'HOLD_START_UNSUPPORTED' as const,
+   initialSupportId:supportAtStart?.solidId??null,
+   initialFootGapMeters:startGap,firstUnsupportedStep:0,
+   supportedMovementSteps:0,observedMovementMeters:0,
+   observations:[]};
+ }
+ const world=physics.world;
+ const body=world.createRigidBody(
+  RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+   start.x,start.footY+footOffset+.06,start.z));
+ const collider=world.createCollider(RAPIER.ColliderDesc.capsule(
+  PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+  PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
+ const character=createConfiguredPlayerCharacterController(world);
+ const settleSteps=4,movingSteps=60;
+ const dx=(target.x-start.x)/movingSteps;
+ const dz=(target.z-start.z)/movingSteps;
+ const observations:Array<{
+  tick:number;foot:readonly [number,number,number];grounded:boolean;
+  nearHeightSupportId:string|null;footGapMeters:number|null
+ }>=[];
+ let firstUnsupportedStep:number|null=null;
+ let supportedMovementSteps=0;
+ for(let tick=0;tick<settleSteps+movingSteps;tick++){
+  const before=body.translation();
+  character.computeColliderMovement(collider,
+   new Vec3(tick<settleSteps?0:dx,-.075,tick<settleSteps?0:dz),
+   undefined,undefined,
+   (candidate)=>physics.shouldCharacterCollide(candidate,'HUMAN'));
+  const movement=character.computedMovement();
+  const grounded=character.computedGrounded();
+  body.setNextKinematicTranslation({
+   x:before.x+movement.x,y:before.y+movement.y,z:before.z+movement.z
+  });
+  physics.step();
+  const after=body.translation();
+  const footY=after.y-footOffset;
+  const hit=physics.castCharacterFootSupport(
+   new Vec3(after.x,after.y,after.z),footOffset,'HUMAN');
+  const gap=hit?footY-hit.point.y:null;
+  const nearHeight=hit!==null&&gap!==null&&Math.abs(gap)<=.22;
+  const supported=grounded&&nearHeight;
+  if(tick>=settleSteps){
+   if(supported)supportedMovementSteps++;
+   else if(firstUnsupportedStep===null)firstUnsupportedStep=tick-settleSteps+1;
+  }
+  if(tick===settleSteps-1||tick===settleSteps+movingSteps-1||
+     (tick>=settleSteps&&(tick-settleSteps+1)%10===0)||
+     (firstUnsupportedStep!==null&&firstUnsupportedStep===tick-settleSteps+1)){
+   observations.push({tick:tick-settleSteps+1,
+    foot:[after.x,footY,after.z],grounded,
+    nearHeightSupportId:nearHeight?hit!.solidId:null,
+    footGapMeters:gap});
+  }
+ }
+ const last=body.translation();
+ const observedMovementMeters=Math.hypot(last.x-start.x,last.z-start.z);
+ return {...scope,
+  status:firstUnsupportedStep===null?
+   'OBSERVED_KCC_SUPPORTS_THIS_LOCAL_CORRIDOR_ONLY' as const:
+   'OBSERVED_KCC_SUPPORT_LOSS' as const,
+  initialSupportId:supportAtStart.solidId,
+  initialFootGapMeters:startGap,firstUnsupportedStep,
+  supportedMovementSteps,observedMovementMeters,
+  observations};
 }
