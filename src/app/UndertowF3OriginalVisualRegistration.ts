@@ -22,7 +22,7 @@ export function originalVisualRegistration(q:URLSearchParams):OriginalVisualPose
  return {
   position:[(-c*x-s*z)/k,
    audit.projectNormalization.modelToProjectYOffset,(s*x-c*z)/k],
-  rotationYDegrees,scale:[1/k,1,1/k],
+  rotationYDegrees:rotationDegrees,scale:[1/k,1,1/k],
   collidersAdded:0,wholeMapAlignedCertified:false};
 }
 export function applyOriginalVisualRegistration(e:Entity,p:OriginalVisualPose){
