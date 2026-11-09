@@ -5926,7 +5926,7 @@ export class UndertowF3PlayablePreviewApp{
     const nativeFoot=this.player.getPosition(this.p);
     this.radar.render({
      player:{position:[nativeFoot.x,nativeFoot.y,nativeFoot.z]},
-     cpu:this.traffic.snapshot(),matchState:this.matchState,
+     cpu:this.traffic.nativeSourceRadarView(),matchState:this.matchState,
      tick:this.clock.tick
     });
    }
@@ -6239,7 +6239,7 @@ export class UndertowF3PlayablePreviewApp{
   const b411Live=this.b411CompactGenuineSourceRound(run);
   root.dataset.t21B411Active=String(b411Live);
   const info=b195NativeCoopMissionView(run,
-   this.matchState==='PLAYING'&&this.traffic.snapshot().freeCombatEnabled);
+   this.matchState==='PLAYING'&&this.traffic.nativeSourceFreeCombatEnabled());
   if(info.a1Impacts>this.b195PreviousA1ImpactCount&&
      info.a1>this.b195PreviousA1ChangedCells)
    this.b195A1PulseUntilTick=this.clock.tick+90;

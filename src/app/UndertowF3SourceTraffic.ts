@@ -2513,6 +2513,33 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return this.bots.length===7&&this.bots.every(bot=>
    sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined));
  }
+ /** Native radar needs only the real 7 actor feet and actual approved
+  * patrol goals. The previous every-third-render traffic.snapshot()
+  * also cloned unrelated QA ledgers and route audits. No game writes.
+  */
+ nativeSourceRadarView():{
+  cpu:readonly {id:string;physicalFoot:[number,number,number];
+   mobilityState:string;rejoined:boolean}[];
+  sourcePatrol:{activeTargets:readonly {id:string;
+   position:[number,number,number]}[]}
+ }{
+  return {
+   cpu:this.bots.map(b=>({
+    id:b.id,mobilityState:b.mobilityState,
+    rejoined:sourceNativeLiveRejoinedCpu(b,this.physicallyRejoined),
+    physicalFoot:[b.position.x,b.position.y,b.position.z] as
+     [number,number,number]
+   })),
+   sourcePatrol:{activeTargets:this.bots.flatMap(bot=>{
+    const index=this.patrolIndex.get(bot.id)??-1;
+    const point=this.patrolGoals.get(bot.id)?.[index];
+    return index>=0&&point&&
+     sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)
+     ?[{id:bot.id,position:[point.x,point.y,point.z] as
+      [number,number,number]}]:[];
+   })}
+  };
+ }
  snapshot():F3TrafficSnapshot{
   return {
    cpu:this.bots.map(b=>({id:b.id,mobilityState:b.mobilityState,
