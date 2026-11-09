@@ -117,6 +117,31 @@ jobs:
         if: ${{ contains(github.event.head_commit.message, '[k3-one-world]') }}
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
+          # K3 costs minutes of authentic physics. A node --check parses
+          # syntax but misses undefined lexical names (e.g. firstPaint).
+          # In scope K3 only, abort BEFORE Chromium for TS2304/2552.
+          node --input-type=module <<'K3_JS_BINDINGS'
+          import ts from 'typescript';
+          import {readFileSync} from 'node:fs';
+          const file='scripts/t21-b440-short-native-original-foot.mjs';
+          const text=readFileSync(file,'utf8');
+          const begin=text.indexOf('async function runK3CanonicalOneWorld(');
+          const end=text.indexOf('\nasync function main()',begin);
+          if(begin<0||end<=begin)throw Error('K3_NATIVE_BINDING_SCOPE_MISSING');
+          const program=ts.createProgram([file],{
+            allowJs:true,checkJs:true,noEmit:true,skipLibCheck:true,
+            target:ts.ScriptTarget.ES2022,
+            module:ts.ModuleKind.NodeNext,
+            moduleResolution:ts.ModuleResolutionKind.NodeNext
+          });
+          const errors=ts.getPreEmitDiagnostics(program).filter(d=>
+            d.file?.fileName.endsWith(file)&&
+            d.start>=begin&&d.start<end&&
+            [2304,2552,2663].includes(d.code));
+          if(errors.length)throw Error('K3_UNDEFINED_NATIVE_RUNNER_BINDINGS: '+errors.map(d=>
+            ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));
+          console.log('K3_NATIVE_RUNNER_BINDINGS_PASS');
+          K3_JS_BINDINGS
           npx vitest run src/app/UndertowF3SourceTraffic.test.ts
           npm run build -- --base=/browser-ink-tps/
       # Use exactly the immutable successful Chromium evidence from run

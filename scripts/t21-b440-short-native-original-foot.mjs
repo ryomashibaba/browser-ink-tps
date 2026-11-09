@@ -498,6 +498,7 @@ async function runK3CanonicalOneWorld(actualHref){
   sample(tag,after);
  };
  await shoot('FIRST_REAL_HUMAN_PAINT_SHOTS');
+ const firstPaint=await validate(await snap());
  // Genuine trials: #42530565403 Shift on stationary NEUTRAL failed;
  // #42536808564 real W moved 1.5m over original ramp but stayed NEUTRAL.
  // Never lengthen that blind walk. Select real ownerGrid Team.A cells
