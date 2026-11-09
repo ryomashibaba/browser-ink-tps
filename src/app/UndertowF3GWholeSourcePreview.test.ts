@@ -1,5 +1,8 @@
 import {describe,it,expect} from 'vitest';
-import {auditF3gPackManifest,f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256}
+import {undertowT21dConnectivityQaStage}
+ from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
+ f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
 describe('F3G whole-original source pack source authority',()=>{
  const group=(kind:'FLOOR'|'SLOPE'|'GLASS')=>({
@@ -40,5 +43,33 @@ describe('F3G whole-original source pack source authority',()=>{
    actorPlacementRecovered:true as unknown as false}})).toThrow('T21_F3H_SOURCE_COVERAGE_UNTRUSTED');
   expect(()=>auditF3gPackManifest({...valid(),includedOriginalTriangles:1599}))
    .toThrow('T21_F3G_UNVERIFIED_GROUP_TRIANGLE_TOTAL');
+ });
+});
+
+// This is an isolated physics replacement, never a runtime SOURCE promotion.
+describe('V23 original first-drop isolated Rapier candidate',()=>{
+ it('replaces only the registered landing and excludes optical-only outside floor',()=>{
+  const frozen=undertowT21dConnectivityQaStage();
+  const bins=new Map<OriginalF3gKind,Float32Array>([['FLOOR',new Float32Array([
+   -22,6,44,-21.5,6,44,-22,6,44.5,
+   -18,6,38,-17.5,6,38,-18,6,38.5
+  ])]]);
+  const candidate=buildIsolatedFirstDropOriginalTriangleStage(bins,frozen);
+  expect(candidate.status).toBe('ISOLATED_24_ORIGINAL_PLUS_SOURCE_TRIANGLE_REPLACEMENT');
+  expect(candidate.triangles).toBe(1);
+  const isolated=candidate.stage!;
+  expect(isolated).not.toBe(frozen);
+  expect(isolated.solids).toHaveLength(25);
+  expect(isolated.paintSurfaces).toHaveLength(0);
+  expect(isolated.navigationLinks).toHaveLength(0);
+  expect(isolated.solids.filter(s=>s.id===
+   'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY')).toHaveLength(1);
+  expect(isolated.solids.some(s=>s.id===
+   'UndertowT21D:first-drop-landing-positive-z')).toBe(false);
+  expect(frozen.solids.some(s=>s.id===
+   'UndertowT21D:first-drop-landing-positive-z')).toBe(true);
+  expect(isolated.solids.find(s=>s.id===
+   'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY')?.triangleMesh?.indices)
+   .toEqual([0,1,2]);
  });
 });

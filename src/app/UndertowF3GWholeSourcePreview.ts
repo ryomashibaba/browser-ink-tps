@@ -197,19 +197,30 @@ export async function loadF3gWholeSource(app:AppBase){
      verifiedTriangles,stage);
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
     let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
+    let isolationRampWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
     if(isolated.stage){
      const lab=new RapierStagePhysics(1/60,isolated.stage);
      try{lab.step();isolationHits=probeIsolatedFirstDropRapier(
       isolated.stage,lab);
-      isolationWalk=probeV23FirstDropHumanKcc(lab);}
+      isolationWalk=probeV23FirstDropHumanKcc(lab,'EDGE_LOSS');}
      finally{lab.world.free();}
+     const rampLab=new RapierStagePhysics(1/60,isolated.stage);
+     try{rampLab.step();isolationRampWalk=probeV23FirstDropHumanKcc(
+      rampLab,'KNOWN_RAMP');}
+     finally{rampLab.world.free();}
     }
-    // Both KCC worlds are new temporary review instances; gameplay is inert.
-    const registeredWalk=probeV23FirstDropHumanKcc(real);
-    v23Evidence={alignment,registeredWalk,isolation:{status:isolated.status,
+    // Different temporary worlds keep the edge-loss and ramp probes independent.
+    const registeredWalk=probeV23FirstDropHumanKcc(real,'EDGE_LOSS');
+    const registeredRampWorld=new RapierStagePhysics(1/60,stage);
+    let registeredRampWalk:ReturnType<typeof probeV23FirstDropHumanKcc>;
+    try{registeredRampWorld.step();registeredRampWalk=probeV23FirstDropHumanKcc(
+     registeredRampWorld,'KNOWN_RAMP');}
+    finally{registeredRampWorld.world.free();}
+    v23Evidence={alignment,registeredWalk,registeredRampWalk,isolation:{status:isolated.status,
      originalSourceTriangles:isolated.triangles,
      originalCollisionFlags:isolated.sourceCollisionFlags,
      isolatedRapierFeet:isolationHits,isolatedHumanKccWalk:isolationWalk,
+     isolatedRampKccWalk:isolationRampWalk,
      liveOriginalStageModified:false,
      naturalHumanCpuRouteCertified:false}};
    }finally{real.world.free();}
@@ -234,7 +245,7 @@ export const ORIGINAL_F3G_KINDS=[
 export type OriginalF3gKind=typeof ORIGINAL_F3G_KINDS[number];
 export type OriginalF3gBins=ReadonlyMap<OriginalF3gKind,Float32Array>;
 type Probe={id:string;x:number;z:number;footY:number;
- provenance:'WINDOWS_NATIVE'|'REGISTERED_MODEL_REGION'};
+ provenance:'WINDOWS_NATIVE'|'CHROMIUM_K1'|'REGISTERED_MODEL_REGION'};
 /** Actual Windows trace 2026-11-09 tick 1270-1390 + K1 ramp witness.
  * Later model-region locations are NOT human observations or collision flags.
  */
@@ -254,7 +265,7 @@ const WINDOWS:readonly Probe[]=[
  {id:'LOW_UNSUPPORTED_1390',x:.8204801082611084,z:44.09070587158203,
   footY:3,provenance:'WINDOWS_NATIVE'},
  {id:'RAMP_CONTACT_K1',x:2.0517,z:49.8099,
-  footY:3.0683,provenance:'WINDOWS_NATIVE'}
+  footY:3.0683,provenance:'CHROMIUM_K1'}
 ];
 const MODEL_SAMPLES:readonly {id:string;mx:number;mz:number;modelY:number}[]=[
  {id:'RIGHT_LOW_REGION',mx:-14,mz:42,modelY:7.5},
@@ -421,18 +432,25 @@ export function buildIsolatedFirstDropOriginalTriangleStage(
   collisionEnabled:true,navigationEnabled:false,
   triangleMesh:{vertices:local,indices:local.map((_,i)=>i)}
  };
+ // Replace ONLY the already registered landing on an isolated full physics
+ // clone. Keeping the other 24 source solids makes the REAL ramp junction
+ // testable without adding a duplicate collider or granting any new route.
  const stage:StageDefinition={
-  metadata:original.metadata,solids:[candidate],paintSurfaces:[],
-  navigationLinks:[]
+  metadata:original.metadata,
+  solids:original.solids.map(s=>s.id===TARGET?candidate:s),
+  paintSurfaces:[],navigationLinks:[]
  };
- return {status:'ISOLATED_RAPIER_CANDIDATE_ONLY' as const,
+ return {status:'ISOLATED_24_ORIGINAL_PLUS_SOURCE_TRIANGLE_REPLACEMENT' as const,
   stage,triangles:vertices.length/3,sourceCollisionFlags:'UNKNOWN' as const};
 }
 export function probeIsolatedFirstDropRapier(
  stage:StageDefinition,physics:RapierStagePhysics
 ){
- if(stage.solids.length!==1||
-    stage.solids[0]?.id!=='T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY')
+ if(stage.solids.length!==25||
+    stage.solids.filter(s=>
+     s.id==='T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY').length!==1||
+    stage.solids.some(s=>s.id===TARGET)||stage.paintSurfaces.length!==0||
+    (stage.navigationLinks?.length??0)!==0)
   throw Error('T21_V23_NO_ISOLATED_STAGE');
  return ORIGINAL_F3G_FLOOR_SAMPLES.filter(p=>p.id.startsWith('LOW_')).map(p=>{
   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
@@ -456,16 +474,21 @@ export function probeIsolatedFirstDropRapier(
  * unknown. No success result authorizes collision promotion, Recast links,
  * CPU crossing, or final original Turf collision flags.
  */
-export function probeV23FirstDropHumanKcc(physics:RapierStagePhysics){
+export function probeV23FirstDropHumanKcc(
+ physics:RapierStagePhysics,route:'EDGE_LOSS'|'KNOWN_RAMP'='EDGE_LOSS'
+){
  const start=WINDOWS.find(p=>p.id==='LOW_SUPPORTED_1355')!;
- const target=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ const target=WINDOWS.find(p=>p.id===
+  (route==='KNOWN_RAMP'?'RAMP_CONTACT_K1':'LOW_UNSUPPORTED_1390'))!;
  const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
  const supportAtStart=physics.castCharacterFootSupport(
   new Vec3(start.x,start.footY+footOffset,start.z),footOffset,'HUMAN');
  const startGap=supportAtStart?
   start.footY-supportAtStart.point.y:null;
  const scope={
-  fromWindowsTick:1355 as const,toWindowsTick:1390 as const,
+  fromWindowsTick:1355 as const,
+  toWindowsTick:route==='EDGE_LOSS'?1390:null,
+  targetProvenance:target.provenance,route,
   start:[start.x,start.footY,start.z] as const,
   target:[target.x,target.footY,target.z] as const,
   profile:'PRODUCTION_HUMAN_CAPSULE_KCC' as const,
@@ -533,12 +556,18 @@ export function probeV23FirstDropHumanKcc(physics:RapierStagePhysics){
  }
  const last=body.translation();
  const observedMovementMeters=Math.hypot(last.x-start.x,last.z-start.z);
+ const endpointErrorMeters=Math.hypot(last.x-target.x,last.z-target.z);
+ // A capsule that stays grounded because it was BLOCKED before reaching the
+ // target must never be recorded as a continuous successful crossing.
+ const endpointReached=endpointErrorMeters<=.12;
  return {...scope,
-  status:firstUnsupportedStep===null?
-   'OBSERVED_KCC_SUPPORTS_THIS_LOCAL_CORRIDOR_ONLY' as const:
-   'OBSERVED_KCC_SUPPORT_LOSS' as const,
+  status:firstUnsupportedStep!==null?
+   'OBSERVED_KCC_SUPPORT_LOSS' as const:
+   !endpointReached?'HOLD_KCC_TARGET_NOT_REACHED' as const:
+   'OBSERVED_KCC_SUPPORTS_THIS_LOCAL_CORRIDOR_ONLY' as const,
   initialSupportId:supportAtStart.solidId,
   initialFootGapMeters:startGap,firstUnsupportedStep,
   supportedMovementSteps,observedMovementMeters,
+  endpointErrorMeters,endpointReached,
   observations};
 }
