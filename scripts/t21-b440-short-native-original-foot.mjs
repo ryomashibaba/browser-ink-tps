@@ -467,7 +467,7 @@ async function runK3CanonicalOneWorld(actualHref){
  if(!Number.isFinite(aimed.cameraSourcePractice?.pitchDegrees))
   fail('K3_CAMERA_REAL_POINTER_AIM_UNAVAILABLE');
  let shotScreenY=660;
- const shoot=async(tag)=>{
+ const shoot=async(tag,requireFreshOwnerCells=true)=>{
   const before=await validate(await snap());
   if(before.player.mode!=='HUMAN'||before.player.ink<6)
    fail('K3_HUMAN_SHOT_REAL_INK_NOT_AVAILABLE_'+tag);
@@ -480,10 +480,17 @@ async function runK3CanonicalOneWorld(actualHref){
     const n=await validate(await snap());
     if(n.tick>=before.tick+150)
      fail('K3_REAL_SHOT_AND_PAINT_WINDOW_EXPIRED_'+tag);
-    return n.shotsFired>=before.shotsFired+3&&
-     before.player.ink-n.player.ink>=1&&
+    // Initial shots must paint NEW genuine cells. After an authentic
+    // SQUID_OWN refill, the same already-blue source ramp can accept
+    // paid native bullets without changing any ownership cells.
+    // Never invent a second paint impact; prove real shots + paid ink.
+    const paidNativeShots=n.shotsFired>=before.shotsFired+3&&
+     before.player.ink-n.player.ink>=1;
+    const paintedNewRealCells=
      n.b23HumanInkFeedback?.humanChangedCells>
-      before.b23HumanInkFeedback?.humanChangedCells?n:false;
+      before.b23HumanInkFeedback?.humanChangedCells;
+    return paidNativeShots&&
+     (!requireFreshOwnerCells||paintedNewRealCells)?n:false;
    },80000,160);
   }finally{
    if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
@@ -491,10 +498,14 @@ async function runK3CanonicalOneWorld(actualHref){
   }
   const after=await validate(await snap());
   k.humanActions.push({tag,from:before.tick,to:after.tick,
+   realPlayerShotsVerified:after.shotsFired-before.shotsFired>=3,
    actualShots:after.shotsFired-before.shotsFired,
    paidInk:before.player.ink-accepted.player.ink,
+   newPaintCellProofRequired:requireFreshOwnerCells,
    realPaintImpactCells:after.b23HumanInkFeedback.humanChangedCells-
-    before.b23HumanInkFeedback.humanChangedCells});
+    before.b23HumanInkFeedback.humanChangedCells,
+   realOriginalPaintImpactEvents:after.b23HumanInkFeedback?.humanOriginalImpactPaintEvents-
+    before.b23HumanInkFeedback?.humanOriginalImpactPaintEvents});
   sample(tag,after);
  };
  await shoot('FIRST_REAL_HUMAN_PAINT_SHOTS');
@@ -662,7 +673,7 @@ async function runK3CanonicalOneWorld(actualHref){
  await until(async()=>{
   const n=await validate(await snap());return n.player.mode==='HUMAN'?n:false;
  },20000,180);
- await shoot('ACTUAL_POST_OWN_REFILL_RESHOT');
+ await shoot('ACTUAL_POST_OWN_REFILL_RESHOT',false);
  const preSub=await validate(await snap());
  await tapSourceCameraKey('f','KeyF',70);
  const postSub=await until(async()=>{
