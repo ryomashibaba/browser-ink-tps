@@ -2568,6 +2568,7 @@ export class UndertowF3PlayablePreviewApp{
     auditB308NativeOtherPaintSurfaceRoutes:(origin:readonly [number,number,number])=>
      this.auditB308NativeOtherPaintSurfaceRoutes(origin),
     auditB312NativeHumanOwnerLedger:()=>this.auditB312NativeHumanOwnerLedger(),
+    auditK3NativeOwnRampCells:()=>this.auditK3NativeOwnRampCells(),
     judgeB312NativeHumanSecondSource:(before:B312RealReadOnlyFrame,
       after:B312RealReadOnlyFrame,targetId:string)=>
      b312JudgeRealHumanSecondSurface(before,after,targetId),
@@ -3944,6 +3945,86 @@ export class UndertowF3PlayablePreviewApp{
      active:r.activeFootprintCells,probes:r.nativeProbes})),
     owner.actualOwnerCells)};
  }
+
+ /** K3-only original native ink authority: read actual Team.A cells on the
+  * registered SOURCE ramp. A cyan screen pixel or a painted cell on another
+  * surface cannot authorize a squid OWN recovery. No gameplay writes.
+  */
+ private auditK3NativeOwnRampCells(){
+  const n=this.snapshot();
+  const rampId='UndertowT21D:right-low-route-ramp-positive-z';
+  const paintId=rampId+':paint';
+  if(sourceCanonicalPlayableMode(location.href)===null||
+     !this.b203FullRound||this.matchState!=='PLAYING'||
+     this.paused||this.stopReason||
+     document.pointerLockElement!==this.canvas||
+     n.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
+     n.originalSourceNavigationLinks!==26||
+     n.sourceScoreablePromotions!==0||n.productionAuthorized!==false||
+     n.unrestricted4v4Certified!==false||
+     n.cpu.cpu.length!==7||n.cpu.freeCombatEnabled!==true||
+     n.cpu.physicalFootRelocations!==0||
+     n.b112OriginalHumanGround?.genuineKccGrounded!==true||
+     n.b112OriginalHumanGround?.lastOriginalSourceHitId!==rampId)
+    throw Error('K3_REAL_NATIVE_RAMP_OWNER_READ_FORBIDDEN');
+  const surface=this.b45SourceSurfaces.find(x=>x.id===paintId);
+  if(!surface||surface.isScoreable||
+     this.ink.getSurface(paintId)!==surface||
+     (surface.baseFlags&SurfaceFlags.Swimmable)===0)
+    throw Error('K3_REAL_SOURCE_PAINT_AUTHORITY_MISSING');
+  const body=this.player.getPosition(new Vec3());
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const sample=this.ink.sampleWorld(
+   new Vec3(body.x,body.y-off+.06,body.z),
+   .4,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+  type Cell={grid:[number,number];world:[number,number,number];
+   distanceXZ:number};
+  const near:Cell[]=[];let actualOwnedCells=0;
+  for(let y=0;y<surface.heightCells;y++)
+   for(let x=0;x<surface.widthCells;x++){
+    if(!surface.isCellActive(x,y)||
+       surface.ownerGrid[surface.index(x,y)]!==Team.A)continue;
+    actualOwnedCells++;
+    const p=surface.localToWorld(
+     Math.min(surface.widthMeters,(x+.5)*surface.cellSize),
+     Math.min(surface.heightMeters,(y+.5)*surface.cellSize));
+    const d=Math.hypot(p.x-body.x,p.z-body.z);
+    if(d>=.22&&d<=2.55)
+     near.push({grid:[x,y],world:[p.x,p.y,p.z],
+      distanceXZ:Number(d.toFixed(5))});
+   }
+  near.sort((a,b)=>a.distanceXZ-b.distanceXZ||
+   a.grid[0]-b.grid[0]||a.grid[1]-b.grid[1]);
+  const verified:Cell[]=[];
+  // Independently require the SAME gameplay sample authority and a
+  // true original Rapier HUMAN foot, not merely a painted atlas pixel.
+  for(const c of near.slice(0,90)){
+   const [x,y,z]=c.world;
+   const actual=this.ink.sampleWorld(new Vec3(x,y+.06,z),
+    .4,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+   if(actual?.surface.id!==paintId||actual.owner!==Team.A)continue;
+   const support=this.physics.castCharacterFootSupport(
+    new Vec3(x,y+off,z),off,'HUMAN');
+   if(support?.solidId!==rampId||
+      Math.abs(support.point.y-y)>.14)continue;
+   if(verified.some(p=>Math.hypot(p.world[0]-x,p.world[2]-z)<.35))
+    continue;
+   verified.push(c);
+   if(verified.length===5)break;
+  }
+  return {schema:'K3_READ_ONLY_REAL_PAINT_SURFACE_OWN_GRID',
+   tick:n.tick,rampId,paintId,original:'25/17/26/0' as const,
+   actualBody:[body.x,body.y,body.z],
+   actualFootPaintSurface:sample?.surface.id??null,
+   actualFootOwner:sample?.owner??null,
+   actualNativeInkRelation:n.player.inkRelation,
+   actualOwnedCells,nearbyEligibleCount:near.length,
+   verifiedOwnedTargets:verified,actualRapierSupport:rampId,
+   gameplayWrites:0 as const,actorMoves:0 as const,
+   paintedCellsInjected:0 as const,scoreablePromotions:0 as const,
+   sourceOnly:true as const};
+ }
+
  /** B312 17 original source human/CPU-owner ledger while a real human
   * session is running. Never rewrites ink, physics, camera or tick. */
  private auditB312NativeHumanOwnerLedger(){
