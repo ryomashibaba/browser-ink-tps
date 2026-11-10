@@ -170,7 +170,7 @@ import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
 import {buildF3eOriginalSourceCoverage}
  from './UndertowF3EOriginalSourceCoverage';
 import {UndertowF3ESourceSurvey} from './UndertowF3ESourceSurvey';
-import {loadF3gWholeSource,F3H_SOURCE_VISUAL_MODES,
+import {loadF3gWholeSource,f3gSourceLayerVisibility,F3H_SOURCE_VISUAL_MODES,
  type F3HSourceVisualMode,type F3GPackManifest}
  from './UndertowF3GWholeSourcePreview';
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
@@ -1532,11 +1532,13 @@ export class UndertowF3PlayablePreviewApp{
    controls.insertAdjacentElement('afterend',capture);
   }
   this.panel.querySelector('#t21-f3-structures')?.addEventListener('click',()=>{
+   this.releaseFullSourceForLegacyReference();
    this.structures.root.enabled=!this.structures.root.enabled;
    const btn=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement;
    btn.textContent='Original source: '+(this.structures.root.enabled?'ON':'OFF');
   });
   this.panel.querySelector('#t21-f3-completion')?.addEventListener('click',()=>{
+   this.releaseFullSourceForLegacyReference();
    this.sourceCompletion.root.enabled=!this.sourceCompletion.root.enabled;
    const btn=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
    btn.textContent='Source terrain study: '+
@@ -1546,10 +1548,12 @@ export class UndertowF3PlayablePreviewApp{
    if(!this.wholeSourceRoot)return;
    const currentlyOn=this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled;
    const next=!currentlyOn;
-   this.wholeSourceRoot.enabled=next&&!this.texturedF3lActive;
-   if(this.texturedF3l)this.texturedF3l.root.enabled=next&&this.texturedF3lActive;
-   this.sourceCompletion.root.enabled=!this.wholeSourceRoot.enabled;
-   this.structures.root.enabled=!this.wholeSourceRoot.enabled;
+   const layers=f3gSourceLayerVisibility(next,
+    this.texturedF3lActive&&!!this.texturedF3l);
+   this.wholeSourceRoot.enabled=layers.flatSource;
+   if(this.texturedF3l)this.texturedF3l.root.enabled=layers.texturedSource;
+   this.sourceCompletion.root.enabled=layers.legacySourceStudy;
+   this.structures.root.enabled=layers.legacyOriginalStructures;
    const btn=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement;
    btn.textContent='Full source OBJ: '+((this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled)?'ON':'OFF');
    const ref=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement;
@@ -2693,6 +2697,20 @@ export class UndertowF3PlayablePreviewApp{
   app.start();
   if(new URL(location.href).searchParams.get('t21FullSource')==='review')
    void this.loadWholeSource();
+ }
+
+ /** Switching to either legacy reference layer must not superimpose it
+  * on an already active F3G/F3L full-source optical floor.
+  * Real source Stage/Rapier/paint/CPU remain entirely unchanged.
+  */
+ private releaseFullSourceForLegacyReference(){
+  if(!this.wholeSourceRoot?.enabled&&!this.texturedF3l?.root.enabled)return;
+  if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
+  if(this.texturedF3l)this.texturedF3l.root.enabled=false;
+  this.sourceCompletion.root.enabled=false;
+  this.structures.root.enabled=false;
+  const button=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
+  if(button)button.textContent='Full source OBJ: OFF';
  }
 
  private async loadWholeSource(){

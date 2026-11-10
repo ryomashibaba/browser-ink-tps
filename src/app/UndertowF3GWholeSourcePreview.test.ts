@@ -19,7 +19,7 @@ import {auditF3gOriginalFloorAgainstRapier,
  predictV23ReleasedInputY0Position,v23HypotheticalAirXZDeltaAtTick,
  probeV23PredictedOriginalLowLandingKcc,probeV23IsolatedLowHumanKcc,
  classifyV23LowOriginalFootprintContact,
- f3hSourceMaterialStyle,F3H_SOURCE_VISUAL_MODES,
+ f3hSourceMaterialStyle,f3gSourceLayerVisibility,F3H_SOURCE_VISUAL_MODES,
  T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
@@ -56,6 +56,24 @@ describe('F3G whole-original source pack source authority',()=>{
   }
   expect(f3hSourceMaterialStyle('SUPPORT','SOLID',true))
    .toEqual(f3hSourceMaterialStyle('SUPPORT','SOLID'));
+ });
+ it('shows one full optical scene and no legacy overlay, including F3L',()=>{
+  expect(f3gSourceLayerVisibility(true,false)).toEqual({
+   flatSource:true,texturedSource:false,
+   legacySourceStudy:false,legacyOriginalStructures:false
+  });
+  expect(f3gSourceLayerVisibility(true,true)).toEqual({
+   flatSource:false,texturedSource:true,
+   legacySourceStudy:false,legacyOriginalStructures:false
+  });
+  for(const texturedActive of [false,true]){
+   expect(f3gSourceLayerVisibility(false,texturedActive)).toEqual({
+    flatSource:false,texturedSource:false,
+    legacySourceStudy:true,legacyOriginalStructures:true
+   });
+  }
+  expect(()=>f3gSourceLayerVisibility(true,1 as unknown as boolean))
+   .toThrow('T21_F3G_BAD_SOURCE_LAYER_SELECTION');
  });
  it('requires exact pinned original hash and all non-gameplay flags',()=>{
   expect(auditF3gPackManifest(valid()).sourceTriangles).toBe(1600);

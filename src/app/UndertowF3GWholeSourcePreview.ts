@@ -27,6 +27,20 @@ const KINDS=['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as 
 type Kind=typeof KINDS[number];
 export const F3H_SOURCE_VISUAL_MODES=['SOLID','TRAVERSAL','X_RAY'] as const;
 export type F3HSourceVisualMode=typeof F3H_SOURCE_VISUAL_MODES[number];
+/** Single high-detail scene vs legacy reference layers in the real preview.
+ * F3G/F3L are optical-only, not additional collision or Turf authority.
+ */
+export function f3gSourceLayerVisibility(fullSourceVisible:boolean,texturedActive:boolean){
+ if(typeof fullSourceVisible!=='boolean'||typeof texturedActive!=='boolean')
+  throw Error('T21_F3G_BAD_SOURCE_LAYER_SELECTION');
+ return {
+  flatSource:fullSourceVisible&&!texturedActive,
+  texturedSource:fullSourceVisible&&texturedActive,
+  legacySourceStudy:!fullSourceVisible,
+  legacyOriginalStructures:!fullSourceVisible
+ } as const;
+}
+
 export const T21_F3G_SOURCE_SHA256=
  'a32cff26b1a142d31e7658ebc48f213059b3ea42e86d32ed12cb80de5b03d046';
 export type F3GPackManifest={
