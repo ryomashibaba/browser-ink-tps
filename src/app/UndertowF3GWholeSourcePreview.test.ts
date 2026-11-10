@@ -1,4 +1,6 @@
-import {describe,it,expect} from 'vitest';
+import {beforeAll,describe,it,expect} from 'vitest';
+import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
+import type {StageDefinition} from '../stage/StageDefinition';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
@@ -7,6 +9,7 @@ import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  v23ExplicitPhysicsReviewRequested,
  v23HasSourceUpwardFloorWinding,predictV23OriginalY0LandingFromNativeAir,
  predictV23ReleasedInputY0Position,v23HypotheticalAirXZDeltaAtTick,
+ probeV23PredictedOriginalLowLandingKcc,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
@@ -265,5 +268,57 @@ describe('V23 authentic native KCC horizontal input cases are separate',()=>{
   expect(()=>v23HypotheticalAirXZDeltaAtTick(NaN,'RELEASE')).toThrow();
   expect(()=>v23HypotheticalAirXZDeltaAtTick(1,'FAKE' as 'CONTINUE')).toThrow();
   expect(predictV23ReleasedInputY0Position().rapierContactCertified).toBe(false);
+ });
+});
+
+/** Run REAL Rapier 0.20.0 KCC with a synthetic, locally-defined Y0 plane.
+ * This checks the two native-input controller branches and correct collider
+ * ray mapping, NOT the original 11-face stage, 7.2.0 flags, human landing,
+ * Recast, Scoreable, or official 4v4. No source mesh/asset is embedded.
+ */
+describe('V23 real isolated Rapier native-air mechanics on non-original fixture',()=>{
+ beforeAll(async()=>{await initializeRapier()});
+ it('tests continued/released input in separate TRUE KCC physics worlds',()=>{
+  const frozen=undertowT21dConnectivityQaStage();
+  const plane={
+   id:V23_LOW_ISOLATED_SOLID_ID,
+   center:[1.5,0,43] as const,size:[12,.01,12] as const,
+   material:'medium' as const,render:false,
+   projectileBlocker:false,cameraBlocker:false,
+   collisionEnabled:true,navigationEnabled:false,
+   // Upward-wound synthetic square. Test-only, not an original 7.2.0 face.
+   triangleMesh:{
+    vertices:[[-6,0,-6],[-6,0,6],[6,0,-6],[6,0,6]] as const,
+    indices:[0,1,2,1,3,2] as const
+   }
+  };
+  const isolated:StageDefinition={
+   metadata:frozen.metadata,solids:[plane],paintSurfaces:[],navigationLinks:[]
+  };
+  const results=[] as ReturnType<typeof probeV23PredictedOriginalLowLandingKcc>[];
+  for(const inputCase of ['CONTINUE','RELEASE'] as const){
+   const physics=new RapierStagePhysics(1/60,isolated);
+   try{
+    physics.step();
+    results.push(probeV23PredictedOriginalLowLandingKcc(
+     physics,inputCase));
+   }finally{physics.world.free();}
+  }
+  for(const [index,scenario] of (['CONTINUE','RELEASE'] as const).entries()){
+   const r=results[index]!;
+   expect(r.inputCase).toBe(scenario);
+   expect(r.genuineRapierInIsolatedWorld).toBe(true);
+   expect(r.status).toBe('ISOLATED_NATIVE_AIR_KCC_LANDED_ON_SOURCE_Y0_ONLY');
+   expect(r.firstGroundedNativeTick).toBeGreaterThanOrEqual(1394);
+   expect(r.firstGroundedNativeTick).toBeLessThanOrEqual(1410);
+   expect(r.actualGroundedSolidId).toBe(V23_LOW_ISOLATED_SOLID_ID);
+   expect(r.originalGameplayLandingCertified).toBe(false);
+   expect(r.originalVersion72CollisionFlagsCertified).toBe(false);
+   expect(r.normalStageModified).toBe(false);
+  }
+  expect(results[0]!.actualGroundedXZ).not.toEqual(results[1]!.actualGroundedXZ);
+  expect(frozen.solids).toHaveLength(25);
+  expect(frozen.paintSurfaces).toHaveLength(17);
+  expect(frozen.navigationLinks).toHaveLength(26);
  });
 });
