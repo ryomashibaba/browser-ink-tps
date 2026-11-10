@@ -142,6 +142,17 @@ function flatOriginalNormals(pos:Float32Array):Float32Array{
  }
  return normal;
 }
+/** Expensive original-source Rapier replay is a separate research action.
+ * Merely opening the correctly registered full-source visual stage must not
+ * allocate six extra physics worlds or run simulated KCC ticks on startup.
+ * Never grants original-version collision, floor, paint, nav or scoring.
+ */
+export function v23ExplicitPhysicsReviewRequested(q:URLSearchParams):boolean{
+ return originalVisualRegistration(q)!==null&&
+  q.getAll('t21V23Physics').length===1&&
+  q.get('t21V23Physics')==='isolated';
+}
+
 export async function loadF3gWholeSource(app:AppBase){
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'manifest.json',{cache:'no-store'});
@@ -182,10 +193,14 @@ export async function loadF3gWholeSource(app:AppBase){
  root.enabled=true;
  // Only the explicitly selected locally pinned review can inspect physical
  // mismatch. Never modify the live SOURCE stage, 25 solids, nav or score.
- let v23Evidence:unknown=null;
+ let v23Evidence:unknown={
+  status:'NOT_RUN_EXPLICIT_ISOLATED_PHYSICS_REVIEW_REQUIRED',
+  liveOriginalStageModified:false,physicalFloorCertified:false
+ };
  const q=new URL(location.href).searchParams;
- // Same gate as the optical model-to-project pose, including duplicate flags.
- if(originalVisualRegistration(q)){
+ // The visual model pose remains enabled independently. The isolated physics
+ // replay is opt-in only, keeping normal screenshot/preview startup lightweight.
+ if(v23ExplicitPhysicsReviewRequested(q)){
   try{
    const stage=undertowT21dConnectivityQaStage();
    const syntheticFallHeight=auditV23WindowsFallStaticHeightSection(verifiedTriangles);

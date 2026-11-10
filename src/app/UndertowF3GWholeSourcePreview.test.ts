@@ -4,6 +4,7 @@ import {undertowT21dConnectivityQaStage}
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
  auditV23WindowsFallStaticHeightSection,ORIGINAL_F3G_KINDS,
+ v23ExplicitPhysicsReviewRequested,
  v23HasSourceUpwardFloorWinding,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
@@ -188,5 +189,34 @@ describe('V23 two-witness static-source plane height checks',()=>{
   const atFoot=auditV23WindowsFallStaticHeightSection(fake(6));
   expect(atFoot.nearRecordedFootSamples).toBe(21);
   expect(atFoot.actualRouteCertified).toBe(false);
+ });
+});
+
+describe('V23 original optical preview remains independent of heavy Rapier review',()=>{
+ const visual=()=>new URLSearchParams(
+  't21Play=preview&t21FullSource=review&t21F3Registration=project');
+ it('does not allocate an isolated physics review for ordinary visual loading',()=>{
+  expect(v23ExplicitPhysicsReviewRequested(visual())).toBe(false);
+  const only=visual();
+  only.set('t21V23Physics','isolated');
+  expect(v23ExplicitPhysicsReviewRequested(only)).toBe(true);
+ });
+ it('rejects duplicate, implicit or unsafe physics-review requests',()=>{
+  const bad=visual();
+  bad.set('t21V23Physics','isolated');
+  bad.append('t21V23Physics','isolated');
+  expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
+  bad.delete('t21V23Physics');
+  bad.set('t21V23Physics','true');
+  expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
+  bad.set('t21V23Physics','isolated');
+  bad.set('production','1');
+  expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
+  bad.delete('production');
+  bad.set('t21QaInput','deterministic');
+  expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
+  bad.delete('t21QaInput');
+  bad.set('t21F3Registration','raw');
+  expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
  });
 });
