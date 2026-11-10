@@ -10,7 +10,8 @@ import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics
 import type {StageDefinition} from '../stage/StageDefinition';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
+import {auditF3gOriginalFloorAgainstRapier,
+ auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
  auditV23WindowsFallStaticHeightSection,ORIGINAL_F3G_KINDS,
  v23ExplicitPhysicsReviewRequested,
@@ -404,6 +405,82 @@ describe('V23 authentic pinned original 11-face isolated real Rapier',()=>{
    expect(original.solids).toHaveLength(25);
    expect(original.paintSurfaces).toHaveLength(17);
    expect(original.navigationLinks).toHaveLength(26);
+  }
+ );
+});
+
+/** The one-shot SHA-verified ephemeral F3G pack also permits an ORIGINAL
+ * visual surface vs ACTUAL registered 25-Rapier-support coordinate audit.
+ * These thirteen anchors include genuine Windows, K1 and NON-witness model
+ * regions. No missing native support or optical-only material becomes floor.
+ * Nothing from the upstream OBJ/mesh is embedded, uploaded or persisted.
+ */
+describe('V23 13-anchor original visual versus registered physics audit',()=>{
+ beforeAll(async()=>{await initializeRapier()});
+ it.skipIf(!process.env.T21_V23_PINNED_FLOOR_BIN)(
+  'measures original-source 7-category planes against existing 25-solid Rapier',()=>{
+   const floorPath=process.env.T21_V23_PINNED_FLOOR_BIN!;
+   if(!floorPath.endsWith('/original-floor.bin'))
+    throw Error('T21_V23_EPHEMERAL_SOURCE_PATH_INVALID');
+   const dir=floorPath.slice(0,-'original-floor.bin'.length);
+   const manifest=JSON.parse(readFileSync(dir+'manifest.json','utf8')) as {
+    schema:string;sourceSHA256:string;productionAuthorization:boolean;
+    groups:{kind:string;file:string;sha256:string;triangles:number;bytes:number}[]
+   };
+   expect(manifest.sourceSHA256).toBe(T21_F3G_SOURCE_SHA256);
+   expect(manifest.productionAuthorization).toBe(false);
+   expect(manifest.groups).toHaveLength(7);
+   const verified=new Map<OriginalF3gKind,Float32Array>();
+   for(const group of manifest.groups){
+    if(!ORIGINAL_F3G_KINDS.includes(group.kind as OriginalF3gKind))
+     throw Error('T21_V23_UNRECOGNIZED_SOURCE_KIND');
+    if(group.file!=='original-'+group.kind.toLowerCase()+'.bin')
+     throw Error('T21_V23_UNEXPECTED_SOURCE_FILE');
+    const bytes=readFileSync(dir+group.file);
+    expect(bytes.byteLength).toBe(group.bytes);
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(group.sha256);
+    const floatBuffer=Uint8Array.from(bytes).buffer;
+    const scalars=new Float32Array(floatBuffer);
+    expect(scalars.length).toBe(group.triangles*9);
+    verified.set(group.kind as OriginalF3gKind,scalars);
+   }
+   const stage=undertowT21dConnectivityQaStage();
+   const native=new RapierStagePhysics(1/60,stage);
+   let audit:ReturnType<typeof auditF3gOriginalFloorAgainstRapier>;
+   try{
+    native.step();
+    audit=auditF3gOriginalFloorAgainstRapier(verified,stage,native);
+   }finally{native.world.free();}
+   expect(audit.originalStage).toBe('25/17/26/0');
+   expect(audit.rows).toHaveLength(ORIGINAL_F3G_FLOOR_SAMPLES.length);
+   expect(audit.rows).toHaveLength(13);
+   expect(audit.fullStageAlignmentCertified).toBe(false);
+   expect(audit.newGameColliders).toBe(0);
+   expect(audit.newGameNavigationLinks).toBe(0);
+   const rows=audit.rows.map(r=>({
+    id:r.id,provenance:r.provenance,
+    opticalFloorKind:r.nearestSourceOpticalFloorKind,
+    opticalFloorY:r.nearestSourceOpticalFloorY,
+    recordedFootVsOpticalMeters:r.sourceOpticalFloorMinusRecordedFootMeters,
+    registeredRapierSupportId:r.rapierSupportId,
+    registeredRapierFootGapMeters:r.rapierFootGapMeters,
+    opticalFloorVsRegisteredMeters:r.sourceOpticalFloorMinusRegisteredRapierMeters,
+    originalCollisionFlagsCertified:false
+   }));
+   console.info('T21_V23_PINNED_SOURCE_VS_RAPIER_13_ANCHORS',JSON.stringify({
+    certifiedSourceSha256:manifest.sourceSHA256,
+    originalStage:audit.originalStage,rows,
+    caveats:['MODEL_REGION_NOT_HUMAN_OBSERVATIONS',
+     'MISSING_RAPIER_SUPPORT_REMAINS_UNKNOWN',
+     'ORIGINAL_VERSION_COLLISION_FLAGS_UNKNOWN',
+     'NO_GAME_STAGE_MODIFICATION']}));
+   expect(rows.some(r=>r.provenance==='WINDOWS_NATIVE')).toBe(true);
+   expect(rows.some(r=>r.provenance==='CHROMIUM_K1')).toBe(true);
+   expect(rows.some(r=>r.provenance==='REGISTERED_MODEL_REGION')).toBe(true);
+   expect(audit.rows.every(r=>r.fullF3gFaceCollisionAuthority==='UNKNOWN'&&
+    !r.connectedWalkableRouteCertified)).toBe(true);
+   expect([stage.solids.length,stage.paintSurfaces.length,
+    stage.navigationLinks?.length]).toEqual([25,17,26]);
   }
  );
 });
