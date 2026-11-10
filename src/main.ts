@@ -99,7 +99,8 @@ async function boot(): Promise<void> {
         }))return;
         const action=sourceReplayHotkeyAction({
           ...evidence,code:ev.code,repeat:ev.repeat,
-          modified:ev.ctrlKey||ev.altKey||ev.metaKey,editing:editable
+          modified:ev.shiftKey||ev.ctrlKey||ev.altKey||ev.metaKey,
+          editing:editable
         });
         if(action==='UNRELATED')return;
         ev.stopImmediatePropagation();
