@@ -809,8 +809,8 @@ export function buildIsolatedV23LowOriginalFloor(
  // A valid endpoint disk is not enough: the *same* extrapolated native
  // trajectory must enter the original source capsule-safe interior BEFORE
  // its falling feet pass source Y0. No native input after tick1390 is known.
- const [observedPrevious,observedAt1390]=
-  V23_OBSERVED_NATIVE_AIR_1388_TO_1390.slice(1);
+ const [,observedPrevious,observedAt1390]=
+  V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
  let firstCapsuleClearNativeTick:number|null=null;
  for(let tick=1390;tick<predictedLanding.firstWholeNativeTickAtOrBelowY0;tick++){
   const steps=tick-1390;
