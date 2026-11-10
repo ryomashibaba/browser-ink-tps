@@ -28,12 +28,6 @@ on:
       - 'src/app/B166OriginalAllyRendezvous.ts'
       - 'src/app/B166OriginalAllyRendezvous.test.ts'
   workflow_dispatch:
-    inputs:
-      native_r_pair_once:
-        description: 'One authorized real A1 CLEAR R and physical fall STOP R pair'
-        required: false
-        type: boolean
-        default: false
 permissions:
   contents: read
 jobs:
@@ -61,10 +55,10 @@ jobs:
           T21_B139_VARIANT: ALLY_RALLY
           T21_B162_REAL_ALLY_SYNC: '1'
           T21_B194_REAL_PLAYER_BUTTON: '1'
-          # Normal CI retains historical R HOLD. Manual opt-in runs
-          # only one genuine A1 CLEAR -> R -> fresh world check.
-          T21_B200_REAL_REPLAY: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && inputs.native_r_pair_once && '1' || '0' }}
-          T21_B200_R_ONLY_ONCE: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && inputs.native_r_pair_once && '1' || '0' }}
+          # Push retains old R HOLD. Only an explicit manual dispatch
+          # on the research branch runs one genuine CLEAR -> R -> new world.
+          T21_B200_REAL_REPLAY: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && '1' || '0' }}
+          T21_B200_R_ONLY_ONCE: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && '1' || '0' }}
           T21_B201_REAL_PAUSE_RESUME: '0'
           T21_B202_REAL_CONTROLS: '0'
           T21_B203_REAL_FULL_ROUND: '1'
@@ -76,7 +70,7 @@ jobs:
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
       - name: Same opt-in: real physical SOURCE fall STOP then real R
-        if: ${{ inputs.native_r_pair_once && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' }}
         env:
           T21_B441_SOURCE_FRONTLINE: '0'
           T21_P0_NORMAL_HUMAN: '1'
