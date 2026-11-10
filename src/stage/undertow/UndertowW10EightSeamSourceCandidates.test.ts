@@ -21,6 +21,12 @@ describe('W10 exact eight CI688 original source face seams and 54 existing candi
   expect(report.totalUniqueSourceCandidates).toBe(54);
   expect(report.previousStaticSourceCandidates).toBe(40);
   expect(report.addedBatch2Candidates).toBe(14);
+  // Current exact public source inventory has no independent single
+  // component within 30 cm of BOTH ends of ANY of the eight seams.
+  // This does not rule out multiple-component / SetActor routes.
+  expect(report.rows.every(x=>
+   x.independentStaticPairwiseNearCount===0&&
+   x.independentUnplacedPairwiseNearCount===0)).toBe(true);
   for(const side of ['POSITIVE_Z','NEGATIVE_Z'] as const){
    const rows=report.rows.filter(x=>x.side===side);
    expect(rows).toHaveLength(4);

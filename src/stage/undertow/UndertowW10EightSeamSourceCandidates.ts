@@ -40,7 +40,7 @@ type Candidate=Readonly<{
  placementAuthority:Authority;
 }>;
 type Surface=Readonly<{
- id:string;sourceObject:string;mesh:StageTriangleMeshGeometry;
+ id:string;side:Side;sourceObject:string;mesh:StageTriangleMeshGeometry;
 }>;
 export type W10EightSeamCandidateEvidence=Readonly<{
  sourceComponentId:string;sourceMaterial:string;
