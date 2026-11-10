@@ -415,7 +415,7 @@ describe('V23 authentic pinned original 11-face isolated real Rapier',()=>{
  * regions. No missing native support or optical-only material becomes floor.
  * Nothing from the upstream OBJ/mesh is embedded, uploaded or persisted.
  */
-describe('V23 13-anchor original visual versus registered physics audit',()=>{
+describe('V23 authentic pinned original 11-face isolated real Rapier / 13-anchor visual versus registered physics',()=>{
  beforeAll(async()=>{await initializeRapier()});
  it.skipIf(!process.env.T21_V23_PINNED_FLOOR_BIN)(
   'measures original-source 7-category planes against existing 25-solid Rapier',()=>{
