@@ -49,6 +49,7 @@ async function boot(): Promise<void> {
         await import('./app/SourcePlayPortal');
       const liveReplay=()=>{
         const game=(window as unknown as {__t21F3?:{
+          restart:()=>unknown;
           snapshot:()=>{matchState?:string;stopReason?:string|null;
             originalSourceSolids?:number;originalPaintSurfaces?:number;
             originalSourceNavigationLinks?:number;
@@ -60,7 +61,7 @@ async function boot(): Promise<void> {
           '#t21-f3-b59-session-finished');
         const replay=finish?.querySelector<HTMLButtonElement>(
           '#t21-f3-b59-restart');
-        return {replay,state,evidence:{
+        return {game,replay,state,evidence:{
           href:window.location.href,
           matchState:state?.matchState,stopped:!!state?.stopReason,
           pointerLocked:document.pointerLockElement!==null,
@@ -84,7 +85,7 @@ async function boot(): Promise<void> {
           ev.stopImmediatePropagation();
           return;
         }
-        const {replay,state,evidence}=liveReplay();
+        const {game,replay,state,evidence}=liveReplay();
         // Capture is for blocking unsafe legacy reset, NOT for swallowing
         // the native game's genuine A1 CLEAR or proven physical-fall R.
         // The existing bubble listener owns both with stronger live gates.
@@ -108,23 +109,24 @@ async function boot(): Promise<void> {
         ev.preventDefault();
         if(action==='CLICK_REAL_REPLAY')replay?.click();
         else if(action==='RELOAD_NATIVE_SOURCE_WORLD')
-          window.location.reload();
+          game?.restart();
       },true);
       // The visible real TIME_UP button previously reached a legacy
-      // reset() in the opponent research mode. Capture it and perform
-      // a fresh browser/Rapier world reload instead. A1/B384 retain
+      // reset() in the opponent research mode. Route authorized replay
+      // through the native new-world restart, preserving selected kit. A1/B384 retain
       // their existing fresh-world URL and weapon-selection actions.
       appUiRoot.addEventListener('click',ev=>{
         if(!(ev.target instanceof Element))return;
         const button=ev.target.closest<HTMLButtonElement>(
           '#t21-f3-b59-restart,#t21-f3-b58-restart');
         if(!button||!appUiRoot.contains(button))return;
-        const action=sourceFinishedReplayAction(liveReplay().evidence);
+        const {game,evidence}=liveReplay();
+        const action=sourceFinishedReplayAction(evidence);
         if(action==='CLICK_REAL_REPLAY')return;
         ev.stopImmediatePropagation();
         ev.preventDefault();
         if(action==='RELOAD_NATIVE_SOURCE_WORLD')
-          window.location.reload();
+          game?.restart();
       },true);
     }
     if(q.get('t21QaDrive')==='source'&&
