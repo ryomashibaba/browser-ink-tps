@@ -18,6 +18,22 @@ export interface DebugInkClick {
 export type CombatAimQuery = (from: Vec3, to: Vec3) =>
   { distance: number; point: Vec3; botId?:string; guarded?:boolean } | null;
 
+/** True SOURCE camera ray clearance: never place the eye beyond an actual
+ * registered Rapier blocker just to satisfy a visual minimum distance.
+ * This affects no collider, KCC, CPU, projectile or T20/default camera.
+ */
+export function sourceCameraPhysicalClearanceMeters(
+ desiredMeters:number,blockerMeters:number|null
+):number{
+ if(!Number.isFinite(desiredMeters)||desiredMeters<0)
+  throw Error('T21_SOURCE_BAD_CAMERA_DISTANCE');
+ if(blockerMeters===null)return desiredMeters;
+ // Invalid native ray distances fail closed rather than permitting clipping.
+ if(!Number.isFinite(blockerMeters)||blockerMeters<0)return 0;
+ return Math.max(0,Math.min(desiredMeters,
+  blockerMeters-GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters));
+}
+
 export class ThirdPersonCamera {
   private yaw = 0;
   private pitch = -12;
@@ -260,10 +276,8 @@ export class ThirdPersonCamera {
       this.sourceSmartOcclusion.tick(recoveryDtSeconds);
       if(blocker&&
          this.sourceSmartOcclusion.mayProbe(recoveryDtSeconds)){
-        const clearance=Math.max(
-         GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
-         Math.min(desiredDistance,blocker.distance-
-          GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters));
+        const clearance=sourceCameraPhysicalClearanceMeters(
+         desiredDistance,blocker.distance);
         if(desiredDistance-clearance>=1){
           // The far-side candidate is a CAMERA ONLY point; no player,
           // actor, Recast foot or collision is relocated.
@@ -276,11 +290,8 @@ export class ThirdPersonCamera {
            this.target,this.alternateCameraPosition,'camera');
           this.sourcePracticeCameraCasts++;
           const altDistance=this.alternateCameraPosition.distance(this.target);
-          const altClearance=altBlocker?Math.max(
-           GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
-           Math.min(altDistance,altBlocker.distance-
-            GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters)):
-           altDistance;
+          const altClearance=sourceCameraPhysicalClearanceMeters(
+           altDistance,altBlocker?.distance??null);
           const selected=this.sourceSmartOcclusion.observe({
             currentClearMeters:clearance,alternateClearMeters:altClearance,
             desiredMeters:desiredDistance,realDeltaSeconds:recoveryDtSeconds
@@ -292,15 +303,21 @@ export class ThirdPersonCamera {
         }else this.sourceSmartOcclusion.resetCandidate();
       }else this.sourceSmartOcclusion.resetCandidate();
     }
-    const targetDistance = blocker
-      ? Math.max(
-          GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
-          Math.min(
-            desiredDistance,
-            blocker.distance - GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters
+    // The legacy T20 camera distance stays frozen. For real T21 SOURCE
+    // play, the existing Rapier hit wins when a close registered wall/slope
+    // is nearer than the old visual camera minimum.
+    const targetDistance = this.sourcePracticeControls
+      ? sourceCameraPhysicalClearanceMeters(
+         desiredDistance,blocker?.distance??null)
+      : blocker
+        ? Math.max(
+            GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
+            Math.min(
+              desiredDistance,
+              blocker.distance - GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters
+            )
           )
-        )
-      : desiredDistance;
+        : desiredDistance;
 
     if (!Number.isFinite(this.currentCameraDistance)) {
       this.currentCameraDistance = targetDistance;

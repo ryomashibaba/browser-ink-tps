@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {ThirdPersonCamera} from './ThirdPersonCamera';
-import type {Entity} from 'playcanvas';
+import {ThirdPersonCamera,sourceCameraPhysicalClearanceMeters} from './ThirdPersonCamera';
+import {Vec3,type Entity} from 'playcanvas';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 
 /** Only the real T21 SOURCE player camera opts in. No simulated actor writes. */
@@ -165,5 +165,48 @@ describe('SOURCE-only visual settings survive real 180-second replay',()=>{
   expect(replay.camera.sourcePracticeViewSnapshot()).toMatchObject({
    sourceAimSensitivityMultiplier:1,sourceAimInvertVertical:false,
    shoulderSide:'LEFT'});
+ });
+});
+
+describe('real SOURCE player camera against already registered Rapier blockers',()=>{
+ it('never crosses a blocker closer than the old cosmetic camera minimum',()=>{
+  expect(sourceCameraPhysicalClearanceMeters(6.4,null)).toBe(6.4);
+  expect(sourceCameraPhysicalClearanceMeters(6.4,1.1)).toBeCloseTo(.92,6);
+  expect(sourceCameraPhysicalClearanceMeters(6.4,.22)).toBeCloseTo(.04,6);
+  expect(sourceCameraPhysicalClearanceMeters(6.4,.08)).toBe(0);
+  expect(sourceCameraPhysicalClearanceMeters(6.4,Number.NaN)).toBe(0);
+  expect(()=>sourceCameraPhysicalClearanceMeters(-1,null))
+   .toThrow('T21_SOURCE_BAD_CAMERA_DISTANCE');
+ });
+ it('clips actual SOURCE camera on the same real ray; untouched T20 keeps its old profile',()=>{
+  vi.stubGlobal('window',{addEventListener:vi.fn(),location:{search:''}});
+  vi.stubGlobal('document',{addEventListener:vi.fn(),pointerLockElement:null});
+  const canvas={addEventListener:vi.fn()} as unknown as HTMLCanvasElement;
+  const eye=new Vec3();
+  const entity={
+   setPosition:(x:number,y:number,z:number)=>{eye.set(x,y,z);},
+   lookAt:vi.fn()
+  } as unknown as Entity;
+  // Stubbed near-wall Rapier result: an existing SOURCE collider, not
+  // claimed native Chromium/KCC or authority to register new geometry.
+  const castStageSegment=vi.fn((_from:Vec3,_to:Vec3,kind:string)=>{
+   expect(kind).toBe('camera');
+   return {distance:.08,point:new Vec3(),
+    solidId:'UndertowT21D:spawn-high-positive-z'};
+  });
+  const physics={castStageSegment} as unknown as RapierStagePhysics;
+  const camera=new ThirdPersonCamera(canvas,entity,[],physics);
+  const body=new Vec3(0,7,50),target=new Vec3(0,7.55,50);
+  camera.update(body,1/60);
+  expect(eye.distance(target)).toBeCloseTo(.12,6);
+  camera.enableSourcePracticeControls();
+  camera.update(body,1/60);
+  expect(eye.distance(target)).toBeCloseTo(0,6);
+  expect(camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourcePracticeOnly:true,geometryClipped:true,
+   cameraDistanceMeters:0,sourcePhysicsModified:false,
+   sourceNavigationModified:false
+  });
+  expect(castStageSegment).toHaveBeenCalledTimes(2);
  });
 });
