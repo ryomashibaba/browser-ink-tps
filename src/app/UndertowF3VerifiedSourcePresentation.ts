@@ -31,3 +31,12 @@ export const B29_SOURCE_VISUAL_AUTHORITY=Object.freeze({
  scoreableSurfaces:0,
  productionAuthorized:false
 } as const);
+
+/** F3K is a separately normalized UNPLACED actor-parts showroom, not
+ * terrain or a gameplay prop. The genuine four-mode SOURCE game never
+ * allocates/fetches these dormant GPU meshes or a second camera. */
+export function sourceF3kShowroomEligible(
+ explicitFullSourceReview:boolean,nativeFourModeGame:boolean
+):boolean{
+ return explicitFullSourceReview&&!nativeFourModeGame;
+}

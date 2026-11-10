@@ -119,7 +119,11 @@ export function prioritizeExistingInFlightSourceGoal(
  if(!candidate||activeIndex<0||!Number.isSafeInteger(activeIndex)||
     ![realFoot.x,realFoot.y,realFoot.z].every(Number.isFinite))
   return [...sorted];
- const distance=Math.hypot(realFoot.x-candidate.x,realFoot.z-candidate.z);
+ // SOURCE has independently registered 3.0m, 4.5m and 7.5m
+ // collision floors. A nearby XZ goal on another elevation is NOT an
+ // arrival at this goal's real native Recast/Rapier foot.
+ const distance=Math.hypot(realFoot.x-candidate.x,
+  realFoot.y-candidate.y,realFoot.z-candidate.z);
  if(!Number.isFinite(distance)||distance<arrivalMeters)return [...sorted];
  const entry=sorted.find(e=>e.index===activeIndex);
  return entry?[entry,...sorted.filter(e=>e.index!==activeIndex)]:[...sorted];

@@ -115,6 +115,19 @@ describe('B468 genuine dwell schedules a second SOURCE audit, never a goal grant
   expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,approvedOriginalGoals:3})).toBe(true);
   expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({...live,nativeTick:1699})).toBe(false);
  });
+ it('refuses false 120-tick B2/B4 arrival at a different original elevation',()=>{
+  // Original lower and raised stage geometry can share XZ. The same
+  // physical CPU must remain within 0.30m Y of its approved B-floor goal.
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+   ...live,realFoot:[-6.22,3.0,-37.40]
+  })).toBe(false);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+   ...live,realFoot:[-6.22,4.73,-37.40]
+  })).toBe(true);
+  expect(b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+   ...live,realFoot:[-6.22,4.81,-37.40]
+  })).toBe(false);
+ });
  it('holds unapproved, wrong-side, stale, forged and more-than-one goals',()=>{
   for(const change of [
    {id:'A2'},{id:'B1'},{originallyAuthorized:false},

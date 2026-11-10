@@ -926,7 +926,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       freshEligibleOriginalGoals++;
       const goal=candidates[rank.index]!;
       if(goal.z<33||goal.y<2.7||goal.y>5.25||
-         Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z)<2.5||
+         Math.hypot(goal.x-realFoot.x,
+          goal.y-realFoot.y,goal.z-realFoot.z)<2.5||
          !this.hasSourceFootSupport(realFoot)||
          !this.hasSourceFootSupport(goal))continue;
       const path=this.nav.auditPath(realFoot,goal);
@@ -1851,7 +1852,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     goals=[newlyExtendedNativeFront,
      ...goals.filter(p=>p.distance(newlyExtendedNativeFront!)>.01)];
    for(const goal of goals){
-    const direct=Math.hypot(goal.x-realFoot.x,goal.z-realFoot.z);
+    // Recast goals use true original 3D floor elevation; an XZ-close
+    // but vertically separate platform is not an arrival.
+    const direct=Math.hypot(goal.x-realFoot.x,
+     goal.y-realFoot.y,goal.z-realFoot.z);
     if(direct<1.5){
      if(gate)gate.runtimeNearExistingGoal++;
      continue;
@@ -1924,7 +1928,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    null;
   const prior=candidates[active];
   const priorDistance=prior?Math.hypot(
-   realFoot.x-prior.x,realFoot.z-prior.z):0;
+   realFoot.x-prior.x,realFoot.y-prior.y,realFoot.z-prior.z):0;
   const recovering=this.enableB34SourceStallRecovery&&
    this.enablePaintAwarePatrol&&this.enableStableSourceGoal&&
    mayReconsiderStalledOriginalGoal(
@@ -1948,7 +1952,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const goal=candidates[index]!;
    if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
-   const distance=Math.hypot(realFoot.x-goal.x,realFoot.z-goal.z);
+   const distance=Math.hypot(realFoot.x-goal.x,
+    realFoot.y-goal.y,realFoot.z-goal.z);
    if(distance<1.5)continue;
    if(!this.hasSourceFootSupport(goal)){
     this.rejectedUnsupportedGoals++;continue;
@@ -1970,7 +1975,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // BEFORE reaching its prior native goal. No Actor position write.
    const oldGoal=active>=0?candidates[active]:undefined;
    const priorInFlight=!!oldGoal&&
-    Math.hypot(realFoot.x-oldGoal.x,realFoot.z-oldGoal.z)>=1.5;
+    Math.hypot(realFoot.x-oldGoal.x,
+     realFoot.y-oldGoal.y,realFoot.z-oldGoal.z)>=1.5;
    if(priorInFlight){
     if(index===active)this.continuedPreviouslyApprovedGoalRequests++;
     else this.switchedGoalBeforePreviousArrival++;

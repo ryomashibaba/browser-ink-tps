@@ -237,7 +237,8 @@ import {b308NativeRouteOpportunityGate,b308NativePathIsOnlyCandidate,
 import {b310CheckOriginalTripleRoutes} from './B310RealThreeSourceFootProbes';
 import {b312ValidateOriginalOwnerFrame,b312JudgeRealHumanSecondSurface,
  type B312RealReadOnlyFrame} from './B312NativeOriginalSecondHumanInk';
-import {selectVerifiedSourcePresentation,B29_SOURCE_VISUAL_AUTHORITY}
+import {selectVerifiedSourcePresentation,sourceF3kShowroomEligible,
+ B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
 import {installB251SourceOpticalSeparation,type B251OpticalView}
@@ -2812,12 +2813,18 @@ export class UndertowF3PlayablePreviewApp{
     // F3I failures do not turn off an independently certified F3G source scene.
     this.environmentError=String(error).slice(0,240);
    }
-   try{
-    this.familyGallery=await loadF3kGallery(this.app);
-    const button=this.panel.querySelector('#t21-f3k-gallery') as HTMLButtonElement|null;
-    if(button&&this.familyGallery)button.hidden=false;
-   }catch(error){
-    this.galleryError=String(error).slice(0,240);
+   // Native SOURCE 180s never opens the separately normalized actor
+   // showroom. Skip its file fetches, mesh uploads and spare camera
+   // entirely; retain the exact gallery in explicit F3G review only.
+   if(sourceF3kShowroomEligible(this.b29ExplicitFullSourceReview,
+     this.nativeVerifiedStageVisualEligible)){
+    try{
+     this.familyGallery=await loadF3kGallery(this.app);
+     const button=this.panel.querySelector('#t21-f3k-gallery') as HTMLButtonElement|null;
+     if(button&&this.familyGallery)button.hidden=false;
+    }catch(error){
+     this.galleryError=String(error).slice(0,240);
+    }
    }
    this.texturedF3lStatus='LOADING';
    try{

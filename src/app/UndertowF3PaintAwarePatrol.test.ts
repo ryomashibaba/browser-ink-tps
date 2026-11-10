@@ -290,3 +290,23 @@ describe('genuine source CPU teammates distribute already-authorized goals',()=>
    [new Vec3(1,3,40)],Number.NaN)).toEqual(ranked);
  });
 });
+
+describe('genuine SOURCE bot must not report arrival at another floor elevation',()=>{
+ it('keeps the previously Rapier/Recast-audited in-flight target if XZ matches but Y remains 1.55m away',()=>{
+  const ink=ownerInk([Team.A,Team.B,Team.Neutral,Team.A]);
+  const ranked=rankOriginalSourcePatrolGoals(goals,Team.A,ink.system,0);
+  expect(ranked[0]!.index).toBe(1);
+  // The goal is on the existing Y=3.0m floor. A Y=4.55m
+  // foot above it is NOT an arrival just because the map dot overlaps.
+  const differentLevel=prioritizeExistingInFlightSourceGoal(
+   ranked,goals,0,new Vec3(1,4.55,40));
+  expect(differentLevel[0]!.index).toBe(0);
+  // A real foot at the same height DOES release the old in-flight
+  // target for an actual different source owner-grid opportunity.
+  const sameLevel=prioritizeExistingInFlightSourceGoal(
+   ranked,goals,0,new Vec3(1,3.05,40));
+  expect(sameLevel[0]!.index).toBe(1);
+  expect(differentLevel.every(r=>r.sourceOnly&&!r.pathAuthorized)).toBe(true);
+  expect(ranked[0]!.index).toBe(1);
+ });
+});

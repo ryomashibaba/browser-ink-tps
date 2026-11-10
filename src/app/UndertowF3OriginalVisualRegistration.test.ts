@@ -5,7 +5,7 @@ import {originalVisualRegistration,originalCanonicalSourceVisualRegistration,
  from './UndertowF3OriginalVisualRegistration';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl}
  from './SourcePlayPortal';
-import {selectVerifiedSourcePresentation}
+import {selectVerifiedSourcePresentation,sourceF3kShowroomEligible}
  from './UndertowF3VerifiedSourcePresentation';
 import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
@@ -97,5 +97,14 @@ describe('true native SOURCE original stage floor remains physically honest',()=
    .toBe('F3G_FLAT');
   expect(selectVerifiedSourcePresentation({...base,nativeRegisteredFloorOnly:false,
    texturedSourceVerified:true,prefersFlat:true})).toBe('F3G_FLAT');
+ });
+});
+
+describe('actual SOURCE 180s gameplay does not load unrelated F3K unplaced OBJ showroom',()=>{
+ it('only permits source-verified isolated gallery during deliberate optical REVIEW',()=>{
+  expect(sourceF3kShowroomEligible(true,false)).toBe(true);
+  expect(sourceF3kShowroomEligible(false,false)).toBe(false);
+  expect(sourceF3kShowroomEligible(false,true)).toBe(false);
+  expect(sourceF3kShowroomEligible(true,true)).toBe(false);
  });
 });

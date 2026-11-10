@@ -72,9 +72,12 @@ export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
     !e.heldGoal.every(Number.isFinite)||
     !e.realFoot.every(Number.isFinite))return false;
  const [x,y,z]=e.realFoot,[gx,gy,gz]=e.heldGoal;
+ // True native 120-tick dwell must occur on the same original
+ // registered elevation, not an overlapping XZ footprint a level away.
+ // B470 already requires this 30cm real-foot tolerance.
  return z>=-63&&z<=-33&&y>=2.7&&y<=5.25&&
   gz<=-33&&gz>=-63&&gy>=2.7&&gy<=5.25&&
-  Math.hypot(x-gx,z-gz)<=3;
+  Math.abs(y-gy)<=.30&&Math.hypot(x-gx,z-gz)<=3;
 }
 
 /** B470 real same-side pursuit scheduler: every non-A1 CPU with an
