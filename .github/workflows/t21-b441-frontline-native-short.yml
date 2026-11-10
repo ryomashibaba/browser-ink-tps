@@ -86,6 +86,7 @@ on:
       - 'src/app/B463SourceReplayMemory.test.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/camera/ThirdPersonCamera.test.ts'
+      - 'src/camera/ThirdPersonCamera.combat.test.ts'
       - 'src/audio/SourcePracticeAudio.ts'
       - 'src/audio/SourcePracticeAudio.test.ts'
       - '.github/workflows/t21-b441-frontline-native-short.yml'
