@@ -121,6 +121,23 @@ jobs:
           npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
+      - name: One-shot genuine 11-face V23 Rapier, ephemeral verified source
+        if: ${{ contains(github.event.head_commit.message, '[p0-v23-original-face-once]') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d "${RUNNER_TEMP}/t21-v23-source.XXXXXXXX")"
+          trap 'rm -rf "$work"' EXIT
+          curl --fail --location --silent --show-error \
+            --connect-timeout 10 --max-time 120 --retry 0 \
+            'https://media.githubusercontent.com/media/kirakira-dev/KiTrix/main/stages/Vss_Temple01/Vss_Temple01.obj' \
+            --output "$work/Vss_Temple01.obj"
+          mkdir -p "$work/verified_pack"
+          node scripts/t21-f3g-source-pack.mjs \
+            "$work/Vss_Temple01.obj" "$work/verified_pack"
+          T21_V23_PINNED_FLOOR_BIN="$work/verified_pack/original-floor.bin" \
+            npx vitest run src/app/UndertowF3GWholeSourcePreview.test.ts \
+            -t 'V23 authentic pinned original 11-face isolated real Rapier'
   real-native-original-frontline:
     # B385 already runs real 7CPU for this one camera-input milestone.
     if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}

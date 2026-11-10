@@ -1,4 +1,6 @@
 import {beforeAll,describe,it,expect} from 'vitest';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition} from '../stage/StageDefinition';
 import {undertowT21dConnectivityQaStage}
@@ -327,4 +329,76 @@ describe('V23 real isolated Rapier native-air mechanics on non-original fixture'
   expect(frozen.paintSurfaces).toHaveLength(17);
   expect(frozen.navigationLinks).toHaveLength(26);
  });
+});
+
+/** Ephemeral SOURCE-only 11-face integration test.
+ * The original source pack is downloaded to GitHub runner TEMP (not repo,
+ * build, public/, upload artifact or action cache), SHA verified, then
+ * erased by workflow trap on exit. No source bytes are embedded here.
+ * Only the exact 2,146-Face FLOOR BIN may enter this private research test.
+ * Collision flags, 7.2.0 actor placement and game route remain UNKNOWN.
+ */
+describe('V23 authentic pinned original 11-face isolated real Rapier',()=>{
+ beforeAll(async()=>{await initializeRapier()});
+ it.skipIf(!process.env.T21_V23_PINNED_FLOOR_BIN)(
+  'uses EXACT original-source 11 faces, not synthetic geometry',()=>{
+   const bytes=readFileSync(process.env.T21_V23_PINNED_FLOOR_BIN!);
+   expect(bytes.byteLength).toBe(77256);
+   const sha=createHash('sha256').update(bytes).digest('hex');
+   expect(sha).toBe('c2769136586b9a68657a5a090bafbe58d2ffcd5f4af23cf6b9ca8e6073f38fe4');
+   const byteCopy=Uint8Array.from(bytes).buffer;
+   const bins=new Map<OriginalF3gKind,Float32Array>([
+    ['FLOOR',new Float32Array(byteCopy)]
+   ]);
+   const original=undertowT21dConnectivityQaStage();
+   const physical=new RapierStagePhysics(1/60,original);
+   let candidate:ReturnType<typeof buildIsolatedV23LowOriginalFloor>;
+   try{
+    physical.step();
+    candidate=buildIsolatedV23LowOriginalFloor(bins,original,physical);
+   }finally{physical.world.free();}
+   console.info('V23_REAL_11_FACE_BUILD_STATUS',JSON.stringify({
+    status:candidate.status,triangles:candidate.triangles,
+    hasIsolatedWorld:candidate.stage!==null,
+    sourceVersionCollisionFlags:'UNKNOWN',originalRuntimeModified:false
+   }));
+   expect(candidate.status).toBe('ISOLATED_ORIGINAL_Y0_GEOMETRIC_CANDIDATE');
+   expect(candidate.triangles).toBe(11);
+   expect(candidate.stage).not.toBeNull();
+   const isolated=candidate.stage!;
+   expect(isolated.solids).toHaveLength(26);
+   expect(isolated.solids.filter(s=>s.id===V23_LOW_ISOLATED_SOLID_ID))
+    .toHaveLength(1);
+   expect(isolated.paintSurfaces).toHaveLength(0);
+   expect(isolated.navigationLinks).toHaveLength(0);
+   const results=[] as ReturnType<typeof probeV23PredictedOriginalLowLandingKcc>[];
+   for(const scenario of ['CONTINUE','RELEASE'] as const){
+    const engine=new RapierStagePhysics(1/60,isolated);
+    try{
+     engine.step();
+     results.push(probeV23PredictedOriginalLowLandingKcc(engine,scenario));
+    }finally{engine.world.free();}
+   }
+   console.info('V23_REAL_11_FACE_KCC_ISOLATED',JSON.stringify(
+    results.map(r=>({
+     inputCase:r.inputCase,status:r.status,
+     originalGameplayLandingCertified:r.originalGameplayLandingCertified,
+     originalVersion72CollisionFlagsCertified:r.originalVersion72CollisionFlagsCertified,
+     groundedTick:r.firstGroundedNativeTick,
+     sourceId:'actualGroundedSolidId' in r?r.actualGroundedSolidId:null
+    }))
+   ));
+   for(const [i,scenario] of (['CONTINUE','RELEASE'] as const).entries()){
+    const observed=results[i]!;
+    expect(observed.inputCase).toBe(scenario);
+    expect(observed.originalGameplayLandingCertified).toBe(false);
+    expect(observed.originalVersion72CollisionFlagsCertified).toBe(false);
+    expect(observed.status).toBe(
+     'ISOLATED_NATIVE_AIR_KCC_LANDED_ON_SOURCE_Y0_ONLY');
+   }
+   expect(original.solids).toHaveLength(25);
+   expect(original.paintSurfaces).toHaveLength(17);
+   expect(original.navigationLinks).toHaveLength(26);
+  }
+ );
 });
