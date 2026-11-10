@@ -30,6 +30,19 @@ export type PlayerLocomotionState =
   | 'SURGE'
   | 'DUALIE_DODGE';
 
+/** In genuine SOURCE play, ownership sampled near the character foot is
+ * not proof of physical contact with a registered stage floor. The KCC's
+ * just-computed ground contact is authoritative for floor ink effects.
+ * Actual sampled OWN wall swimming/charging stays eligible. This does NOT
+ * change movement, KCC, surface masks, painting or any stage collider. */
+export function nativeSourcePhysicallyContactedInk(
+ relation:InkRelation,state:PlayerLocomotionState,grounded:boolean
+):InkRelation{
+ if(grounded||state==='SWIM_WALL'||state==='SURGE_CHARGE')
+  return relation;
+ return relation==='OWN'||relation==='ENEMY'?'NONE':relation;
+}
+
 interface OwnWallSample {
   sample: GameplayInkSample;
   outward: Vec3;
@@ -81,6 +94,7 @@ export class PlayerController {
   private weaponDodgeCompletedEvent = false;
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
+  private nativeSourceGroundInkGuard = false;
 
   private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
   private static readonly humanHalfHeight = PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters;
@@ -163,7 +177,16 @@ export class PlayerController {
   }
 
   public get currentInkRelation(): InkRelation {
-    return this.inkRelation;
+    return this.nativeSourceGroundInkGuard
+      ? nativeSourcePhysicallyContactedInk(
+          this.inkRelation,this.locomotionState,this.grounded)
+      : this.inkRelation;
+  }
+
+  /** Only true human SOURCE full rounds; all T20 and deterministic QA remain
+   * unchanged. This affects resource contact, NOT player steering. */
+  public setNativeSourceGroundInkGuard(enabled:boolean):void{
+    this.nativeSourceGroundInkGuard=enabled;
   }
 
   public requestWeaponDodge(): boolean {
@@ -531,7 +554,7 @@ export class PlayerController {
           this.position.z - this.previousPosition.z
         ) / dt
       : 0;
-    this.stats.playerInkRelation = this.inkRelation;
+    this.stats.playerInkRelation = this.currentInkRelation;
     const debugSample = this.gameplayInk.sampleWorld(
       this.footPoint,
       0.40,

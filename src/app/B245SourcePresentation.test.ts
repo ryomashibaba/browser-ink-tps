@@ -1,4 +1,8 @@
 import {describe,expect,it} from 'vitest';
+import {nativeSourcePhysicallyContactedInk}
+ from '../player/PlayerController';
+import {sourceHumanFullRoundPrestartGuard,sourcePlayPortalDestinations,
+ sourcePlayFrontlineResearchUrl} from './SourcePlayPortal';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,b245NativeStopReason,
@@ -341,5 +345,37 @@ describe('P1 source-only real Windows landing-rim native foot protection',()=>{
    {...row,nativeTick:1354},
    {...row,stopReason:'SAFE_STOP'}
   ])expect(b245OriginalLandingRimWarning(other).state).toBe('OFF');
+ });
+});
+
+describe('native SOURCE floor paint requires true KCC support for ink resources',()=>{
+ it('retains genuine registered ground ownership and physically sampled OWN wall contact',()=>{
+  for(const relation of ['OWN','ENEMY','NEUTRAL','NONE'] as const){
+   expect(nativeSourcePhysicallyContactedInk(relation,'SWIM_GROUND',true))
+    .toBe(relation);
+  }
+  for(const state of ['SWIM_WALL','SURGE_CHARGE'] as const){
+   expect(nativeSourcePhysicallyContactedInk('OWN',state,false)).toBe('OWN');
+  }
+ });
+ it('denies midair false-floor OWN ink recovery and ENEMY ink damage without changing movement',()=>{
+  for(const state of ['HUMAN','SWIM_GROUND','SQUID_DRY','SQUID_ROLL',
+    'SURGE','DUALIE_DODGE'] as const){
+   expect(nativeSourcePhysicallyContactedInk('OWN',state,false)).toBe('NONE');
+   expect(nativeSourcePhysicallyContactedInk('ENEMY',state,false)).toBe('NONE');
+   expect(nativeSourcePhysicallyContactedInk('NEUTRAL',state,false))
+    .toBe('NEUTRAL');
+  }
+ });
+ it('the human SOURCE staging guard covers canonical four modes but excludes QA',()=>{
+  const portal='http://127.0.0.1:4173/browser-ink-tps/play-source.html';
+  const modes=sourcePlayPortalDestinations(portal);
+  const urls=[modes.circuit,modes.combat,modes.coop,
+   sourcePlayFrontlineResearchUrl(portal)];
+  for(const href of urls){
+   expect(sourceHumanFullRoundPrestartGuard(href)).toBe(true);
+   expect(sourceHumanFullRoundPrestartGuard(href+'&t21QaInput=deterministic'))
+    .toBe(false);
+  }
  });
 });
