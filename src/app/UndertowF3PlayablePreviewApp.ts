@@ -175,7 +175,8 @@ import {loadF3gWholeSource,f3gSourceLayerVisibility,F3H_SOURCE_VISUAL_MODES,
  from './UndertowF3GWholeSourcePreview';
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
-import {originalVisualRegistration,applyOriginalVisualRegistration}
+import {originalVisualRegistration,originalCanonicalSourceVisualRegistration,
+ applyOriginalVisualRegistration}
  from './UndertowF3OriginalVisualRegistration';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
@@ -487,8 +488,13 @@ export class UndertowF3PlayablePreviewApp{
   new URL(location.href).searchParams.get('t21FullSource')==='review';
  private readonly b29PreferFlat=
   new URL(location.href).searchParams.get('t21F3lPref')==='flat';
+ // Canonical live SOURCE previously had only the simplified stage;
+ // verified original models were confined to a separate review URL.
+ private readonly nativeVerifiedStageVisualEligible=
+  sourceCanonicalPlayableMode(location.href)!==null;
  private readonly b29OriginalVisualPose=originalVisualRegistration(
-  new URL(location.href).searchParams);
+  new URL(location.href).searchParams)??
+  originalCanonicalSourceVisualRegistration(location.href);
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;
@@ -2695,8 +2701,29 @@ export class UndertowF3PlayablePreviewApp{
   this.camera.update(this.player.getPosition(this.visual));
   this.refresh();
   app.start();
-  if(new URL(location.href).searchParams.get('t21FullSource')==='review')
+  if(this.b29ExplicitFullSourceReview)
    void this.loadWholeSource();
+  else if(this.nativeVerifiedStageVisualEligible)
+   void this.loadAvailableNativeOriginalOptics();
+ }
+
+ /** Use only a pre-existing same-origin, hash-verified original display
+  * pack inside canonical SOURCE rounds. No asset download, collider,
+  * Actor/NavMesh/ink/score or URL mutation. A missing pack leaves the
+  * present 25-solid registered stage rendering unchanged.
+  */
+ private async loadAvailableNativeOriginalOptics():Promise<void>{
+  if(!this.nativeVerifiedStageVisualEligible||
+     this.wholeSourceStatus!=='OFF')return;
+  try{
+   const url=new URL('t21-f3g-source/manifest.json',document.baseURI);
+   if(url.origin!==location.origin)return;
+   const available=await fetch(url.href,{method:'HEAD',cache:'no-store'});
+   if(!available.ok||this.stopReason)return;
+   await this.loadWholeSource();
+  }catch{
+   // Optional local optics must never turn a playable stage into STOP.
+  }
  }
 
  /** Switching to either legacy reference layer must not superimpose it
@@ -2784,7 +2811,8 @@ export class UndertowF3PlayablePreviewApp{
     // full-source review, replacing the previously hidden-until-T behavior.
     // No source pack means the pinned F3G flat stage simply stays active.
     const choice=selectVerifiedSourcePresentation({
-     fullSourceReviewRequested:this.b29ExplicitFullSourceReview,
+     fullSourceReviewRequested:this.b29ExplicitFullSourceReview||
+      this.nativeVerifiedStageVisualEligible,
      flatSourceVerified:this.wholeSourceStatus==='READY',
      texturedSourceVerified:this.texturedF3lStatus==='READY'&&!!this.texturedF3l,
      prefersFlat:this.b29PreferFlat

@@ -1,7 +1,10 @@
 import {describe,it,expect} from 'vitest';
 import {Entity,Vec3} from 'playcanvas';
-import {originalVisualRegistration,applyOriginalVisualRegistration}
+import {originalVisualRegistration,originalCanonicalSourceVisualRegistration,
+ applyOriginalVisualRegistration}
  from './UndertowF3OriginalVisualRegistration';
+import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl}
+ from './SourcePlayPortal';
 import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
 describe('verified optical-only original model stage placement',()=>{
@@ -33,5 +36,39 @@ describe('verified optical-only original model stage placement',()=>{
   const e=new Entity('HIDDEN');e.enabled=false;
   applyOriginalVisualRegistration(e,originalVisualRegistration(q)!);
   expect(e.enabled).toBe(false);
+ });
+});
+
+describe('canonical SOURCE playable stage uses only preinstalled local optical geometry',()=>{
+ const menu='http://127.0.0.1:4173/browser-ink-tps/play-source.html';
+ const actual=sourcePlayPortalDestinations(menu);
+ const playable=[actual.circuit,actual.combat,actual.coop,
+  sourcePlayFrontlineResearchUrl(menu)];
+ const review=new URLSearchParams(
+  't21Play=preview&t21FullSource=review&t21F3Registration=project');
+ it('shares the existing exact project pose without changing a native game URL',()=>{
+  const pinnedReview=originalVisualRegistration(review);
+  expect(pinnedReview).not.toBeNull();
+  for(const href of playable){
+   const originalHref=href;
+   const same=originalCanonicalSourceVisualRegistration(href);
+   expect(same).toEqual(pinnedReview);
+   expect(same).toMatchObject({
+    collidersAdded:0,wholeMapAlignedCertified:false});
+   expect(href).toBe(originalHref);
+   const q=new URL(href).searchParams;
+   expect(q.has('t21FullSource')).toBe(false);
+   expect(q.has('t21F3Registration')).toBe(false);
+  }
+ });
+ it('rejects injected review flags, deterministic QA and fake score or production',()=>{
+  for(const href of [
+   'http://127.0.0.1:4173/browser-ink-tps/',
+   ...['t21FullSource=review','t21F3Registration=project',
+    't21QaInput=deterministic','production=1','scoreable=1',
+    't21UnknownStageCollider=1'].map(x=>actual.combat+'&'+x)
+  ]){
+   expect(originalCanonicalSourceVisualRegistration(href)).toBeNull();
+  }
  });
 });
