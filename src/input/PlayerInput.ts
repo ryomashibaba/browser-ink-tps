@@ -6,6 +6,9 @@ const SOURCE_PRESTART_MOVEMENT_CODES=new Set([
 export class PlayerInput {
   private readonly keys = new Set<string>();
   private sourcePrestartBlocked=false;
+  // Native SOURCE input: require a fresh keydown after Pointer Lock loss.
+  // Inert until genuine SOURCE STAGING; T20/QA behavior is unchanged.
+  private sourceNativeRepeatGuard=false;
   private readonly sourcePrestartHeldKeys=new Set<string>();
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
@@ -30,6 +33,14 @@ export class PlayerInput {
   ) {
     window.addEventListener('keydown', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
+      // An OS key repeat after STAGING/blur is not a new physical press.
+      // Without this guard, focus recovery can revive unwanted movement.
+      if(this.sourceNativeRepeatGuard &&
+         SOURCE_PRESTART_MOVEMENT_CODES.has(event.code) &&
+         event.repeat && !this.keys.has(event.code)){
+        if(event.code==='Space')event.preventDefault();
+        return;
+      }
       // Ignore actual held keys from STAGING even if the OS sends repeats
       // after genuine 7/7. A fresh keyup+keydown is required to walk.
       if(SOURCE_PRESTART_MOVEMENT_CODES.has(event.code)&&
@@ -136,6 +147,7 @@ export class PlayerInput {
   public setSourcePrestartMovementBlocked(blocked:boolean):void{
     if(this.deterministicQaEnabled||this.sourcePrestartBlocked===blocked)return;
     this.sourcePrestartBlocked=blocked;
+    if(blocked)this.sourceNativeRepeatGuard=true;
     if(!blocked)return;
     for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
      if(this.keys.has(code))this.sourcePrestartHeldKeys.add(code);

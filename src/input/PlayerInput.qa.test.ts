@@ -227,6 +227,39 @@ test('normal SOURCE STAGING blocks early real WASD/squid/jump/fire without a fak
  expect(input.consumePrimaryPressed()).toBe(true);
 });
 
+test('native SOURCE focus recovery rejects stale OS key repeats until a fresh press',()=>{
+ const {input,canvas,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keydown',{code:'Space',repeat:false});
+ Object.defineProperty(document,'pointerLockElement',{value:null,writable:true});
+ emit('window','pointerlockchange');
+ input.setSourcePrestartMovementBlocked(false);
+ Object.defineProperty(document,'pointerLockElement',{value:canvas,writable:true});
+ emit('window','pointerlockchange');
+ for(const code of ['KeyW','Space','KeyF','KeyG','ShiftLeft'])
+  emit('window','keydown',{code,repeat:true});
+ expect([input.moveY,input.jumpHeld,input.squidHeld,input.consumeJump(),
+  input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([0,false,false,false,false,false]);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keydown',{code:'KeyW',repeat:true});
+ expect(input.moveY).toBe(1);
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.moveY).toBe(0);
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect(input.consumeJump()).toBe(true);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ Object.defineProperty(document,'pointerLockElement',{value:null,writable:true});
+ emit('window','pointerlockchange');
+ Object.defineProperty(document,'pointerLockElement',{value:canvas,writable:true});
+ emit('window','pointerlockchange');
+ emit('window','keydown',{code:'KeyD',repeat:true});
+ expect(input.moveX).toBe(0);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ expect(input.moveX).toBe(1);
+});
+
 test('QA-only deterministic source input keeps its existing authoritative axis',()=>{
  const {input}=createInput(true);
  input.setSourcePrestartMovementBlocked(true);
