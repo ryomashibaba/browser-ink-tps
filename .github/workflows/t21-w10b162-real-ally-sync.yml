@@ -42,9 +42,9 @@ jobs:
     # Already genuine PASS on prior HEAD. Run one B448-only short A3
     # research case without redundantly repeating the unrelated A1
     # cooperative 5-minute browser run; manual dispatch still allowed.
-    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') && (!inputs.native_r_pair_once || github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105') }}
+    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.native_r_pair_once && 80 || 48 }}
+    timeout-minutes: 48
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,8 +63,8 @@ jobs:
           T21_B194_REAL_PLAYER_BUTTON: '1'
           # Normal CI retains historical R HOLD. Manual opt-in runs
           # only one genuine A1 CLEAR -> R -> fresh world check.
-          T21_B200_REAL_REPLAY: ${{ inputs.native_r_pair_once && '1' || '0' }}
-          T21_B200_R_ONLY_ONCE: ${{ inputs.native_r_pair_once && '1' || '0' }}
+          T21_B200_REAL_REPLAY: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && inputs.native_r_pair_once && '1' || '0' }}
+          T21_B200_R_ONLY_ONCE: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && inputs.native_r_pair_once && '1' || '0' }}
           T21_B201_REAL_PAUSE_RESUME: '0'
           T21_B202_REAL_CONTROLS: '0'
           T21_B203_REAL_FULL_ROUND: '1'
