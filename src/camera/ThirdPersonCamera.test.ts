@@ -1,7 +1,13 @@
-import {afterEach,describe,expect,it,vi} from 'vitest';
+import {afterEach,beforeAll,describe,expect,it,vi} from 'vitest';
 import {ThirdPersonCamera,sourceCameraPhysicalClearanceMeters} from './ThirdPersonCamera';
+import RAPIER from '@dimforge/rapier3d-compat';
 import {Vec3,type Entity} from 'playcanvas';
-import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
+import {RapierStagePhysics,initializeRapier}
+ from '../physics/RapierStagePhysics';
+import {PLAYER_CHARACTER_PHYSICS,createConfiguredPlayerCharacterController}
+ from '../player/PlayerCharacterPhysics';
+import {undertowT21dConnectivityQaStage}
+ from '../stage/undertow/UndertowSpillwayConnectivityQa';
 
 /** Only the real T21 SOURCE player camera opts in. No simulated actor writes. */
 type EventListener=(event:Record<string,unknown>)=>void;
@@ -208,5 +214,75 @@ describe('real SOURCE player camera against already registered Rapier blockers',
    sourceNavigationModified:false
   });
   expect(castStageSegment).toHaveBeenCalledTimes(2);
+ });
+});
+
+/** Actual Rapier original stage + configured project KCC, but a UNIT
+ * reconstruction of a prior native supported foot, never a new native
+ * Chromium, 180s route, collision-version or player-control proof. */
+describe('registered SOURCE player floor + real KCC camera line of sight',()=>{
+ beforeAll(async()=>{await initializeRapier();});
+ it('keeps the eye before the existing high-spawn floor while native-profile KCC is grounded',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const unchanged=[stage.solids,stage.paintSurfaces,stage.navigationLinks];
+  expect([stage.solids.length,stage.paintSurfaces.length,
+   stage.navigationLinks?.length]).toEqual([25,17,26]);
+  const physics=new RapierStagePhysics(1/60,stage);
+  const originalFoot=new Vec3(-4.770392417907715,
+   7.525381927490234,52.723026275634766);
+  const center=originalFoot.clone();
+  center.y+=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const support=physics.castCharacterFootSupport(
+   center,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+  expect(support?.solidId).toBe('UndertowT21D:spawn-high-positive-z');
+  const body=physics.world.createRigidBody(
+   RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+    center.x,center.y,center.z));
+  const collider=physics.world.createCollider(
+   RAPIER.ColliderDesc.capsule(
+    PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+    PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
+  const kcc=createConfiguredPlayerCharacterController(physics.world);
+  physics.step();
+  kcc.computeColliderMovement(collider,{x:0,y:-.06,z:0},
+   undefined,undefined,(c)=>physics.shouldCharacterCollide(c,'HUMAN'));
+  const motion=kcc.computedMovement();
+  expect([motion.x,motion.y,motion.z].every(Number.isFinite)).toBe(true);
+  expect(kcc.computedGrounded()).toBe(true);
+  const supportedBody=center.clone().add(new Vec3(
+   motion.x,motion.y,motion.z));
+  const canvas={addEventListener:()=>{}} as unknown as HTMLCanvasElement;
+  const movementHandlers:EventListener[]=[];
+  vi.stubGlobal('window',{addEventListener:()=>{},
+   location:{search:'?t21QaInput=deterministic'}});
+  vi.stubGlobal('document',{pointerLockElement:canvas,
+   addEventListener:(name:string,handler:EventListener)=>{
+    if(name==='mousemove')movementHandlers.push(handler);
+   }});
+  const eye=new Vec3();
+  const entity={setPosition:(x:number,y:number,z:number)=>eye.set(x,y,z),
+   lookAt:()=>{}} as unknown as Entity;
+  const view=new ThirdPersonCamera(canvas,entity,[],physics);
+  view.enableSourcePracticeControls();
+  for(const move of movementHandlers)
+   move({movementX:0,movementY:-300});
+  expect(view.sourcePracticeViewSnapshot().pitchDegrees).toBe(28);
+  const target=supportedBody.clone().add(new Vec3(0,.55,0));
+  const radians=28*Math.PI/180;
+  const desired=new Vec3(target.x+.72,
+   target.y-Math.sin(radians)*6.4,
+   target.z+Math.cos(radians)*6.4);
+  const hit=physics.castStageSegment(target,desired,'camera');
+  expect(hit?.solidId).toBe('UndertowT21D:spawn-high-positive-z');
+  view.update(supportedBody,1/60);
+  const expected=sourceCameraPhysicalClearanceMeters(
+   target.distance(desired),hit!.distance);
+  expect(eye.distance(target)).toBeCloseTo(expected,5);
+  expect(view.sourcePracticeViewSnapshot()).toMatchObject({
+   geometryClipped:true,sourcePhysicsModified:false,
+   sourceNavigationModified:false});
+  expect(unchanged).toEqual([stage.solids,stage.paintSurfaces,
+   stage.navigationLinks]);
+  kcc.free();
  });
 });

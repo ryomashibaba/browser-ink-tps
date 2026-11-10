@@ -119,7 +119,7 @@ jobs:
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           node --check scripts/t21-w10b139-original-native-descent-rally.mjs
-          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts
+          npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
       - name: One-shot genuine 11-face V23 Rapier, ephemeral verified source
