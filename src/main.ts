@@ -86,10 +86,14 @@ async function boot(): Promise<void> {
           return;
         }
         const {game,replay,state,evidence}=liveReplay();
+        // Only a genuine plain, non-repeated R may reach the native
+        // physical STOP or A1 CLEAR handler. Modified keys remain here.
+        const plainR=!ev.repeat&&!ev.shiftKey&&!ev.altKey&&
+          !ev.ctrlKey&&!ev.metaKey;
         // Capture is for blocking unsafe legacy reset, NOT for swallowing
         // the native game's genuine A1 CLEAR or proven physical-fall R.
         // The existing bubble listener owns both with stronger live gates.
-        if(sourceNativeReplayOwnsKeyR({
+        if(plainR&&sourceNativeReplayOwnsKeyR({
           href:evidence.href,matchState:state?.matchState,
           stopReason:state?.stopReason,
           practiceStatus:state?.b25SourcePaintRun?.status,

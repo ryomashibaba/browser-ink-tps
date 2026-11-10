@@ -2480,8 +2480,8 @@ export class UndertowF3PlayablePreviewApp{
      this.canvas.dataset.t21B200RealKeyRDecision=decision;
      if(decision==='CLICK_REAL_REPLAY'||
         decision==='RELOAD_NATIVE_SOURCE_WORLD'){
-      // Native capture precedes the bootstrap SOURCE capture listener.
-      // Consume an authorized R once to avoid duplicate world navigation.
+      // Bootstrap capture already delegated this genuine R event.
+      // Consume it before any later legacy bubble key handlers.
       ev.preventDefault();ev.stopImmediatePropagation();this.restart();
      }else if(decision==='NAVIGATE_FRESH_COOP_CLEAR'){
       // Same real new-world route as the already authorized mission button.
@@ -2492,6 +2492,12 @@ export class UndertowF3PlayablePreviewApp{
        this.b25RunProgress.textContent=
         'REPLAY BLOCKED · UNLOCK MOUSE / CLOSE GALLERY OR SURVEY';
       }
+     }else if(decision==='BLOCK'&&
+      sourceCanonicalPlayableMode(window.location.href)!==null){
+      // Bootstrap delegated the native CLEAR/STOP candidate, but the
+      // stronger live-state/UI gate denied it. Never leak an invalid R
+      // to legacy in-place CPU/ink reset keyboard handlers.
+      ev.stopImmediatePropagation();
      }
     }else if(b193Coop){
      window.location.assign(sourceCoopNavigationUrl(window.location.href,true));
