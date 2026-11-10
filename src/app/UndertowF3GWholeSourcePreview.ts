@@ -9,6 +9,7 @@
 import {BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,Mesh,MeshInstance,
  StandardMaterial,Vec3,type AppBase} from 'playcanvas';
 import RAPIER from '@dimforge/rapier3d-compat';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {undertowT21dConnectivityQaStage}
@@ -215,6 +216,8 @@ export async function loadF3gWholeSource(app:AppBase){
      verifiedTriangles,stage,real);
     let originalLowContact:ReturnType<typeof inspectV23IsolatedLowFloorContact>|null=null;
     let originalLowKcc:ReturnType<typeof probeV23IsolatedLowHumanKcc>|null=null;
+    let originalLowNativeAirKcc:
+     ReturnType<typeof probeV23PredictedOriginalLowLandingKcc>|null=null;
     if(originalLow.stage){
      const lowWorld=new RapierStagePhysics(1/60,originalLow.stage);
      try{
@@ -228,6 +231,12 @@ export async function loadF3gWholeSource(app:AppBase){
       lowKccWorld.step();
       originalLowKcc=probeV23IsolatedLowHumanKcc(lowKccWorld);
      }finally{lowKccWorld.world.free();}
+     const lowNativeAirWorld=new RapierStagePhysics(1/60,originalLow.stage);
+     try{
+      lowNativeAirWorld.step();
+      originalLowNativeAirKcc=probeV23PredictedOriginalLowLandingKcc(
+       lowNativeAirWorld);
+     }finally{lowNativeAirWorld.world.free();}
     }
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
     let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
@@ -253,7 +262,9 @@ export async function loadF3gWholeSource(app:AppBase){
     v23Evidence={alignment,syntheticFallHeight,registeredWalk,registeredRampWalk,
      originalLowFloor:{status:originalLow.status,sourceTriangles:originalLow.triangles,
       physicalContactAtOriginalY0:originalLowContact,
+      nativeAirExtrapolation:predictV23OriginalY0LandingFromNativeAir(),
       isolatedHumanKcc:originalLowKcc,
+      hypotheticalNativeAirLandingKcc:originalLowNativeAirKcc,
       originalCollisionFlags:'UNKNOWN',normalGameModified:false,
       realHumanLandingCertified:false},
      isolation:{status:isolated.status,
@@ -604,6 +615,61 @@ export function buildIsolatedFirstDropOriginalTriangleStage(
   stage,triangles:vertices.length/3,sourceCollisionFlags:'UNKNOWN' as const};
 }
 
+
+/** Only three genuine Windows/native 60Hz samples, from the saved 1498-tick
+ * floor trace. They are NOT observed native frames after tick 1390.
+ * No guessed gameplay floor, input, version-specific flags or transport.
+ */
+const V23_OBSERVED_NATIVE_AIR_1388_TO_1390=[
+ {tick:1388,body:[0.7357593774795532,4.013314723968506,44.241920471191406]},
+ {tick:1389,body:[0.7781197428703308,3.8855369091033936,44.16631317138672]},
+ {tick:1390,body:[0.8204801082611084,3.74998140335083,44.09070587158203]}
+] as const;
+
+/** Hypothetical ballistic continuation, not proof that the user actually
+ * kept holding the same movement or that source-Y0 has original collision.
+ * Uses the game's 60Hz/28m/s2 physics constants without guessing a jump.
+ */
+export function predictV23OriginalY0LandingFromNativeAir(){
+ const [f0,f1,f2]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
+ const perTickY=f2.body[1]-f1.body[1];
+ const observedSecondDelta=f2.body[1]-2*f1.body[1]+f0.body[1];
+ const expectedSecondDelta=-GAME_CONFIG.player.gravityMetersPerSecond2/
+  (GAME_CONFIG.simulation.tickRate**2);
+ if(Math.abs(observedSecondDelta-expectedSecondDelta)>5e-5||
+    !Number.isFinite(perTickY)||perTickY>=0)
+  throw Error('T21_V23_NATIVE_AIR_TRAJECTORY_UNVERIFIED');
+ const footY=f2.body[1]-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const predictedY=(n:number)=>footY+n*perTickY+
+  observedSecondDelta*n*(n+1)/2;
+ let crossingWholeTick=0;
+ for(let n=1;n<=60;n++){
+  if(predictedY(n)<=0){crossingWholeTick=n;break;}
+ }
+ if(!crossingWholeTick)throw Error('T21_V23_NATIVE_AIR_NO_Y0_CROSSING');
+ const n=crossingWholeTick;
+ const fraction=predictedY(n-1)/(predictedY(n-1)-predictedY(n));
+ const t=n-1+fraction;
+ return {
+  status:'EXTRAPOLATED_Y0_CROSSING_NOT_ACTUAL_LANDING' as const,
+  recordedNativeTicks:[1388,1389,1390] as const,
+  predictedNativeTick:1390+t,
+  firstWholeNativeTickAtOrBelowY0:1390+n,
+  projectedXZ:[
+   f2.body[0]+(f2.body[0]-f1.body[0])*t,
+   f2.body[2]+(f2.body[2]-f1.body[2])*t
+  ] as readonly [number,number],
+  lastRecordedFootY:footY,
+  perTickY,observedSecondDelta,
+  observedGravityConsistent:true as const,
+  horizontalInputContinuedAssumption:true as const,
+  actualPost1390PlayerPathObserved:false as const,
+  originalCollisionFlagsCertified:false as const,
+  sourceY0IsGameplayFloorCertified:false as const,
+  normalStageModified:false as const
+ };
+}
+
 /** Strict original-source FLO0R candidate in an ISOLATED Rapier world.
  * The retained source Face ledger's SHA-verified gzip describes exactly 11
  * edge-connected static FLOOR triangles at native Y=3 (project Y=0), near
@@ -729,6 +795,17 @@ export function buildIsolatedV23LowOriginalFloor(
  const pathMinClearance=Math.min(...margins);
  if(!Number.isFinite(pathMinClearance)||pathMinClearance<humanRadius)
   return hold('HOLD_LOW_KCC_PATH_CAPSULE_TOO_CLOSE_TO_EDGE',selected.length);
+ // Unlike the tick-1390 witness at Y2.88, the extrapolated Y0 crossing
+ // must fit the complete HUMAN capsule strictly inside the original faces.
+ const predictedLanding=predictV23OriginalY0LandingFromNativeAir();
+ const [lx,lz]=predictedLanding.projectedXZ;
+ const [lmx,lmz]=undertowProjectXZToTemple01ModelXZ([lx,lz]);
+ if(!faceBuffers.some(a=>sourceHeightAtXZ(a,0,lmx,lmz)!==null))
+  return hold('HOLD_EXTRAPOLATED_Y0_NOT_ON_ORIGINAL_FACE',selected.length);
+ const predictedLandingClearance=clearance(lx,lz);
+ if(!Number.isFinite(predictedLandingClearance)||
+    predictedLandingClearance<humanRadius)
+  return hold('HOLD_EXTRAPOLATED_Y0_NO_FULL_CAPSULE_CLEARANCE',selected.length);
  const points=selected.flatMap(t=>t.p).map(p=>{
   const [x,z]=undertowTemple01ModelXZToProjectXZ([p[0],p[2]]);
   return [x,p[1]-3,z] as StageVector3;
@@ -771,6 +848,10 @@ export function buildIsolatedV23LowOriginalFloor(
   areaSquareMeters:area,
   recordedWitnessBoundaryClearanceMeters:witnessClearance,
   recordedWitnessFullCapsuleFits:witnessFullCapsuleFits,
+  extrapolatedY0Landing:{...predictedLanding,
+   exactOriginalFloorFaceAtXZ:true as const,
+   planarBoundaryClearanceMeters:predictedLandingClearance,
+   fullCapsuleFitsWithinExactOriginalSource:true as const},
   isolatedCorridorMinBoundaryClearanceMeters:pathMinClearance,
   isolatedCorridorCapsuleFullyInsideSource:true as const,
   recordedWindowsLandingCertified:false as const,
@@ -877,6 +958,70 @@ export function probeV23IsolatedLowHumanKcc(physics:RapierStagePhysics){
   startSupportId:initial.solidId,endSupportId:finalSupport.solidId,
   supportedSteps,firstUnsupportedStep,
   endpointErrorMeters:error,sourceRunTicks:steps};
+}
+
+
+/** A REAL isolated Rapier KCC tries landing on the original 11-face Y0
+ * candidate using the authentic 1388-1390 ballistic velocity increments.
+ * After tick1390 the XZ input is only a documented CONSTANT-input guess.
+ * No world teleport, original collision/actor flags, navigation or score.
+ */
+export function probeV23PredictedOriginalLowLandingKcc(physics:RapierStagePhysics){
+ const prediction=predictV23OriginalY0LandingFromNativeAir();
+ const [a,b,c]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
+ const dx=c.body[0]-b.body[0],dz=c.body[2]-b.body[2];
+ const dy=c.body[1]-b.body[1];
+ const secondDy=c.body[1]-2*b.body[1]+a.body[1];
+ const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const body=physics.world.createRigidBody(
+  RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+   c.body[0],c.body[1],c.body[2]));
+ const capsule=physics.world.createCollider(RAPIER.ColliderDesc.capsule(
+  PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+  PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
+ const controller=createConfiguredPlayerCharacterController(physics.world);
+ const scope={
+  startedFromActualNativeTick:1390 as const,
+  actualSubsequentPlayerInputObserved:false as const,
+  ballisticInputExtrapolationOnly:true as const,
+  genuineRapierInIsolatedWorld:true as const,
+  originalVersion72CollisionFlagsCertified:false as const,
+  normalStageModified:false as const,
+  navigationAndCpuCertified:false as const,
+  expectedY0CrossingNativeTick:prediction.predictedNativeTick
+ };
+ for(let i=1;i<=40;i++){
+  const before=body.translation();
+  controller.computeColliderMovement(capsule,
+   new Vec3(dx,dy+secondDy*i,dz),undefined,undefined,
+   collider=>collider.handle!==capsule.handle&&
+    physics.shouldCharacterCollide(collider,'HUMAN'));
+  const movement=controller.computedMovement();
+  body.setNextKinematicTranslation({
+   x:before.x+movement.x,y:before.y+movement.y,z:before.z+movement.z
+  });
+  physics.step();
+  if(!controller.computedGrounded())continue;
+  const at=body.translation();
+  const support=physics.castCharacterFootSupport(
+   new Vec3(at.x,at.y,at.z),footOffset,'HUMAN');
+  const gap=support?at.y-footOffset-support.point.y:null;
+  const isSource=support?.solidId===V23_LOW_ISOLATED_SOLID_ID&&
+   gap!==null&&Math.abs(gap)<=.22;
+  return {...scope,
+   status:isSource?
+    'ISOLATED_NATIVE_AIR_KCC_LANDED_ON_SOURCE_Y0_ONLY' as const:
+    'HOLD_ISOLATED_NATIVE_AIR_GROUNDED_OTHER_OR_NO_VALID_FOOT_RAY' as const,
+   firstGroundedNativeTick:1390+i,
+   actualGroundedXZ:[at.x,at.z] as const,
+   actualGroundedFootY:at.y-footOffset,
+   actualGroundedSolidId:support?.solidId??null,
+   actualFootRayGapMeters:gap,
+   originalGameplayLandingCertified:false as const};
+ }
+ return {...scope,status:'HOLD_ISOLATED_NATIVE_AIR_NO_GROUND_IN_40_TICKS' as const,
+  firstGroundedNativeTick:null,actualGroundedSolidId:null,
+  originalGameplayLandingCertified:false as const};
 }
 
 export function probeIsolatedFirstDropRapier(

@@ -5,7 +5,7 @@ import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
  auditV23WindowsFallStaticHeightSection,ORIGINAL_F3G_KINDS,
  v23ExplicitPhysicsReviewRequested,
- v23HasSourceUpwardFloorWinding,
+ v23HasSourceUpwardFloorWinding,predictV23OriginalY0LandingFromNativeAir,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
@@ -218,5 +218,20 @@ describe('V23 original optical preview remains independent of heavy Rapier revie
   bad.delete('t21QaInput');
   bad.set('t21F3Registration','raw');
   expect(v23ExplicitPhysicsReviewRequested(bad)).toBe(false);
+ });
+});
+
+describe('V23 authentic Windows airborne frames and hypothetical Y0 crossing',()=>{
+ it('reproduces native 28m/s2 gravity and predicts full descent before testing a floor',()=>{
+  const p=predictV23OriginalY0LandingFromNativeAir();
+  expect(p.observedGravityConsistent).toBe(true);
+  expect(p.predictedNativeTick).toBeCloseTo(1404.656356,3);
+  expect(p.firstWholeNativeTickAtOrBelowY0).toBe(1405);
+  expect(p.projectedXZ[0]).toBeCloseTo(1.441329,3);
+  expect(p.projectedXZ[1]).toBeCloseTo(42.982578,3);
+  expect(p.lastRecordedFootY).toBeCloseTo(2.8799814,5);
+  expect(p.actualPost1390PlayerPathObserved).toBe(false);
+  expect(p.sourceY0IsGameplayFloorCertified).toBe(false);
+  expect(p.normalStageModified).toBe(false);
  });
 });
