@@ -2291,6 +2291,37 @@ async function main(){
   proof.b477RealStartupHandoff.endNativeTick=ready.tick;
   save();
  }
+ // Real Chromium KeyR during an active canonical original SOURCE world
+ // must not reset or navigate. Reuse THIS B441 7-CPU browser session only.
+ if(b441Experiment&&!b448Experiment&&!proveRealQ&&!proveRealSweep&&
+    !proveRealCharger&&!proveSourcePracticeExpiry){
+  const beforeR=await snap();authority(beforeR);
+  const worldBeforeR=await origin(),hrefBeforeR=await evaluate('location.href');
+  if(beforeR.matchState!=='PLAYING'||beforeR.paused||
+     beforeR.cpu.physicalRejoins.length!==7||!await locked()||
+     !trueOriginalFoot(foot(beforeR)))
+   fail('R_PLAYING_PRECONDITION_NOT_GENUINE_NATIVE_SOURCE');
+  await tapSourceCameraKey('r','KeyR',82);
+  const afterR=await until(async()=>{
+   const n=await snap();authority(n);
+   return n.tick>=beforeR.tick+3?n:null;
+  },15000,100);
+  if(afterR.matchState!=='PLAYING'||afterR.paused||
+     afterR.cpu.physicalRejoins.length!==7||!await locked()||
+     await origin()!==worldBeforeR||
+     await evaluate('location.href')!==hrefBeforeR||
+     afterR.timeRemainingSeconds>beforeR.timeRemainingSeconds||
+     afterR.sourceScoreablePromotions!==0)
+    fail('R_DURING_REAL_SOURCE_PLAY_CAUSED_RESTART_OR_WORLD_DRIFT');
+  proof.realPlayingKeyRBlocked={actualChromiumKeyR:true,
+   initialTick:beforeR.tick,afterTick:afterR.tick,
+   samePerformanceTimeOrigin:true,sameExactNativeUrl:true,
+   physicalCpuRejoins:7,originalSource:'25/17/26/0',
+   gameplayContinued:true,scoreablePromotions:0,
+   actorPositionWrites:0,nativeClockWrites:0,officialWinner:'NONE',
+   certifiedA1ClearReplay:false,certifiedFallStopRecovery:false};
+  save();
+ }
  if(b441Experiment){
   // B476 is a PLAYER UI check on actual Chrome DOM, not a fake
   // screenshot or model-authored source HUD. Native challenge MUST
