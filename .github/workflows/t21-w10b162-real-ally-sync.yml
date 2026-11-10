@@ -28,6 +28,12 @@ on:
       - 'src/app/B166OriginalAllyRendezvous.ts'
       - 'src/app/B166OriginalAllyRendezvous.test.ts'
   workflow_dispatch:
+    inputs:
+      native_r_pair_once:
+        description: 'One authorized real A1 CLEAR R and physical fall STOP R pair'
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -36,9 +42,9 @@ jobs:
     # Already genuine PASS on prior HEAD. Run one B448-only short A3
     # research case without redundantly repeating the unrelated A1
     # cooperative 5-minute browser run; manual dispatch still allowed.
-    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') && (!inputs.native_r_pair_once || github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 48
+    timeout-minutes: ${{ inputs.native_r_pair_once && 80 || 48 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,10 +61,10 @@ jobs:
           T21_B139_VARIANT: ALLY_RALLY
           T21_B162_REAL_ALLY_SYNC: '1'
           T21_B194_REAL_PLAYER_BUTTON: '1'
-          # R-key CDP delivery was 0 DOM events on this research branch.
-          # Keep genuine C/A1/7-CPU/60Hz; do not rerun same failed B200.
-          # The formal B200 workflow on other branches is untouched.
-          T21_B200_REAL_REPLAY: '0'
+          # Normal CI retains historical R HOLD. Manual opt-in runs
+          # only one genuine A1 CLEAR -> R -> fresh world check.
+          T21_B200_REAL_REPLAY: ${{ inputs.native_r_pair_once && '1' || '0' }}
+          T21_B200_R_ONLY_ONCE: ${{ inputs.native_r_pair_once && '1' || '0' }}
           T21_B201_REAL_PAUSE_RESUME: '0'
           T21_B202_REAL_CONTROLS: '0'
           T21_B203_REAL_FULL_ROUND: '1'
@@ -69,11 +75,21 @@ jobs:
           T21_B471_REAL_PLAYER_ORDER: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
+      - name: Same opt-in: real physical SOURCE fall STOP then real R
+        if: ${{ inputs.native_r_pair_once && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' }}
+        env:
+          T21_B441_SOURCE_FRONTLINE: '0'
+          T21_P0_NORMAL_HUMAN: '1'
+          T21_P0_KEY_R_FALL_ONCE: '1'
+          T21_B440_OUT: /tmp/t21-b440-fall-R
+        run: node scripts/t21-b440-short-native-original-foot.mjs
       - name: Preserve real A1 and human attempted trial whether CLEAR or HOLD
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: w10b162-actual-original-human-A1-ally-sync
-          path: /tmp/t21-w10b162/
+          path: |
+            /tmp/t21-w10b162/
+            /tmp/t21-b440-fall-R/
           retention-days: 14
           if-no-files-found: warn

@@ -67,6 +67,11 @@ const b471RealPlayerOrder=process.env.T21_B471_REAL_PLAYER_ORDER==='1';
 const b162ReadyPrearm=process.env.T21_B162_READY_PREARM==='1';
 const b194ButtonTrial=process.env.T21_B194_REAL_PLAYER_BUTTON==='1';
 const b200ReplayTrial=process.env.T21_B200_REAL_REPLAY==='1';
+// Explicit opt-in: ONE real A1 CLEAR -> physical CDP R -> new SOURCE.
+// Skip the redundant second A1 mission for this limited proof only.
+const b200ROnlyOnce=process.env.T21_B200_R_ONLY_ONCE==='1';
+if(b200ROnlyOnce&&!b200ReplayTrial)
+ throw Error('B200_R_ONLY_REQUIRES_REAL_REPLAY');
 const b201PauseTrial=process.env.T21_B201_REAL_PAUSE_RESUME==='1';
 const b202ControlsTrial=process.env.T21_B202_REAL_CONTROLS==='1';
 const b203FullRoundTrial=process.env.T21_B203_REAL_FULL_ROUND==='1';
@@ -3578,6 +3583,17 @@ async function run(){
   proof.keyboardReplay=await verifyNewWorld(original1,
    'REAL_CDP_KEY_R_AFTER_COOP_CLEAR',24000);
   persist();
+  if(b200ROnlyOnce){
+   proof.oneShotLimitedVerdict='PASS_REAL_A1_CLEAR_KEY_R_FRESH_SOURCE_WORLD';
+   proof.secondClear=null;proof.hudReplay=null;
+   proof.official4v4Certified=false;
+   persist();
+   console.log('B200_ONE_REAL_A1_CLEAR_KEY_R_FRESH_WORLD',JSON.stringify({
+    verdict:proof.oneShotLimitedVerdict,realClear:proof.firstClear,
+    realR:proof.keyboardReplay,source:proof.sourceAuthority,
+    officialWinner:'NONE',secondMissionNotAttempted:true}));
+   return;
+  }
   // A second full genuine session, not a screenshot/QA-state substitution.
   await doPhysicalTrial(2);
   const second=await snapshot();authority(second,'FIXED');

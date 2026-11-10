@@ -15,6 +15,10 @@ import {setTimeout as delay} from 'node:timers/promises';
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
 const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
+// Only a naturally observed physical STOP can authorize a genuine CDP R.
+const p0FallROnlyOnce=process.env.T21_P0_KEY_R_FALL_ONCE==='1';
+if(p0FallROnlyOnce&&!p0NormalHuman)
+ throw Error('P0_FALL_R_REQUIRES_NORMAL_USER_MODE');
 const p1RampOnce=p0NormalHuman&&process.env.T21_P1_TRUE_RAMP_WALK_ONCE==='1';
 const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
 const p1InputDiagnosticOnce=p0NormalHuman&&
@@ -976,7 +980,14 @@ async function main(){
       })()`);
      },30000,180);
      proof.p0RealStopRecoveryButton=stopUi;save();
-     await buttonClick('#t21-f3-b202-resume');
+     if(p0FallROnlyOnce){
+      // Genuine native keyboard after actual STOP and real Escape.
+      await cdp('Page.bringToFront');
+      const key={key:'r',code:'KeyR',windowsVirtualKeyCode:82,
+       nativeVirtualKeyCode:82};
+      await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});
+      await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+     }else await buttonClick('#t21-f3-b202-resume');
      let lastRecoveryProbe=null;
      const fresh=await until(async()=>{
       try{
@@ -1004,12 +1015,16 @@ async function main(){
         fresh.actors!==7||fresh.rejoins!==0||
         JSON.stringify(fresh.stage)!=='[25,17,26,0]')
       fail('P0_REAL_KEYR_FRESH_WORLD_NOT_PROVEN');
-     proof.p0FallRecovery={realAction:'REAL_CDP_STOP_BUTTON_CLICK',oldWorldWasStopped:true,
+     proof.p0FallRecovery={realAction:p0FallROnlyOnce?
+      'REAL_CDP_KEY_R_AFTER_AUTHENTIC_SOURCE_FALL_STOP':
+      'REAL_CDP_STOP_BUTTON_CLICK',oldWorldWasStopped:true,
       stoppedTick:n.tick,stoppedReason:n.stopReason,
       stoppedCpuRejoins:n.cpu?.physicalRejoins?.length,
       freshWorld:fresh,actorWrites:0,scoreWrites:0,nativeClockWrites:0,
       officialWinner:'NONE',productionAuthorized:false};
-     proof.verdict='PASS_NATIVE_SOURCE_FALL_STOP_AND_CLICK_NEW_WORLD_ONLY';
+     proof.verdict=p0FallROnlyOnce?
+      'PASS_REAL_FALL_STOP_KEY_R_NEW_NATIVE_SOURCE_WORLD':
+      'PASS_NATIVE_SOURCE_FALL_STOP_AND_CLICK_NEW_WORLD_ONLY';
      proof.p0Verdict=proof.verdict;
      proof.stage='P0_SOURCE_FALL_EXPLICIT_REENTRY';save();
      console.log('P0_SOURCE_FALL_RECOVERY',JSON.stringify(proof.p0FallRecovery));
@@ -1440,6 +1455,9 @@ async function main(){
    await runK3CanonicalOneWorld(actualHref);
    return;
   }
+  // No physical fall means this one-shot R test remains HOLD, not PASS.
+  if(p0FallROnlyOnce)
+   fail('P0_NO_ACTUAL_PHYSICAL_FALL_STOP_R_NOT_PROVEN');
   proof.p0Verdict='PASS_CANONICAL_SOURCE_PRESTART_W_BLOCKED_AND_7CPU_POSTJOIN_W';
   proof.stage=p1InputDiagnosticOnce?'P1_REAL_D_KEY_INPUT_WITNESS':
    p1RampOnce?'P1_NATIVE_REGISTERED_LANDING_TO_RAMP':
