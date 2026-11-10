@@ -8,6 +8,7 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourceFreshSelectedModeHref,
  sourceCoopPracticeFreshReplayHref,sourcePausedFreshRoundHref,
  sourceOriginalFallFreshWorldHref,SOURCE_ORIGINAL_FALL_STOP,
+ sourceNativeReplayOwnsKeyR,
  sourceStoppedWorldMenuHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
@@ -570,5 +571,37 @@ describe('genuine SOURCE original fall R recovery',()=>{
    {href:urls.circuit+'&production=1'},
    {href:urls.circuit+'&cpuWarp=1'}
   ])expect(sourceOriginalFallFreshWorldHref({...x,...y})).toBeNull();
+ });
+});
+
+describe('SOURCE key R: native game gets only authentic CLEAR / fall STOP',()=>{
+ const modes=sourcePlayWeaponModeDestinations(
+  'https://example.org/browser-ink-tps/play-source.html','ink-saber');
+ const valid=(href:string)=>({
+  href,matchState:'PLAYING',stopReason:null as string|null,
+  practiceStatus:'CLEAR',pointerLocked:false,
+  originalSolids:25,originalPaint:17,originalLinks:26,scoreable:0
+ });
+ it('lets real A1 co-op CLEAR reach the existing native new-world button',()=>{
+  expect(sourceNativeReplayOwnsKeyR(valid(modes.coop))).toBe(true);
+  for(const href of [modes.circuit,modes.combat,modes.frontline])
+   expect(sourceNativeReplayOwnsKeyR(valid(href))).toBe(false);
+ });
+ it('hands back exact original fall STOP to native R recovery only',()=>{
+  for(const href of Object.values(modes))
+   expect(sourceNativeReplayOwnsKeyR({...valid(href),
+    stopReason:SOURCE_ORIGINAL_FALL_STOP,matchState:'STAGING'})).toBe(true);
+ });
+ it('never passes active, untrusted, locked, foreign or drifting game state',()=>{
+  const v=valid(modes.coop);
+  for(const change of [
+   {practiceStatus:'RUNNING'},{practiceStatus:'ABORTED'},
+   {matchState:'TIME_UP'},{stopReason:'OTHER_STOP'},
+   {stopReason:undefined},{pointerLocked:true},
+   {originalSolids:26},{originalPaint:16},
+   {originalLinks:25},{scoreable:1},
+   {href:modes.coop+'&t21QaInput=deterministic'},
+   {href:modes.coop+'&cpuWarp=1'}
+  ])expect(sourceNativeReplayOwnsKeyR({...v,...change})).toBe(false);
  });
 });

@@ -44,21 +44,23 @@ async function boot(): Promise<void> {
     // Capture before the legacy bubble listener without modifying
     // native controls, player/CPU state, the clock, or replay thresholds.
     if(q.get('t21QaDrive')==='source'&&q.get('t21W10B203')==='fullRound'){
-      const {sourceReplayHotkeyAction,sourceFinishedReplayAction}=
+      const {sourceReplayHotkeyAction,sourceFinishedReplayAction,
+       sourceNativeReplayOwnsKeyR}=
         await import('./app/SourcePlayPortal');
       const liveReplay=()=>{
         const game=(window as unknown as {__t21F3?:{
           snapshot:()=>{matchState?:string;stopReason?:string|null;
             originalSourceSolids?:number;originalPaintSurfaces?:number;
             originalSourceNavigationLinks?:number;
-            sourceScoreablePromotions?:number}
+            sourceScoreablePromotions?:number;
+            b25SourcePaintRun?:{status?:string}}
         }}).__t21F3;
         const state=game?.snapshot();
         const finish=appUiRoot.querySelector<HTMLElement>(
           '#t21-f3-b59-session-finished');
         const replay=finish?.querySelector<HTMLButtonElement>(
           '#t21-f3-b59-restart');
-        return {replay,evidence:{
+        return {replay,state,evidence:{
           href:window.location.href,
           matchState:state?.matchState,stopped:!!state?.stopReason,
           pointerLocked:document.pointerLockElement!==null,
@@ -82,7 +84,19 @@ async function boot(): Promise<void> {
           ev.stopImmediatePropagation();
           return;
         }
-        const {replay,evidence}=liveReplay();
+        const {replay,state,evidence}=liveReplay();
+        // Capture is for blocking unsafe legacy reset, NOT for swallowing
+        // the native game's genuine A1 CLEAR or proven physical-fall R.
+        // The existing bubble listener owns both with stronger live gates.
+        if(sourceNativeReplayOwnsKeyR({
+          href:evidence.href,matchState:state?.matchState,
+          stopReason:state?.stopReason,
+          practiceStatus:state?.b25SourcePaintRun?.status,
+          pointerLocked:evidence.pointerLocked,
+          originalSolids:evidence.originalSolids,
+          originalPaint:evidence.originalPaint,
+          originalLinks:evidence.originalLinks,scoreable:evidence.scoreable
+        }))return;
         const action=sourceReplayHotkeyAction({
           ...evidence,code:ev.code,repeat:ev.repeat,
           modified:ev.ctrlKey||ev.altKey||ev.metaKey,editing:editable

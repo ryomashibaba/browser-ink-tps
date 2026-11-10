@@ -338,6 +338,27 @@ export function sourceReplayHotkeyAction(
  * open a wholly new canonical SOURCE world; NEVER a collision/death grant. */
 export const SOURCE_ORIGINAL_FALL_STOP=
  'T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED';
+/** SOURCE R dispatch owns two real escape actions already implemented
+ * in UndertowF3PlayablePreviewApp. The top-level capture listener must let
+ * that native handler validate the exact physical fall / A1 CLEAR button.
+ * This is NOT a replay grant: native R independently checks live state,
+ * keyboard modifiers, available UI, source mode and new-world URL. */
+export function sourceNativeReplayOwnsKeyR(x:{
+ href:string;matchState?:string;stopReason?:string|null;
+ practiceStatus?:string;pointerLocked:boolean;
+ originalSolids?:number;originalPaint?:number;
+ originalLinks?:number;scoreable?:number;
+}):boolean{
+ if(x.pointerLocked||x.originalSolids!==25||x.originalPaint!==17||
+    x.originalLinks!==26||x.scoreable!==0)return false;
+ const mode=sourceCanonicalPlayableMode(x.href);
+ if(mode===null)return false;
+ if(x.stopReason===SOURCE_ORIGINAL_FALL_STOP)
+  return x.matchState==='STAGING'||x.matchState==='PLAYING';
+ return mode==='coop'&&x.stopReason===null&&
+  x.matchState==='PLAYING'&&x.practiceStatus==='CLEAR';
+}
+
 export function sourceOriginalFallFreshWorldHref(x:{
  href:string;weaponId:string;stopReason:string|null;
  matchState:string;paused:boolean;nativeTick:number;
