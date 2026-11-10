@@ -203,7 +203,9 @@ export async function loadF3gWholeSource(app:AppBase){
      const lowWorld=new RapierStagePhysics(1/60,originalLow.stage);
      try{
       lowWorld.step();
-      originalLowContact=inspectV23IsolatedLowFloorContact(lowWorld);
+      originalLowContact=inspectV23IsolatedLowFloorContact(
+       lowWorld,'recordedWitnessBoundaryClearanceMeters' in originalLow
+        ? originalLow.recordedWitnessBoundaryClearanceMeters:null);
      }finally{lowWorld.world.free();}
      const lowKccWorld=new RapierStagePhysics(1/60,originalLow.stage);
      try{
@@ -562,7 +564,11 @@ export function buildIsolatedV23LowOriginalFloor(
  if(!source||source.length%9!==0)return hold('HOLD_NO_PINNED_FLOOR_BIN');
  type Tri={p:readonly[StageVector3,StageVector3,StageVector3];edges:readonly string[]};
  const all:Tri[]=[];
- const vkey=(p:StageVector3)=>p.map(v=>v.toFixed(4)).join(',');
+ // F3G contains already-verified Float32 coordinates. Do NOT round them
+ // again: 4-decimal joins could fabricate connections across tiny source
+ // cracks. Equality here means binary-Float32 coordinate agreement only;
+ // it is NOT recovered original OBJ vertex-ID topology.
+ const vkey=(p:StageVector3)=>p.map(v=>String(v)).join(',');
  const ekey=(a:StageVector3,b:StageVector3)=>[vkey(a),vkey(b)].sort().join('|');
  for(let i=0;i<source.length;i+=9){
   const a=[source[i]!,source[i+1]!,source[i+2]!] as const;
@@ -695,14 +701,40 @@ export function buildIsolatedV23LowOriginalFloor(
   realWalkabilityCertified:false as const,liveGameModified:false as const};
 }
 
-export function inspectV23IsolatedLowFloorContact(world:RapierStagePhysics){
+/** A source-Y0 ray contact and a human capsule footprint are distinct.
+ * The historical human fell at Y=3, so this intentionally hypothetical ray
+ * at Y=0 is never a recorded landfall or original collision proof.
+ */
+export function classifyV23LowOriginalFootprintContact(
+ sourceRaySolidId:string|null,boundaryClearanceMeters:number|null
+){
+ const capsuleRadiusMeters=PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
+ const exactSourceRayHit=sourceRaySolidId===V23_LOW_ISOLATED_SOLID_ID;
+ const edgeClear=boundaryClearanceMeters!==null&&
+  Number.isFinite(boundaryClearanceMeters)&&
+  boundaryClearanceMeters>=capsuleRadiusMeters;
+ return {
+  exactSourceRayHit,
+  capsuleRadiusMeters,
+  boundaryClearanceMeters,
+  fullCapsulePlanarClearancePass:exactSourceRayHit&&edgeClear,
+  sourceVersion72CollisionFlagsCertified:false as const,
+  playerReachedOrLandedAtY0:false as const,
+  sourcePlaneRayIsRealGameplaySupport:false as const
+ };
+}
+export function inspectV23IsolatedLowFloorContact(
+ world:RapierStagePhysics,boundaryClearanceMeters:number|null
+){
  const p=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
  const o=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
  const hit=world.castCharacterFootSupport(new Vec3(p.x,o,p.z),o,'HUMAN');
- return {recordedFootY:p.footY,inspectedOriginalFloorY:0 as const,
+ return {...classifyV23LowOriginalFootprintContact(
+   hit?.solidId??null,boundaryClearanceMeters),
+  recordedHumanFootY:p.footY,hypotheticalSourceRayFootY:0 as const,
   originalWindowsXZ:[p.x,p.z] as const,
-  supportedByExactIsolatedTriangle:hit?.solidId===V23_LOW_ISOLATED_SOLID_ID,
-  supportSolidId:hit?.solidId??null,sourceHeightGap:hit?-hit.point.y:null,
+  hitSolidId:hit?.solidId??null,
+  hypotheticalSourceHeightGapMeters:hit?-hit.point.y:null,
   actualHumanReachedThisFloor:false as const,
   gameCollisionFlagsCertified:false as const};
 }

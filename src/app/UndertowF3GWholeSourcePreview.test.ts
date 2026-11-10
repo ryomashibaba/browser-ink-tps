@@ -3,6 +3,7 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
+ classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
@@ -126,5 +127,28 @@ describe('V23 source-Y0 original lower floor is review-only',()=>{
   expect(rejected.status).toBe('HOLD_LOW_FLOOR_ANCHOR_AMBIGUOUS');
   expect(stage.solids).toHaveLength(25);
   expect(stage.solids.some(s=>s.id===V23_LOW_ISOLATED_SOLID_ID)).toBe(false);
+ });
+});
+
+describe('V23 original low floor source ray is NOT original human landfall',()=>{
+ it('rejects a center ray as full capsule support when original edge is close',()=>{
+  const hit=classifyV23LowOriginalFootprintContact(V23_LOW_ISOLATED_SOLID_ID,
+   .11226701182842902/.964211);
+  expect(hit.exactSourceRayHit).toBe(true);
+  expect(hit.fullCapsulePlanarClearancePass).toBe(false);
+  expect(hit.playerReachedOrLandedAtY0).toBe(false);
+  expect(hit.sourcePlaneRayIsRealGameplaySupport).toBe(false);
+ });
+ it('requires the precise source collider, finite boundary margin and radius',()=>{
+  expect(classifyV23LowOriginalFootprintContact('other-solid',2)
+   .fullCapsulePlanarClearancePass).toBe(false);
+  expect(classifyV23LowOriginalFootprintContact(V23_LOW_ISOLATED_SOLID_ID,null)
+   .fullCapsulePlanarClearancePass).toBe(false);
+  expect(classifyV23LowOriginalFootprintContact(V23_LOW_ISOLATED_SOLID_ID,Infinity)
+   .fullCapsulePlanarClearancePass).toBe(false);
+  const interior=classifyV23LowOriginalFootprintContact(
+   V23_LOW_ISOLATED_SOLID_ID,.7);
+  expect(interior.fullCapsulePlanarClearancePass).toBe(true);
+  expect(interior.playerReachedOrLandedAtY0).toBe(false);
  });
 });
