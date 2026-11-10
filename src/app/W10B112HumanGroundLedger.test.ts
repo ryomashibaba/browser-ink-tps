@@ -187,6 +187,8 @@ describe('B112 real keyboard source vs deterministic QA axes',()=>{
    .toBe(false);
   expect(b112NativeHumanKeysEvidenceAllowed(url('&t21W10B112=humanGround')))
    .toBe(false);
+  expect(b112NativeHumanKeysEvidenceAllowed(url('&t21QaDrive=source')))
+   .toBe(false);
   expect(b112NativeHumanKeysEvidenceAllowed(new URLSearchParams()))
    .toBe(false);
  });

@@ -10,6 +10,7 @@ import type {B114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 export function b112NativeHumanKeysEvidenceAllowed(q:URLSearchParams):boolean{
  return q.get('t21Play')==='preview'&&
   q.get('t21QaDrive')==='source'&&
+  q.getAll('t21QaDrive').length===1&&
   q.get('t21W10B112')==='humanGround'&&
   q.getAll('t21W10B112').length===1&&!q.has('t21QaInput');
 }

@@ -440,7 +440,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b112GroundEnabled=(()=>{
   const q=new URL(location.href).searchParams;
   return q.get('t21QaDrive')==='source'&&
-   q.get('t21W10B112')==='humanGround';
+   q.getAll('t21QaDrive').length===1&&
+   q.get('t21W10B112')==='humanGround'&&
+   q.getAll('t21W10B112').length===1;
  })();
  // Fixed once: deterministic QA movement must never claim real keyboard data.
  private readonly b112RealHumanAxesEligible=b112NativeHumanKeysEvidenceAllowed(

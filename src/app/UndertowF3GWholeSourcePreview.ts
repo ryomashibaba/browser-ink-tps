@@ -931,8 +931,8 @@ export function buildIsolatedV23LowOriginalFloor(
   material:'medium' as const,render:false,
   projectileBlocker:false,cameraBlocker:false,
   collisionEnabled:true,navigationEnabled:false,
-  triangleMesh:{vertices:points.map(p=>[p[0]-cx,p[1],p[2]-cz]
-   as StageVector3),indices:points.map((_,i)=>i)}
+  triangleMesh:{vertices:points.map(p=>[p[0]-cx,p[1],p[2]-cz] as StageVector3),
+   indices:points.map((_,i)=>i)}
  };
  const isolated:StageDefinition={
   metadata:stage.metadata,solids:[...stage.solids,candidate],
