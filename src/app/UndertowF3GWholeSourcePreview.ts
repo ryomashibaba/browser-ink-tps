@@ -607,6 +607,45 @@ export function buildIsolatedV23LowOriginalFloor(
     Math.abs(minX+29.5)>.001||Math.abs(maxX+4.25)>.001||
     Math.abs(minZ-21.5)>.001||Math.abs(maxZ-38.5)>.001)
   return hold('HOLD_LOW_FLOOR_PROVENANCE_GEOMETRY_DRIFT',selected.length);
+ // Only source boundary edges that occur once are physical outer edges.
+ // Reject nonmanifold connectivity instead of treating a ray as a full capsule.
+ const border=new Map<string,{a:StageVector3;b:StageVector3;count:number}>();
+ for(const t of selected)for(let i=0;i<3;i++){
+  const a=t.p[i]!,b=t.p[(i+1)%3]!,key=ekey(a,b),known=border.get(key);
+  if(known)known.count++;
+  else border.set(key,{a,b,count:1});
+ }
+ if([...border.values()].some(e=>e.count>2))
+  return hold('HOLD_LOW_FLOOR_NONMANIFOLD_BOUNDARY',selected.length);
+ const exposed=[...border.values()].filter(e=>e.count===1);
+ if(exposed.length<3)return hold('HOLD_LOW_FLOOR_NO_BOUNDARY',selected.length);
+ const segments=exposed.map(e=>({
+  a:undertowTemple01ModelXZToProjectXZ([e.a[0],e.a[2]]),
+  b:undertowTemple01ModelXZToProjectXZ([e.b[0],e.b[2]])
+ }));
+ const clearance=(x:number,z:number)=>Math.min(...segments.map(({a,b})=>{
+  const dx=b[0]-a[0],dz=b[1]-a[1],lengthSq=dx*dx+dz*dz;
+  if(lengthSq<1e-12)return Infinity;
+  const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/lengthSq));
+  return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz);
+ }));
+ const witnessClearance=clearance(witness.x,witness.z);
+ const humanRadius=PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
+ const witnessFullCapsuleFits=witnessClearance>=humanRadius;
+ // A forty-step source-Y0 test corridor must remain on exact source faces
+ // with the frozen 0.32m HUMAN capsule fully inside the real edge polygon.
+ const faceBuffers=selected.map(t=>Float32Array.from(t.p.flatMap(p=>[...p])));
+ const margins:number[]=[];
+ for(let i=0;i<=40;i++){
+  const testZ=mz-.6-i/40;
+  const [x,z]=undertowTemple01ModelXZToProjectXZ([mx,testZ]);
+  if(!faceBuffers.some(a=>sourceHeightAtXZ(a,0,mx,testZ)!==null))
+   return hold('HOLD_LOW_KCC_PATH_OUTSIDE_ORIGINAL_TRIANGLES',selected.length);
+  margins.push(clearance(x,z));
+ }
+ const pathMinClearance=Math.min(...margins);
+ if(!Number.isFinite(pathMinClearance)||pathMinClearance<humanRadius)
+  return hold('HOLD_LOW_KCC_PATH_CAPSULE_TOO_CLOSE_TO_EDGE',selected.length);
  const points=selected.flatMap(t=>t.p).map(p=>{
   const [x,z]=undertowTemple01ModelXZToProjectXZ([p[0],p[2]]);
   return [x,p[1]-3,z] as StageVector3;
@@ -646,7 +685,13 @@ export function buildIsolatedV23LowOriginalFloor(
  };
  return {status:'ISOLATED_ORIGINAL_Y0_GEOMETRIC_CANDIDATE' as const,
   triangles:selected.length,stage:isolated as StageDefinition|null,
-  areaSquareMeters:area,sourceVersionCollisionFlags:'UNKNOWN' as const,
+  areaSquareMeters:area,
+  recordedWitnessBoundaryClearanceMeters:witnessClearance,
+  recordedWitnessFullCapsuleFits:witnessFullCapsuleFits,
+  isolatedCorridorMinBoundaryClearanceMeters:pathMinClearance,
+  isolatedCorridorCapsuleFullyInsideSource:true as const,
+  recordedWindowsLandingCertified:false as const,
+  sourceVersionCollisionFlags:'UNKNOWN' as const,
   realWalkabilityCertified:false as const,liveGameModified:false as const};
 }
 
