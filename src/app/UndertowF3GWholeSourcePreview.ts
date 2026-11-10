@@ -806,6 +806,27 @@ export function buildIsolatedV23LowOriginalFloor(
  if(!Number.isFinite(predictedLandingClearance)||
     predictedLandingClearance<humanRadius)
   return hold('HOLD_EXTRAPOLATED_Y0_NO_FULL_CAPSULE_CLEARANCE',selected.length);
+ // A valid endpoint disk is not enough: the *same* extrapolated native
+ // trajectory must enter the original source capsule-safe interior BEFORE
+ // its falling feet pass source Y0. No native input after tick1390 is known.
+ const [observedPrevious,observedAt1390]=
+  V23_OBSERVED_NATIVE_AIR_1388_TO_1390.slice(1);
+ let firstCapsuleClearNativeTick:number|null=null;
+ for(let tick=1390;tick<predictedLanding.firstWholeNativeTickAtOrBelowY0;tick++){
+  const steps=tick-1390;
+  const px=observedAt1390.body[0]+
+   (observedAt1390.body[0]-observedPrevious.body[0])*steps;
+  const pz=observedAt1390.body[2]+
+   (observedAt1390.body[2]-observedPrevious.body[2])*steps;
+  const [mmx,mmz]=undertowProjectXZToTemple01ModelXZ([px,pz]);
+  if(!faceBuffers.some(a=>sourceHeightAtXZ(a,0,mmx,mmz)!==null))
+   continue;
+  if(clearance(px,pz)>=humanRadius){
+   firstCapsuleClearNativeTick=tick;break;
+  }
+ }
+ if(firstCapsuleClearNativeTick===null)
+  return hold('HOLD_EXTRAPOLATED_CAPSULE_NOT_INSIDE_BEFORE_Y0',selected.length);
  const points=selected.flatMap(t=>t.p).map(p=>{
   const [x,z]=undertowTemple01ModelXZToProjectXZ([p[0],p[2]]);
   return [x,p[1]-3,z] as StageVector3;
@@ -851,6 +872,8 @@ export function buildIsolatedV23LowOriginalFloor(
   extrapolatedY0Landing:{...predictedLanding,
    exactOriginalFloorFaceAtXZ:true as const,
    planarBoundaryClearanceMeters:predictedLandingClearance,
+   firstCapsuleClearNativeTick,
+   fullCapsuleEnteredBeforePredictedY0Crossing:true as const,
    fullCapsuleFitsWithinExactOriginalSource:true as const},
   isolatedCorridorMinBoundaryClearanceMeters:pathMinClearance,
   isolatedCorridorCapsuleFullyInsideSource:true as const,
