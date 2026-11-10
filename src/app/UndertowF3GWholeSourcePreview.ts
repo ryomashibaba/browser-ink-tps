@@ -776,7 +776,8 @@ export function probeV23IsolatedLowHumanKcc(physics:RapierStagePhysics){
   const before=rigid.translation();
   controller.computeColliderMovement(capsule,new Vec3(dx,-.075,dz),
    undefined,undefined,
-   candidate=>physics.shouldCharacterCollide(candidate,'HUMAN'));
+   candidate=>candidate.handle!==capsule.handle&&
+     physics.shouldCharacterCollide(candidate,'HUMAN'));
   const mv=controller.computedMovement();
   rigid.setNextKinematicTranslation({
    x:before.x+mv.x,y:before.y+mv.y,z:before.z+mv.z});
@@ -896,7 +897,8 @@ export function probeV23FirstDropHumanKcc(
   character.computeColliderMovement(collider,
    new Vec3(tick<settleSteps?0:dx,-.075,tick<settleSteps?0:dz),
    undefined,undefined,
-   (candidate)=>physics.shouldCharacterCollide(candidate,'HUMAN'));
+   (candidate)=>candidate.handle!==collider.handle&&
+    physics.shouldCharacterCollide(candidate,'HUMAN'));
   const movement=character.computedMovement();
   const grounded=character.computedGrounded();
   body.setNextKinematicTranslation({
