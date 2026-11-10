@@ -1,5 +1,10 @@
 import {describe,it,expect} from 'vitest';
-import {B248_SOURCE_VISUAL_AUTHORITY,b248HumanParts,b249FacingDegrees,b249StrideDegrees} from './B248SourceActorVisuals';
+import {B248_SOURCE_VISUAL_AUTHORITY,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+ B248_SOURCE_SQUID_BODY_HEIGHT_METERS,B248_SOURCE_SQUID_PARENT_SCALE_Y,
+ b248HumanParts,b249FacingDegrees,b249StrideDegrees}
+ from './B248SourceActorVisuals';
+import {GAME_CONFIG} from '../config/game/gameConfig';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 describe('B248 source-only actor visual boundary',()=>{
  it('never creates any game physics or score authority',()=>{
   expect(B248_SOURCE_VISUAL_AUTHORITY).toMatchObject({
@@ -42,5 +47,24 @@ describe('B249 native actor-facing render-only animation',()=>{
   expect(b249StrideDegrees(2,-Math.PI/2)).toBeCloseTo(-24);
   expect(b249StrideDegrees(Number.NaN,1)).toBe(0);
   expect(b249StrideDegrees(.5,Number.NaN)).toBe(0);
+ });
+});
+
+describe('B248 genuine grounded SOURCE squid visual foot correspondence',()=>{
+ it('puts the rendered squid body on a recorded registered high-spawn foot without moving the Rapier ball',()=>{
+  const realRegisteredFootY=7.525381927490234; // recorded native Windows original high spawn
+  const humanBodyY=realRegisteredFootY+
+   PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const visualHalfHeight=B248_SOURCE_SQUID_BODY_HEIGHT_METERS*
+    B248_SOURCE_SQUID_PARENT_SCALE_Y/2;
+  const before=humanBodyY+GAME_CONFIG.player.squidVisualOffsetYMeters-
+   visualHalfHeight;
+  expect(before-realRegisteredFootY).toBeCloseTo(.2816,4);
+  const after=humanBodyY+B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS-
+   visualHalfHeight;
+  expect(after).toBeCloseTo(realRegisteredFootY,6);
+  // No value in PlayerCharacterPhysics or the original-source collider moved.
+  expect(PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters).toBeCloseTo(.87);
+  expect(PLAYER_CHARACTER_PHYSICS.squidRadiusMeters).toBeCloseTo(.34);
  });
 });

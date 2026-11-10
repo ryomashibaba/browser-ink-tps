@@ -5,7 +5,8 @@ import RAPIER, {
 } from '@dimforge/rapier3d-compat';
 import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
 import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
-import {decorateB248Actor,type B248Visual} from '../app/B248SourceActorVisuals';
+import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+ type B248Visual} from '../app/B248SourceActorVisuals';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
@@ -769,13 +770,17 @@ export class PlayerController {
     this.b248Visual?.setPose(this.flatForward.x,this.flatForward.z,
       animated&&this.grounded&&this.mode==='HUMAN'?
        Math.min(1,speedRatio):0,time*12);
-    this.entity.setPosition(
-      position.x,
-      position.y +
-        (this.mode === 'SQUID' ? GAME_CONFIG.player.squidVisualOffsetYMeters : 0) +
-        groundedBob,
-      position.z
-    );
+    // In genuine B248 SOURCE PLAYER, grounded squid visuals must meet the
+    // actual Rapier foot, not hover above it. The project KCC, 25 source
+    // solids and other modes (wall/air/roll/T20) remain unchanged.
+    const sourceGroundedSquid=this.mode==='SQUID'&&!!this.b248Visual&&
+      this.grounded&&(this.locomotionState==='SWIM_GROUND'||
+      this.locomotionState==='SQUID_DRY');
+    const visualY=this.mode!=='SQUID'?0:sourceGroundedSquid
+      ? B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS
+      : GAME_CONFIG.player.squidVisualOffsetYMeters;
+    this.entity.setPosition(position.x,position.y+visualY+groundedBob,
+      position.z);
 
     if (this.locomotionState === 'SQUID_ROLL') {
       const duration = Math.max(GAME_CONFIG.player.squidRollDurationSeconds, 1e-6);

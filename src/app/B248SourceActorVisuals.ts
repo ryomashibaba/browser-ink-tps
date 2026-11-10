@@ -2,11 +2,19 @@
  * attack targets, stage solids, paint surfaces, Recast links or score. */
 import {Color,Entity,StandardMaterial} from 'playcanvas';
 import {GAME_CONFIG} from '../config/game/gameConfig';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {B268_COMPACT_HUMAN_PARTS,b268VariantAccepted,
  type B268RenderVariant} from './B268SourceActorComposition';
 import {B269_REAR_IDENTITY_PARTS,b269ValidateParts}
  from './B269SourceActorIdentity';
 import {B292_PARTS,b292Validate} from './B292FlowSourceActor';
+// Genuine T21 B248 squid body's rendered Y extents, before live animation.
+// SOURCE grounded opt-in only: this is display alignment, never a collider.
+export const B248_SOURCE_SQUID_BODY_HEIGHT_METERS=.66;
+export const B248_SOURCE_SQUID_PARENT_SCALE_Y=.48;
+export const B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS=
+ -PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+
+ B248_SOURCE_SQUID_BODY_HEIGHT_METERS*B248_SOURCE_SQUID_PARENT_SCALE_Y/2;
 type Primitive='box'|'sphere'|'capsule'|'cylinder';
 type MaterialId='SUIT'|'TEAM'|'VISOR'|'DARK'|'GEAR';
 type Part={name:string;type:Primitive;tint:MaterialId;
@@ -95,7 +103,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
  parent.addChild(squidRoot);
  if(role==='PLAYER')for(const p of [
   {name:'squid-body',type:'sphere',tint:'TEAM',
-   pos:[0,0,0],size:[.95,.66,1.04]},
+   pos:[0,0,0],size:[.95,B248_SOURCE_SQUID_BODY_HEIGHT_METERS,1.04]},
   {name:'squid-eye-l',type:'sphere',tint:'VISOR',
    pos:[-.22,.18,-.43],size:[.20,.23,.15]},
   {name:'squid-eye-r',type:'sphere',tint:'VISOR',
