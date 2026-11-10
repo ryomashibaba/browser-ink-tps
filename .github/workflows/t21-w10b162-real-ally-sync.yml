@@ -69,7 +69,7 @@ jobs:
           T21_B471_REAL_PLAYER_ORDER: '1'
           T21_F3_SHOT_DIR: /tmp/t21-w10b162
         run: node scripts/t21-w10b139-original-native-descent-rally.mjs
-      - name: Same opt-in: real physical SOURCE fall STOP then real R
+      - name: Real physical SOURCE fall STOP then native R
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' }}
         env:
           T21_B441_SOURCE_FRONTLINE: '0'
