@@ -513,6 +513,11 @@ export class ThirdPersonCamera {
     });
 
     this.canvas.addEventListener('wheel', (event) => {
+      // In the SOURCE preview, a paused/unlocked game must not silently
+      // change the player's view or hijack scrolling the visible menu/page.
+      // The frozen default T20 camera retains its original wheel behavior.
+      if (this.sourcePracticeControls &&
+          document.pointerLockElement !== this.canvas) return;
       event.preventDefault();
       this.distance = Math.max(3.6, Math.min(9.5, this.distance * Math.exp(event.deltaY * 0.001)));
     }, { passive: false });

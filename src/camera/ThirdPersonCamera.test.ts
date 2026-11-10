@@ -15,8 +15,9 @@ function harness(storage?:{
   (name:string,callback:EventListener)=>{
    map.set(name,[...(map.get(name)??[]),callback]);
   };
+ const canvasListeners=new Map<string,EventListener[]>();
  const canvas={
-  addEventListener:()=>{},
+  addEventListener:add(canvasListeners),
  } as unknown as HTMLCanvasElement;
  const documentStub={
   pointerLockElement:canvas as HTMLCanvasElement|null,
@@ -50,7 +51,13 @@ function harness(storage?:{
   for(const handler of documentListeners.get('pointerlockchange')??[])
    handler({});
  };
- return {camera,key,mouse,pointerLock,documentStub,elements};
+ const wheel=(deltaY:number)=>{
+  let prevented=false;
+  for(const handler of canvasListeners.get('wheel')??[])
+   handler({deltaY,preventDefault:()=>{prevented=true;}});
+  return prevented;
+ };
+ return {camera,key,mouse,pointerLock,documentStub,elements,canvas,wheel};
 }
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -108,6 +115,31 @@ describe('F3 real SOURCE-only player camera controls',()=>{
   h.documentStub.pointerLockElement=null;
   h.pointerLock();
   expect(h.elements[0]?.hidden).toBe(true);
+ });
+});
+
+describe('SOURCE gameplay wheel focus recovery',()=>{
+ it('does not change SOURCE zoom or swallow scrolling when unlocked, while locked wheel and frozen T20 still work',()=>{
+  const source=harness();source.camera.enableSourcePracticeControls();
+  const before=source.camera.sourcePracticeViewSnapshot().zoomMeters;
+  source.documentStub.pointerLockElement=null;
+  expect(source.wheel(-300)).toBe(false);
+  expect(source.camera.sourcePracticeViewSnapshot().zoomMeters).toBe(before);
+  source.documentStub.pointerLockElement=source.canvas;
+  expect(source.wheel(-300)).toBe(true);
+  const locked=source.camera.sourcePracticeViewSnapshot().zoomMeters;
+  expect(locked).toBeLessThan(before);
+  source.documentStub.pointerLockElement=null;
+  expect(source.wheel(300)).toBe(false);
+  expect(source.camera.sourcePracticeViewSnapshot().zoomMeters).toBe(locked);
+  expect(source.camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourcePhysicsModified:false,sourceNavigationModified:false
+  });
+  const frozen=harness();
+  const original=frozen.camera.sourcePracticeViewSnapshot().zoomMeters;
+  frozen.documentStub.pointerLockElement=null;
+  expect(frozen.wheel(-300)).toBe(true);
+  expect(frozen.camera.sourcePracticeViewSnapshot().zoomMeters).toBeLessThan(original);
  });
 });
 
