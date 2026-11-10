@@ -3509,7 +3509,10 @@ async function run(){
   // This is a TRUE browser KeyR press after a genuine CLEAR. A 24-second
   // cap records any failed input; never treat TIMEOUT as navigation PASS.
   const original1=await evaluate('performance.timeOrigin');
-  await cmd('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'r',code:'KeyR',
+  // B440 genuine SOURCE Chromium confirmed actual KeyR via CDP keyDown.
+  // Match that physically delivered keyboard form for A1 CLEAR; do not
+  // synthesize DOM events, change native state, or grant replay manually.
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
   await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',
    windowsVirtualKeyCode:82,nativeVirtualKeyCode:82});
