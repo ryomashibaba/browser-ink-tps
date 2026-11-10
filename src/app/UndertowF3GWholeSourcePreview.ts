@@ -218,6 +218,8 @@ export async function loadF3gWholeSource(app:AppBase){
     let originalLowKcc:ReturnType<typeof probeV23IsolatedLowHumanKcc>|null=null;
     let originalLowNativeAirKcc:
      ReturnType<typeof probeV23PredictedOriginalLowLandingKcc>|null=null;
+    let originalLowReleasedAirKcc:
+     ReturnType<typeof probeV23PredictedOriginalLowLandingKcc>|null=null;
     if(originalLow.stage){
      const lowWorld=new RapierStagePhysics(1/60,originalLow.stage);
      try{
@@ -237,6 +239,14 @@ export async function loadF3gWholeSource(app:AppBase){
       originalLowNativeAirKcc=probeV23PredictedOriginalLowLandingKcc(
        lowNativeAirWorld);
      }finally{lowNativeAirWorld.world.free();}
+     // Separate temporary world: no leftover capsule or controller from the
+     // continued-input case can influence the zero-input native trajectory.
+     const lowReleasedWorld=new RapierStagePhysics(1/60,originalLow.stage);
+     try{
+      lowReleasedWorld.step();
+      originalLowReleasedAirKcc=probeV23PredictedOriginalLowLandingKcc(
+       lowReleasedWorld,'RELEASE');
+     }finally{lowReleasedWorld.world.free();}
     }
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
     let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
@@ -265,6 +275,7 @@ export async function loadF3gWholeSource(app:AppBase){
       nativeAirExtrapolation:predictV23OriginalY0LandingFromNativeAir(),
       isolatedHumanKcc:originalLowKcc,
       hypotheticalNativeAirLandingKcc:originalLowNativeAirKcc,
+      hypotheticalReleasedInputLandingKcc:originalLowReleasedAirKcc,
       originalCollisionFlags:'UNKNOWN',normalGameModified:false,
       realHumanLandingCertified:false},
      isolation:{status:isolated.status,
@@ -670,6 +681,32 @@ export function predictV23OriginalY0LandingFromNativeAir(){
  };
 }
 
+/** Both post-1390 horizontal-input cases use the same recorded 1389->1390
+ * velocity and actual PlayerController's 60Hz per-axis zero-input braking.
+ * No post-1390 user input is observed; this never certifies actual landing.
+ */
+export type V23AirInputCase='CONTINUE'|'RELEASE';
+export function v23HypotheticalAirXZDeltaAtTick(
+ tickAfter1390:number,scenario:V23AirInputCase
+):readonly[number,number]{
+ if(!Number.isSafeInteger(tickAfter1390)||tickAfter1390<1||
+    tickAfter1390>40||!(scenario==='CONTINUE'||scenario==='RELEASE'))
+  throw Error('T21_V23_AIR_INPUT_SCENARIO_INVALID');
+ const [,previous,recorded]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
+ const dx=recorded.body[0]-previous.body[0];
+ const dz=recorded.body[2]-previous.body[2];
+ if(scenario==='CONTINUE')return [dx,dz];
+ const rate=GAME_CONFIG.simulation.tickRate;
+ const decrease=GAME_CONFIG.player.decelerationMetersPerSecond2/rate;
+ const axis=(perTick:number)=>{
+  const originalVelocity=perTick*rate;
+  const speed=Math.max(0,Math.abs(originalVelocity)-
+   decrease*tickAfter1390);
+  return Math.sign(originalVelocity)*speed/rate;
+ };
+ return [axis(dx),axis(dz)];
+}
+
 /** Counterfactual release of human movement input AFTER recorded native
  * tick1390. Replicates PlayerController.applyHorizontalTarget's zero-input
  * PER-AXIS moveToward(v,0,34/60); gravity and KCC remain unmodified.
@@ -677,19 +714,14 @@ export function predictV23OriginalY0LandingFromNativeAir(){
  */
 export function predictV23ReleasedInputY0Position(){
  const baseline=predictV23OriginalY0LandingFromNativeAir();
- const [,previous,recorded]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
- const rate=GAME_CONFIG.simulation.tickRate;
- const decrease=GAME_CONFIG.player.decelerationMetersPerSecond2/rate;
- let vx=(recorded.body[0]-previous.body[0])*rate;
- let vz=(recorded.body[2]-previous.body[2])*rate;
+ const [, ,recorded]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
  let x=recorded.body[0],z=recorded.body[2];
- // The final fraction of a tick has zero velocity for this recorded speed,
- // so the first integer tick at or below Y0 has identical horizontal XZ.
+ // The final fraction of a tick has zero horizontal velocity for this
+ // recorded speed after release. Tick-1405 and fractional XZ therefore agree.
  const count=baseline.firstWholeNativeTickAtOrBelowY0-1390;
- for(let n=0;n<count;n++){
-  vx=Math.sign(vx)*Math.max(0,Math.abs(vx)-decrease);
-  vz=Math.sign(vz)*Math.max(0,Math.abs(vz)-decrease);
-  x+=vx/rate;z+=vz/rate;
+ for(let n=1;n<=count;n++){
+  const [stepX,stepZ]=v23HypotheticalAirXZDeltaAtTick(n,'RELEASE');
+  x+=stepX;z+=stepZ;
  }
  return {
   source:'SIMULATED_NO_INPUT_PER_AXIS_DECELERATION' as const,
@@ -1045,10 +1077,11 @@ export function probeV23IsolatedLowHumanKcc(physics:RapierStagePhysics){
  * After tick1390 the XZ input is only a documented CONSTANT-input guess.
  * No world teleport, original collision/actor flags, navigation or score.
  */
-export function probeV23PredictedOriginalLowLandingKcc(physics:RapierStagePhysics){
+export function probeV23PredictedOriginalLowLandingKcc(
+ physics:RapierStagePhysics,inputCase:V23AirInputCase='CONTINUE'
+){
  const prediction=predictV23OriginalY0LandingFromNativeAir();
  const [a,b,c]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
- const dx=c.body[0]-b.body[0],dz=c.body[2]-b.body[2];
  const dy=c.body[1]-b.body[1];
  const secondDy=c.body[1]-2*b.body[1]+a.body[1];
  const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
@@ -1060,6 +1093,8 @@ export function probeV23PredictedOriginalLowLandingKcc(physics:RapierStagePhysic
   PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
  const controller=createConfiguredPlayerCharacterController(physics.world);
  const scope={
+  inputCase,
+  modelAfter1390:'UNOBSERVED_COUNTERFACTUAL' as const,
   startedFromActualNativeTick:1390 as const,
   actualSubsequentPlayerInputObserved:false as const,
   ballisticInputExtrapolationOnly:true as const,
@@ -1071,6 +1106,7 @@ export function probeV23PredictedOriginalLowLandingKcc(physics:RapierStagePhysic
  };
  for(let i=1;i<=40;i++){
   const before=body.translation();
+  const [dx,dz]=v23HypotheticalAirXZDeltaAtTick(i,inputCase);
   controller.computeColliderMovement(capsule,
    new Vec3(dx,dy+secondDy*i,dz),undefined,undefined,
    collider=>collider.handle!==capsule.handle&&

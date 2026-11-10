@@ -6,7 +6,7 @@ import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  auditV23WindowsFallStaticHeightSection,ORIGINAL_F3G_KINDS,
  v23ExplicitPhysicsReviewRequested,
  v23HasSourceUpwardFloorWinding,predictV23OriginalY0LandingFromNativeAir,
- predictV23ReleasedInputY0Position,
+ predictV23ReleasedInputY0Position,v23HypotheticalAirXZDeltaAtTick,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
@@ -245,5 +245,25 @@ describe('V23 actual zero-input per-axis deceleration is a separate hypothesis',
   expect(p.actualPlayerInputAfter1390Observed).toBe(false);
   expect(p.rapierContactCertified).toBe(false);
   expect(p.liveStageModified).toBe(false);
+ });
+});
+
+describe('V23 authentic native KCC horizontal input cases are separate',()=>{
+ it('continues measured delta unchanged, but releases each axis at 34m/s²',()=>{
+  const cont=v23HypotheticalAirXZDeltaAtTick(1,'CONTINUE');
+  const released=v23HypotheticalAirXZDeltaAtTick(1,'RELEASE');
+  expect(cont[0]).toBeCloseTo(.04236036539077759,7);
+  expect(cont[1]).toBeCloseTo(-.0756072998046875,7);
+  expect(released[0]).toBeCloseTo(.03291592094633315,7);
+  expect(released[1]).toBeCloseTo(-.06616285536024306,7);
+  expect(v23HypotheticalAirXZDeltaAtTick(8,'RELEASE')[0]).toBe(0);
+  expect(v23HypotheticalAirXZDeltaAtTick(15,'RELEASE')[1]).toBe(0);
+ });
+ it('refuses invalid case/time without granting any physical authority',()=>{
+  expect(()=>v23HypotheticalAirXZDeltaAtTick(0,'RELEASE')).toThrow();
+  expect(()=>v23HypotheticalAirXZDeltaAtTick(41,'CONTINUE')).toThrow();
+  expect(()=>v23HypotheticalAirXZDeltaAtTick(NaN,'RELEASE')).toThrow();
+  expect(()=>v23HypotheticalAirXZDeltaAtTick(1,'FAKE' as 'CONTINUE')).toThrow();
+  expect(predictV23ReleasedInputY0Position().rapierContactCertified).toBe(false);
  });
 });
