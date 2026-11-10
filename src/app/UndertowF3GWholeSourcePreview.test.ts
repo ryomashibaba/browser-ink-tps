@@ -1,6 +1,11 @@
 import {beforeAll,describe,it,expect} from 'vitest';
+// Node builtins exist in Vitest's runner, but this browser application
+// intentionally does not install @types/node for its production TS build.
+// @ts-ignore TS2307: test-runner-only Node import (not game runtime)
 import {readFileSync} from 'node:fs';
+// @ts-ignore TS2307: test-runner-only Node import (not game runtime)
 import {createHash} from 'node:crypto';
+declare const process:{env:Record<string,string|undefined>};
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition} from '../stage/StageDefinition';
 import {undertowT21dConnectivityQaStage}
