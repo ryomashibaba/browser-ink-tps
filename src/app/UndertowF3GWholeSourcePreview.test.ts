@@ -3,6 +3,7 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
+ v23HasSourceUpwardFloorWinding,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
@@ -150,5 +151,18 @@ describe('V23 original low floor source ray is NOT original human landfall',()=>
    V23_LOW_ISOLATED_SOLID_ID,.7);
   expect(interior.fullCapsulePlanarClearancePass).toBe(true);
   expect(interior.playerReachedOrLandedAtY0).toBe(false);
+ });
+});
+
+describe('V23 isolated original native floor winding guard',()=>{
+ const a=[0,3,0] as const,b=[0,3,1] as const,c=[1,3,0] as const;
+ it('accepts the native +Y normal, rejects reversed orientation',()=>{
+  expect(v23HasSourceUpwardFloorWinding([a,b,c])).toBe(true);
+  expect(v23HasSourceUpwardFloorWinding([a,c,b])).toBe(false);
+ });
+ it('rejects altered plane, collapsed and malformed source triangles',()=>{
+  expect(v23HasSourceUpwardFloorWinding([a,b,[1,3.2,0]])).toBe(false);
+  expect(v23HasSourceUpwardFloorWinding([a,a,c])).toBe(false);
+  expect(v23HasSourceUpwardFloorWinding([a,b,[Infinity,3,0]])).toBe(false);
  });
 });

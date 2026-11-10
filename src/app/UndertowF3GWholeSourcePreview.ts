@@ -553,6 +553,22 @@ export function buildIsolatedFirstDropOriginalTriangleStage(
  */
 export const V23_LOW_ISOLATED_SOLID_ID=
  'T21_V23_ISOLATED_EXACT_STATIC_Y0_COMPONENT_NOT_AUTHORIZED';
+/** Source-origin triangle orientation in native X/Y/Z. Only for the
+ * already pinned F3G FLOOR bin, not an assertion of playable collision.
+ * A reversed face can have exactly the same triangle area, bounding box,
+ * connectivity and optical look, but an unreliable Rapier contact normal.
+ */
+export function v23HasSourceUpwardFloorWinding(
+ p:readonly [StageVector3,StageVector3,StageVector3]
+):boolean{
+ const [a,b,c]=p;
+ if(![...a,...b,...c].every(Number.isFinite)||
+    [a[1],b[1],c[1]].some(y=>Math.abs(y-3)>.0001))
+  return false;
+ const normalY=(b[2]-a[2])*(c[0]-a[0])-
+  (b[0]-a[0])*(c[2]-a[2]);
+ return normalY>1e-7;
+}
 export function buildIsolatedV23LowOriginalFloor(
  bins:OriginalF3gBins,stage:StageDefinition,native:RapierStagePhysics
 ){
@@ -597,6 +613,8 @@ export function buildIsolatedV23LowOriginalFloor(
   if(seen.size>256)return hold('HOLD_LOW_FLOOR_COMPONENT_UNBOUNDED',seen.size);
  }
  const selected=[...seen].map(i=>all[i]!);
+ if(selected.some(t=>!v23HasSourceUpwardFloorWinding(t.p)))
+  return hold('HOLD_LOW_FLOOR_SOURCE_WINDING_NOT_UP',selected.length);
  let area=0,minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
  for(const t of selected){
   const [a,b,c]=t.p;
