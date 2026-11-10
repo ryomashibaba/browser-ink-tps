@@ -17,7 +17,7 @@ import {auditF3gOriginalFloorAgainstRapier,
  v23ExplicitPhysicsReviewRequested,
  v23HasSourceUpwardFloorWinding,predictV23OriginalY0LandingFromNativeAir,
  predictV23ReleasedInputY0Position,v23HypotheticalAirXZDeltaAtTick,
- probeV23PredictedOriginalLowLandingKcc,
+ probeV23PredictedOriginalLowLandingKcc,probeV23IsolatedLowHumanKcc,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
@@ -402,6 +402,31 @@ describe('V23 authentic pinned original 11-face isolated real Rapier',()=>{
     expect(observed.status).toBe(
      'ISOLATED_NATIVE_AIR_KCC_LANDED_ON_SOURCE_Y0_ONLY');
    }
+   // Existing, previously unexecuted 40-tick HUMAN KCC validates 1m
+   // continuous support over the EXACT same pinned 11-face component.
+   // Synthetic start at Y0: NOT a continuous observed Windows trajectory
+   // from the preceding native-air landing and NOT an original collision flag.
+   const walkWorld=new RapierStagePhysics(1/60,isolated);
+   let walk:ReturnType<typeof probeV23IsolatedLowHumanKcc>;
+   try{
+    walkWorld.step();
+    walk=probeV23IsolatedLowHumanKcc(walkWorld);
+   }finally{walkWorld.world.free();}
+   console.info('V23_REAL_11_FACE_HUMAN_KCC_40_TICK',JSON.stringify({
+    status:walk.status,supportedSteps:walk.supportedSteps,
+    firstUnsupportedStep:walk.firstUnsupportedStep,
+    endpointErrorMeters:walk.endpointErrorMeters,
+    originalCollisionFlagsCertified:false,continuousWithNativeAir:false,
+    stageModified:false
+   }));
+   expect(walk.status).toBe('ISOLATED_Y0_HUMAN_KCC_SUPPORT_ONLY');
+   expect(walk.supportedSteps).toBe(40);
+   expect(walk.firstUnsupportedStep).toBeNull();
+   expect(walk.endpointErrorMeters).not.toBeNull();
+   expect(walk.endpointErrorMeters!).toBeLessThanOrEqual(.12);
+   expect(walk.originalCollisionFlagsCertified).toBe(false);
+   expect(walk.cpuRecastCertified).toBe(false);
+   expect(walk.normalGameModified).toBe(false);
    expect(original.solids).toHaveLength(25);
    expect(original.paintSurfaces).toHaveLength(17);
    expect(original.navigationLinks).toHaveLength(26);
