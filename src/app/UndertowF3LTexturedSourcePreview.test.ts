@@ -1,7 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
-import {auditF3lManifest,f3lSourceReadabilityStyle,F3L_STAGE_READABILITY_MODES,b253VerifiedInkVisualOptIn,type F3lManifest}
+import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
+ F3L_STAGE_READABILITY_MODES,b253VerifiedInkVisualOptIn,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
 describe('F3L original static textured scene review',()=>{
@@ -113,5 +114,37 @@ describe('B253 authentic source UV supports opt-in real-ink view',()=>{
   }
   expect(b253VerifiedInkVisualOptIn(new URLSearchParams(
    q.toString()+'&t21QaInput=deterministic'),57578,19)).toBe(false);
+ });
+});
+
+describe('genuine SOURCE stage optical overlays cannot impersonate registered paths',()=>{
+ const falseFloor=['Fld_Temple01_FloorLine00','Fld_Temple01_FloorLine02',
+  'Fld_Temple01_FloorFence00','Fld_Temple01_FloorFence03'];
+ it('ghosts precisely source FloorLine/FloorFence material groups while real PLAYER sees physical 25-solid stage',()=>{
+  for(const name of falseFloor){
+   expect(f3lIsUnverifiedFloorMarking(name)).toBe(true);
+   // FloorFence is classified METAL, FloorLine DETAIL: neither counts
+   // as physical floor; preserve source category and original UV assets.
+   const kind=name.includes('Fence')?'METAL' as const:'DETAIL' as const;
+   expect(f3lSourceReadabilityStyle(kind,'ORIGINAL_UV',true,name))
+    .toEqual({opacity:.08,depthWrite:false,opaque:false});
+   // QA/review presentation must be byte-for-byte visually unchanged.
+   expect(f3lSourceReadabilityStyle(kind,'ORIGINAL_UV',false,name))
+    .toEqual({opacity:1,depthWrite:true,opaque:true});
+  }
+ });
+ it('does not ghost walls, other metal, support, native gameplay or unverified names',()=>{
+  for(const name of ['Fld_Temple01_Wall00','Fld_Temple01_BridgeMetal00',
+   'Fld_Temple01_Pillar00','Fld_Temple01_Ceiling00','FloorLine00',
+   'Fld_Temple00_FloorLine00','Fld_Temple01_FloorConcrete00']){
+   expect(f3lIsUnverifiedFloorMarking(name)).toBe(false);
+  }
+  expect(f3lSourceReadabilityStyle('METAL','ORIGINAL_UV',true,
+    'Fld_Temple01_Wall00')).toEqual({opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('SUPPORT','ORIGINAL_UV',true,
+    'Fld_Temple01_Pillar00')).toEqual({opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+    'Fld_Temple01_FloorConcrete00')).toEqual({
+    opacity:.14,depthWrite:false,opaque:false});
  });
 });
