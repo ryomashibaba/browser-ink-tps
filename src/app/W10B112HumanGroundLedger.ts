@@ -17,6 +17,9 @@ export type B112FootSample={
  sourceSupportGapMeters:number|null;
  /** B114: optional read-only actual capsule-width original Rapier witness. */
  footprint?:B114OriginalFootprint;
+ /** Optional effective per-tick game movement axes, not raw keyboard or
+  * mouse events. Absent in older Windows witness exports. */
+ movementAxes?:readonly [number,number];
 };
 
 /**
@@ -40,6 +43,13 @@ function cloneB115Footprint(f:B114OriginalFootprint):B114OriginalFootprint{
   probes:f.probes.map(p=>({...p})),
   observedSourceSolidIds:[...f.observedSourceSolidIds]};
 }
+function cloneB112NativeFrame(s:B112FootSample):B112FootSample{
+ return {...s,
+  center:[...s.center] as [number,number,number],
+  movementAxes:s.movementAxes?
+   [...s.movementAxes] as [number,number]:undefined,
+  footprint:s.footprint?cloneB115Footprint(s.footprint):undefined};
+}
 export type B112FloorSuspicion={
  status:'SUSPECT_UNSUPPORTED_DESCENT_NOT_PROVEN_FLOOR_HOLE';
  firstUnsupportedNativeTick:number;
@@ -54,6 +64,10 @@ export type B112FloorSuspicion={
  rayHitDoesNotProveKccCollision:true;
  /** Measured pre-trigger frames retained across a real respawn. */
  realNativeFramesBeforeDetection:readonly B112FootSample[];
+ /** Up to the first 20 consecutive genuine native ticks AFTER detection.
+  * This closes the real-input evidence gap at 1391..1410 without changing
+  * physics, UI, PlayerInput or the normal game's stage. */
+ realNativeFramesAfterDetection:B112FootSample[];
  originalSourceSupportIdAtDetection:null;
  originalStageGeometryModified:false;
  playerPositionChangedByMonitor:false;
@@ -84,11 +98,12 @@ export class W10B112HumanGroundLedger {
   // Genuine actor reset is not a new source hole; retain previous suspects.
  }
  public observe(input:B112FootSample){
-  const s:{[K in keyof B112FootSample]:B112FootSample[K]}={
-   ...input,center:[...input.center]
-  };
+  const s=cloneB112NativeFrame(input);
   if(!Number.isSafeInteger(s.tick)||s.tick<0||
      !s.center.every(Number.isFinite)||
+     (s.movementAxes!==undefined&&
+      (s.movementAxes.length!==2||!s.movementAxes.every(
+       value=>Number.isFinite(value)&&Math.abs(value)<=1)))||
      (s.sourceSupportGapMeters!==null&&
       !Number.isFinite(s.sourceSupportGapMeters)))
    throw Error('B112_INVALID_NATIVE_FOOT_WITNESS');
@@ -108,6 +123,13 @@ export class W10B112HumanGroundLedger {
    throw Error('B112_SOURCE_HIT_ID_GAP_MISMATCH');
   this.samples.push(s);
   if(this.samples.length>HISTORY)this.samples.shift();
+  // Bounded read-only continuation of the same genuine fall witness.
+  // Strict sequential ticks: a skipped/absent frame is never fabricated.
+  for(const event of this.suspicions){
+   const next=event.realNativeFramesAfterDetection.length+1;
+   if(next<=20&&s.tick===event.detectedNativeTick+next)
+    event.realNativeFramesAfterDetection.push(cloneB112NativeFrame(s));
+  }
   const nearSupport=s.sourceSolidId!==null&&
    Math.abs(s.sourceSupportGapMeters??Infinity)<=NEAR_SUPPORT_GAP_METERS;
   if(s.grounded&&nearSupport)this.lastSupported=s;
@@ -136,9 +158,8 @@ export class W10B112HumanGroundLedger {
       cloneB115Footprint(s.footprint):null,
      unsupportedRayVsKccContext:classifyB115UnsupportedRayContext(s),
      rayHitDoesNotProveKccCollision:true,
-     realNativeFramesBeforeDetection:this.samples.map(row=>({
-      ...row,center:[...row.center] as [number,number,number]
-     })),
+     realNativeFramesBeforeDetection:this.samples.map(cloneB112NativeFrame),
+     realNativeFramesAfterDetection:[],
      originalSourceSupportIdAtDetection:null,
      originalStageGeometryModified:false,
      playerPositionChangedByMonitor:false
@@ -165,6 +186,7 @@ export class W10B112HumanGroundLedger {
    actualNativeFeet:this.samples.map(s=>({
     tick:s.tick,body:[...s.center],grounded:s.grounded,mode:s.mode,
     sourceSolidId:s.sourceSolidId,gapMeters:s.sourceSupportGapMeters,
+    movementAxes:s.movementAxes?[...s.movementAxes]:undefined,
     footprint:s.footprint?cloneB115Footprint(s.footprint):undefined
    })),
    suspicionCount:this.suspicions.length,
@@ -173,10 +195,10 @@ export class W10B112HumanGroundLedger {
     actualDetectedBody:[...e.actualDetectedBody],
     nativeFootprintAtDetection:e.nativeFootprintAtDetection?
      cloneB115Footprint(e.nativeFootprintAtDetection):null,
-    realNativeFramesBeforeDetection:e.realNativeFramesBeforeDetection.map(row=>({
-     ...row,center:[...row.center] as [number,number,number],
-     footprint:row.footprint?cloneB115Footprint(row.footprint):undefined
-    })),
+    realNativeFramesBeforeDetection:e.realNativeFramesBeforeDetection.map(
+     cloneB112NativeFrame),
+    realNativeFramesAfterDetection:e.realNativeFramesAfterDetection.map(
+     cloneB112NativeFrame),
     previousSupportedBody:e.previousSupportedBody?
      [...e.previousSupportedBody]:null
    })),

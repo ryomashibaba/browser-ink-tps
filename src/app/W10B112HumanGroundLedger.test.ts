@@ -136,3 +136,39 @@ describe('W10-B112 genuine original-source foot support ledger',()=>{
   expect(q.snapshot().suspicionCount).toBe(0);
  });
 });
+
+describe('B112 bounded genuine post-fall input evidence, no game intervention',()=>{
+ it('retains only 20 consecutive real ticks after a detected unsupported fall',()=>{
+  const q=new W10B112HumanGroundLedger();
+  q.observe({...frame(1,8.4,true),movementAxes:[0,1]});
+  for(let tick=2;tick<=45;tick++)
+   q.observe({...frame(tick,8.4-(tick-1)*.06,false,null),
+    movementAxes:tick<15?[0,1]:[0,0]});
+  const snap=q.snapshot();
+  expect(snap.suspicionCount).toBe(1);
+  const event=snap.suspicions[0]!;
+  expect(event.detectedNativeTick).toBe(9);
+  expect(event.realNativeFramesAfterDetection).toHaveLength(20);
+  expect(event.realNativeFramesAfterDetection[0]?.tick).toBe(10);
+  expect(event.realNativeFramesAfterDetection[0]?.movementAxes).toEqual([0,1]);
+  expect(event.realNativeFramesAfterDetection.find(p=>p.tick===15)?.movementAxes)
+   .toEqual([0,0]);
+  expect(event.realNativeFramesAfterDetection[19]?.tick).toBe(29);
+  expect(snap.actualNativeFeet).toHaveLength(24);
+  expect(snap.originalStageGeometryModified).toBe(false);
+  expect(snap.sourceFloorHoleCertified).toBe(false);
+ });
+ it('defensively copies movement axes and rejects non-finite input',()=>{
+  const q=new W10B112HumanGroundLedger();
+  const axes:[number,number]=[0,1];
+  q.observe({...frame(1,8.4,true),movementAxes:axes});
+  axes[1]=0;
+  expect(q.snapshot().actualNativeFeet[0]?.movementAxes).toEqual([0,1]);
+  expect(()=>q.observe({...frame(2,8.3,false,null),
+   movementAxes:[Number.POSITIVE_INFINITY,0]}))
+   .toThrow('B112_INVALID_NATIVE_FOOT_WITNESS');
+  expect(()=>q.observe({...frame(2,8.3,false,null),
+   movementAxes:[0,1.1]})).toThrow('B112_INVALID_NATIVE_FOOT_WITNESS');
+  expect(q.snapshot().lastNativeTick).toBe(1);
+ });
+});

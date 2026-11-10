@@ -5644,6 +5644,9 @@ export class UndertowF3PlayablePreviewApp{
       grounded:this.stats.playerGrounded,mode,
       sourceSolidId:centerSupport.sourceSolidId,
       sourceSupportGapMeters:centerSupport.gapMeters,
+      // Effective axes sampled in this same real 60Hz native tick.
+      // Existing read-only B112 opt-in only; no extra input or actor writes.
+      movementAxes:[this.input.moveX,this.input.moveY],
       footprint:sourceFootprint
      });
     }
