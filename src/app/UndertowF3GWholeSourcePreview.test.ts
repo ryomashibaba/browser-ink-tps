@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
+ buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
@@ -105,5 +106,25 @@ describe('V23 original first-drop isolated Rapier candidate',()=>{
   expect(isolated.solids.find(s=>s.id===
    'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY')?.triangleMesh?.indices)
    .toEqual([0,1,2]);
+ });
+});
+
+describe('V23 source-Y0 original lower floor is review-only',()=>{
+ it('does not make a floor from upper-only or missing original triangles',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  // Missing source never turns into a polygon proxy or a 26th live solid.
+  const fakePhysics={castCharacterFootSupport:()=>null} as unknown as
+   import('../physics/RapierStagePhysics').RapierStagePhysics;
+  const missing=buildIsolatedV23LowOriginalFloor(
+   new Map<OriginalF3gKind,Float32Array>(),stage,fakePhysics);
+  expect(missing.stage).toBeNull();
+  expect(missing.status).toBe('HOLD_NO_PINNED_FLOOR_BIN');
+  const onlyHigh=new Map<OriginalF3gKind,Float32Array>([['FLOOR',
+   new Float32Array([-22,6,44,-21.5,6,44,-22,6,44.5])]]);
+  const rejected=buildIsolatedV23LowOriginalFloor(onlyHigh,stage,fakePhysics);
+  expect(rejected.stage).toBeNull();
+  expect(rejected.status).toBe('HOLD_LOW_FLOOR_ANCHOR_AMBIGUOUS');
+  expect(stage.solids).toHaveLength(25);
+  expect(stage.solids.some(s=>s.id===V23_LOW_ISOLATED_SOLID_ID)).toBe(false);
  });
 });

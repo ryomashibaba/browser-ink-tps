@@ -195,6 +195,14 @@ export async function loadF3gWholeSource(app:AppBase){
      verifiedTriangles,stage,real);
     const isolated=buildIsolatedFirstDropOriginalTriangleStage(
      verifiedTriangles,stage);
+    const originalLow=buildIsolatedV23LowOriginalFloor(
+     verifiedTriangles,stage,real);
+    let originalLowContact:ReturnType<typeof inspectV23IsolatedLowFloorContact>|null=null;
+    if(originalLow.stage){
+     const lowWorld=new RapierStagePhysics(1/60,originalLow.stage);
+     try{lowWorld.step();originalLowContact=inspectV23IsolatedLowFloorContact(lowWorld);}
+     finally{lowWorld.world.free();}
+    }
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
     let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
     let isolationRampWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
@@ -216,7 +224,12 @@ export async function loadF3gWholeSource(app:AppBase){
     try{registeredRampWorld.step();registeredRampWalk=probeV23FirstDropHumanKcc(
      registeredRampWorld,'KNOWN_RAMP');}
     finally{registeredRampWorld.world.free();}
-    v23Evidence={alignment,registeredWalk,registeredRampWalk,isolation:{status:isolated.status,
+    v23Evidence={alignment,registeredWalk,registeredRampWalk,
+     originalLowFloor:{status:originalLow.status,sourceTriangles:originalLow.triangles,
+      physicalContactAtOriginalY0:originalLowContact,
+      originalCollisionFlags:'UNKNOWN',normalGameModified:false,
+      realHumanLandingCertified:false},
+     isolation:{status:isolated.status,
      originalSourceTriangles:isolated.triangles,
      originalCollisionFlags:isolated.sourceCollisionFlags,
      isolatedRapierFeet:isolationHits,isolatedHumanKccWalk:isolationWalk,
@@ -519,6 +532,125 @@ export function buildIsolatedFirstDropOriginalTriangleStage(
  };
  return {status:'ISOLATED_24_ORIGINAL_PLUS_SOURCE_TRIANGLE_REPLACEMENT' as const,
   stage,triangles:vertices.length/3,sourceCollisionFlags:'UNKNOWN' as const};
+}
+
+/** Strict original-source FLO0R candidate in an ISOLATED Rapier world.
+ * The retained source Face ledger's SHA-verified gzip describes exactly 11
+ * edge-connected static FLOOR triangles at native Y=3 (project Y=0), near
+ * the Windows 1390 FALL XZ. Neither original collision flags nor human
+ * ability to reach the lower floor are known. No OBJ vertices are embedded.
+ */
+export const V23_LOW_ISOLATED_SOLID_ID=
+ 'T21_V23_ISOLATED_EXACT_STATIC_Y0_COMPONENT_NOT_AUTHORIZED';
+export function buildIsolatedV23LowOriginalFloor(
+ bins:OriginalF3gBins,stage:StageDefinition,native:RapierStagePhysics
+){
+ requireFrozenSource(stage);
+ const hold=(status:string,count=0)=>({
+  status,triangles:count,stage:null as StageDefinition|null,
+  collisionFlags:'UNKNOWN' as const,realWalkabilityCertified:false as const});
+ const source=bins.get('FLOOR');
+ if(!source||source.length%9!==0)return hold('HOLD_NO_PINNED_FLOOR_BIN');
+ type Tri={p:readonly[StageVector3,StageVector3,StageVector3];edges:readonly string[]};
+ const all:Tri[]=[];
+ const vkey=(p:StageVector3)=>p.map(v=>v.toFixed(4)).join(',');
+ const ekey=(a:StageVector3,b:StageVector3)=>[vkey(a),vkey(b)].sort().join('|');
+ for(let i=0;i<source.length;i+=9){
+  const a=[source[i]!,source[i+1]!,source[i+2]!] as const;
+  const b=[source[i+3]!,source[i+4]!,source[i+5]!] as const;
+  const c=[source[i+6]!,source[i+7]!,source[i+8]!] as const;
+  if(![...a,...b,...c].every(Number.isFinite)||
+   [a[1],b[1],c[1]].some(y=>Math.abs(y-3)>.0001))continue;
+  const signed=(b[0]-a[0])*(c[2]-a[2])-(c[0]-a[0])*(b[2]-a[2]);
+  if(Math.abs(signed)<1e-7)continue;
+  all.push({p:[a,b,c],edges:[ekey(a,b),ekey(b,c),ekey(c,a)]});
+ }
+ const witness=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ const [mx,mz]=undertowProjectXZToTemple01ModelXZ([witness.x,witness.z]);
+ const seeds=all.map((t,i)=>sourceHeightAtXZ(
+  Float32Array.from(t.p.flatMap(p=>[...p])),0,mx,mz)!==null?i:-1).filter(i=>i>=0);
+ if(seeds.length!==1)return hold('HOLD_LOW_FLOOR_ANCHOR_AMBIGUOUS',seeds.length);
+ const edges=new Map<string,number[]>();
+ all.forEach((t,i)=>t.edges.forEach(e=>{
+  const ids=edges.get(e)??[];ids.push(i);edges.set(e,ids);
+ }));
+ const seen=new Set<number>([seeds[0]!]),q=[seeds[0]!];
+ for(let i=0;i<q.length;i++){
+  for(const e of all[q[i]!]!.edges)for(const n of edges.get(e)??[]){
+   if(!seen.has(n)){seen.add(n);q.push(n);}
+  }
+  if(seen.size>256)return hold('HOLD_LOW_FLOOR_COMPONENT_UNBOUNDED',seen.size);
+ }
+ const selected=[...seen].map(i=>all[i]!);
+ let area=0,minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+ for(const t of selected){
+  const [a,b,c]=t.p;
+  area+=Math.abs((b[0]-a[0])*(c[2]-a[2])-
+   (c[0]-a[0])*(b[2]-a[2]))/2;
+  for(const p of t.p){
+   minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);
+   minZ=Math.min(minZ,p[2]);maxZ=Math.max(maxZ,p[2]);
+  }
+ }
+ // These measurements come from the independent, retained source ledger.
+ // A nonmatching optical pack cannot quietly create a new physical floor.
+ if(selected.length!==11||Math.abs(area-296.5)>.02||
+    Math.abs(minX+29.5)>.001||Math.abs(maxX+4.25)>.001||
+    Math.abs(minZ-21.5)>.001||Math.abs(maxZ-38.5)>.001)
+  return hold('HOLD_LOW_FLOOR_PROVENANCE_GEOMETRY_DRIFT',selected.length);
+ const points=selected.flatMap(t=>t.p).map(p=>{
+  const [x,z]=undertowTemple01ModelXZToProjectXZ([p[0],p[2]]);
+  return [x,p[1]-3,z] as StageVector3;
+ });
+ const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ for(let i=0;i<points.length;i+=3){
+  const a=points[i]!,b=points[i+1]!,c=points[i+2]!;
+  const probes:StageVector3[]=[a,b,c,
+   [(a[0]+b[0])/2,0,(a[2]+b[2])/2],
+   [(b[0]+c[0])/2,0,(b[2]+c[2])/2],
+   [(c[0]+a[0])/2,0,(c[2]+a[2])/2],
+   [(a[0]+b[0]+c[0])/3,0,(a[2]+b[2]+c[2])/3]];
+  for(const p of probes){
+   const hit=native.castCharacterFootSupport(
+    new Vec3(p[0],p[1]+offset,p[2]),offset,'HUMAN');
+   if(hit&&Math.abs(p[1]-hit.point.y)<=.22)
+    return hold('HOLD_LOW_FLOOR_DUPLICATES_REGISTERED_RAPIER',selected.length);
+  }
+ }
+ const minPx=Math.min(...points.map(p=>p[0]));
+ const maxPx=Math.max(...points.map(p=>p[0]));
+ const minPz=Math.min(...points.map(p=>p[2]));
+ const maxPz=Math.max(...points.map(p=>p[2]));
+ const cx=(minPx+maxPx)/2,cz=(minPz+maxPz)/2;
+ const candidate={
+  id:V23_LOW_ISOLATED_SOLID_ID,center:[cx,0,cz] as const,
+  size:[maxPx-minPx,.01,maxPz-minPz] as const,
+  material:'medium' as const,render:false,
+  projectileBlocker:false,cameraBlocker:false,
+  collisionEnabled:true,navigationEnabled:false,
+  triangleMesh:{vertices:points.map(p=>[p[0]-cx,p[1],p[2]-cz]
+   as StageVector3),indices:points.map((_,i)=>i)}
+ };
+ const isolated:StageDefinition={
+  metadata:stage.metadata,solids:[...stage.solids,candidate],
+  paintSurfaces:[],navigationLinks:[]
+ };
+ return {status:'ISOLATED_ORIGINAL_Y0_GEOMETRIC_CANDIDATE' as const,
+  triangles:selected.length,stage:isolated as StageDefinition|null,
+  areaSquareMeters:area,sourceVersionCollisionFlags:'UNKNOWN' as const,
+  realWalkabilityCertified:false as const,liveGameModified:false as const};
+}
+
+export function inspectV23IsolatedLowFloorContact(world:RapierStagePhysics){
+ const p=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ const o=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const hit=world.castCharacterFootSupport(new Vec3(p.x,o,p.z),o,'HUMAN');
+ return {recordedFootY:p.footY,inspectedOriginalFloorY:0 as const,
+  originalWindowsXZ:[p.x,p.z] as const,
+  supportedByExactIsolatedTriangle:hit?.solidId===V23_LOW_ISOLATED_SOLID_ID,
+  supportSolidId:hit?.solidId??null,sourceHeightGap:hit?-hit.point.y:null,
+  actualHumanReachedThisFloor:false as const,
+  gameCollisionFlagsCertified:false as const};
 }
 export function probeIsolatedFirstDropRapier(
  stage:StageDefinition,physics:RapierStagePhysics
