@@ -2480,11 +2480,13 @@ export class UndertowF3PlayablePreviewApp{
      this.canvas.dataset.t21B200RealKeyRDecision=decision;
      if(decision==='CLICK_REAL_REPLAY'||
         decision==='RELOAD_NATIVE_SOURCE_WORLD'){
-      ev.preventDefault();this.restart();
+      // Native capture precedes the bootstrap SOURCE capture listener.
+      // Consume an authorized R once to avoid duplicate world navigation.
+      ev.preventDefault();ev.stopImmediatePropagation();this.restart();
      }else if(decision==='NAVIGATE_FRESH_COOP_CLEAR'){
       // Same real new-world route as the already authorized mission button.
       // Never mutate current physics, actors, paint, clock or official score.
-      ev.preventDefault();
+      ev.preventDefault();ev.stopImmediatePropagation();
       if(!this.requestFreshSourceCoopReplay()){
        this.canvas.dataset.t21B200RealKeyRDecision='REPLAY_UI_BLOCKED';
        this.b25RunProgress.textContent=
