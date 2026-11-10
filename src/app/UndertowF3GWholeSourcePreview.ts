@@ -702,7 +702,9 @@ export function v23HypotheticalAirXZDeltaAtTick(
   const originalVelocity=perTick*rate;
   const speed=Math.max(0,Math.abs(originalVelocity)-
    decrease*tickAfter1390);
-  return Math.sign(originalVelocity)*speed/rate;
+  // A stopped Z axis must be +0, not JS -0. Preserve native movement
+  // distance; avoid treating signed-zero artifacts as different input cases.
+  return speed===0?0:Math.sign(originalVelocity)*speed/rate;
  };
  return [axis(dx),axis(dz)];
 }

@@ -316,7 +316,13 @@ describe('V23 real isolated Rapier native-air mechanics on non-original fixture'
    expect(r.originalVersion72CollisionFlagsCertified).toBe(false);
    expect(r.normalStageModified).toBe(false);
   }
-  expect(results[0]!.actualGroundedXZ).not.toEqual(results[1]!.actualGroundedXZ);
+  // TypeScript's union includes HOLD responses without a grounded position:
+  // narrow explicitly instead of claiming every isolated attempt lands.
+  const continued=results[0]!,released=results[1]!;
+  if(!('actualGroundedXZ' in continued)||
+     !('actualGroundedXZ' in released))
+   throw Error('T21_V23_SYNTHETIC_RAPIER_GROUND_CONTACT_NOT_OBSERVED');
+  expect(continued.actualGroundedXZ).not.toEqual(released.actualGroundedXZ);
   expect(frozen.solids).toHaveLength(25);
   expect(frozen.paintSurfaces).toHaveLength(17);
   expect(frozen.navigationLinks).toHaveLength(26);
