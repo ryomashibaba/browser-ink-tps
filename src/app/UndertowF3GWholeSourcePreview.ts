@@ -188,6 +188,7 @@ export async function loadF3gWholeSource(app:AppBase){
  if(originalVisualRegistration(q)){
   try{
    const stage=undertowT21dConnectivityQaStage();
+   const syntheticFallHeight=auditV23WindowsFallStaticHeightSection(verifiedTriangles);
    const real=new RapierStagePhysics(1/60,stage);
    try{
     real.step();
@@ -234,7 +235,7 @@ export async function loadF3gWholeSource(app:AppBase){
     try{registeredRampWorld.step();registeredRampWalk=probeV23FirstDropHumanKcc(
      registeredRampWorld,'KNOWN_RAMP');}
     finally{registeredRampWorld.world.free();}
-    v23Evidence={alignment,registeredWalk,registeredRampWalk,
+    v23Evidence={alignment,syntheticFallHeight,registeredWalk,registeredRampWalk,
      originalLowFloor:{status:originalLow.status,sourceTriangles:originalLow.triangles,
       physicalContactAtOriginalY0:originalLowContact,
       isolatedHumanKcc:originalLowKcc,
@@ -332,6 +333,49 @@ function sourceHeightAtXZ(a:Float32Array,i:number,mx:number,mz:number):
  if(magnitude<1e-9||Math.abs(ny)/magnitude<.70)return null;
  const y=u*ay+v*by+w*cy;
  return Number.isFinite(y)?y:null;
+}
+
+/** Two witnessed Windows tick positions, 21 SYNTHETIC straight-line XZ
+ * samples between them. Not a witnessed walk, original version-7.2 collision
+ * map, actor placement, or a globally authenticated source transform.
+ */
+export function auditV23WindowsFallStaticHeightSection(bins:OriginalF3gBins){
+ const base={witnesses:['LOW_SUPPORTED_1355','LOW_UNSUPPORTED_1390'] as const,
+  syntheticIntermediateSamples:true as const,actualRouteCertified:false as const,
+  actorPlacementsCertified:false as const,globalTransformCertified:false as const,
+  originalCollisionFlagsCertified:false as const};
+ if(ORIGINAL_F3G_KINDS.some(k=>!bins.has(k)))return {
+  ...base,status:'HOLD_INCOMPLETE_PINNED_SOURCE' as const,
+  sampledPoints:0,nearRecordedFootSamples:null as number|null};
+ const start=WINDOWS.find(p=>p.id==='LOW_SUPPORTED_1355')!;
+ const end=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ let nearRecordedFootSamples=0,pointsWithAnyStaticPlane=0;
+ const nearestOriginalPlaneGapMeters:Array<number|null>=[];
+ for(let step=0;step<=20;step++){
+  const t=step/20;
+  const x=start.x+(end.x-start.x)*t,z=start.z+(end.z-start.z)*t;
+  const footY=start.footY+(end.footY-start.footY)*t;
+  const [mx,mz]=undertowProjectXZToTemple01ModelXZ([x,z]);
+  let near=false,nearest:number|null=null;
+  for(const kind of ORIGINAL_F3G_KINDS){
+   const a=bins.get(kind)!;
+   if(a.length%9!==0)throw Error('T21_V23_BAD_STATIC_SOURCE_BIN');
+   for(let i=0;i<a.length;i+=9){
+    const sourceY=sourceHeightAtXZ(a,i,mx,mz);
+    if(sourceY===null)continue;
+    const delta=sourceY-3-footY;
+    if(nearest===null||Math.abs(delta)<Math.abs(nearest))nearest=delta;
+    if(Math.abs(delta)<=PLAYER_CHARACTER_PHYSICS.humanRadiusMeters)near=true;
+   }
+  }
+  if(near)nearRecordedFootSamples++;
+  if(nearest!==null)pointsWithAnyStaticPlane++;
+  nearestOriginalPlaneGapMeters.push(nearest);
+ }
+ return {...base,status:'SOURCE_HEIGHT_SECTION_INSPECTED_ONLY' as const,
+  sampledPoints:21,nearRecordedFootSamples,pointsWithAnyStaticPlane,
+  nearestOriginalPlaneGapMeters,
+  originalY0SourceDoesNotCertifyY3Support:true as const};
 }
 
 function requireFrozenSource(stage:StageDefinition){

@@ -3,6 +3,7 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
  buildIsolatedV23LowOriginalFloor,V23_LOW_ISOLATED_SOLID_ID,
+ auditV23WindowsFallStaticHeightSection,ORIGINAL_F3G_KINDS,
  v23HasSourceUpwardFloorWinding,
  classifyV23LowOriginalFootprintContact,
  f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
@@ -164,5 +165,28 @@ describe('V23 isolated original native floor winding guard',()=>{
   expect(v23HasSourceUpwardFloorWinding([a,b,[1,3.2,0]])).toBe(false);
   expect(v23HasSourceUpwardFloorWinding([a,a,c])).toBe(false);
   expect(v23HasSourceUpwardFloorWinding([a,b,[Infinity,3,0]])).toBe(false);
+ });
+});
+
+describe('V23 two-witness static-source plane height checks',()=>{
+ it('fails closed with missing bins instead of saying the floor is absent',()=>{
+  const x=auditV23WindowsFallStaticHeightSection(
+   new Map<OriginalF3gKind,Float32Array>());
+  expect(x.status).toBe('HOLD_INCOMPLETE_PINNED_SOURCE');
+  expect(x.nearRecordedFootSamples).toBeNull();
+  expect(x.actualRouteCertified).toBe(false);
+ });
+ it('does not classify a source plane 3m below as recorded foot support',()=>{
+  // Intentionally artificial broad-plane fixtures: never original game data.
+  const fake=(y:number)=>new Map<OriginalF3gKind,Float32Array>(
+   ORIGINAL_F3G_KINDS.map(k=>[k,new Float32Array([
+    0,y,1000,1000,y,-1000,-1000,y,-1000
+   ])]));
+  const lower=auditV23WindowsFallStaticHeightSection(fake(3));
+  expect(lower.sampledPoints).toBe(21);
+  expect(lower.nearRecordedFootSamples).toBe(0);
+  const atFoot=auditV23WindowsFallStaticHeightSection(fake(6));
+  expect(atFoot.nearRecordedFootSamples).toBe(21);
+  expect(atFoot.actualRouteCertified).toBe(false);
  });
 });
