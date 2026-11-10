@@ -2716,10 +2716,18 @@ export class UndertowF3PlayablePreviewApp{
   if(!this.nativeVerifiedStageVisualEligible||
      this.wholeSourceStatus!=='OFF')return;
   try{
-   const url=new URL('t21-f3g-source/manifest.json',document.baseURI);
-   if(url.origin!==location.origin)return;
-   const available=await fetch(url.href,{method:'HEAD',cache:'no-store'});
-   if(!available.ok||this.stopReason)return;
+   const flat=new URL('t21-f3g-source/manifest.json',document.baseURI);
+   const uv=new URL('t21-f3g-source/f3l-original-textured.json',
+    document.baseURI);
+   if(flat.origin!==location.origin||uv.origin!==location.origin)return;
+   // The F3G flat fallback groups FloorLine/FloorFence with opaque
+   // DETAIL/METAL, so it cannot distinguish excluded route markings from
+   // structural walls. Require locally present F3L material separation.
+   const [flatPresent,uvPresent]=await Promise.all([
+    fetch(flat.href,{method:'HEAD',cache:'no-store'}),
+    fetch(uv.href,{method:'HEAD',cache:'no-store'})
+   ]);
+   if(!flatPresent.ok||!uvPresent.ok||this.stopReason)return;
    await this.loadWholeSource();
   }catch{
    // Optional local optics must never turn a playable stage into STOP.
@@ -2738,6 +2746,18 @@ export class UndertowF3PlayablePreviewApp{
   this.structures.root.enabled=false;
   const button=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
   if(button)button.textContent='Full source OBJ: OFF';
+ }
+
+ private restoreNativeRegisteredStageWhenUvUnverified():void{
+  if(!this.nativeVerifiedStageVisualEligible)return;
+  // False bridge markings must not replace the registered 25-solid
+  // physical SOURCE floor. Leave review mode and gameplay untouched.
+  if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
+  if(this.texturedF3l)this.texturedF3l.root.enabled=false;
+  this.sourceCompletion.root.enabled=true;
+  this.structures.root.enabled=true;
+  this.texturedF3lActive=false;
+  this.canvas.dataset.t21F3lOriginalTexture='OFF';
  }
 
  private async loadWholeSource(){
@@ -2815,7 +2835,8 @@ export class UndertowF3PlayablePreviewApp{
       this.nativeVerifiedStageVisualEligible,
      flatSourceVerified:this.wholeSourceStatus==='READY',
      texturedSourceVerified:this.texturedF3lStatus==='READY'&&!!this.texturedF3l,
-     prefersFlat:this.b29PreferFlat
+     prefersFlat:this.b29PreferFlat,
+     nativeRegisteredFloorOnly:this.nativeVerifiedStageVisualEligible
     });
     const wasVisible=!!this.wholeSourceRoot?.enabled;
     if(choice==='F3L_ORIGINAL_UV'&&this.texturedF3l){
@@ -2828,9 +2849,12 @@ export class UndertowF3PlayablePreviewApp{
      this.texturedF3l.root.enabled=false;
      this.canvas.dataset.t21F3lOriginalTexture='OFF';
     }
+    if(choice==='F3E_REFERENCE')
+     this.restoreNativeRegisteredStageWhenUvUnverified();
    }catch(error){
     this.texturedF3lStatus='ERROR';
     this.texturedF3lError=String(error).slice(0,240);
+    this.restoreNativeRegisteredStageWhenUvUnverified();
    }
   }catch(e){
    this.wholeSourceError=String(e).slice(0,320);

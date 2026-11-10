@@ -9,11 +9,16 @@ export interface SourcePresentationEvidence{
  flatSourceVerified:boolean;
  texturedSourceVerified:boolean;
  prefersFlat:boolean;
+ /** Native four-mode gameplay cannot use unsplittable F3G fallback: its
+  * DETAIL/METAL groups include unverified FloorLine/FloorFence bridges. */
+ nativeRegisteredFloorOnly?:boolean;
 }
 export function selectVerifiedSourcePresentation(
  e:SourcePresentationEvidence):VerifiedSourcePresentation{
  if(!e.fullSourceReviewRequested||!e.flatSourceVerified)
   return 'F3E_REFERENCE';
+ if(e.nativeRegisteredFloorOnly)return e.texturedSourceVerified
+  ?'F3L_ORIGINAL_UV':'F3E_REFERENCE';
  if(e.texturedSourceVerified&&!e.prefersFlat)return 'F3L_ORIGINAL_UV';
  return 'F3G_FLAT';
 }

@@ -5,6 +5,8 @@ import {originalVisualRegistration,originalCanonicalSourceVisualRegistration,
  from './UndertowF3OriginalVisualRegistration';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl}
  from './SourcePlayPortal';
+import {selectVerifiedSourcePresentation}
+ from './UndertowF3VerifiedSourcePresentation';
 import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
 describe('verified optical-only original model stage placement',()=>{
@@ -70,5 +72,30 @@ describe('canonical SOURCE playable stage uses only preinstalled local optical g
   ]){
    expect(originalCanonicalSourceVisualRegistration(href)).toBeNull();
   }
+ });
+});
+
+describe('true native SOURCE original stage floor remains physically honest',()=>{
+ const base={
+  fullSourceReviewRequested:true,flatSourceVerified:true,
+  texturedSourceVerified:false,prefersFlat:false,
+  nativeRegisteredFloorOnly:true
+ };
+ it('never loads unsplit flat F3G optical FloorLine/FloorFence bridges into native PLAYER',()=>{
+  expect(selectVerifiedSourcePresentation(base)).toBe('F3E_REFERENCE');
+  expect(selectVerifiedSourcePresentation({...base,prefersFlat:true}))
+   .toBe('F3E_REFERENCE');
+  expect(selectVerifiedSourcePresentation({...base,flatSourceVerified:false,
+   texturedSourceVerified:true})).toBe('F3E_REFERENCE');
+ });
+ it('uses independently verified UV F3L when present and preserves explicit QA-only flat review',()=>{
+  expect(selectVerifiedSourcePresentation({...base,texturedSourceVerified:true}))
+   .toBe('F3L_ORIGINAL_UV');
+  expect(selectVerifiedSourcePresentation({...base,texturedSourceVerified:true,
+   prefersFlat:true})).toBe('F3L_ORIGINAL_UV');
+  expect(selectVerifiedSourcePresentation({...base,nativeRegisteredFloorOnly:false}))
+   .toBe('F3G_FLAT');
+  expect(selectVerifiedSourcePresentation({...base,nativeRegisteredFloorOnly:false,
+   texturedSourceVerified:true,prefersFlat:true})).toBe('F3G_FLAT');
  });
 });
