@@ -156,7 +156,8 @@ import {createB70OwnerAimComparisonUI}
  from './UndertowF3OwnerAimComparisonUI';
 import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
-import {W10B112HumanGroundLedger} from './W10B112HumanGroundLedger';
+import {W10B112HumanGroundLedger,
+ b112NativeHumanKeysEvidenceAllowed} from './W10B112HumanGroundLedger';
 import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
 import {sourceNativeInputProjection} from './SourceNativeInputProjection';
@@ -441,6 +442,9 @@ export class UndertowF3PlayablePreviewApp{
   return q.get('t21QaDrive')==='source'&&
    q.get('t21W10B112')==='humanGround';
  })();
+ // Fixed once: deterministic QA movement must never claim real keyboard data.
+ private readonly b112RealHumanAxesEligible=b112NativeHumanKeysEvidenceAllowed(
+  new URL(location.href).searchParams);
  // B36: normal source-practice can reclaim view-space when pointer-locked.
  // Deterministic source QA keeps its prior DOM layout unless opted in.
  private readonly b36FocusEnabled=(()=>{
@@ -5644,9 +5648,10 @@ export class UndertowF3PlayablePreviewApp{
       grounded:this.stats.playerGrounded,mode,
       sourceSolidId:centerSupport.sourceSolidId,
       sourceSupportGapMeters:centerSupport.gapMeters,
-      // Effective axes sampled in this same real 60Hz native tick.
-      // Existing read-only B112 opt-in only; no extra input or actor writes.
-      movementAxes:[this.input.moveX,this.input.moveY],
+      // Only genuine key axes, never deterministic QA input masquerading
+      // as a user key release. UNKNOWN is undefined, never [0,0].
+      movementAxes:this.b112RealHumanAxesEligible?
+       [this.input.moveX,this.input.moveY]:undefined,
       footprint:sourceFootprint
      });
     }

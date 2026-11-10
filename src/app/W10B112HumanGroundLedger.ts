@@ -6,6 +6,13 @@
  * "SUSPECT" is a reproducible diagnostic pattern, NOT proof of a mesh hole.
  */
 import type {B114OriginalFootprint} from './W10B114OriginalFootprintAudit';
+/** Do not mislabel a deterministic QA axis as a genuine keyboard release. */
+export function b112NativeHumanKeysEvidenceAllowed(q:URLSearchParams):boolean{
+ return q.get('t21Play')==='preview'&&
+  q.get('t21QaDrive')==='source'&&
+  q.get('t21W10B112')==='humanGround'&&
+  q.getAll('t21W10B112').length===1&&!q.has('t21QaInput');
+}
 export type B112FootSample={
  tick:number;
  /** Native body center from PlayerController / Rapier after physics.step. */
@@ -17,8 +24,9 @@ export type B112FootSample={
  sourceSupportGapMeters:number|null;
  /** B114: optional read-only actual capsule-width original Rapier witness. */
  footprint?:B114OriginalFootprint;
- /** Optional effective per-tick game movement axes, not raw keyboard or
-  * mouse events. Absent in older Windows witness exports. */
+ /** Optional effective per-tick axes from real keyboard control only.
+  * Undefined = UNKNOWN, not a synthetic [0,0] or a proven key release.
+  * No raw keyboard/mouse events; absent in older Windows exports or QA. */
  movementAxes?:readonly [number,number];
 };
 

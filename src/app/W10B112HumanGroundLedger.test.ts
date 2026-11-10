@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {W10B112HumanGroundLedger,classifyB115UnsupportedRayContext,
+ b112NativeHumanKeysEvidenceAllowed,
  type B112FootSample}
  from './W10B112HumanGroundLedger';
 
@@ -170,5 +171,29 @@ describe('B112 bounded genuine post-fall input evidence, no game intervention',(
   expect(()=>q.observe({...frame(2,8.3,false,null),
    movementAxes:[0,1.1]})).toThrow('B112_INVALID_NATIVE_FOOT_WITNESS');
   expect(q.snapshot().lastNativeTick).toBe(1);
+ });
+});
+
+describe('B112 real keyboard source vs deterministic QA axes',()=>{
+ const url=(suffix='')=>new URLSearchParams(
+  't21Play=preview&t21QaDrive=source&t21W10B112=humanGround'+suffix);
+ it('retains authentic human intent but never labels synthetic QA as keyboard',()=>{
+  expect(b112NativeHumanKeysEvidenceAllowed(url())).toBe(true);
+  expect(b112NativeHumanKeysEvidenceAllowed(url('&t21KccAudit=readOnly')))
+   .toBe(true);
+  expect(b112NativeHumanKeysEvidenceAllowed(url('&t21QaInput=deterministic')))
+   .toBe(false);
+  expect(b112NativeHumanKeysEvidenceAllowed(url('&t21QaInput=unknown')))
+   .toBe(false);
+  expect(b112NativeHumanKeysEvidenceAllowed(url('&t21W10B112=humanGround')))
+   .toBe(false);
+  expect(b112NativeHumanKeysEvidenceAllowed(new URLSearchParams()))
+   .toBe(false);
+ });
+ it('unknown axes are NOT evidence for real key release [0,0]',()=>{
+  const q=new W10B112HumanGroundLedger();
+  q.observe({...frame(1,8.4,true),movementAxes:undefined});
+  expect(q.snapshot().actualNativeFeet[0]?.movementAxes).toBeUndefined();
+  expect(q.snapshot().sourceFloorHoleCertified).toBe(false);
  });
 });
