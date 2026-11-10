@@ -228,6 +228,8 @@ describe('registered SOURCE player floor + real KCC camera line of sight',()=>{
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);
   const physics=new RapierStagePhysics(1/60,stage);
+  // Rapier must update its query pipeline before a SOURCE floor ray.
+  physics.step();
   const originalFoot=new Vec3(-4.770392417907715,
    7.525381927490234,52.723026275634766);
   const center=originalFoot.clone();

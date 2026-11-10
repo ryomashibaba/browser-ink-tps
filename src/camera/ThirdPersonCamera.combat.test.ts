@@ -21,7 +21,12 @@ beforeAll(async()=>{
 });
 beforeEach(()=>{
  vi.stubGlobal('window',{addEventListener:vi.fn()});
- vi.stubGlobal('document',{addEventListener:vi.fn()});
+ vi.stubGlobal('document',{addEventListener:vi.fn(),
+  createElement:()=>({
+   id:'',hidden:false,textContent:'',style:{cssText:''},
+   setAttribute:vi.fn()
+  }),body:{appendChild:vi.fn()}});
+
  vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
 });
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
