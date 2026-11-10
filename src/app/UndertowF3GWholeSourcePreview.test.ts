@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {auditF3gPackManifest,buildIsolatedFirstDropOriginalTriangleStage,
- f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,type OriginalF3gKind}
+ f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
+ type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
 describe('F3G whole-original source pack source authority',()=>{
  const group=(kind:'FLOOR'|'SLOPE'|'GLASS')=>({
@@ -43,6 +44,23 @@ describe('F3G whole-original source pack source authority',()=>{
    actorPlacementRecovered:true as unknown as false}})).toThrow('T21_F3H_SOURCE_COVERAGE_UNTRUSTED');
   expect(()=>auditF3gPackManifest({...valid(),includedOriginalTriangles:1599}))
    .toThrow('T21_F3G_UNVERIFIED_GROUP_TRIANGLE_TOTAL');
+ });
+});
+
+// K1 original ramp and Windows native fall are different trials; do not
+// invent a hybrid route or accidentally treat model region anchors as inputs.
+describe('V23 witnessed same-run K1 start and end',()=>{
+ it('keeps ramp probe within the actual K1 witness family',()=>{
+  const start=ORIGINAL_F3G_FLOOR_SAMPLES.find(p=>p.id==='RAMP_APPROACH_K1')!;
+  const end=ORIGINAL_F3G_FLOOR_SAMPLES.find(p=>p.id==='RAMP_CONTACT_K1')!;
+  const win=ORIGINAL_F3G_FLOOR_SAMPLES.find(p=>p.id==='LOW_SUPPORTED_1355')!;
+  expect(start.provenance).toBe('CHROMIUM_K1');
+  expect(end.provenance).toBe('CHROMIUM_K1');
+  expect(win.provenance).toBe('WINDOWS_NATIVE');
+  expect(start.x).toBeCloseTo(-.079,6);
+  expect(start.z).toBeCloseTo(50.582,6);
+  expect(start.footY).toBeGreaterThan(3);
+  expect(end.z).toBeCloseTo(49.8099,6);
  });
 });
 

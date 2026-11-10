@@ -264,6 +264,11 @@ const WINDOWS:readonly Probe[]=[
   footY:3,provenance:'WINDOWS_NATIVE'},
  {id:'LOW_UNSUPPORTED_1390',x:.8204801082611084,z:44.09070587158203,
   footY:3,provenance:'WINDOWS_NATIVE'},
+ // K1 genuine same-run starting body (-.079,3.896,50.582), recorded
+ // to millimetres; subtract the unchanged native HUMAN capsule foot offset.
+ {id:'RAMP_APPROACH_K1',x:-.079,z:50.582,
+  footY:3.896-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+  provenance:'CHROMIUM_K1'},
  {id:'RAMP_CONTACT_K1',x:2.0517,z:49.8099,
   footY:3.0683,provenance:'CHROMIUM_K1'}
 ];
@@ -326,6 +331,8 @@ export function auditF3gOriginalFloorAgainstRapier(
   rows:ORIGINAL_F3G_FLOOR_SAMPLES.map((p,index)=>{
    const [mx,mz]=undertowProjectXZToTemple01ModelXZ([p.x,p.z]);
    let nearest:{kind:OriginalF3gKind;y:number;delta:number}|null=null;
+   let opticalFloor:{kind:'FLOOR'|'SLOPE';y:number;delta:number}|null=null;
+   let opticalFloorPlanes=0;
    let intersectionCount=0;
    for(const kind of ORIGINAL_F3G_KINDS){
     const a=bins.get(kind);
@@ -338,6 +345,13 @@ export function auditF3gOriginalFloorAgainstRapier(
      const delta=y-3-p.footY;
      if(!nearest||Math.abs(delta)<Math.abs(nearest.delta))
       nearest={kind,y:y-3,delta};
+     // Names are source MATERIAL hints, never original collision flags.
+     // Keep glass/roof/decorative planes out of the floor-only comparison.
+     if(kind==='FLOOR'||kind==='SLOPE'){
+      opticalFloorPlanes++;
+      if(!opticalFloor||Math.abs(delta)<Math.abs(opticalFloor.delta))
+       opticalFloor={kind,y:y-3,delta};
+     }
     }
    }
    const rapier=observations[index]!;
@@ -349,6 +363,16 @@ export function auditF3gOriginalFloorAgainstRapier(
     closestOriginalVisualKind:nearest?.kind??null,
     closestOriginalVisualY:nearest?.y??null,
     sourceMinusRecordedFootMeters:nearest?.delta??null,
+    // Floor MATERIAL is only a candidate; physical walkability remains HOLD.
+    sourceOpticalFloorPlanesAtXZ:opticalFloorPlanes,
+    nearestSourceOpticalFloorKind:opticalFloor?.kind??null,
+    nearestSourceOpticalFloorY:opticalFloor?.y??null,
+    sourceOpticalFloorMinusRecordedFootMeters:opticalFloor?.delta??null,
+    sourceOpticalFloorMinusRegisteredRapierMeters:opticalFloor!==null&&
+     rapier.originalRapierHitFootGapMeters!==null?
+      opticalFloor.delta+rapier.originalRapierHitFootGapMeters:null,
+    actualFootWitness:p.provenance!=='REGISTERED_MODEL_REGION',
+    sourceOpticalMaterialConfersCollisionAuthority:false as const,
     // Unlike foot-to-visual error, this compares actual near-height Rapier.
     // Missing registered support is UNKNOWN (null), never a claimed 0m gap.
     sourceMinusRegisteredRapierMeters:nearest!==null&&
@@ -512,6 +536,10 @@ export function probeIsolatedFirstDropRapier(
   return {id:p.id,originalFoot:[p.x,p.footY,p.z] as const,
    isolatedRapierSupportId:hit?.solidId??null,
    isolatedRapierHeightGapMeters:hit?p.footY-hit.point.y:null,
+   sourceTriangleColliderActuallyHit:hit?.solidId===
+    'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY',
+   otherFrozenSolidSupportedFoot:!!hit&&hit.solidId!==
+    'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY',
    actualHumanKccCertified:false as const,
    originalGameCollisionFlagsCertified:false as const};
  });
@@ -530,7 +558,10 @@ export function probeIsolatedFirstDropRapier(
 export function probeV23FirstDropHumanKcc(
  physics:RapierStagePhysics,route:'EDGE_LOSS'|'KNOWN_RAMP'='EDGE_LOSS'
 ){
- const start=WINDOWS.find(p=>p.id==='LOW_SUPPORTED_1355')!;
+ // Do not splice a Windows fall start into the separate K1 ramp run.
+ // Each bounded synthetic KCC comparison uses a single witness family.
+ const start=WINDOWS.find(p=>p.id===
+  (route==='KNOWN_RAMP'?'RAMP_APPROACH_K1':'LOW_SUPPORTED_1355'))!;
  const target=WINDOWS.find(p=>p.id===
   (route==='KNOWN_RAMP'?'RAMP_CONTACT_K1':'LOW_UNSUPPORTED_1390'))!;
  const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
@@ -539,8 +570,9 @@ export function probeV23FirstDropHumanKcc(
  const startGap=supportAtStart?
   start.footY-supportAtStart.point.y:null;
  const scope={
-  fromWindowsTick:1355 as const,
+  fromWindowsTick:route==='EDGE_LOSS'?1355:null,
   toWindowsTick:route==='EDGE_LOSS'?1390:null,
+  witnessFamily:route==='EDGE_LOSS'?'WINDOWS_NATIVE':'CHROMIUM_K1' as const,
   targetProvenance:target.provenance,route,
   start:[start.x,start.footY,start.z] as const,
   target:[target.x,target.footY,target.z] as const,
@@ -551,7 +583,10 @@ export function probeV23FirstDropHumanKcc(
   cpuRecastCrossingCertified:false as const
  };
  // An unsupported candidate must NOT be given an artificial starting slab.
- if(!supportAtStart||startGap===null||Math.abs(startGap)>.22){
+ const legitimateLandingIds=[TARGET,
+  'T21_V23_ISOLATED_FIRST_DROP_GEOMETRIC_TRIMESH_ONLY'];
+ if(!supportAtStart||!legitimateLandingIds.includes(supportAtStart.solidId)||
+    startGap===null||Math.abs(startGap)>.22){
   return {...scope,status:'HOLD_START_UNSUPPORTED' as const,
    initialSupportId:supportAtStart?.solidId??null,
    initialFootGapMeters:startGap,firstUnsupportedStep:0,
