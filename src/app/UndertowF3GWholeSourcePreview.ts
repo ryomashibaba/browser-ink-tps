@@ -99,7 +99,12 @@ const PALETTE:Record<Kind,{rgb:[number,number,number];opacity:number}>={
 /** Non-authoritative display presets. SOLID fixes the F3G all-transparent
  * no-depth-write appearance. TRAVERSAL highlights source floor but grants no
  * walkability. X_RAY preserves the prior source overlay for comparison. */
-export function f3hSourceMaterialStyle(k:Kind,mode:F3HSourceVisualMode){
+export function f3hSourceMaterialStyle(k:Kind,mode:F3HSourceVisualMode,
+ registeredFloorPriority=false){
+ // Real PLAYER: unlicensed optical FLOOR/SLOPE must not hide native Rapier
+ // support. Source meshes, UVs, colliders and camera remain unchanged.
+ if(registeredFloorPriority&&(k==='FLOOR'||k==='SLOPE'))
+  return {opacity:.14,depthWrite:false,opaque:false};
  const base=PALETTE[k];
  if(mode==='SOLID'){
   const opacity=k==='GLASS' ? .24 : 1;
@@ -122,8 +127,9 @@ function sourceMaterial(k:Kind){
  m.useMetalness=true;m.metalness=.22;m.gloss=.27;
  applySourceMaterialStyle(m,k,'SOLID');return m;
 }
-function applySourceMaterialStyle(m:StandardMaterial,k:Kind,mode:F3HSourceVisualMode){
- const style=f3hSourceMaterialStyle(k,mode);
+function applySourceMaterialStyle(m:StandardMaterial,k:Kind,
+ mode:F3HSourceVisualMode,registeredFloorPriority=false){
+ const style=f3hSourceMaterialStyle(k,mode,registeredFloorPriority);
  m.opacity=style.opacity;
  m.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
  m.depthWrite=style.depthWrite;
@@ -162,6 +168,8 @@ export async function loadF3gWholeSource(app:AppBase){
  const certification=auditF3gPackManifest(manifest);
  const root=new Entity('T21F3G:WHOLE_ORIGINAL_SOURCE_OPTICAL_ONLY');
  const materials=new Map<Kind,StandardMaterial>();
+ let visualMode:F3HSourceVisualMode='SOLID';
+ let registeredFloorPriority=false;
  const verifiedTriangles=new Map<OriginalF3gKind,Float32Array>();
  root.enabled=false;
  try{
@@ -296,8 +304,17 @@ export async function loadF3gWholeSource(app:AppBase){
  return {root,manifest,certification,v23Evidence,
   setVisualMode(mode:F3HSourceVisualMode){
    if(!F3H_SOURCE_VISUAL_MODES.includes(mode))throw Error('T21_F3H_INVALID_REVIEW_MODE');
-   for(const [kind,material] of materials)applySourceMaterialStyle(material,kind,mode);
+   for(const [kind,material] of materials)
+    applySourceMaterialStyle(material,kind,mode,registeredFloorPriority);
+   visualMode=mode;
    return mode;
+  },
+  setRegisteredFloorPriority(on:boolean){
+   if(typeof on!=='boolean')throw Error('T21_F3G_BAD_FLOOR_VISUAL_PRIORITY');
+   if(on===registeredFloorPriority)return;
+   registeredFloorPriority=on;
+   for(const [kind,material] of materials)
+    applySourceMaterialStyle(material,kind,visualMode,on);
   }};
 }
 

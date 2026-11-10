@@ -19,7 +19,8 @@ import {auditF3gOriginalFloorAgainstRapier,
  predictV23ReleasedInputY0Position,v23HypotheticalAirXZDeltaAtTick,
  probeV23PredictedOriginalLowLandingKcc,probeV23IsolatedLowHumanKcc,
  classifyV23LowOriginalFootprintContact,
- f3hSourceMaterialStyle,T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
+ f3hSourceMaterialStyle,F3H_SOURCE_VISUAL_MODES,
+ T21_F3G_SOURCE_SHA256,ORIGINAL_F3G_FLOOR_SAMPLES,
  type OriginalF3gKind}
  from './UndertowF3GWholeSourcePreview';
 describe('F3G whole-original source pack source authority',()=>{
@@ -46,6 +47,15 @@ describe('F3G whole-original source pack source authority',()=>{
   expect(f3hSourceMaterialStyle('SUPPORT','TRAVERSAL').opacity).toBeLessThan(.3);
   expect(f3hSourceMaterialStyle('FLOOR','TRAVERSAL').depthWrite).toBe(true);
   expect(f3hSourceMaterialStyle('FLOOR','X_RAY').depthWrite).toBe(false);
+  // Active real PLAYER must see the existing registered Rapier floor,
+  // while original QA review modes remain unchanged when priority is off.
+  for(const mode of F3H_SOURCE_VISUAL_MODES){
+   expect(f3hSourceMaterialStyle('FLOOR',mode,true)).toEqual(
+    {opacity:.14,depthWrite:false,opaque:false});
+   expect(f3hSourceMaterialStyle('SLOPE',mode,true).opaque).toBe(false);
+  }
+  expect(f3hSourceMaterialStyle('SUPPORT','SOLID',true))
+   .toEqual(f3hSourceMaterialStyle('SUPPORT','SOLID'));
  });
  it('requires exact pinned original hash and all non-gameplay flags',()=>{
   expect(auditF3gPackManifest(valid()).sourceTriangles).toBe(1600);

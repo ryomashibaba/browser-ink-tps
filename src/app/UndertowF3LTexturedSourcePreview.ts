@@ -30,7 +30,12 @@ export function b253VerifiedInkVisualOptIn(
   originalTriangles===57578&&Number.isSafeInteger(verifiedTextures)&&
   verifiedTextures>=8&&verifiedTextures<=20;
 }
-export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode){
+export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
+ registeredFloorPriority=false){
+ // In native PLAYER, visual-only FLOOR/SLOPE must not occlude the real
+ // registered source support. Original source mesh and textures stay intact.
+ if(registeredFloorPriority&&(kind==='FLOOR'||kind==='SLOPE'))
+  return {opacity:.14,depthWrite:false,opaque:false};
  if(mode==='ORIGINAL_UV'){
   const glass=kind==='GLASS';
   return {opacity:glass?.24:1,depthWrite:!glass,opaque:!glass};
@@ -51,8 +56,8 @@ export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode
  return {opacity:opacity[kind],depthWrite:false,opaque:false};
 }
 function applyF3lReadability(material:StandardMaterial,kind:Kind,
- mode:F3lStageReadabilityMode){
- const style=f3lSourceReadabilityStyle(kind,mode);
+ mode:F3lStageReadabilityMode,registeredFloorPriority=false){
+ const style=f3lSourceReadabilityStyle(kind,mode,registeredFloorPriority);
  material.opacity=style.opacity;
  material.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
  material.depthWrite=style.depthWrite;
@@ -205,6 +210,7 @@ export async function loadF3lTexturedSource(
  };
 
  let visualMode:F3lStageReadabilityMode='ORIGINAL_UV';
+ let registeredFloorPriority=false;
  try{
   const textures=await Promise.all(manifest.textures.map(async file=>{
    const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256);
@@ -284,11 +290,18 @@ export async function loadF3lTexturedSource(
     throw Error('T21_W10B30_INVALID_SOURCE_REVIEW_VISUAL_MODE');
    if(mode===visualMode)return visualMode;
    for(const entry of materialInstances)
-    applyF3lReadability(entry.material,entry.kind,mode);
+    applyF3lReadability(entry.material,entry.kind,mode,registeredFloorPriority);
    visualMode=mode;
    // A different research UV mode must never retain an invisible aperture.
    if(b256Research)applyB256(app.graphicsDevice.width,app.graphicsDevice.height);
    return visualMode;
+  },
+  setRegisteredFloorPriority(on:boolean){
+   if(typeof on!=='boolean')throw Error('T21_F3L_BAD_FLOOR_VISUAL_PRIORITY');
+   if(on===registeredFloorPriority)return;
+   registeredFloorPriority=on;
+   for(const entry of materialInstances)
+    applyF3lReadability(entry.material,entry.kind,visualMode,on);
   },
   auditB257OriginalStaticRay(from:Vec3,to:Vec3){
    if(!b257Research||b257OriginalStaticMeshes.length!==manifest.materials.length)

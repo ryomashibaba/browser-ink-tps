@@ -60,6 +60,13 @@ describe('W10-B30 source original UV cutaway reveals existing physical-ground re
   }
   expect(f3lSourceReadabilityStyle('GLASS','ORIGINAL_UV')).toEqual({
    opacity:.24,depthWrite:false,opaque:false});
+  for(const mode of F3L_STAGE_READABILITY_MODES){
+   expect(f3lSourceReadabilityStyle('FLOOR',mode,true)).toEqual({
+    opacity:.14,depthWrite:false,opaque:false});
+   expect(f3lSourceReadabilityStyle('SLOPE',mode,true).depthWrite).toBe(false);
+   expect(f3lSourceReadabilityStyle('METAL',mode,true))
+    .toEqual(f3lSourceReadabilityStyle('METAL',mode));
+  }
  });
  it('makes every optical original material translucent for actual source-foot visibility',()=>{
   for(const k of ['FLOOR','SLOPE','METAL','GLASS','SUPPORT','STRUCTURE','DETAIL'] as const){

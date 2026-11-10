@@ -468,6 +468,8 @@ export class UndertowF3PlayablePreviewApp{
  private wholeSourceRoot:Entity|null=null;
  private sourceVisualMode:F3HSourceVisualMode='SOLID';
  private sourceSetVisualMode:((mode:F3HSourceVisualMode)=>F3HSourceVisualMode)|null=null;
+ private sourceSetRegisteredFloorPriority:((on:boolean)=>void)|null=null;
+ private realPlayerFloorPriority=false;
  private sourceCoverage:F3GPackManifest['coverage'];
  private environmentRoot:Entity|null=null;
  private environmentManifest:F3iEnvironmentManifest|null=null;
@@ -2369,8 +2371,13 @@ export class UndertowF3PlayablePreviewApp{
    // F8 QA displays the original exact-source architectural references.
    // Real PLAYER displays reference-only floor shapes as faint optics,
    // while approved stage Rapier colliders keep their original rendering.
-   this.sourceCompletion.setRegisteredFloorPriority(
-    nativeHumanMode&&ui.dataset.t21B245Presentation==='PLAYER');
+   const priority=nativeHumanMode&&ui.dataset.t21B245Presentation==='PLAYER';
+   this.realPlayerFloorPriority=priority;
+   this.sourceCompletion.setRegisteredFloorPriority(priority);
+   // F3G/F3L replace F3E's visual study after loading: same real
+   // PLAYER/F8 floor priority, with unchanged source and native physics.
+   this.sourceSetRegisteredFloorPriority?.(priority);
+   this.texturedF3l?.setRegisteredFloorPriority(priority);
    this.refreshB36PlayFocus();
   });
   // KeyQ also belongs to source-only camera shoulder. Capture only a
@@ -2701,7 +2708,9 @@ export class UndertowF3PlayablePreviewApp{
    this.wholeSourceGroups=installed.manifest.groups.length;
    this.sourceCoverage=installed.manifest.coverage;
    this.sourceSetVisualMode=installed.setVisualMode;
+   this.sourceSetRegisteredFloorPriority=installed.setRegisteredFloorPriority;
    this.sourceSetVisualMode(this.sourceVisualMode);
+   this.sourceSetRegisteredFloorPriority(this.realPlayerFloorPriority);
    // Avoid duplicate translucent layers obscuring actual source forms.
    this.sourceCompletion.root.enabled=false;
    this.structures.root.enabled=false;
@@ -2749,6 +2758,7 @@ export class UndertowF3PlayablePreviewApp{
       new URL(location.href).searchParams.get('t21B257')==='depthAudit');
     if(this.texturedF3l&&this.b29OriginalVisualPose)
      applyOriginalVisualRegistration(this.texturedF3l.root,this.b29OriginalVisualPose);
+    this.texturedF3l?.setRegisteredFloorPriority(this.realPlayerFloorPriority);
     this.texturedF3lStatus=this.texturedF3l?'READY':'MISSING';
     const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
     if(button&&this.texturedF3l)button.hidden=false;
