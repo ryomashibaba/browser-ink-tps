@@ -23,7 +23,8 @@ beforeEach(()=>{
  vi.stubGlobal('window',{addEventListener:vi.fn()});
  vi.stubGlobal('document',{addEventListener:vi.fn(),
   createElement:()=>({
-   id:'',hidden:false,textContent:'',style:{cssText:''},
+   id:'',hidden:false,textContent:'',dataset:{} as Record<string,string>,
+   style:{cssText:''},
    setAttribute:vi.fn()
   }),body:{appendChild:vi.fn()}});
 
