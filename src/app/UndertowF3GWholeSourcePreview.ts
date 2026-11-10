@@ -670,6 +670,38 @@ export function predictV23OriginalY0LandingFromNativeAir(){
  };
 }
 
+/** Counterfactual release of human movement input AFTER recorded native
+ * tick1390. Replicates PlayerController.applyHorizontalTarget's zero-input
+ * PER-AXIS moveToward(v,0,34/60); gravity and KCC remain unmodified.
+ * Never treat this as observed post1390 input or as original floor authority.
+ */
+export function predictV23ReleasedInputY0Position(){
+ const baseline=predictV23OriginalY0LandingFromNativeAir();
+ const [,previous,recorded]=V23_OBSERVED_NATIVE_AIR_1388_TO_1390;
+ const rate=GAME_CONFIG.simulation.tickRate;
+ const decrease=GAME_CONFIG.player.decelerationMetersPerSecond2/rate;
+ let vx=(recorded.body[0]-previous.body[0])*rate;
+ let vz=(recorded.body[2]-previous.body[2])*rate;
+ let x=recorded.body[0],z=recorded.body[2];
+ // The final fraction of a tick has zero velocity for this recorded speed,
+ // so the first integer tick at or below Y0 has identical horizontal XZ.
+ const count=baseline.firstWholeNativeTickAtOrBelowY0-1390;
+ for(let n=0;n<count;n++){
+  vx=Math.sign(vx)*Math.max(0,Math.abs(vx)-decrease);
+  vz=Math.sign(vz)*Math.max(0,Math.abs(vz)-decrease);
+  x+=vx/rate;z+=vz/rate;
+ }
+ return {
+  source:'SIMULATED_NO_INPUT_PER_AXIS_DECELERATION' as const,
+  projectedXZ:[x,z] as readonly[number,number],
+  fixedSourceY0CrossingNativeTick:baseline.predictedNativeTick,
+  actualPlayerInputAfter1390Observed:false as const,
+  originalVersion72CollisionCertified:false as const,
+  rapierContactCertified:false as const,
+  liveStageModified:false as const
+ };
+}
+
 /** Strict original-source FLO0R candidate in an ISOLATED Rapier world.
  * The retained source Face ledger's SHA-verified gzip describes exactly 11
  * edge-connected static FLOOR triangles at native Y=3 (project Y=0), near
@@ -806,6 +838,16 @@ export function buildIsolatedV23LowOriginalFloor(
  if(!Number.isFinite(predictedLandingClearance)||
     predictedLandingClearance<humanRadius)
   return hold('HOLD_EXTRAPOLATED_Y0_NO_FULL_CAPSULE_CLEARANCE',selected.length);
+ // Read-only uncertainty comparison. A continued-input success cannot
+ // certify a landing if the human may have released movement at tick1390.
+ const releasedInput=predictV23ReleasedInputY0Position();
+ const [rx,rz]=releasedInput.projectedXZ;
+ const [rmx,rmz]=undertowProjectXZToTemple01ModelXZ([rx,rz]);
+ const releasedOnFace=faceBuffers.some(a=>
+  sourceHeightAtXZ(a,0,rmx,rmz)!==null);
+ const releaseBoundaryClearance= releasedOnFace?clearance(rx,rz):null;
+ const conservativeControllerClearanceMeters=humanRadius+
+  PLAYER_CHARACTER_PHYSICS.controllerOffsetMeters;
  // A valid endpoint disk is not enough: the *same* extrapolated native
  // trajectory must enter the original source capsule-safe interior BEFORE
  // its falling feet pass source Y0. No native input after tick1390 is known.
@@ -872,6 +914,20 @@ export function buildIsolatedV23LowOriginalFloor(
   extrapolatedY0Landing:{...predictedLanding,
    exactOriginalFloorFaceAtXZ:true as const,
    planarBoundaryClearanceMeters:predictedLandingClearance,
+   releasedInputSensitivity:{
+    ...releasedInput,
+    onExactOriginalSourceFace:releasedOnFace,
+    boundaryClearanceMeters:releaseBoundaryClearance,
+    humanRadiusMeters:humanRadius,
+    conservativeControllerClearanceMeters,
+    fullCapsuleRadiusFits:releasedOnFace&&
+     releaseBoundaryClearance!==null&&
+     releaseBoundaryClearance>=humanRadius,
+    radiusPlusControllerOffsetFits:releasedOnFace&&
+     releaseBoundaryClearance!==null&&
+     releaseBoundaryClearance>=conservativeControllerClearanceMeters,
+    offsetIsOnlyConservativeGeometryHeuristic:true as const
+   },
    firstCapsuleClearNativeTick,
    fullCapsuleEnteredBeforePredictedY0Crossing:true as const,
    fullCapsuleFitsWithinExactOriginalSource:true as const},
