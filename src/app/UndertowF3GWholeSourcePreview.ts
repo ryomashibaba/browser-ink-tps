@@ -198,10 +198,18 @@ export async function loadF3gWholeSource(app:AppBase){
     const originalLow=buildIsolatedV23LowOriginalFloor(
      verifiedTriangles,stage,real);
     let originalLowContact:ReturnType<typeof inspectV23IsolatedLowFloorContact>|null=null;
+    let originalLowKcc:ReturnType<typeof probeV23IsolatedLowHumanKcc>|null=null;
     if(originalLow.stage){
      const lowWorld=new RapierStagePhysics(1/60,originalLow.stage);
-     try{lowWorld.step();originalLowContact=inspectV23IsolatedLowFloorContact(lowWorld);}
-     finally{lowWorld.world.free();}
+     try{
+      lowWorld.step();
+      originalLowContact=inspectV23IsolatedLowFloorContact(lowWorld);
+     }finally{lowWorld.world.free();}
+     const lowKccWorld=new RapierStagePhysics(1/60,originalLow.stage);
+     try{
+      lowKccWorld.step();
+      originalLowKcc=probeV23IsolatedLowHumanKcc(lowKccWorld);
+     }finally{lowKccWorld.world.free();}
     }
     let isolationHits:ReturnType<typeof probeIsolatedFirstDropRapier>|null=null;
     let isolationWalk:ReturnType<typeof probeV23FirstDropHumanKcc>|null=null;
@@ -227,6 +235,7 @@ export async function loadF3gWholeSource(app:AppBase){
     v23Evidence={alignment,registeredWalk,registeredRampWalk,
      originalLowFloor:{status:originalLow.status,sourceTriangles:originalLow.triangles,
       physicalContactAtOriginalY0:originalLowContact,
+      isolatedHumanKcc:originalLowKcc,
       originalCollisionFlags:'UNKNOWN',normalGameModified:false,
       realHumanLandingCertified:false},
      isolation:{status:isolated.status,
@@ -652,6 +661,69 @@ export function inspectV23IsolatedLowFloorContact(world:RapierStagePhysics){
   actualHumanReachedThisFloor:false as const,
   gameCollisionFlagsCertified:false as const};
 }
+/** Real HUMAN production-profile Rapier KCC in the independent candidate.
+ * Source-native path is a one-metre capsule-clear segment on the retained
+ * 11-triangle component. It is NOT a witnessed human drop or gameplay route.
+ */
+export function probeV23IsolatedLowHumanKcc(physics:RapierStagePhysics){
+ const observed=WINDOWS.find(p=>p.id==='LOW_UNSUPPORTED_1390')!;
+ const [mx,mz]=undertowProjectXZToTemple01ModelXZ([observed.x,observed.z]);
+ const [sx,sz]=undertowTemple01ModelXZToProjectXZ([mx,mz-.6]);
+ const [tx,tz]=undertowTemple01ModelXZToProjectXZ([mx,mz-1.6]);
+ const footOffset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const initial=physics.castCharacterFootSupport(
+  new Vec3(sx,footOffset,sz),footOffset,'HUMAN');
+ const finalSupport=physics.castCharacterFootSupport(
+  new Vec3(tx,footOffset,tz),footOffset,'HUMAN');
+ const scope={nativeSourceY:3 as const,projectFootY:0 as const,
+  originalWitnessHorizontalOnly:true as const,
+  actualPlayerLandfallObserved:false as const,
+  originalCollisionFlagsCertified:false as const,
+  cpuRecastCertified:false as const,normalGameModified:false as const};
+ if(initial?.solidId!==V23_LOW_ISOLATED_SOLID_ID||
+    finalSupport?.solidId!==V23_LOW_ISOLATED_SOLID_ID)
+  return {...scope,status:'HOLD_ISOLATED_KCC_ENDPOINT_SOURCE_UNSUPPORTED' as const,
+   startSupportId:initial?.solidId??null,
+   endSupportId:finalSupport?.solidId??null,
+   supportedSteps:0,firstUnsupportedStep:0,endpointErrorMeters:null};
+ const rigid=physics.world.createRigidBody(
+  RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+   sx,footOffset+.06,sz));
+ const capsule=physics.world.createCollider(RAPIER.ColliderDesc.capsule(
+  PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+  PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),rigid);
+ const controller=createConfiguredPlayerCharacterController(physics.world);
+ const steps=40,dx=(tx-sx)/steps,dz=(tz-sz)/steps;
+ let supportedSteps=0,firstUnsupportedStep:number|null=null;
+ for(let tick=1;tick<=steps;tick++){
+  const before=rigid.translation();
+  controller.computeColliderMovement(capsule,new Vec3(dx,-.075,dz),
+   undefined,undefined,
+   candidate=>physics.shouldCharacterCollide(candidate,'HUMAN'));
+  const mv=controller.computedMovement();
+  rigid.setNextKinematicTranslation({
+   x:before.x+mv.x,y:before.y+mv.y,z:before.z+mv.z});
+  physics.step();
+  const after=rigid.translation();
+  const ray=physics.castCharacterFootSupport(
+   new Vec3(after.x,after.y,after.z),footOffset,'HUMAN');
+  const supported=controller.computedGrounded()&&
+   ray?.solidId===V23_LOW_ISOLATED_SOLID_ID&&
+   Math.abs(after.y-footOffset-ray.point.y)<=.22;
+  if(supported)supportedSteps++;
+  else if(firstUnsupportedStep===null)firstUnsupportedStep=tick;
+ }
+ const last=rigid.translation();
+ const error=Math.hypot(last.x-tx,last.z-tz);
+ return {...scope,
+  status:firstUnsupportedStep!==null?'OBSERVED_ISOLATED_KCC_SUPPORT_LOSS' as const:
+   error>.12?'HOLD_ISOLATED_KCC_TARGET_NOT_REACHED' as const:
+   'ISOLATED_Y0_HUMAN_KCC_SUPPORT_ONLY' as const,
+  startSupportId:initial.solidId,endSupportId:finalSupport.solidId,
+  supportedSteps,firstUnsupportedStep,
+  endpointErrorMeters:error,sourceRunTicks:steps};
+}
+
 export function probeIsolatedFirstDropRapier(
  stage:StageDefinition,physics:RapierStagePhysics
 ){
