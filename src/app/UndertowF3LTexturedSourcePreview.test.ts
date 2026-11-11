@@ -2,9 +2,11 @@ import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
 import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
- F3L_STAGE_READABILITY_MODES,b253VerifiedInkVisualOptIn,type F3lManifest}
+ f3lIsUnverifiedBridgeOverlay,F3L_STAGE_READABILITY_MODES,
+ b253VerifiedInkVisualOptIn,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
+import {nativeF3iBackdropVisible} from './UndertowF3VerifiedSourcePresentation';
 describe('F3L original static textured scene review',()=>{
  it('uses only explicit source vertex UV references, not world projected UV',()=>{
   const table=parseF3lOriginalMtl('newmtl Fld_Temple01_FloorConcrete00\n'+
@@ -146,5 +148,32 @@ describe('genuine SOURCE stage optical overlays cannot impersonate registered pa
   expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
     'Fld_Temple01_FloorConcrete00')).toEqual({
     opacity:.14,depthWrite:false,opaque:false});
+ });
+});
+
+describe('native SOURCE optics do not invent an original bridge or background',()=>{
+ it('ghosts original BridgeMetal UV overlay only with certified floor visual priority',()=>{
+  for(const name of ['Fld_Temple01_BridgeMetal00','Fld_Temple01_BridgeMetal04']){
+   expect(f3lIsUnverifiedBridgeOverlay(name)).toBe(true);
+   expect(f3lIsUnverifiedFloorMarking(name)).toBe(false);
+   expect(f3lSourceReadabilityStyle('METAL','ORIGINAL_UV',true,name))
+    .toEqual({opacity:.08,depthWrite:false,opaque:false});
+   // Original F3G/F3L explicit review and fixed QA appearance untouched.
+   expect(f3lSourceReadabilityStyle('METAL','ORIGINAL_UV',false,name))
+    .toEqual({opacity:1,depthWrite:true,opaque:true});
+  }
+  for(const name of ['Fld_Temple01_WallMetal00','Fld_Temple01_FloorConcrete03',
+   'Fld_Temple00_BridgeMetal00','Fld_Temple01_Metal00','BridgeMetal00']){
+   expect(f3lIsUnverifiedBridgeOverlay(name)).toBe(false);
+  }
+  expect(f3lSourceReadabilityStyle('METAL','ORIGINAL_UV',true,
+   'Fld_Temple01_WallMetal00')).toEqual({
+    opacity:1,depthWrite:true,opaque:true});
+ });
+ it('permits unregistered F3I scenery only by B opt-in while verified native F3L is visible',()=>{
+  expect(nativeF3iBackdropVisible(false,false)).toBe(false);
+  expect(nativeF3iBackdropVisible(false,true)).toBe(false);
+  expect(nativeF3iBackdropVisible(true,false)).toBe(false);
+  expect(nativeF3iBackdropVisible(true,true)).toBe(true);
  });
 });

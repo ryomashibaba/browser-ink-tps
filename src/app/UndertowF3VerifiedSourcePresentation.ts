@@ -22,6 +22,14 @@ export function selectVerifiedSourcePresentation(
  if(e.texturedSourceVerified&&!e.prefersFlat)return 'F3L_ORIGINAL_UV';
  return 'F3G_FLAT';
 }
+/** An ORIGINAL source-only background is unregistered: keep it opt-in
+ * during real PLAYER, and do not overlay the registered-only T=OFF view.
+ * User B preference is restored only when verified F3L is again visible. */
+export function nativeF3iBackdropVisible(
+ verifiedF3lVisible:boolean,userEnabled:boolean
+):boolean{
+ return verifiedF3lVisible&&userEnabled;
+}
 export const B29_SOURCE_VISUAL_AUTHORITY=Object.freeze({
  sourceOnly:true,
  staticGeometry:'PINNED_EXACT_ORIGINAL_OBJ_ONLY',

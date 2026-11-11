@@ -37,12 +37,20 @@ export function b253VerifiedInkVisualOptIn(
 export function f3lIsUnverifiedFloorMarking(materialName:string):boolean{
  return /^Fld_Temple01_Floor(?:Line|Fence)[A-Za-z0-9_.-]*$/.test(materialName);
 }
+/** BridgeMetal is a pinned ORIGINAL static texture group, not an
+ * authorized original collision bridge. As with FloorFence, the name
+ * and UV texture cannot prove a traversable floor in actual SOURCE. */
+export function f3lIsUnverifiedBridgeOverlay(materialName:string):boolean{
+ return /^Fld_Temple01_BridgeMetal[A-Za-z0-9_.-]*$/.test(materialName);
+}
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
  registeredFloorPriority=false,sourceMaterialName=''){
  // Real SOURCE PLAYER: those original FloorLine/FloorFence overlays used to
  // appear opaque as a false bridge. Keep real 25 Rapier solids fully visible.
  // Preview-only UV mode, wall/support materials and KCC are not modified.
- if(registeredFloorPriority&&f3lIsUnverifiedFloorMarking(sourceMaterialName))
+ if(registeredFloorPriority&&
+    (f3lIsUnverifiedFloorMarking(sourceMaterialName)||
+     f3lIsUnverifiedBridgeOverlay(sourceMaterialName)))
   return {opacity:.08,depthWrite:false,opaque:false};
  if(registeredFloorPriority&&(kind==='FLOOR'||kind==='SLOPE'))
   return {opacity:.14,depthWrite:false,opaque:false};

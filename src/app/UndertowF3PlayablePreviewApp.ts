@@ -238,7 +238,7 @@ import {b310CheckOriginalTripleRoutes} from './B310RealThreeSourceFootProbes';
 import {b312ValidateOriginalOwnerFrame,b312JudgeRealHumanSecondSurface,
  type B312RealReadOnlyFrame} from './B312NativeOriginalSecondHumanInk';
 import {selectVerifiedSourcePresentation,sourceF3kShowroomEligible,
- B29_SOURCE_VISUAL_AUTHORITY}
+ nativeF3iBackdropVisible,B29_SOURCE_VISUAL_AUTHORITY}
  from './UndertowF3VerifiedSourcePresentation';
 import {installB250SourceView,type B250SourceView} from './B250SourceStageReadability';
 import {installB251SourceOpticalSeparation,type B251OpticalView}
@@ -478,7 +478,9 @@ export class UndertowF3PlayablePreviewApp{
  private environmentError='';
  // Only verified F3L may display unregistered F3I scenery in native play.
  // Preserve the explicit B toggle across an F3L T comparison.
- private nativeEnvironmentPreferred=true;
+ // F3I source scenery has NO certified registration/collision. A real
+ // game starts with only verified F3L and registered stage; B opts in.
+ private nativeEnvironmentPreferred=false;
  private familyGallery:Awaited<ReturnType<typeof loadF3kGallery>>=null;
  private galleryIndex=-1;
  private galleryWasPaused=false;
@@ -2847,7 +2849,8 @@ export class UndertowF3PlayablePreviewApp{
   * Explicit F3G review keeps the independent historical backdrop control. */
  private syncNativeSourceEnvironmentVisibility():void{
   if(!this.nativeVerifiedStageVisualEligible||!this.environmentRoot)return;
-  const show=!!this.texturedF3l?.root.enabled&&this.nativeEnvironmentPreferred;
+  const show=nativeF3iBackdropVisible(
+   !!this.texturedF3l?.root.enabled,this.nativeEnvironmentPreferred);
   this.environmentRoot.enabled=show;
   this.canvas.dataset.t21F3iEnvironment=show?'ON':'OFF';
   const b=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
