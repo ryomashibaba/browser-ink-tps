@@ -856,6 +856,11 @@ async function b490CaptureLocalSamePosePair(){
   normalWindowsRenderingCertified:false,
   localViewer:'B490_LOCAL_COMPARE.html'};
  save();
+ // Verify the local evidence set was fully persisted before reporting
+ // capture success. This never reads/writes any private original OBJ/PNG.
+ if(!['B490_LOCAL_COMPARE.html',...pngs.map(p=>p.file)]
+     .every(file=>existsSync(resolve(out,file))))
+  fail('B490_LOCAL_CAPTURE_FILES_MISSING_AFTER_WRITE');
  console.log('B490_LOCAL_F3L_REGISTERED_SAME_POSE',JSON.stringify(
   proof.b490FrozenF3lPair));
 }
