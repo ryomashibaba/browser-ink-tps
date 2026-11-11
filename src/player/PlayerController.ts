@@ -447,7 +447,14 @@ export class PlayerController {
         this.setSnapToGround(true);
 
         const tuning = GAME_CONFIG.player;
-        if (this.inkRelation === 'OWN') {
+        // In a genuine SOURCE round, nearby painted projection alone cannot
+        // grant swim speed while the actual Rapier character is airborne.
+        // Use the prior native KCC ground result at this pre-movement tick.
+        // Verified wall-swim/surge paths above keep their separate rules.
+        const groundInkRelation =
+          this.nativeSourceGroundInkGuard && !this.grounded
+            ? 'NONE' : this.inkRelation;
+        if (groundInkRelation === 'OWN') {
           this.locomotionState = 'SWIM_GROUND';
           this.captureSquidRollTurnIntent();
 
@@ -466,7 +473,7 @@ export class PlayerController {
           this.squidRollTurnWindowSeconds = 0;
           this.locomotionState = 'SQUID_DRY';
 
-          if (this.inkRelation === 'ENEMY') {
+          if (groundInkRelation === 'ENEMY') {
             this.applyHorizontalTarget(
               tuning.squidEnemyInkSpeedMetersPerSecond,
               tuning.squidDryAccelerationMetersPerSecond2,

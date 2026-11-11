@@ -1556,6 +1556,13 @@ export class UndertowF3PlayablePreviewApp{
   });
   this.panel.querySelector('#t21-f3g-full')?.addEventListener('click',()=>{
    if(!this.wholeSourceRoot)return;
+   // The native game must NEVER switch to unsplit F3G FloorLine/FloorFence
+   // geometry: its flat groups cannot distinguish false bridges from walls.
+   if(this.nativeVerifiedStageVisualEligible){
+    if(this.texturedF3lStatus!=='READY'||!this.texturedF3l)return;
+    this.setNativeVerifiedOpticalScene(!this.texturedF3l.root.enabled);
+    return;
+   }
    const currentlyOn=this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled;
    const next=!currentlyOn;
    const layers=f3gSourceLayerVisibility(next,
@@ -2773,6 +2780,9 @@ export class UndertowF3PlayablePreviewApp{
    if(this.b29OriginalVisualPose)
     applyOriginalVisualRegistration(installed.root,this.b29OriginalVisualPose);
    this.wholeSourceRoot=installed.root;
+   // Keep the 25-solid SOURCE stage visible during async UV verification.
+   // Unsplit F3G can display unlicensed FloorLine/FloorFence as walkable.
+   if(this.nativeVerifiedStageVisualEligible)installed.root.enabled=false;
    this.wholeSourceTriangles=installed.manifest.includedOriginalTriangles;
    this.wholeSourceGroups=installed.manifest.groups.length;
    this.sourceCoverage=installed.manifest.coverage;
@@ -2780,9 +2790,12 @@ export class UndertowF3PlayablePreviewApp{
    this.sourceSetRegisteredFloorPriority=installed.setRegisteredFloorPriority;
    this.sourceSetVisualMode(this.sourceVisualMode);
    this.sourceSetRegisteredFloorPriority(this.realPlayerFloorPriority);
-   // Avoid duplicate translucent layers obscuring actual source forms.
-   this.sourceCompletion.root.enabled=false;
-   this.structures.root.enabled=false;
+   // Review may show F3G immediately. Real native PLAYER instead retains
+   // its current registered-floor view until F3L is fully hash-verified.
+   if(!this.nativeVerifiedStageVisualEligible){
+    this.sourceCompletion.root.enabled=false;
+    this.structures.root.enabled=false;
+   }
    const f3eButton=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
    if(f3eButton)f3eButton.textContent='Source terrain study: OFF';
    const f3Button=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
@@ -2848,13 +2861,18 @@ export class UndertowF3PlayablePreviewApp{
      prefersFlat:this.b29PreferFlat,
      nativeRegisteredFloorOnly:this.nativeVerifiedStageVisualEligible
     });
-    const wasVisible=!!this.wholeSourceRoot?.enabled;
+    const wasVisible=this.nativeVerifiedStageVisualEligible||
+     !!this.wholeSourceRoot?.enabled;
     if(choice==='F3L_ORIGINAL_UV'&&this.texturedF3l){
      this.texturedF3lActive=true;
      this.wholeSourceRoot!.enabled=false;
      this.texturedF3l.root.enabled=wasVisible;
      this.canvas.dataset.t21F3lOriginalTexture='ON';
      if(button)button.textContent='F3L original textures: ON (T)';
+     // Commit the two optical layer changes together only AFTER F3L
+     // verification: no temporary flat false bridge during native play.
+     if(this.nativeVerifiedStageVisualEligible)
+      this.setNativeVerifiedOpticalScene(true);
     }else if(this.texturedF3l){
      this.texturedF3l.root.enabled=false;
      this.canvas.dataset.t21F3lOriginalTexture='OFF';
@@ -4605,9 +4623,35 @@ export class UndertowF3PlayablePreviewApp{
   this.b21RenderSamplesMs.length=0;
   return this.b21ProbeSnapshot();
  }
+ /** Native SOURCE toggles only between the registered 25-solid scene and
+  * hash-verified, correctly separated F3L optics. Never the unsplit F3G
+  * flat fallback, even through T or the full-source button. */
+ private setNativeVerifiedOpticalScene(visible:boolean):void{
+  if(!this.nativeVerifiedStageVisualEligible||
+     this.texturedF3lStatus!=='READY'||!this.texturedF3l)return;
+  if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
+  this.texturedF3l.root.enabled=visible;
+  this.texturedF3lActive=visible;
+  this.sourceCompletion.root.enabled=!visible;
+  this.structures.root.enabled=!visible;
+  this.canvas.dataset.t21F3lOriginalTexture=visible?'ON':'OFF';
+  const uv=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
+  if(uv)uv.textContent='F3L original textures: '+(visible?'ON':'OFF')+' (T)';
+  const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
+  if(full)full.textContent='Full source OBJ: '+(visible?'ON':'OFF');
+  const study=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
+  if(study)study.textContent='Source terrain study: '+(!visible?'ON':'OFF');
+  const structures=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
+  if(structures)structures.textContent='Original source: '+(!visible?'ON':'OFF');
+  this.refresh();
+ }
  private toggleTexturedF3l(){
   if(!this.texturedF3l||!this.wholeSourceRoot||
      this.texturedF3lStatus!=='READY'||this.galleryIndex>=0)return;
+  if(this.nativeVerifiedStageVisualEligible){
+   this.setNativeVerifiedOpticalScene(!this.texturedF3l.root.enabled);
+   return;
+  }
   const visible=this.wholeSourceRoot.enabled||this.texturedF3l.root.enabled;
   this.texturedF3lActive=!this.texturedF3lActive;
   this.wholeSourceRoot.enabled=visible&&!this.texturedF3lActive;
