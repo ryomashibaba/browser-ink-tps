@@ -4235,9 +4235,14 @@ export class UndertowF3PlayablePreviewApp{
     throw Error('K3_REAL_SOURCE_PAINT_AUTHORITY_MISSING');
   const body=this.player.getPosition(new Vec3());
   const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const footSupport=this.physics.castCharacterFootSupport(
+   body,off,this.player.currentMode);
+  if(footSupport?.solidId!==rampId||
+     Math.abs(body.y-off-footSupport.point.y)>.12)
+   throw Error('K3_REAL_NATIVE_RAMP_FOOT_SUPPORT_MISSING');
   const sample=this.ink.sampleWorld(
-   new Vec3(body.x,body.y-off+.06,body.z),
-   .4,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+   footSupport.point,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+   candidate=>candidate.id===paintId);
   type Cell={grid:[number,number];world:[number,number,number];
    distanceXZ:number};
   const near:Cell[]=[];let actualOwnedCells=0;
@@ -4261,13 +4266,16 @@ export class UndertowF3PlayablePreviewApp{
   // true original Rapier HUMAN foot, not merely a painted atlas pixel.
   for(const c of near.slice(0,90)){
    const [x,y,z]=c.world;
-   const actual=this.ink.sampleWorld(new Vec3(x,y+.06,z),
-    .4,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
-   if(actual?.surface.id!==paintId||actual.owner!==Team.A)continue;
    const support=this.physics.castCharacterFootSupport(
     new Vec3(x,y+off,z),off,'HUMAN');
    if(support?.solidId!==rampId||
       Math.abs(support.point.y-y)>.14)continue;
+   // Match PlayerController's real support-point sampling on slopes.
+   // An elevated probe can read a different row even on this same ramp.
+   const actual=this.ink.sampleWorld(support.point,
+    .4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+    candidate=>candidate.id===paintId);
+   if(actual?.surface.id!==paintId||actual.owner!==Team.A)continue;
    if(verified.some(p=>Math.hypot(p.world[0]-x,p.world[2]-z)<.35))
     continue;
    verified.push(c);

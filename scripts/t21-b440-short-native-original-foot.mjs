@@ -26,11 +26,20 @@ if(p0FallROnlyOnce&&!p0NormalHuman)
 const p1RampOnce=p0NormalHuman&&process.env.T21_P1_TRUE_RAMP_WALK_ONCE==='1';
 const b490LocalCompare=process.env.T21_B490_LOCAL_F3L_COMPARE_ONCE==='1';
 const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
+// Prepared short acceptance mode; enabling it requires individual approval.
+// Reuse the K3 real input/ink path, ending after reshoot, never 180s/replay.
+const p1InkLoopOnce=process.env.T21_P1_REGISTERED_INK_LOOP_ONCE==='1';
+if(p1InkLoopOnce&&(!p0NormalHuman||!p1RampOnce||b441Experiment||
+   b490LocalCompare||k3IntegratedSource180||
+   process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux'))
+ throw Error('P1_INK_LOOP_REQUIRES_ONE_PUBLIC_LINUX_NORMAL_SOURCE_RAMP');
 const p1InputDiagnosticOnce=p0NormalHuman&&
  process.env.T21_P1_INPUT_DIAGNOSTIC_ONCE==='1';
 const p1LowerOnce=p0NormalHuman&&
  (process.env.T21_P1_LOWER_EDGE_ONCE==='1'||p1RampOnce||p1InputDiagnosticOnce);
 
+if(p1InkLoopOnce&&(p1InputDiagnosticOnce||p0FallROnlyOnce))
+ throw Error('P1_INK_LOOP_CANNOT_COMBINE_DIAGNOSTIC_OR_FALL_R');
 if(k3IntegratedSource180&&(!p0NormalHuman||!p1RampOnce||p1InputDiagnosticOnce||
    b441Experiment))throw Error('K3_REQUIRES_NORMAL_P0_AND_TRUE_P1_RAMP');
  // One-shot full replay uses the EXACT real frontline portal mode, which
@@ -423,18 +432,38 @@ async function b58AttemptActualThreeSurfaceClear({world,start,firstAim}){
 
 /** K3: strictly opt-in continuation of the existing P0/P1 genuine SOURCE
  * trial. A real user world, no synthetic native tick, actor or paint. */
-async function runK3CanonicalOneWorld(actualHref){
+async function runK3CanonicalOneWorld(actualHref,{inkLoopOnly=false}={}){
  const start=await snap();authority(start);
  const born=await origin(),ids=['A1','A2','A3','B1','B2','B3','B4'];
  const ramp='UndertowT21D:right-low-route-ramp-positive-z';
- const k={schema:'K3_ONE_GENUINE_CANONICAL_SOURCE_WORLD',
+ const k={schema:inkLoopOnly?'P1_REGISTERED_SOURCE_REAL_INK_LOOP':
+  'K3_ONE_GENUINE_CANONICAL_SOURCE_WORLD',
   verdict:'HOLD',source:'25/17/26/0',origin:born,url:actualHref,
   firstNativeTick:start.tick,firstRemaining:start.timeRemainingSeconds,
   humanActions:[],samples:[],cpuImpactDeltas:null,
   actorTeleports:0,syntheticTicks:0,syntheticInk:0,
   scoreablePromotions:0,officialWinner:'NONE',formal4v4:false};
- proof.k3SingleSourceWorld=k;
- const persist=()=>{proof.stage='K3_'+k.verdict;save();};
+ if(inkLoopOnly)proof.p1RegisteredRampInkLoop=k;
+ else proof.k3SingleSourceWorld=k;
+ const persist=()=>{proof.stage=(inkLoopOnly?'P1_INK_LOOP_':'K3_')+k.verdict;save();};
+ const rampHumanCells=n=>n.b23HumanInkFeedback?.originalImpactChangedCellsBySurface
+  ?.find(row=>row.surfaceId===ramp+':paint')?.changedCells??0;
+ const firstHumanRampCells=rampHumanCells(start);
+ const picture=async(tag)=>{
+  if(!inkLoopOnly)return;
+  const shot=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false});
+  const bytes=Buffer.from(shot?.data??'','base64');
+  if(bytes.length<10000||
+     bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+     bytes.readUInt32BE(16)!==1600||bytes.readUInt32BE(20)!==900)
+   fail('P1_INK_LOOP_REAL_FRAMEBUFFER_MISSING');
+  const file='p1-real-ink-loop-'+tag+'.png';
+  writeFileSync(resolve(out,file),bytes);
+  k.screenshots??=[];
+  k.screenshots.push({file,bytes:bytes.length,
+   sha256:createHash('sha256').update(bytes).digest('hex')});persist();
+ };
  const readCpu=n=>Object.fromEntries(ids.map(id=>{
   const a=n.b154NativeSevenCpuInk?.byActor?.[id];
   const shots=n.cpuSourceTurfShotsByActor?.[id];
@@ -449,6 +478,19 @@ async function runK3CanonicalOneWorld(actualHref){
   * roster + fully unlocked SOURCE combat; never revive or move actors. */
  const validate=async(n,phase='PLAYING')=>{
   authority(n);
+  if(inkLoopOnly){
+   const f=n.sourceNativeFloorInkWitness;
+   if(n.tick>start.tick+1200||n.tick<start.tick||
+      n.sourceNativeHumanInputProjection?.nativeTick!==n.tick||
+      f?.sourceOnlyEnabled!==true||f.originalAuthority!=='25/17/26/0'||
+      f.actualKccGrounded!==true||f.actualRapierSolidId!==ramp||
+      !Number.isFinite(f.actualRapierFootGapMeters)||
+      Math.abs(f.actualRapierFootGapMeters)>.12||
+      f.floorRuleApplicable!==true||f.inkRelation!==n.player.inkRelation||
+      (['OWN','ENEMY'].includes(f.inkRelation)&&
+       (f.floorContactVerified!==true||f.sampledBackingSolidId!==ramp)))
+    fail('P1_INK_LOOP_NATIVE_TICK_OR_REGISTERED_FLOOR_CONTACT');
+  }
   if(await origin()!==born||await evaluate('location.href')!==actualHref||
      n.matchState!==phase||n.cpu.cpu.length!==7||
      n.cpu.freeCombatEnabled!==true||
@@ -469,6 +511,8 @@ async function runK3CanonicalOneWorld(actualHref){
    playerImpactCells:n.b23HumanInkFeedback?.humanChangedCells,
    lastRealPlayerPaintSurface:n.b23HumanInkFeedback?.lastPaintedSurface??null,
    relation:n.player.inkRelation,recovery:n.playerInkRecoveryState,
+   ...(inkLoopOnly?{floorInk:n.sourceNativeFloorInkWitness,
+    humanRampImpactCells:rampHumanCells(n)}:{}),
    actualCpu:readCpu(n)});
   persist();
  };
@@ -493,6 +537,8 @@ async function runK3CanonicalOneWorld(actualHref){
   const before=await validate(await snap());
   if(before.player.mode!=='HUMAN'||before.player.ink<6)
    fail('K3_HUMAN_SHOT_REAL_INK_NOT_AVAILABLE_'+tag);
+  const minPaidInk=inkLoopOnly&&
+   tag==='REAL_OWNER_INK_SPEND_BEFORE_SQUID_REFILL'?15:1;
   let held=false,accepted=null;
   try{
    await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
@@ -507,7 +553,7 @@ async function runK3CanonicalOneWorld(actualHref){
     // paid native bullets without changing any ownership cells.
     // Never invent a second paint impact; prove real shots + paid ink.
     const paidNativeShots=n.shotsFired>=before.shotsFired+3&&
-     before.player.ink-n.player.ink>=1;
+     before.player.ink-n.player.ink>=minPaidInk;
     const paintedNewRealCells=
      n.b23HumanInkFeedback?.humanChangedCells>
       before.b23HumanInkFeedback?.humanChangedCells;
@@ -531,6 +577,7 @@ async function runK3CanonicalOneWorld(actualHref){
   sample(tag,after);
  };
  await shoot('FIRST_REAL_HUMAN_PAINT_SHOTS');
+ await picture('after-first-shot');
  const firstPaint=await validate(await snap());
  // Genuine trials: #42530565403 Shift on stationary NEUTRAL failed;
  // #42536808564 real W moved 1.5m over original ramp but stayed NEUTRAL.
@@ -661,13 +708,15 @@ async function runK3CanonicalOneWorld(actualHref){
  k.verdict='REAL_NATIVE_OWNER_CONTACT_ON_REGISTERED_RAMP';
  sample('REAL_OWNER_RAMP_CONTACT',contact);
  let diveBefore=await validate(await snap());
- if(diveBefore.player.ink>=98){
-  await shoot('REAL_OWNER_INK_SPEND_BEFORE_SQUID_REFILL');
+ const refillHeadroomLimit=inkLoopOnly?85:98;
+ if(diveBefore.player.ink>=refillHeadroomLimit){
+  await shoot('REAL_OWNER_INK_SPEND_BEFORE_SQUID_REFILL',!inkLoopOnly);
   diveBefore=await validate(await snap());
  }
- if(diveBefore.player.ink>=98||diveBefore.player.inkRelation!=='OWN')
+ if(diveBefore.player.ink>=refillHeadroomLimit||diveBefore.player.inkRelation!=='OWN')
   fail('K3_REAL_OWN_INK_REFILL_HEADROOM_NOT_PROVEN');
  let shifted=false;
+ const refillSamples=[];
  try{
   await cdp('Input.dispatchKeyEvent',{type:'keyDown',
    key:'Shift',code:'ShiftLeft',windowsVirtualKeyCode:16,nativeVirtualKeyCode:16});
@@ -679,15 +728,30 @@ async function runK3CanonicalOneWorld(actualHref){
     ink:n.player.ink,position:n.player.position,
     grounded:n.nativeKccGrounded};
    if(n.tick>diveBefore.tick+150)fail('K3_ACTUAL_OWN_REFILL_WINDOW_EXPIRED');
-   return n.player.mode==='SQUID'&&n.player.inkRelation==='OWN'&&
+   const recovering=n.player.mode==='SQUID'&&n.player.inkRelation==='OWN'&&
     n.playerInkRecoveryState==='SQUID_OWN'&&
-    n.player.ink>diveBefore.player.ink+1?n:false;
+    n.player.ink>diveBefore.player.ink+1;
+   if(!inkLoopOnly)return recovering?n:false;
+   if(!recovering){
+    if(refillSamples.length)fail('P1_INK_LOOP_OWN_RECOVERY_INTERRUPTED');
+    return false;
+   }
+   const last=refillSamples.at(-1);
+   if(last&&n.tick===last.tick)return false;
+   if(last&&(n.tick<last.tick||n.player.ink<=last.ink))
+    fail('P1_INK_LOOP_REAL_RECOVERY_NOT_INCREASING');
+   refillSamples.push({tick:n.tick,ink:n.player.ink,mode:n.player.mode,
+    recovery:n.playerInkRecoveryState,relation:n.player.inkRelation,
+    floorInk:n.sourceNativeFloorInkWitness});
+   k.refillSamples=refillSamples;persist();
+   return refillSamples.length>=3?n:false;
   },55000,160);
   k.humanActions.push({tag:'GENUINE_SHIFT_SQUID_OWN_REFILL',
    from:diveBefore.tick,to:own.tick,
    fromInk:diveBefore.player.ink,toInk:own.player.ink,
    recovery:own.playerInkRecoveryState});
   sample('SQUID_OWN',own);
+  await picture('own-squid-recovery');
  }finally{
   if(shifted)await cdp('Input.dispatchKeyEvent',{type:'keyUp',
    key:'Shift',code:'ShiftLeft',windowsVirtualKeyCode:16,nativeVirtualKeyCode:16});
@@ -696,6 +760,32 @@ async function runK3CanonicalOneWorld(actualHref){
   const n=await validate(await snap());return n.player.mode==='HUMAN'?n:false;
  },20000,180);
  await shoot('ACTUAL_POST_OWN_REFILL_RESHOT',false);
+ if(inkLoopOnly){
+  const end=await validate(await snap());
+  const required=['FIRST_REAL_HUMAN_PAINT_SHOTS',
+   'GENUINE_SHIFT_SQUID_OWN_REFILL','ACTUAL_POST_OWN_REFILL_RESHOT'];
+  if(end.player.mode!=='HUMAN'||refillSamples.length<3||
+     rampHumanCells(end)<=firstHumanRampCells||
+     required.some(tag=>!k.humanActions.some(a=>a.tag===tag))||
+     k.humanActions.filter(a=>a.tag===required[0]||a.tag===required[2])
+      .some(a=>a.realPlayerShotsVerified!==true||a.paidInk<1))
+   fail('P1_INK_LOOP_SAME_SOURCE_SHOT_RECOVERY_RESHOT_NOT_PROVEN');
+  k.humanRampImpactCellDelta=rampHumanCells(end)-firstHumanRampCells;
+  k.finalNativeTick=end.tick;
+  k.actualNativeElapsedTicks=end.tick-start.tick;
+  sample('HUMAN_REAL_RESHOT',end);
+  await picture('human-reshoot');
+  if(k.screenshots?.length!==3)
+   fail('P1_INK_LOOP_REAL_THREE_PHASE_FRAMES_MISSING');
+  k.verdict='PASS_LIMITED_REAL_REGISTERED_SOURCE_FIRE_REFILL_RESHOT';
+  proof.verdict=k.verdict;
+  proof.testKind='P1_SHORT_SAME_WORLD_REGISTERED_SOURCE_INK_LOOP';
+  // No sub, TIME_UP, replay or formal match certification in this mode.
+  proof.full180sCertified=false;proof.genuineReplayClickCertified=false;
+  persist();
+  console.log('P1_REAL_REGISTERED_SOURCE_INK_LOOP',JSON.stringify(k));
+  return;
+ }
  const preSub=await validate(await snap());
  await tapSourceCameraKey('f','KeyF',70);
  const postSub=await until(async()=>{
@@ -1618,8 +1708,8 @@ async function main(){
      JSON.stringify(proof.p1RampNativeProgress));
    }
   }
-  if(k3IntegratedSource180){
-   await runK3CanonicalOneWorld(actualHref);
+  if(k3IntegratedSource180||p1InkLoopOnce){
+   await runK3CanonicalOneWorld(actualHref,{inkLoopOnly:p1InkLoopOnce});
    return;
   }
   // No physical fall means this one-shot R test remains HOLD, not PASS.
