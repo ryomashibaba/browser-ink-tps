@@ -561,13 +561,29 @@ export class PlayerController {
           this.position.z - this.previousPosition.z
         ) / dt
       : 0;
-    this.stats.playerInkRelation = this.currentInkRelation;
+    // SOURCE resources update immediately after this real Rapier step.
+    // The pre-step footPoint was necessary for movement planning, but using
+    // its old ink owner here allows one tick of false OWN refill or ENEMY
+    // damage after the player already crossed a painted edge or landed.
+    // Source-only: sample the *actual* current capsule/ball foot once.
+    // Keep wall-swim/surge's independently verified OWN wall contact;
+    // they never inherit floor ownership from an unrelated lower slab.
+    if(this.nativeSourceGroundInkGuard){
+      this.footPoint.set(
+        p.x,p.y-PlayerController.humanFootOffset+0.06,p.z);
+    }
     const debugSample = this.gameplayInk.sampleWorld(
       this.footPoint,
       0.40,
       SurfaceFlags.Swimmable,
       SurfaceFlags.Wall
     );
+    if(this.nativeSourceGroundInkGuard&&
+       this.locomotionState!=='SWIM_WALL'&&
+       this.locomotionState!=='SURGE_CHARGE'){
+      this.inkRelation=this.relationFor(debugSample);
+    }
+    this.stats.playerInkRelation = this.currentInkRelation;
     this.stats.playerSampleSurface = debugSample?.surface.id ?? '-';
     this.stats.playerSampleU = debugSample?.u ?? Number.NaN;
     this.stats.playerSampleV = debugSample?.v ?? Number.NaN;
