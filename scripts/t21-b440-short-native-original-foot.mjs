@@ -1068,7 +1068,7 @@ async function main(){
   // V18 P0: follow the actual STANDARD SOURCE GAME portal, not B441 QA
   // navigation. A real CDP click starts the same 25/17/26/0 world used
   // by human play. No artificial clock, Actor, ink, stage or nav writes.
-  if(k3IntegratedSource180){
+  if(k3IntegratedSource180||p1InkLoopOnce){
    // Select the existing Needle SMG through the genuine source portal,
    // never by writing game state or changing an actor/weapon in JS.
    let currentKit=await evaluate(
@@ -3962,12 +3962,12 @@ proof.verdict=proveFullSourceReplay?
  console.log('B440_TRUE_SOURCE_NATIVE_HUMAN_WALK',JSON.stringify(proof));
 }
 try{await main();}catch(e){
- // For K3 only: capture exact first native failure, without restarting
+ // Capture the first shared K3/short-ink native failure, without restarting
  // the round, changing the actor world, or retrying prior certified K1/K2.
- if(k3IntegratedSource180){
+ if(k3IntegratedSource180||p1InkLoopOnce){
   try{
    const n=await snap();
-   proof.k3FirstFailureRealNative={
+   proof[p1InkLoopOnce?'p1InkLoopFirstFailureRealNative':'k3FirstFailureRealNative']={
     firstError:String(e),tick:n.tick,
     phase:n.matchState,remainingSeconds:n.timeRemainingSeconds,
     stopReason:n.stopReason,
