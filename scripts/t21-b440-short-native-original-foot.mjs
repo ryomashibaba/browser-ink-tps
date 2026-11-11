@@ -3281,6 +3281,38 @@ async function main(){
    console.log('B489_GENUINE_NATIVE_A3_INK_OUTCOME',
     JSON.stringify(proof.b489ActualSourceA3Paint));
   }
+  // Original B443 gameplay state from the SAME genuine 7-CPU native world.
+  // These are monotonic LIVE counters only, not a fabricated traversal
+  // proof. The rotation path still needs native Rapier/Recast checks.
+  const b443Before=firstRead.patrol,b443After=actual.cpu.sourcePatrol;
+  const b443Keys=['b443NativeGoalRetentions',
+   'b443FirstActualFrontlineArrivals',
+   'b443RotationsAfterDwell','b443ReleasedUnsafeOrStalled'];
+  if(!b443Before||!b443After||
+     !b443Keys.every(k=>Number.isSafeInteger(b443Before[k])&&
+      b443Before[k]>=0&&Number.isSafeInteger(b443After[k])&&
+      b443After[k]>=b443Before[k])||
+     b443After.b443NativeGoalRetentions<=
+      b443Before.b443NativeGoalRetentions)
+   fail('B443_REAL_NATIVE_LOCK_COUNTERS_NOT_GROUNDED');
+  proof.b443RealNativeExistingGoalDwell={
+   schema:'B443_REAL_NATIVE_SOURCE_GOAL_DWELL_COUNTERS_V1',
+   source:'25/17/26/0',
+   initialNativeTick:firstRead.tick,finalNativeTick:actual.tick,
+   realSevenCpu:actual.cpu.physicalRejoins.length===7,
+   before:Object.fromEntries(b443Keys.map(k=>[k,b443Before[k]])),
+   after:Object.fromEntries(b443Keys.map(k=>[k,b443After[k]])),
+   delta:Object.fromEntries(b443Keys.map(k=>[
+    k,b443After[k]-b443Before[k]])),
+   fromActualNativeOriginalSourceTraffic:true,
+   readOnly:true,stageGeometryWrites:0,actorWrites:0,
+   inkWrites:0,clockWrites:0,scoreWrites:0,
+   certifiedContinuousCapsuleTraversal:false,
+   certifiedOriginalCollisionFlags:false,
+   certifiedCrossTeamRoute:false,officialWinner:'NONE',
+   verdict:'PASS_REAL_NATIVE_B443_COUNTERS_NOT_CROSSING_CERTIFICATION'
+  };
+  save();
   const observed=actual.cpu.cpu.map(c=>{
    const from=baseline[c.id],p=c.physicalFoot;
    return {id:c.id,from,to:p,

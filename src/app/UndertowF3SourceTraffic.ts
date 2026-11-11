@@ -1787,38 +1787,46 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      lock.arrivedSinceTick,distance,fronts.length,
      Math.abs(lock.target.y-realFoot.y));
     if(decision.decision==='KEEP_APPROACH'||
-       decision.decision==='KEEP_DWELL'){
-     // A stable lock is NOT a bypass. Recheck actual native CPU foot,
-     // endpoint and EVERY intermediate original-grounded Recast point.
+       decision.decision==='KEEP_DWELL'||
+       decision.decision==='ROTATE_AFTER_DWELL'){
+     // B443 previously rechecked Rapier/Recast for KEEP but skipped it
+     // for ROTATE: the stale 120-tick dwell could then be falsely
+     // recorded as a completed SOURCE goal after support was lost.
+     // Use the same original floor/route gate for BOTH outcomes.
      const route=this.nav.auditPath(realFoot,lock.target);
-     if(lock.target.z*sign>=33&&
+     if(bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+        this.physicallyRejoined.has(id)&&
+        lock.target.z*sign>=33&&
         this.hasSourceFootSupport(realFoot)&&
         this.hasSourceFootSupport(lock.target)&&
         route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
         route.endSnapDistanceMeters<=.20&&
         this.hasSourceSupportedRoute(route,sign)){
-      if(lock.arrivedSinceTick===null&&
-         decision.arrivedSinceTick!==null)
-       this.b443FirstActualFrontlineArrivals++;
-      lock.arrivedSinceTick=decision.arrivedSinceTick;
-      out.copy(lock.target);
-      this.b442LastApprovedFront.set(id,{
-       target:lock.target.clone(),nativeTick:this.b137NativeTick
-      });
-      this.b443NativeGoalRetentions++;
-      if(id==='A3'&&this.enableB448A3LiveOriginalFront)
-       this.b448A3RealNativeGoalRequests++;
-      if(this.b467LiveSourceGoals.has(id))
-       this.b467TrueNativeGoalRequests++;
-      if(gate)gate.runtimeTrueOriginalGoalRequests++;
-      this.realGoalRequests++;this.b441ActualGoalRequests++;
-      return true;
+      if(decision.decision==='ROTATE_AFTER_DWELL'){
+       completed=lock.target.clone();
+       this.b443RotationsAfterDwell++;
+      }else{
+       if(lock.arrivedSinceTick===null&&
+          decision.arrivedSinceTick!==null)
+        this.b443FirstActualFrontlineArrivals++;
+       lock.arrivedSinceTick=decision.arrivedSinceTick;
+       out.copy(lock.target);
+       this.b442LastApprovedFront.set(id,{
+        target:lock.target.clone(),nativeTick:this.b137NativeTick
+       });
+       this.b443NativeGoalRetentions++;
+       if(id==='A3'&&this.enableB448A3LiveOriginalFront)
+        this.b448A3RealNativeGoalRequests++;
+       if(this.b467LiveSourceGoals.has(id))
+        this.b467TrueNativeGoalRequests++;
+       if(gate)gate.runtimeTrueOriginalGoalRequests++;
+       this.realGoalRequests++;this.b441ActualGoalRequests++;
+       return true;
+      }
+     }else{
+      this.b441UnsafeOrUnreachableHolds++;
+      this.b443ReleasedUnsafeOrStalled++;
      }
-     this.b441UnsafeOrUnreachableHolds++;
-     this.b443ReleasedUnsafeOrStalled++;
-    }else if(decision.decision==='ROTATE_AFTER_DWELL'){
-     completed=lock.target.clone();
-     this.b443RotationsAfterDwell++;
     }else this.b443ReleasedUnsafeOrStalled++;
     this.b443OriginalGoalLocks.delete(id);
    }
