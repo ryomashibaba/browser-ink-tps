@@ -55,6 +55,8 @@ echo.
 echo Two local PNG files and the real-physics JSON were captured.
 echo Optical alignment is NOT approved until images are reviewed.
 echo %T21_B440_OUT%
+REM Open the two local PNGs in a single offline overlay viewer.
+if exist "%T21_B440_OUT%\B490_LOCAL_COMPARE.html" start "" "%T21_B440_OUT%\B490_LOCAL_COMPARE.html"
 popd
 pause
 exit /b 0

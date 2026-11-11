@@ -11,7 +11,7 @@ import {spawn,execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {existsSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {b490ValidateSamePoseFrames} from './t21-f3l-same-pose-gate.mjs';
+import {b490ValidateSamePoseFrames,b490LocalComparisonHtml} from './t21-f3l-same-pose-gate.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,isAbsolute,sep,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -844,12 +844,17 @@ async function b490CaptureLocalSamePosePair(){
  mkdirSync(out,{recursive:true});
  for(const p of pngs)
   writeFileSync(resolve(out,p.file),p.data,{flag:'wx'});
+ // The report has references to local PNGs only. It embeds no original
+ // Nintendo OBJ/MTL/texture or pixel data, and cannot contact a server.
+ writeFileSync(resolve(out,'B490_LOCAL_COMPARE.html'),
+  b490LocalComparisonHtml(result),{flag:'wx'});
  proof.b490FrozenF3lPair={...result,localOnly:true,
   screenshots:pngs.map(p=>({file:p.file,bytes:p.data.length,
    sha256:createHash('sha256').update(p.data).digest('hex')})),
   originalSourceMeshBytesCopied:0,originalTextureBytesCopied:0,
   screenshotsUploaded:false,visualAlignmentCertified:false,
-  normalWindowsRenderingCertified:false};
+  normalWindowsRenderingCertified:false,
+  localViewer:'B490_LOCAL_COMPARE.html'};
  save();
  console.log('B490_LOCAL_F3L_REGISTERED_SAME_POSE',JSON.stringify(
   proof.b490FrozenF3lPair));

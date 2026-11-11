@@ -61,7 +61,7 @@ test('optical manifest gate rejects collider/nav/actor/scoring promotion',()=>{
  ])assert.equal(t21OriginalOpticalManifestsValid(...values),false);
 });
 
-import {b490ValidateSamePoseFrames,B490_CAPTURE_AUTHORITY}
+import {b490ValidateSamePoseFrames,b490LocalComparisonHtml,B490_CAPTURE_AUTHORITY}
  from './t21-f3l-same-pose-gate.mjs';
 function b490Sample(on){
  return {tick:1304,paused:true,stopReason:null,matchState:'PLAYING',
@@ -69,8 +69,11 @@ function b490Sample(on){
   originalSourceNavigationLinks:26,sourceScoreablePromotions:0,
   productionAuthorized:false,unrestricted4v4Certified:false,
   player:{position:[2.45555,3.93841,50.63159],mode:'HUMAN'},
-  cpu:{physicalRejoins:Array(7).fill({})},
-  b112OriginalHumanGround:{genuineKccGrounded:true,
+  cpu:{physicalRejoins:Array(7).fill({}),
+   cpu:Array.from({length:7},(_,i)=>({id:'CPU_'+i,
+    physicalFoot:[i*2,3,49.7-i]}))},
+  nativeKccGrounded:true,
+  b112OriginalHumanGround:{lastNativeTick:1304,genuineKccGrounded:true,
    lastOriginalSourceHitId:'UndertowT21D:right-low-route-ramp-positive-z',
    lastOriginalSourceGapMeters:.04239},
   originalSourceStudyVisible:false,sourceOpticalStructuresVisible:false,
@@ -110,6 +113,11 @@ test('B490 refuses mistaken visual/geometry success from a moving or unverified 
    realCameraEye:[1.1,5,54],realCameraForward:[.2,-.1,-.97]}}}],
   [{...uv,cpu:{physicalRejoins:Array(6).fill({})}},plain],
   [uv,{...plain,paused:false}],
+  [uv,{...plain,nativeKccGrounded:false}],
+  [uv,{...plain,b112OriginalHumanGround:{...plain.b112OriginalHumanGround,
+   lastNativeTick:1299}}],
+  [uv,{...plain,cpu:{...plain.cpu,cpu:plain.cpu.cpu.map((a,i)=>
+    i===0?{...a,physicalFoot:[.11,3,49.7]}:a)}}],
   [uv,{...plain,stopReason:'REAL_UNSUPPORTED_FOOT'}]
  ])assert.equal(b490ValidateSamePoseFrames(a,b).status,'HOLD');
 });
@@ -124,4 +132,18 @@ test('B490 only captures local pictures after real P1 success and never uploads 
  assert.match(r,/B490_OWNED_PREVIEW_OR_CDP_PORT_ALREADY_IN_USE/);
  assert.match(r,/mkdtempSync\(join\(tmpdir\(\),'t21-b490-chromium-'\)\)/);
  assert.match(r,/rmSync\(b490OwnedChromeProfile/);
+});
+
+test('B490 same-pose report is offline, readable and never certifies stage alignment',()=>{
+ const valid=b490ValidateSamePoseFrames(b490Sample(true),b490Sample(false));
+ const html=b490LocalComparisonHtml(valid);
+ assert.match(html,/Content-Security-Policy/);
+ assert.match(html,/connect-src 'none'/);
+ assert.match(html,/b490-original-uv-same-pose\.png/);
+ assert.match(html,/b490-registered-floor-same-pose\.png/);
+ assert.match(html,/native tick: 1304/);
+ assert.match(html,/addEventListener\('input'/);
+ assert.doesNotMatch(html,/<(?:script|link)[^>]+src="https?:/i);
+ assert.doesNotMatch(html,/\b(?:fetch|XMLHttpRequest|sendBeacon)\s*\(/);
+ assert.throws(()=>b490LocalComparisonHtml({status:'HOLD',nativeTick:1304}));
 });
