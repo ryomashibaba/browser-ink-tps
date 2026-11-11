@@ -4,7 +4,7 @@ import {CombatTargetSystem} from '../../combat/CombatTargetSystem';
 import {PlayerResources} from '../../combat/PlayerResources';
 import {PerformanceStats} from '../../core/PerformanceStats';
 import {GameplayInkSystem} from '../../ink/GameplayInkSystem';
-import {SurfaceFlags,Team} from '../../ink/types';
+import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../../ink/types';
 import type {PlayerInput} from '../../input/PlayerInput';
 import type {ThirdPersonCamera} from '../../camera/ThirdPersonCamera';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
@@ -30,7 +30,7 @@ function sourceFoot(){
     x:originalLink.start[0],y:originalLink.start[1],z:originalLink.start[2]
   });
 }
-function qaWorld(){
+function qaWorld(rampId?:string){
   const stats=new PerformanceStats();
   const physics=new RapierStagePhysics(DT,stage);
   physics.step();
@@ -39,17 +39,23 @@ function qaWorld(){
   const root=new Entity('T21_PHASE14N_REAL_PLAYER_AND_PROJECTILE');
   const app={root} as never;
   let move=0;
+  let squid=false;
   const input={
     get moveX(){return 0;},
     get moveY(){return move;},
-    get squidHeld(){return false;},
+    get squidHeld(){return squid;},
     get jumpHeld(){return false;},
     consumeJump(){return false;}
   } as PlayerInput;
   const camera={getFlatForward:(out:Vec3)=>out.set(0,0,1)} as ThirdPersonCamera;
   const player=new PlayerController(app,physics,input,camera,ink,stats);
   player.setTeam(Team.A);
-  const landing=sourceFoot();
+  const ramp=surfaces.find(s=>s.id===rampId);
+  const landing=ramp
+    ? ramp.localToWorld(ramp.widthMeters*.5,16*ramp.cellSize+.005)
+        .sub(ramp.normal.clone().mulScalar(.002))
+    : sourceFoot();
+  if(ramp)player.setNativeSourceGroundInkGuard(true,stage.paintSurfaces);
   player.teleport(new Vec3(
     landing.x,landing.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
     landing.z
@@ -60,7 +66,7 @@ function qaWorld(){
     player.syncAfterPhysics(DT);
   }
   return {stats,physics,ink,surfaces,app,player,landing,tickPlayer,
-    setMove:(v:number)=>{move=v;}};
+    setMove:(v:number)=>{move=v;},setSquid:(v:boolean)=>{squid=v;}};
 }
 beforeAll(async()=>{await initializeRapier();});
 afterEach(()=>vi.restoreAllMocks());
@@ -212,5 +218,91 @@ describe('T21 Phase14N original-source real PlayerController and actual CPU proj
     t21ActivationAuthorized:false
   }));
  });
+
+ it.each(['positive-z','negative-z'])(
+  'uses the real registered %s ramp support cell across HUMAN/SQUID resource updates',
+  side=>{
+   vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+   const id='UndertowT21D:right-low-route-ramp-'+side;
+   const w=qaWorld(id+':paint');
+   const surface=w.ink.getSurface(id+':paint')!;
+   const resources=new PlayerResources(w.stats);
+   const stamp=(u:number,v:number,team:Team,radius:number)=>w.ink.apply({
+    tick:1,source:PaintSource.Debug,team,surfaceId:surface.id,
+    centerU:u,centerV:v,radiusU:radius,radiusV:radius,
+    angle:0,type:PaintEventType.Debug,strength:1
+   });
+   for(let i=0;i<90;i++)w.tickPlayer();
+   const readContact=()=>{
+    const body=w.player.getPosition();
+    const hit=w.physics.castCharacterFootSupport(
+     body,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN')!;
+    expect(hit?.solidId).toBe(id);
+    return {
+     contact:surface.projectWorldPoint(hit.point),
+     raised:surface.projectWorldPoint(new Vec3(body.x,
+      body.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.06,body.z))
+    };
+   };
+   let probe=readContact();
+   // Approach an actual cell edge with native KCC movement, rather than
+   // depending on a particular settling displacement or rewriting a pose.
+   w.setMove(.15);
+   for(let i=0;i<60&&
+    Math.floor(probe.contact.v/surface.cellSize)===
+     Math.floor(probe.raised.v/surface.cellSize);i++){
+    w.tickPlayer();probe=readContact();
+   }
+   w.setMove(0);
+   const {contact,raised}=probe;
+   const cell=surface.cellSize;
+   const x=Math.floor(contact.u/cell),y=Math.floor(contact.v/cell);
+   const wrongY=Math.floor(raised.v/cell);
+   // The old elevated-foot projection reads the neighboring row on the
+   // actual registered ramp. Ink is seeded ONLY in this unit fixture.
+   expect(wrongY).not.toBe(y);
+   stamp((x+.5)*cell,(wrongY+.5)*cell,Team.B,cell*.45);
+   stamp((x+.5)*cell,(y+.5)*cell,Team.A,cell*.45);
+   w.player.syncAfterPhysics(DT);
+   expect(w.player.sourceNativeFloorInkWitness()).toMatchObject({
+    actualKccGrounded:true,actualRapierSolidId:id,
+    sampledPaintSurfaceId:surface.id,floorContactVerified:true,inkRelation:'OWN'
+   });
+   expect(w.stats.playerSampleV).toBeCloseTo(contact.v,5);
+   // Reversing ownership must also read ENEMY at contact, not adjacent OWN.
+   stamp((x+.5)*cell,(wrongY+.5)*cell,Team.A,cell*.45);
+   stamp((x+.5)*cell,(y+.5)*cell,Team.B,cell*.45);
+   w.player.syncAfterPhysics(DT);
+   expect(w.player.currentInkRelation).toBe('ENEMY');
+
+   // One physical SOURCE fixture: consume, transform, recover, return
+   // to HUMAN and consume again. This is not real user/projectile proof.
+   stamp(surface.widthMeters*.5,surface.heightMeters*.5,Team.A,
+    Math.hypot(surface.widthMeters,surface.heightMeters));
+   expect(resources.tryConsumeShotInk(60)).toBe(true);
+   const depleted=w.stats.playerInk;
+   w.setSquid(true);
+   for(let i=0;i<60;i++){
+    w.tickPlayer();
+    resources.fixedUpdate(DT,w.player.currentMode,w.player.currentInkRelation);
+   }
+   expect(w.player.currentMode).toBe('SQUID');
+   expect(w.player.currentInkRelation).toBe('OWN');
+   expect(w.stats.playerInkRecoveryState).toBe('SQUID_OWN');
+   expect(w.stats.playerInk).toBeGreaterThan(depleted);
+   w.setSquid(false);
+   w.tickPlayer();
+   resources.fixedUpdate(DT,w.player.currentMode,w.player.currentInkRelation);
+   expect(w.player.currentMode).toBe('HUMAN');
+   expect(w.player.canShoot).toBe(true);
+   const refilled=w.stats.playerInk;
+   expect(resources.tryConsumeShotInk()).toBe(true);
+   expect(w.stats.playerInk).toBeLessThan(refilled);
+   expect(stage.solids).toHaveLength(25);
+   expect(stage.paintSurfaces).toHaveLength(17);
+   expect(stage.navigationLinks).toHaveLength(26);
+   expect(w.ink.snapshot().areaA).toBe(0);
+   expect(w.ink.snapshot().areaB).toBe(0);
+  });
 
 });

@@ -116,6 +116,7 @@ export class PlayerController {
   private sourceSupportedSolidId:string|null=null;
   private sourceFootGapMeters:number|null=null;
   private readonly sourceFootCastPosition=new Vec3();
+  private readonly sourceFloorInkPoint=new Vec3();
   private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
     this.sourceSupportedSolidId!==null&&
     this.sourcePaintBackingById?.get(surface.id)===this.sourceSupportedSolidId;
@@ -245,7 +246,8 @@ export class PlayerController {
     if(this.nativeSourceGroundInkGuard&&
        (!this.grounded||!this.sourceSupportedSolidId))return null;
     return this.gameplayInk.sampleWorld(
-      this.footPoint,0.40,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+      this.nativeSourceGroundInkGuard?this.sourceFloorInkPoint:this.footPoint,
+      0.40,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
       this.nativeSourceGroundInkGuard?this.sourceBackingMatchesSupport:undefined
     );
   }
@@ -673,6 +675,13 @@ export class PlayerController {
         this.sourceFootCastPosition.set(p.x,p.y,p.z),
         PlayerController.humanFootOffset,this.mode):null;
       this.sourceSupportedSolidId=hit?.solidId??null;
+      // Read the ink cell at the actual registered Rapier support point.
+      // Projecting the elevated capsule/ball foot onto a slope shifts UV
+      // downhill/uphill across ink-cell and surface boundaries. Reuse this
+      // same post-step point for next tick's movement planning as well.
+      // A missing hit clears support above, so stale coordinates cannot
+      // grant floor ink. The KCC gap/backing checks remain mandatory.
+      if(hit)this.sourceFloorInkPoint.copy(hit.point);
       this.sourceFootGapMeters=hit?
         p.y-PlayerController.humanFootOffset-hit.point.y:null;
       this.footPoint.set(
