@@ -547,7 +547,11 @@ export class PlayerController {
       this.position.set(p.x, p.y, p.z);
     }
 
-    this.applyVisualPosition(this.position);
+    // Frozen T20 draws at its historical point in the fixed tick.
+    // Native SOURCE instead waits for actual post-Rapier speed below:
+    // its player pose must not animate using the preceding tick's speed.
+    if(!this.nativeSourceGroundInkGuard)
+      this.applyVisualPosition(this.position);
 
     this.stats.playerWorldX = this.position.x;
     this.stats.playerWorldY = this.position.y;
@@ -561,6 +565,10 @@ export class PlayerController {
           this.position.z - this.previousPosition.z
         ) / dt
       : 0;
+    // Keep the visual body on the SAME real Rapier coordinate; only the
+    // native animation speed witness is now from this actual physics step.
+    if(this.nativeSourceGroundInkGuard)
+      this.applyVisualPosition(this.position);
     // SOURCE resources update immediately after this real Rapier step.
     // The pre-step footPoint was necessary for movement planning, but using
     // its old ink owner here allows one tick of false OWN refill or ENEMY
