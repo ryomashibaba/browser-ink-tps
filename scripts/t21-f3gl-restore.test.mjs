@@ -153,3 +153,16 @@ test('B490 same-pose report is offline, readable and never certifies stage align
  assert.doesNotMatch(html,/\b(?:fetch|XMLHttpRequest|sendBeacon)\s*\(/);
  assert.throws(()=>b490LocalComparisonHtml({status:'HOLD',nativeTick:1304}));
 });
+
+test('B493 real native SOURCE registered ink foot proof is tied to W/S/D KCC ramp',()=>{
+ const player=readFileSync(resolve(root,'src/player/PlayerController.ts'),'utf8');
+ const app=readFileSync(resolve(root,'src/app/UndertowF3PlayablePreviewApp.ts'),'utf8');
+ const runner=readFileSync(resolve(root,'scripts/t21-b440-short-native-original-foot.mjs'),'utf8');
+ assert.match(player,/public sourceNativeFloorInkWitness\(\)/);
+ assert.match(player,/paintBacking===this.sourceSupportedSolidId/);
+ assert.match(app,/sourceNativeFloorInkWitness:this\.player\.sourceNativeFloorInkWitness\(\)/);
+ assert.match(runner,/P1_REAL_SOURCE_INK_BACKING_NOT_SAME_SUPPORT/);
+ assert.match(runner,/P1_REAL_RAMP_SOURCE_INK_FOOT_SUPPORT_NOT_PROVEN/);
+ assert.match(runner,/ownRechargeOrEnemyDamageNotAutomaticallyCertified:true/);
+ assert.match(runner,/nativeActorPositionWrites:0,newFloorOrColliderWrites:0/);
+});

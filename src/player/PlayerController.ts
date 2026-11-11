@@ -234,6 +234,36 @@ export class PlayerController {
       this.sourceSupportedSolidId,this.sourceFootGapMeters);
   }
 
+  /** Read-only native original Rapier support / registered paint owner.
+   * This never changes ink, stage, player, or actual native KCC state. */
+  public sourceNativeFloorInkWitness(){
+    const surfaceId=this.stats.playerSampleSurface;
+    const paintBacking=this.sourcePaintBackingById?.get(surfaceId)??null;
+    const footGap=this.sourceFootGapMeters;
+    const verified=this.nativeSourceGroundInkGuard&&this.grounded&&
+      paintBacking!==null&&paintBacking===this.sourceSupportedSolidId&&
+      footGap!==null&&Number.isFinite(footGap)&&Math.abs(footGap)<=.12;
+    const floorRuleApplicable=this.locomotionState!=='SWIM_WALL'&&
+      this.locomotionState!=='SURGE_CHARGE';
+    return {
+      sourceOnlyEnabled:this.nativeSourceGroundInkGuard,
+      originalAuthority:'25/17/26/0' as const,
+      actualKccGrounded:this.grounded,
+      actualRapierSolidId:this.sourceSupportedSolidId,
+      actualRapierFootGapMeters:footGap,
+      sampledPaintSurfaceId:surfaceId,
+      sampledBackingSolidId:paintBacking,
+      floorContactVerified:verified,
+      floorRuleApplicable,
+      inkRelation:this.currentInkRelation,
+      locomotionState:this.locomotionState,
+      originalGeometryWrites:0 as const,
+      originalPaintWrites:0 as const,
+      officialTurfScoreable:0 as const,
+      certifiesHumanRoute:false as const
+    };
+  }
+
   public requestWeaponDodge(): boolean {
     if (
       this.mode !== 'HUMAN' ||

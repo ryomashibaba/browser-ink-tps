@@ -1451,6 +1451,19 @@ async function main(){
      const foot=n.b112OriginalHumanGround;
      const position=n.player?.position;
      const input=n.sourceNativeHumanInputProjection;
+     const ink=n.sourceNativeFloorInkWitness;
+     if(!ink||ink.sourceOnlyEnabled!==true||
+        ink.originalAuthority!=='25/17/26/0'||
+        ink.originalGeometryWrites!==0||ink.originalPaintWrites!==0||
+        ink.officialTurfScoreable!==0||ink.actualKccGrounded!==true)
+       fail('P1_REAL_SOURCE_NATIVE_INK_FOOT_WITNESS_MISSING');
+     // A neutral or unpainted surface cannot prove actual OWN recharge.
+     // But any live OWN/ENEMY floor effect must originate at this actual
+     // native Rapier supporting collider, never at a neighboring slab.
+     if(ink.floorRuleApplicable&&
+        (ink.inkRelation==='OWN'||ink.inkRelation==='ENEMY')&&
+        ink.floorContactVerified!==true)
+       fail('P1_REAL_SOURCE_INK_BACKING_NOT_SAME_SUPPORT');
      const row={phase,nativeTick:n.tick,position,
       grounded:foot?.genuineKccGrounded??null,
       originalSolid:foot?.lastOriginalSourceHitId??null,
@@ -1459,7 +1472,15 @@ async function main(){
       yawDegrees:input?.yawDegrees??null,
       cameraPointerLocked:input?.realPointerLockAtSampling??false,
       nativeDesiredXZ:input?.projectedWorldIntent??null,
-      realLocalPlayerCue:n.p1RealLocalRampPlayerCue?.state??'OFF'};
+      realLocalPlayerCue:n.p1RealLocalRampPlayerCue?.state??'OFF',
+      nativeInk:{
+       relation:ink.inkRelation,mode:ink.locomotionState,
+       actualSupportId:ink.actualRapierSolidId,
+       actualFootGapMeters:ink.actualRapierFootGapMeters,
+       sampledPaintBackingId:ink.sampledBackingSolidId,
+       floorContactVerified:ink.floorContactVerified,
+       floorRuleApplicable:ink.floorRuleApplicable
+      }};
      if(!trace.some(t=>t.nativeTick===n.tick&&t.phase===phase)){
       trace.push(row);traceSave('IN_PROGRESS');
      }
@@ -1533,6 +1554,25 @@ async function main(){
     if(!registeredRamp)
      fail('P1_RAMP_UNOBSERVED_REAL_RAPIER_GROUNDED_ENTRY');
     const final=registeredRamp.player.position;
+    const finalInk=registeredRamp.sourceNativeFloorInkWitness;
+    if(!finalInk||finalInk.sourceOnlyEnabled!==true||
+       finalInk.actualKccGrounded!==true||
+       finalInk.actualRapierSolidId!==slopeId||
+       !Number.isFinite(finalInk.actualRapierFootGapMeters)||
+       Math.abs(finalInk.actualRapierFootGapMeters)>.12)
+      fail('P1_REAL_RAMP_SOURCE_INK_FOOT_SUPPORT_NOT_PROVEN');
+    proof.p1OriginalFloorInkWitness={
+      lastNativeTick:registeredRamp.tick,
+      actualSupportingRamp:finalInk.actualRapierSolidId,
+      actualFootGapMeters:finalInk.actualRapierFootGapMeters,
+      sampledPaintBackingId:finalInk.sampledBackingSolidId,
+      sampledRelation:finalInk.inkRelation,
+      matchedPaintIfAny:finalInk.floorContactVerified,
+      realNativeRapier:true,sourceSolids:25,paintSurfaces:17,
+      navLinks:26,scoreable:0,officialWinner:'NONE',
+      ownRechargeOrEnemyDamageNotAutomaticallyCertified:true
+    };
+    save();
     // Independent, SAME-world route proof must also show the normal
     // SOURCE PLAYER cue at the actual supported S and D stages.
     const sCue=trace.some(x=>x.phase==='REAL_S_KEY_SAFE_BACKSTEP'&&
