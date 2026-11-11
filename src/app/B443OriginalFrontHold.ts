@@ -11,7 +11,8 @@ export interface B443OriginalHoldResult {
 export function decideB443OriginalFrontHold(
  nativeTick:number,firstApprovedTick:number,
  arrivedSinceTick:number|null,physicalGoalXZDistance:number,
- originalVerifiedGoalCount:number
+ originalVerifiedGoalCount:number,
+ physicalFootToOriginalGoalVerticalMeters:number
 ):B443OriginalHoldResult{
  const release={decision:'RELEASE_STALLED_OR_INVALID' as const,
   arrivedSinceTick:null};
@@ -22,10 +23,20 @@ export function decideB443OriginalFrontHold(
       (!Number.isSafeInteger(arrivedSinceTick)||
        arrivedSinceTick<firstApprovedTick||arrivedSinceTick>nativeTick))||
     !Number.isFinite(physicalGoalXZDistance)||
-    physicalGoalXZDistance<0||!Number.isSafeInteger(originalVerifiedGoalCount)||
+    physicalGoalXZDistance<0||
+    !Number.isFinite(physicalFootToOriginalGoalVerticalMeters)||
+    physicalFootToOriginalGoalVerticalMeters<0||
+    !Number.isSafeInteger(originalVerifiedGoalCount)||
     originalVerifiedGoalCount<1)return release;
- const near=physicalGoalXZDistance<=1.5;
- const arrival=near?(arrivedSinceTick??nativeTick):arrivedSinceTick;
+ // Source has real multi-level floors at Y=3.0/4.5/7.5m. A
+ // 2D-near CPU on a different certified floor has NOT arrived.
+ // Require the existing B470 native floor-height band (<=0.30m)
+ // in addition to the original same-side XZ arrival radius.
+ const originalFootSameElevation=
+  physicalFootToOriginalGoalVerticalMeters<=.30;
+ const near=originalFootSameElevation&&physicalGoalXZDistance<=1.5;
+ const arrival=!originalFootSameElevation?null:
+  near?(arrivedSinceTick??nativeTick):arrivedSinceTick;
  if(arrival!==null&&physicalGoalXZDistance<=3){
   if(nativeTick-arrival<120||originalVerifiedGoalCount<2)
    return {decision:'KEEP_DWELL',arrivedSinceTick:arrival};

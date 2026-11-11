@@ -1784,7 +1784,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      lock.target.x-realFoot.x,lock.target.z-realFoot.z);
     const decision=decideB443OriginalFrontHold(
      this.b137NativeTick,lock.firstApprovedTick,
-     lock.arrivedSinceTick,distance,fronts.length);
+     lock.arrivedSinceTick,distance,fronts.length,
+     Math.abs(lock.target.y-realFoot.y));
     if(decision.decision==='KEEP_APPROACH'||
        decision.decision==='KEEP_DWELL'){
      // A stable lock is NOT a bypass. Recheck actual native CPU foot,
