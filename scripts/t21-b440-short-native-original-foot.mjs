@@ -2837,9 +2837,13 @@ async function main(){
        v.lastApprovedNativeTick>n.tick||
        Math.abs(v.target[2])<33||
        ![0,1,2].every(i=>Math.abs(v.physicalFoot[i]-f[i])<.001)||
-       !Number.isFinite(v.distanceXZ)||
+       !Number.isFinite(v.distanceXZ)||!Number.isFinite(v.distance3D)||
        Math.abs(v.distanceXZ-
-        Math.hypot(v.target[0]-f[0],v.target[2]-f[2]))>.001)
+        Math.hypot(v.target[0]-f[0],v.target[2]-f[2]))>.001||
+       Math.abs(v.distance3D-
+        Math.hypot(v.target[0]-f[0],v.target[1]-f[1],
+         v.target[2]-f[2]))>.001||
+       v.distance3D+.001<v.distanceXZ)
      fail('B442_FAKE_OR_STALE_NATIVE_GOAL_WITNESS');
     seen.add(v.id);
    }
@@ -3288,22 +3292,34 @@ async function main(){
   const rows=proof.b441NativeEvidence.realFrames.flatMap(frame=>
    frame.b442RealApprovedOriginalGoals.map(v=>({
     tick:frame.tick,id:v.id,target:v.target,distanceXZ:v.distanceXZ,
+    distance3D:v.distance3D,
+    verticalDifferenceMeters:Math.abs(v.physicalFoot[1]-v.target[1]),
     actualFoot:v.physicalFoot,lastApprovedTick:v.lastApprovedNativeTick
    })));
-  // This is evidence of distance to a genuinely requested goal,
-  // NOT evidence that the CPU actually crossed the original gap.
+  // Genuine physically observed 3D foot->approved goal proximity,
+  // never just flat-map XZ. Even 3D proximity is not a true KCC route.
   const closestById=Object.fromEntries(
    ['A2','A3','B1','B2','B3','B4'].map(id=>{
     const owned=rows.filter(r=>r.id===id);
-    const best=owned.reduce((m,r)=>r.distanceXZ<m? r.distanceXZ:m,
+    const best=owned.reduce((m,row)=>Math.min(m,row.distance3D),
+     Number.POSITIVE_INFINITY);
+    const flatBest=owned.reduce((m,row)=>Math.min(m,row.distanceXZ),
      Number.POSITIVE_INFINITY);
     return [id,{minimumObservedGoalDistanceMeters:
       Number.isFinite(best)?best:null,
+     minimumObservedGoalDistanceXZ:
+      Number.isFinite(flatBest)?flatBest:null,
      closestObservationCount:owned.length,
-     arrivedAtRealGoalInSamples:Number.isFinite(best)&&best<=1.5}];
+     xzFalseProximitySamples:owned.filter(row=>
+      row.distanceXZ<=1.5&&row.distance3D>1.5).length,
+     arrivedAtRealGoalInSamples:Number.isFinite(best)&&best<=1.5,
+     originalRegisteredSupportThroughoutRouteCertified:false}];
    }));
   const observedArrivals=Object.values(closestById).filter(x=>
    x.arrivedAtRealGoalInSamples).length;
+  const oldXzOnlyProximities=Object.values(closestById).filter(x=>
+   x.minimumObservedGoalDistanceXZ!==null&&
+   x.minimumObservedGoalDistanceXZ<=1.5).length;
   proof.b441NativeEvidence={
    ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
    b442ActualApprovedNativeTargetsAtFinish:actualTargets,
@@ -3330,9 +3346,14 @@ async function main(){
    },
    b442ClosestRealGoalDistances:closestById,
    b442ObservedUniqueGoalArrivals:observedArrivals,
+   b442ObservedUniqueGoalProximities3D:observedArrivals,
+   b442OldXZOnlyNearGoalIds:oldXzOnlyProximities,
+   b442FalseXZOnlyGoalSamples:rows.filter(row=>
+    row.distanceXZ<=1.5&&row.distance3D>1.5).length,
    b442ArrivalWitnessVerdict:observedArrivals>0?
-    'OBSERVED_AT_LEAST_ONE_TRUE_ORIGINAL_FRONT_GOAL_PROXIMITY':
-    'HOLD_NO_OBSERVED_TRUE_FRONT_GOAL_ARRIVAL',
+    'OBSERVED_NATIVE_3D_GOAL_PROXIMITY_NOT_KCC_CERTIFIED':
+    'HOLD_NO_OBSERVED_NATIVE_3D_GOAL_PROXIMITY',
+   b442ProximityIsNotNativeRouteCertification:true,
    b442Formal4v4Certified:false,
    lastTick:actual.tick,realNativeTicks:actual.tick-after.tick,
    realSevenCpu:true,actualGoalRequests:afterPatrol?.b441ActualGoalRequests,

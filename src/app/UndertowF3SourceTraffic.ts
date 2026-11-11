@@ -201,7 +201,10 @@ export interface F3TrafficSnapshot{
    id:string;
    target:[number,number,number];
    physicalFoot:[number,number,number];
+   /** Plan-view diagnostic only, NOT actual original SOURCE goal arrival. */
    distanceXZ:number;
+   /** True live CPU foot->already-approved goal metric, all XYZ axes. */
+   distance3D:number;
    lastApprovedNativeTick:number;
    originalRegisteredSourceOnly:true;
   }[];
@@ -2651,6 +2654,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       target:[target.x,target.y,target.z] as [number,number,number],
       physicalFoot:[foot.x,foot.y,foot.z] as [number,number,number],
       distanceXZ:Math.hypot(target.x-foot.x,target.z-foot.z),
+      distance3D:Math.hypot(target.x-foot.x,target.y-foot.y,
+       target.z-foot.z),
       lastApprovedNativeTick:last.nativeTick,
       originalRegisteredSourceOnly:true as const
      }];
