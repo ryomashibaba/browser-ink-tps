@@ -50,11 +50,13 @@ export class GameplayInkSystem {
     point: Vec3,
     maxPlaneDistance = 0.4,
     requiredFlags = 0,
-    excludedFlags = 0
+    excludedFlags = 0,
+    acceptSurface?: (surface: PaintSurface) => boolean
   ): GameplayInkSample | null {
     let best: GameplayInkSample | null = null;
 
     for (const surface of this.surfaces.values()) {
+      if (acceptSurface && !acceptSurface(surface)) continue;
       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
       const projected = surface.projectWorldPoint(point);

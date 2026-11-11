@@ -95,4 +95,37 @@ describe('PaintSurface footprint authority', () => {
     expect(value.projectWorldPoint(new Vec3(0, 0, 0)).inside).toBe(true);
     expect(value.isCellActive(1, 1)).toBe(true);
   });
+
+  it('samples the actually supported original floor before neighboring closer ink',()=>{
+    const gameplay=new GameplayInkSystem();
+    const sourceFlags=SurfaceFlags.Paintable|SurfaceFlags.Swimmable|SurfaceFlags.Floor;
+    const create=(id:string,y:number)=>new PaintSurface(
+      id,new Vec3(0,y,0),new Vec3(1,0,0),new Vec3(0,0,1),
+      4,4,1,sourceFlags,2
+    );
+    const supported=create('supported-original-floor',0);
+    const adjacent=create('nearby-different-backing',.05);
+    gameplay.registerSurface(supported);
+    gameplay.registerSurface(adjacent);
+    for(const [surfaceId,team] of [
+      [supported.id,Team.A],[adjacent.id,Team.B]
+    ] as const)gameplay.apply({
+      tick:1,source:PaintSource.Debug,team,surfaceId,
+      centerU:2,centerV:2,radiusU:1,radiusV:1,angle:0,
+      type:PaintEventType.Debug,strength:1
+    });
+    const foot=new Vec3(0,.06,0);
+    const nearest=gameplay.sampleWorld(foot,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+    expect(nearest?.surface.id).toBe(adjacent.id);
+    expect(nearest?.owner).toBe(Team.B);
+    const sameBacking=gameplay.sampleWorld(
+      foot,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+      p=>p.id===supported.id
+    );
+    expect(sameBacking?.surface.id).toBe(supported.id);
+    expect(sameBacking?.owner).toBe(Team.A);
+    expect(gameplay.sampleWorld(foot,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+      p=>p.id==='not-a-registered-backing')).toBeNull();
+    expect(gameplay.snapshot().totalScoreableArea).toBe(0);
+  });
 });

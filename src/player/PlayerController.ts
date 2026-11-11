@@ -10,6 +10,7 @@ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
+import type { PaintSurface } from '../ink/PaintSurface';
 import { SurfaceFlags, Team } from '../ink/types';
 import type { PlayerInput } from '../input/PlayerInput';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -115,6 +116,9 @@ export class PlayerController {
   private sourceSupportedSolidId:string|null=null;
   private sourceFootGapMeters:number|null=null;
   private readonly sourceFootCastPosition=new Vec3();
+  private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
+    this.sourceSupportedSolidId!==null&&
+    this.sourcePaintBackingById?.get(surface.id)===this.sourceSupportedSolidId;
 
   private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
   private static readonly humanHalfHeight = PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters;
@@ -232,6 +236,18 @@ export class PlayerController {
       relation,this.grounded,
       sample?this.sourcePaintBackingById?.get(sample.surface.id)??null:null,
       this.sourceSupportedSolidId,this.sourceFootGapMeters);
+  }
+  /** The KCC's supported SOURCE solid chooses the eligible ink surface
+   * before ownership is sampled. Picking the nearest arbitrary surface first
+   * can reject legitimate OWN on registered ramp/landing seams, or read
+   * ENEMY from a neighboring registered slab. No fallback to other solids. */
+  private sampleFootInk():GameplayInkSample|null{
+    if(this.nativeSourceGroundInkGuard&&
+       (!this.grounded||!this.sourceSupportedSolidId))return null;
+    return this.gameplayInk.sampleWorld(
+      this.footPoint,0.40,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+      this.nativeSourceGroundInkGuard?this.sourceBackingMatchesSupport:undefined
+    );
   }
 
   /** Read-only native original Rapier support / registered paint owner.
@@ -361,12 +377,7 @@ export class PlayerController {
       bodyPosition.y - PlayerController.humanFootOffset + 0.06,
       bodyPosition.z
     );
-    const groundSample = this.gameplayInk.sampleWorld(
-      this.footPoint,
-      0.40,
-      SurfaceFlags.Swimmable,
-      SurfaceFlags.Wall
-    );
+    const groundSample = this.sampleFootInk();
     this.inkRelation = this.relationFor(groundSample);
     if(this.nativeSourceGroundInkGuard)
       this.inkRelation=this.sourceFloorInk(this.inkRelation,groundSample);
@@ -667,12 +678,7 @@ export class PlayerController {
       this.footPoint.set(
         p.x,p.y-PlayerController.humanFootOffset+0.06,p.z);
     }
-    const debugSample = this.gameplayInk.sampleWorld(
-      this.footPoint,
-      0.40,
-      SurfaceFlags.Swimmable,
-      SurfaceFlags.Wall
-    );
+    const debugSample = this.sampleFootInk();
     if(this.nativeSourceGroundInkGuard&&
        this.locomotionState!=='SWIM_WALL'&&
        this.locomotionState!=='SURGE_CHARGE'){
