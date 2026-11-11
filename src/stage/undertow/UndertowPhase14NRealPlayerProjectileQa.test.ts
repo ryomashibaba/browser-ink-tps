@@ -227,7 +227,7 @@ describe('T21 Phase14N original-source real PlayerController and actual CPU proj
    const w=qaWorld(id+':paint');
    const surface=w.ink.getSurface(id+':paint')!;
    const resources=new PlayerResources(w.stats);
-   const stamp=(u:number,v:number,team:Team,radius:number)=>w.ink.apply({
+   const stamp=(u:number,v:number,team:Team.A|Team.B,radius:number)=>w.ink.apply({
     tick:1,source:PaintSource.Debug,team,surfaceId:surface.id,
     centerU:u,centerV:v,radiusU:radius,radiusV:radius,
     angle:0,type:PaintEventType.Debug,strength:1
