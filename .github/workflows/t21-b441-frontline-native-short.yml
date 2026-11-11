@@ -403,10 +403,11 @@ jobs:
       - name: One real native browser with 7 original CPU and B441 opt-in
         if: ${{ !contains(github.event.head_commit.message, '[audit-only]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         env:
-          T21_B441_SOURCE_FRONTLINE: ${{ contains(github.event.head_commit.message, '[k3-one-world]') && '0' || '1' }}
+          T21_B441_SOURCE_FRONTLINE: ${{ (contains(github.event.head_commit.message, '[k3-one-world]') || contains(github.event.head_commit.message, '[p1-ramp-walk-once]')) && '0' || '1' }}
           T21_P0_NORMAL_HUMAN: ${{ (contains(github.event.head_commit.message, '[p0-normal-once]') || contains(github.event.head_commit.message, '[p1-lower-edge-once]') || contains(github.event.head_commit.message, '[p1-ramp-walk-once]') || contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') || contains(github.event.head_commit.message, '[k3-one-world]')) && '1' || '0' }}
           T21_P1_LOWER_EDGE_ONCE: ${{ contains(github.event.head_commit.message, '[p1-lower-edge-once]') && '1' || '0' }}
           T21_P1_TRUE_RAMP_WALK_ONCE: ${{ (contains(github.event.head_commit.message, '[p1-ramp-walk-once]') || contains(github.event.head_commit.message, '[k3-one-world]')) && '1' || '0' }}
+          T21_P1_REGISTERED_INK_LOOP_ONCE: ${{ contains(github.event.head_commit.message, '[p1-ramp-walk-once]') && '1' || '0' }}
           T21_K3_ONE_REAL_180S: ${{ contains(github.event.head_commit.message, '[k3-one-world]') && '1' || '0' }}
           T21_P1_INPUT_DIAGNOSTIC_ONCE: ${{ contains(github.event.head_commit.message, '[p1-input-diagnostic-once]') && '1' || '0' }}
           # Separate single-run A3 opt-in; ordinary B441 never enables it.
