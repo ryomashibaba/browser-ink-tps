@@ -2725,23 +2725,64 @@ export class UndertowF3PlayablePreviewApp{
   */
  private async loadAvailableNativeOriginalOptics():Promise<void>{
   if(!this.nativeVerifiedStageVisualEligible||
-     this.wholeSourceStatus!=='OFF')return;
+     this.texturedF3lStatus!=='OFF')return;
+  // Native four-mode SOURCE needs only the independently hash-verified F3L
+  // UV materials, not the extra 57,578-triangle F3G flat GPU scene.
+  // F3G's unsplit DETAIL/METAL groups contain unlicensed FloorLine/Fence
+  // bridge markings. Keep existing 25-solid gameplay visuals until F3L
+  // has passed its own exact source/UV/texture SHA verification.
   try{
-   const flat=new URL('t21-f3g-source/manifest.json',document.baseURI);
    const uv=new URL('t21-f3g-source/f3l-original-textured.json',
     document.baseURI);
-   if(flat.origin!==location.origin||uv.origin!==location.origin)return;
-   // The F3G flat fallback groups FloorLine/FloorFence with opaque
-   // DETAIL/METAL, so it cannot distinguish excluded route markings from
-   // structural walls. Require locally present F3L material separation.
-   const [flatPresent,uvPresent]=await Promise.all([
-    fetch(flat.href,{method:'HEAD',cache:'no-store'}),
-    fetch(uv.href,{method:'HEAD',cache:'no-store'})
-   ]);
-   if(!flatPresent.ok||!uvPresent.ok||this.stopReason)return;
-   await this.loadWholeSource();
-  }catch{
-   // Optional local optics must never turn a playable stage into STOP.
+   if(uv.origin!==location.origin)return;
+   const present=await fetch(uv.href,{method:'HEAD',cache:'no-store'});
+   if(!present.ok||this.stopReason)return;
+   this.texturedF3lStatus='LOADING';
+   const installed=await loadF3lTexturedSource(this.app);
+   if(!installed){
+    this.texturedF3lStatus='MISSING';
+    return;
+   }
+   if(this.b29OriginalVisualPose)
+    applyOriginalVisualRegistration(installed.root,this.b29OriginalVisualPose);
+   this.texturedF3l=installed;
+   installed.setRegisteredFloorPriority(this.realPlayerFloorPriority);
+   this.texturedF3lStatus='READY';
+   const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
+   if(button)button.hidden=false;
+   // No intermediate flat optical scene, no aliasing to gameplay solids:
+   // this is an atomic visible switch from the existing registered stage.
+   if(!this.stopReason)this.setNativeVerifiedOpticalScene(true);
+   // Preserve the same separately verified source background as the
+   // prior native loader. It remains unregistered and strictly optical.
+   if(!this.stopReason){
+    try{
+     const environment=await loadF3iEnvironmentReview(this.app);
+     if(environment){
+      if(this.b29OriginalVisualPose)
+       applyOriginalVisualRegistration(environment.root,this.b29OriginalVisualPose);
+      this.environmentRoot=environment.root;
+      this.environmentManifest=environment.manifest;
+      environment.root.enabled=true;
+      this.canvas.dataset.t21F3iEnvironment='ON';
+      const backdrop=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
+      if(backdrop&&environment.manifest.backgroundTriangleCount>0){
+       backdrop.hidden=false;
+       backdrop.textContent='F3J source scenery: ON (B)';
+      }
+     }
+    }catch(error){
+     this.environmentError=String(error).slice(0,240);
+    }
+   }
+  }catch(error){
+   // Optional high-detail graphics can never disable source-native movement
+   // or fabricate missing collision; keep the unchanged registered stage.
+   this.texturedF3lStatus='ERROR';
+   this.texturedF3lError=String(error).slice(0,240);
+   this.restoreNativeRegisteredStageWhenUvUnverified();
+  }finally{
+   this.refresh();
   }
  }
 
@@ -4646,7 +4687,8 @@ export class UndertowF3PlayablePreviewApp{
   this.refresh();
  }
  private toggleTexturedF3l(){
-  if(!this.texturedF3l||!this.wholeSourceRoot||
+  if(!this.texturedF3l||
+     (!this.nativeVerifiedStageVisualEligible&&!this.wholeSourceRoot)||
      this.texturedF3lStatus!=='READY'||this.galleryIndex>=0)return;
   if(this.nativeVerifiedStageVisualEligible){
    this.setNativeVerifiedOpticalScene(!this.texturedF3l.root.enabled);
@@ -4700,7 +4742,9 @@ export class UndertowF3PlayablePreviewApp{
  }
  private toggleF3iEnvironment(){
   if(!this.environmentRoot||!this.environmentManifest||
-     this.wholeSourceStatus!=='READY'||
+     (this.wholeSourceStatus!=='READY'&&
+      !(this.nativeVerifiedStageVisualEligible&&
+        this.texturedF3lStatus==='READY'))||
      this.environmentManifest.backgroundTriangleCount===0)return;
   this.environmentRoot.enabled=!this.environmentRoot.enabled;
   const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
