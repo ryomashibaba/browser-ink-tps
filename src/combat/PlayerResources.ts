@@ -39,15 +39,20 @@ export class PlayerResources {
     }
 
     let hpState = 'WAIT';
-    if (relation === 'ENEMY' && this.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
-      const damage = Math.min(
-        GAME_CONFIG.combat.enemyInkDamagePerSecond * dt,
-        this.hp - GAME_CONFIG.combat.enemyInkMinimumHp
-      );
-      if (damage > 0) {
-        this.hp -= damage;
-        this.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
-        this.stats.playerDamageTaken += damage;
+    if (relation === 'ENEMY') {
+      // Enemy ink cannot itself splat the player, but reaching its HP floor
+      // must never enable passive healing while still standing in enemy ink.
+      // Recovery resumes through the existing delay gate after leaving it.
+      if (this.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
+        const damage = Math.min(
+          GAME_CONFIG.combat.enemyInkDamagePerSecond * dt,
+          this.hp - GAME_CONFIG.combat.enemyInkMinimumHp
+        );
+        if (damage > 0) {
+          this.hp -= damage;
+          this.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+          this.stats.playerDamageTaken += damage;
+        }
       }
       hpState = 'ENEMY_INK';
     } else if (this.hp > 0 && this.hpRecoveryDelaySeconds <= 0) {
