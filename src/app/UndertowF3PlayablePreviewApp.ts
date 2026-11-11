@@ -476,6 +476,9 @@ export class UndertowF3PlayablePreviewApp{
  private environmentRoot:Entity|null=null;
  private environmentManifest:F3iEnvironmentManifest|null=null;
  private environmentError='';
+ // Only verified F3L may display unregistered F3I scenery in native play.
+ // Preserve the explicit B toggle across an F3L T comparison.
+ private nativeEnvironmentPreferred=true;
  private familyGallery:Awaited<ReturnType<typeof loadF3kGallery>>=null;
  private galleryIndex=-1;
  private galleryWasPaused=false;
@@ -2786,6 +2789,8 @@ export class UndertowF3PlayablePreviewApp{
        backdrop.hidden=false;
        backdrop.textContent='F3J source scenery: ON (B)';
       }
+      // F3L may have been toggled off during asynchronous F3I loading.
+      this.syncNativeSourceEnvironmentVisibility();
      }
     }catch(error){
      this.environmentError=String(error).slice(0,240);
@@ -2812,6 +2817,7 @@ export class UndertowF3PlayablePreviewApp{
   if(this.texturedF3l)this.texturedF3l.root.enabled=false;
   this.sourceCompletion.root.enabled=false;
   this.structures.root.enabled=false;
+  this.syncNativeSourceEnvironmentVisibility();
   const button=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
   if(button)button.textContent='Full source OBJ: OFF';
  }
@@ -2826,6 +2832,7 @@ export class UndertowF3PlayablePreviewApp{
   this.sourceCompletion.root.enabled=false;
   this.structures.root.enabled=false;
   this.texturedF3lActive=false;
+  this.syncNativeSourceEnvironmentVisibility();
   this.canvas.dataset.t21F3lOriginalTexture='OFF';
   const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
   if(full)full.textContent='Full source OBJ: OFF';
@@ -2833,6 +2840,18 @@ export class UndertowF3PlayablePreviewApp{
   if(study)study.textContent='Source terrain study: OFF';
   const structures=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
   if(structures)structures.textContent='Original source: OFF';
+ }
+
+ /** F3I source scenery has no certified coordinate/collision authority.
+  * In canonical SOURCE, never leave it above registered-only 25-solid view.
+  * Explicit F3G review keeps the independent historical backdrop control. */
+ private syncNativeSourceEnvironmentVisibility():void{
+  if(!this.nativeVerifiedStageVisualEligible||!this.environmentRoot)return;
+  const show=!!this.texturedF3l?.root.enabled&&this.nativeEnvironmentPreferred;
+  this.environmentRoot.enabled=show;
+  this.canvas.dataset.t21F3iEnvironment=show?'ON':'OFF';
+  const b=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
+  if(b)b.textContent='F3J source scenery: '+(show?'ON':'OFF')+' (B)';
  }
 
  private async loadWholeSource(){
@@ -4702,6 +4721,7 @@ export class UndertowF3PlayablePreviewApp{
   this.sourceCompletion.root.enabled=false;
   this.structures.root.enabled=false;
   this.canvas.dataset.t21F3lOriginalTexture=visible?'ON':'OFF';
+  this.syncNativeSourceEnvironmentVisibility();
   const uv=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
   if(uv)uv.textContent='F3L original textures: '+(visible?'ON':'OFF')+' (T)';
   const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
@@ -4776,11 +4796,18 @@ export class UndertowF3PlayablePreviewApp{
       !(this.nativeVerifiedStageVisualEligible&&
         this.texturedF3lStatus==='READY'))||
      this.environmentManifest.backgroundTriangleCount===0)return;
-  this.environmentRoot.enabled=!this.environmentRoot.enabled;
-  const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
-  if(btn)btn.textContent='F3J source scenery: '+
-   (this.environmentRoot.enabled?'ON':'OFF')+' (B)';
-  this.canvas.dataset.t21F3iEnvironment=this.environmentRoot.enabled?'ON':'OFF';
+  if(this.nativeVerifiedStageVisualEligible){
+   // B never reveals backdrop when T is comparing real Rapier floors.
+   if(!this.texturedF3l?.root.enabled)return;
+   this.nativeEnvironmentPreferred=!this.nativeEnvironmentPreferred;
+   this.syncNativeSourceEnvironmentVisibility();
+  }else{
+   this.environmentRoot.enabled=!this.environmentRoot.enabled;
+   const btn=this.panel.querySelector('#t21-f3i-environment') as HTMLButtonElement|null;
+   if(btn)btn.textContent='F3J source scenery: '+
+    (this.environmentRoot.enabled?'ON':'OFF')+' (B)';
+   this.canvas.dataset.t21F3iEnvironment=this.environmentRoot.enabled?'ON':'OFF';
+  }
   this.refresh();
  }
  private cycleSourceGallery(){
