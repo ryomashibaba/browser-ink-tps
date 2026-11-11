@@ -1813,14 +1813,19 @@ export class CpuAgentSystem {
       }
     }
 
-    if (relation === 'ENEMY' && bot.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
-      const damage = Math.min(
-        GAME_CONFIG.combat.enemyInkDamagePerSecond * dt,
-        bot.hp - GAME_CONFIG.combat.enemyInkMinimumHp
-      );
-      bot.hp -= damage;
-      if(this.b178RealSourceInkRecovery)this.b179ActualEnemyHpLost+=damage;
-      if (damage > 0) bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+    if (relation === 'ENEMY') {
+      // Reaching the enemy-ink HP floor must never turn on passive
+      // healing while the real CPU foot is still inside enemy paint.
+      // The existing HP limit, damage and post-contact delay stay intact.
+      if (bot.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
+        const damage = Math.min(
+          GAME_CONFIG.combat.enemyInkDamagePerSecond * dt,
+          bot.hp - GAME_CONFIG.combat.enemyInkMinimumHp
+        );
+        bot.hp -= damage;
+        if(this.b178RealSourceInkRecovery)this.b179ActualEnemyHpLost+=damage;
+        if (damage > 0) bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+      }
     } else if (bot.hp > 0 && bot.hpRecoveryDelaySeconds <= 0) {
       const rate = relation === 'OWN'
         ? GAME_CONFIG.cpu.ownInkHpRecoveryPerSecond

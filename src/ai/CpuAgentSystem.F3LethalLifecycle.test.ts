@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
-import { Team } from '../ink/types';
+import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit } from './CpuAgentSystem';
 
 /** No simulated gameplay actors are spawned: exercise the real production
@@ -48,6 +48,44 @@ function fixture(originalF3: boolean) {
 }
 
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
+  it('keeps a live CPU at the enemy-ink HP floor until it leaves enemy paint', () => {
+    const { system, bot } = fixture(true);
+    const minimum = GAME_CONFIG.combat.enemyInkMinimumHp;
+    bot.hp = minimum;
+    bot.ink = 50;
+    bot.inkRecoveryLockSeconds = 0;
+    bot.hpRecoveryDelaySeconds = 0;
+    system.samplePoint = new Vec3();
+    system.b178RealSourceInkRecovery = true;
+    system.b178OwnNativeTicks = 0;
+    system.b178EnemyNativeTicks = 0;
+    system.b178NeutralNativeTicks = 0;
+    system.b179ActualOwnInkRecovered = 0;
+    system.b179ActualOwnRecoverTicks = 0;
+    system.b179ActualEnemyHpLost = 0;
+
+    const floor = {
+      isScoreable: false,
+      baseFlags: SurfaceFlags.Paintable | SurfaceFlags.Floor
+    };
+    let owner = Team.A;
+    // Use the same sampled original-ink relation consumed by the actual
+    // CPU updateResources method. No position, paint or HP is injected
+    // between consecutive 60 Hz recovery ticks.
+    system.sampleRegisteredSourceFoot = () => ({ owner, surface: floor });
+    for (let tick = 0; tick < 180; tick += 1) {
+      system.updateResources(bot, 1 / 60);
+      expect(bot.hp).toBe(minimum);
+    }
+    expect(system.b178EnemyNativeTicks).toBe(180);
+    expect(system.b179ActualEnemyHpLost).toBe(0);
+
+    owner = Team.B;
+    system.updateResources(bot, 1 / 60);
+    expect(system.b178OwnNativeTicks).toBe(1);
+    expect(bot.hp).toBeGreaterThan(minimum);
+  });
+
   it('splats after actual human direct HP damage and rejects duplicate impacts', () => {
     const { system, bot, shot } = fixture(true);
     const hit = system.applyProjectileHit(shot, 80, 'HUMAN');
