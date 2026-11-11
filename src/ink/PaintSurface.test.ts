@@ -112,6 +112,7 @@ describe('PaintSurface footprint authority', () => {
     const point=thin.localToWorld(1.15,1.15).add(new Vec3(0,.04,0));
     expect(thin.projectWorldPoint(point).inside).toBe(true);
     expect(thin.flagsGrid[thin.index(1,1)]).toBe(0);
+    expect(gameplay.sampleWorld(point)?.surface.id).toBe('registered-floor');
     expect(gameplay.sampleWorld(point,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall)
       ?.surface.id).toBe('registered-floor');
     expect(gameplay.sampleWorld(point,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,

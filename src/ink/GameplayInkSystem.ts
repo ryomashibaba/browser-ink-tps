@@ -70,7 +70,7 @@ export class GameplayInkSystem {
       // A continuous footprint may include the point while its raster
       // cell is inactive. That cell cannot grant or mask genuine ground ink.
       const cellFlags = surface.flagsGrid[index] ?? 0;
-      if ((cellFlags & requiredFlags) !== requiredFlags ||
+      if (cellFlags === 0 || (cellFlags & requiredFlags) !== requiredFlags ||
           (cellFlags & excludedFlags) !== 0) continue;
       const candidate: GameplayInkSample = {
         surface,
