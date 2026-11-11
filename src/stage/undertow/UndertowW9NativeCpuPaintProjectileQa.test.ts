@@ -6,7 +6,7 @@ import {PlayerResources} from '../../combat/PlayerResources';
 import {CombatTargetSystem} from '../../combat/CombatTargetSystem';
 import {ProjectileSystem} from '../../projectile/ProjectileSystem';
 import {PaintCoordinator,type PaintRequest} from '../../ink/PaintCoordinator';
-import {PaintSource,SurfaceFlags} from '../../ink/types';
+import {PaintEventType,PaintSource,SurfaceFlags} from '../../ink/types';
 import {defineTestSurfaces} from '../TestStage';
 import {PlayerController} from '../../player/PlayerController';
 import {PLAYER_CHARACTER_PHYSICS} from '../../player/PlayerCharacterPhysics';
@@ -32,6 +32,8 @@ import {UndertowPhase14QSharedActorCollision}
  from './UndertowPhase14QSharedActorCollision';
 import {UndertowF3NativeHumanCrowd} from '../../app/UndertowF3NativeHumanCrowd';
 import {UndertowF3SourceTraffic} from '../../app/UndertowF3SourceTraffic';
+
+import {nearestT21SourceSupportedLanding} from './UndertowPhase14ECpuHandoff';
 
 const DT=1/60;
 type RealBot={id:string;team:Team.A|Team.B;agent:CrowdAgent|null;
@@ -357,4 +359,69 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   shared.dispose();
   expect(handoff.activeCount).toBe(0);
  });
+ it('lands an audited CPU slosher floor shot at its real near SOURCE target without changing legacy lob shots',()=>{
+  vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+  const measure=(sourceFloorPaint:boolean)=>{
+   const stage=undertowT21dConnectivityQaStage();
+   const stats=new PerformanceStats(),ink=new GameplayInkSystem();
+   const physics=new RapierStagePhysics(DT,stage);physics.step();
+   const surfaces=defineTestSurfaces(ink,stage);
+   const floorId='UndertowT21D:first-drop-landing-negative-z';
+   const floor=stage.solids.find(s=>s.id===floorId)!;
+   const link=stage.navigationLinks!.find(l=>l.id==='first-drop-negative-z-3')!;
+   const original=nearestT21SourceSupportedLanding(floor,
+    {x:link.start[0],y:link.start[1],z:link.start[2]});
+   const foot=new Vec3(original.x,original.y,original.z);
+   const origin=foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+   const aim=[new Vec3(1,0,0),new Vec3(-1,0,0),new Vec3(0,0,1),new Vec3(0,0,-1)]
+    .map(dir=>{
+     const p=foot.clone().add(dir.mulScalar(1.7));
+     const sample=ink.sampleWorld(p.clone().add(new Vec3(0,.06,0)),
+      .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+     if(!sample||sample.surface.id!==floorId+':paint')return null;
+     const target=sample.surface.localToWorld(sample.u,sample.v);
+     const support=physics.castStageSegment(target.clone().add(new Vec3(0,.55,0)),
+      target.clone().sub(new Vec3(0,.55,0)),'ink-projectile');
+     if(support?.solidId!==floorId||physics.castStageSegment(origin,
+      target.clone().add(new Vec3(0,.07,0)),'ink-projectile'))return null;
+     return target;
+    }).find((p):p is Vec3=>p!==null);
+   expect(aim,'near target must have real original support and clear shot line')
+    .toBeDefined();
+   const app={root:new Entity('W9_REGISTERED_SOURCE_SLOSHER_FIXTURE')} as never;
+   const requests:PaintRequest[]=[];
+   const coordinator=new PaintCoordinator(ink,{queue:vi.fn(),clear:vi.fn()} as never,stats);
+   const enqueue=coordinator.enqueue.bind(coordinator);
+   vi.spyOn(coordinator,'enqueue').mockImplementation(r=>{requests.push(r);enqueue(r);});
+   const feedback={updateChargeVisual:vi.fn(),shot:vi.fn(),impact:vi.fn(),
+    stringerFuse:vi.fn(),stringerBurst:vi.fn(),melee:vi.fn(),beam:vi.fn()};
+   const cpu={findNearestCombatHit:()=>null,applyAreaDamage:()=>0,
+    applyProjectileHit:()=>null};
+   const projectile=new ProjectileSystem(app,surfaces,physics,coordinator,
+    new PlayerResources(stats),new CombatTargetSystem(app,stats,false),
+    cpu as never,feedback as never,stats);
+   projectile.queueCpuShot({sourceId:'A3',team:Team.A,origin,
+    bodyPosition:foot,target:aim!,weaponId:'wave-slosher',charge:0,
+    action:'PROJECTILE',sourceFloorPaint:sourceFloorPaint?true:undefined});
+   try{
+    for(let tick=1;tick<=105;tick++){
+     projectile.fixedUpdate(DT,false,false,origin,new Vec3(0,0,1),
+      Team.A,foot,false,false);
+     coordinator.processTick(tick);
+    }
+    const points=requests.filter(r=>r.source===PaintSource.Cpu&&
+     r.actorId==='A3'&&r.type===PaintEventType.Impact)
+     .map(r=>ink.getSurface(r.surfaceId)!.localToWorld(r.centerU,r.centerV));
+    return {nearest:Math.min(Infinity,...points.map(p=>p.distance(aim!))),
+     sourceCells:stats.cpuImpactInkCellsChanged,scoreA:ink.snapshot().areaA,
+     scoreB:ink.snapshot().areaB};
+   }finally{physics.world.free();}
+  };
+  const legacy=measure(false),source=measure(true);
+  expect(legacy.nearest).toBeGreaterThan(1);
+  expect(source.nearest).toBeLessThan(.25);
+  expect(source.sourceCells).toBeGreaterThan(0);
+  expect(source.scoreA).toBe(0);expect(source.scoreB).toBe(0);
+ });
+
 });

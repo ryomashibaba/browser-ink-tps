@@ -144,6 +144,8 @@ export interface CpuFireRequest {
   action: CpuWeaponAction;
   /** B152 source-only provenance; never grants weapon or stage authority. */
   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+  /** An already audited SOURCE floor aim, not enemy or path authority. */
+  sourceFloorPaint?: true;
 }
 
 type CpuMobilityState =
@@ -2108,7 +2110,8 @@ export class CpuAgentSystem {
         if (!this.cpuTargetInRange(bot, target, profile)) return;
 
         if (this.queueCpuWeaponRequest(bot, target, 0, 'PROJECTILE',
-          allyInk&&bot.id==='A1'?'A1_ORIGINAL_ALLY_SUPPORT_INK':undefined)) {
+          allyInk&&bot.id==='A1'?'A1_ORIGINAL_ALLY_SUPPORT_INK':undefined,
+          turfTarget!==null)) {
           if(allyInk&&bot.id==='A1')this.b152AcceptedSourceAimShots++;
           if (turfTarget) {
             this.recordQaSourceTurfShot(bot);
@@ -2575,7 +2578,8 @@ export class CpuAgentSystem {
     target: Vec3,
     charge: number,
     action: CpuWeaponAction = 'PROJECTILE',
-    qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK'
+    qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK',
+    sourceFloorPaint=false
   ): boolean {
     const profile = weaponProfile(bot.weaponId);
     const inkCost = cpuWeaponInkCost(profile, action, charge);
@@ -2599,7 +2603,9 @@ export class CpuAgentSystem {
       weaponId: bot.weaponId,
       charge,
       action,
-      qaSourceAim
+      qaSourceAim,
+      sourceFloorPaint:sourceFloorPaint&&this.f3dSourceGoals&&
+        this.phase14qF2RecoverableSteps?true:undefined
     });
     this.stats.cpuShots += 1;
     return true;

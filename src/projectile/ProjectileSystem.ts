@@ -431,7 +431,8 @@ export class ProjectileSystem {
       weaponId: request.weaponId,
       charge: request.charge,
       action: request.action,
-      qaSourceAim:request.qaSourceAim
+      qaSourceAim:request.qaSourceAim,
+      sourceFloorPaint:request.sourceFloorPaint
     });
   }
 
@@ -1485,8 +1486,13 @@ export class ProjectileSystem {
         count = profile.pelletCount;
         spread = profile.spreadDegrees;
       } else if (profile.weaponClass === 'SLOSHER') {
-        direction.y = Math.max(direction.y, 0.16);
-        direction.normalize();
+        // Preserve the solved ballistic direction to an audited SOURCE
+        // floor. Raising it after solving overshoots nearby floor patches.
+        // Ordinary combat, legacy CPU shots and human sloshes keep their lob.
+        if(!request.sourceFloorPaint){
+          direction.y = Math.max(direction.y, 0.16);
+          direction.normalize();
+        }
         trailPaintRadius = 0.34;
       } else if (profile.weaponClass === 'SPLATLING') {
         spread = 0.8;
