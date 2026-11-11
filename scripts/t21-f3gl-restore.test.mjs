@@ -60,3 +60,54 @@ test('optical manifest gate rejects collider/nav/actor/scoring promotion',()=>{
   [flat,{...uv,sourceRepositoryCommit:'untrusted'},env,gallery]
  ])assert.equal(t21OriginalOpticalManifestsValid(...values),false);
 });
+
+import {b490ValidateSamePoseFrames,B490_CAPTURE_AUTHORITY}
+ from './t21-f3l-same-pose-gate.mjs';
+function b490Sample(on){
+ return {tick:1304,paused:true,stopReason:null,matchState:'PLAYING',
+  originalSourceSolids:25,originalPaintSurfaces:17,
+  originalSourceNavigationLinks:26,sourceScoreablePromotions:0,
+  productionAuthorized:false,unrestricted4v4Certified:false,
+  player:{position:[2.45555,3.93841,50.63159],mode:'HUMAN'},
+  cpu:{physicalRejoins:Array(7).fill({})},
+  originalSourceStudyVisible:false,sourceOpticalStructuresVisible:false,
+  fullSource:{enabled:false},environmentF3i:{visible:false},
+  texturedSourceF3l:{status:'READY',enabled:on,totalOriginalTriangles:57578,
+   verifiedTextures:19},
+  b29VerifiedSourcePresentation:{selected:on?'F3L_ORIGINAL_UV':'F3E_REFERENCE'},
+  b399NativeCameraClearance:{cameraOpticalWitness:{
+   realCameraEye:[1,5,54],realCameraForward:[.2,-.1,-.97]}}
+ };
+}
+test('B490 verified UV and physical-only frame have identical actual body and camera',()=>{
+ const result=b490ValidateSamePoseFrames(b490Sample(true),b490Sample(false));
+ assert.equal(result.status,'PASS_SAME_POSE_CAPTURE_READY');
+ assert.equal(result.visualAlignmentCertified,false);
+ assert.equal(result.unchangedNativeWorld,true);
+ assert.equal(B490_CAPTURE_AUTHORITY.geometryWrites,0);
+ assert.equal(B490_CAPTURE_AUTHORITY.localOnly,true);
+});
+test('B490 refuses mistaken visual/geometry success from a moving or unverified world',()=>{
+ const uv=b490Sample(true),plain=b490Sample(false);
+ for(const [a,b] of [
+  [{...uv,tick:1305},plain],
+  [uv,{...plain,player:{...plain.player,position:[2.5,3.93,50.63]}}],
+  [uv,{...plain,environmentF3i:{visible:true}}],
+  [uv,{...plain,sourceScoreablePromotions:1}],
+  [uv,{...plain,originalSourceSolids:26}],
+  [{...uv,texturedSourceF3l:{...uv.texturedSourceF3l,status:'MISSING'}},plain],
+  [uv,{...plain,b29VerifiedSourcePresentation:{selected:'F3L_ORIGINAL_UV'}}],
+  [uv,{...plain,b399NativeCameraClearance:{cameraOpticalWitness:{
+   realCameraEye:[1.1,5,54],realCameraForward:[.2,-.1,-.97]}}}],
+  [{...uv,cpu:{physicalRejoins:Array(6).fill({})}},plain],
+  [uv,{...plain,paused:false}],
+  [uv,{...plain,stopReason:'REAL_UNSUPPORTED_FOOT'}]
+ ])assert.equal(b490ValidateSamePoseFrames(a,b).status,'HOLD');
+});
+test('B490 only captures local pictures after real P1 success and never uploads files',()=>{
+ const r=readFileSync(resolve(root,'scripts/t21-b440-short-native-original-foot.mjs'),'utf8');
+ assert.match(r,/GITHUB_ACTIONS==='true'/);
+ assert.match(r,/B490_LOCAL_ONLY_ONE_REAL_RAMP_REQUIRED/);
+ assert.match(r,/if\(b490LocalCompare\)await b490CaptureLocalSamePosePair\(\)/);
+ assert.match(r,/screenshotsUploaded:false/);
+});

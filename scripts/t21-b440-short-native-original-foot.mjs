@@ -8,8 +8,11 @@
  * real player KCC, real CDP W-key; no actor/tick/score/navigation writes.
  */
 import {spawn,execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {existsSync} from 'node:fs';
+import {b490ValidateSamePoseFrames} from './t21-f3l-same-pose-gate.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {resolve,isAbsolute,sep} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
@@ -20,6 +23,7 @@ const p0FallROnlyOnce=process.env.T21_P0_KEY_R_FALL_ONCE==='1';
 if(p0FallROnlyOnce&&!p0NormalHuman)
  throw Error('P0_FALL_R_REQUIRES_NORMAL_USER_MODE');
 const p1RampOnce=p0NormalHuman&&process.env.T21_P1_TRUE_RAMP_WALK_ONCE==='1';
+const b490LocalCompare=process.env.T21_B490_LOCAL_F3L_COMPARE_ONCE==='1';
 const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
 const p1InputDiagnosticOnce=p0NormalHuman&&
  process.env.T21_P1_INPUT_DIAGNOSTIC_ONCE==='1';
@@ -57,6 +61,18 @@ const nativeFrontObservationTicks=b441Experiment?
 if(!Number.isSafeInteger(nativeFrontObservationTicks)||
  nativeFrontObservationTicks<240||nativeFrontObservationTicks>900)
  throw Error('B442_UNSAFE_NATIVE_OBSERVATION_WINDOW');
+if(b490LocalCompare){
+ const localOut=process.env.T21_B440_OUT;
+ if(process.env.GITHUB_ACTIONS==='true'||process.env.CI==='true'||
+    !p1RampOnce||b441Experiment||k3IntegratedSource180)
+  throw Error('B490_LOCAL_ONLY_ONE_REAL_RAMP_REQUIRED');
+ if(!existsSync(new URL('../public/t21-f3g-source/f3l-original-textured.json',
+   import.meta.url)))
+  throw Error('B490_VERIFIED_F3L_LOCAL_PACK_MISSING');
+ if(!localOut||!isAbsolute(localOut)||
+    resolve(localOut).startsWith(resolve('.')+sep))
+  throw Error('B490_EVIDENCE_OUTPUT_MUST_BE_OUTSIDE_REPO');
+}
 const out=process.env.T21_B440_OUT||'/tmp/t21-b440-short-native-foot';
 const children=[],pending=new Map();
 let ws=null,seq=0;
@@ -770,6 +786,73 @@ async function runK3CanonicalOneWorld(actualHref){
   source:'25/17/26/0',winner:'NONE'}));
 }
 
+
+/** B490: screenshots are strictly LOCAL, only after genuine physical
+ * registered landing->ramp P1. They do NOT certify optical alignment. */
+async function b490CaptureLocalSamePosePair(){
+ const first=await snap();
+ authority(first);
+ if(first.texturedSourceF3l?.status!=='READY'||
+    first.texturedSourceF3l?.enabled!==true||
+    first.texturedSourceF3l?.totalOriginalTriangles!==57578||
+    first.b29VerifiedSourcePresentation?.selected!=='F3L_ORIGINAL_UV')
+  fail('B490_PINNED_F3L_PACK_NOT_REAL_AND_VISIBLE');
+ // Stop the actual native world and release the genuine browser pointer.
+ // Do not write a pose, velocity, actor location, tick or camera angle.
+ await evaluate('window.__t21F3.pause();document.exitPointerLock?.();true');
+ await until(async()=>{
+  const n=await snap();
+  return n.paused===true&&!(await locked())?n:false;
+ },12000,120);
+ await delay(450);
+ const settle=async()=>{
+  await evaluate('new Promise(ok=>requestAnimationFrame(()=>requestAnimationFrame(()=>ok(true))))');
+  await delay(180);
+ };
+ const png=async()=>{
+  const frame=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false});
+  if(typeof frame?.data!=='string')fail('B490_NO_REAL_CHROMIUM_PNG');
+  const bytes=Buffer.from(frame.data,'base64');
+  if(bytes.length<200||
+     bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')
+   fail('B490_INVALID_REAL_CHROMIUM_PNG');
+  return bytes;
+ };
+ await settle();
+ const on=await snap();
+ if(on.paused!==true||
+    on.b29VerifiedSourcePresentation?.selected!=='F3L_ORIGINAL_UV')
+  fail('B490_FROZEN_SOURCE_UV_NOT_PRESENT');
+ const originalPng=await png();
+ const toggled=await evaluate("(() => { const b=document.querySelector('#t21-f3l-textured'); if(!b||b.hidden||b.disabled)return false; b.click();return true; })()");
+ if(toggled!==true)fail('B490_EXISTING_NATIVE_T_CONTROL_NOT_AVAILABLE');
+ await settle();
+ const registered=await snap();
+ const result=b490ValidateSamePoseFrames(on,registered);
+ proof.b490FrozenF3lPair={...result,localOnly:true,screenshotsUploaded:false};
+ if(result.status!=='PASS_SAME_POSE_CAPTURE_READY'){
+  save();fail('B490_FROZEN_PAIR_GUARD_'+result.reason);
+ }
+ const registeredPng=await png();
+ const pngs=[
+  {file:'b490-original-uv-same-pose.png',data:originalPng},
+  {file:'b490-registered-floor-same-pose.png',data:registeredPng}
+ ];
+ mkdirSync(out,{recursive:true});
+ for(const p of pngs)
+  writeFileSync(resolve(out,p.file),p.data,{flag:'wx'});
+ proof.b490FrozenF3lPair={...result,localOnly:true,
+  screenshots:pngs.map(p=>({file:p.file,bytes:p.data.length,
+   sha256:createHash('sha256').update(p.data).digest('hex')})),
+  originalSourceMeshBytesCopied:0,originalTextureBytesCopied:0,
+  screenshotsUploaded:false,visualAlignmentCertified:false,
+  normalWindowsRenderingCertified:false};
+ save();
+ console.log('B490_LOCAL_F3L_REGISTERED_SAME_POSE',JSON.stringify(
+  proof.b490FrozenF3lPair));
+}
+
 async function main(){
  save();
  const chrome=process.env.T21_CHROME_PATH||
@@ -1447,6 +1530,7 @@ async function main(){
      writeFileSync(resolve(out,'p1-real-original-landing-to-registered-ramp.png'),
       Buffer.from(png.data,'base64'));
     save();
+    if(b490LocalCompare)await b490CaptureLocalSamePosePair();
     console.log('P1_NATIVE_REAL_SOURCE_RAMP_ROUTE',
      JSON.stringify(proof.p1RampNativeProgress));
    }
