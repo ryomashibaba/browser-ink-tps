@@ -3167,6 +3167,7 @@ async function main(){
        footChangedCells:a.footChangedCells};
     }
     return {tick:n.tick,byActor,
+     sourceInkResource:n.b178SourceInkRecovery,
      nativeCpuShots:n.cpuShots,nativeCpuProjectilePaintHits:
       n.cpuProjectilePaintHits,allCpuChangedCells:n.cpuInkCellsChanged,
      cpuImpactChangedCells:n.cpuImpactInkCellsChanged};
@@ -3212,7 +3213,9 @@ async function main(){
   save();
   console.log('K2_NATIVE_SEVEN_ACTUAL_CPU_PAINT_OUTCOME',
    JSON.stringify({verdict:proof.k2PerActorNativeShotAndInk.verdict,
-    byActor:k2Actors,from:k2First.tick,to:k2Last.tick}));
+    byActor:k2Actors,from:k2First.tick,to:k2Last.tick,
+    sourceInkBefore:k2First.sourceInkResource,
+    sourceInkAfter:k2Last.sourceInkResource}));
   // B454: collect every *actual* native post-KCC B2/B4 foot once,
   // rather than inferring continuous original contact from 24-tick polls.
   // Do not add these large rows to B440 log; save one independent Artifact.
