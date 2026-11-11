@@ -96,7 +96,7 @@ export function b490LocalComparisonHtml(witness){
   throw Error('B490_NO_PROVEN_LOCAL_COMPARISON_PAIR');
  const tick=witness.nativeTick;
  const position=witness.realPlayerBody.map(x=>x.toFixed(4)).join(', ');
- return String.raw\`<!doctype html>
+ return `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src file:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; object-src 'none'; form-action 'none'">
@@ -115,7 +115,7 @@ small{color:#d2dfec;display:block;margin:14px 0;line-height:1.7}
 @media(max-width:760px){.pair{grid-template-columns:1fr}}
 </style></head>
 <body><h1>F3L原作表示 / 登録済み物理床　同一視点比較</h1>
-<p class="meta">真正SOURCE native tick: \${tick} / 実プレイヤー中心: \${position}<br>
+<p class="meta">真正SOURCE native tick: ${tick} / 実プレイヤー中心: ${position}<br>
 原作地形: 25 / 17 / 26 / 0。CPU 7体の物理位置とカメラを固定して撮影。</p>
 <div class="viewer">
 <img src="b490-registered-floor-same-pose.png" alt="登録済み物理床のみ">
@@ -134,5 +134,5 @@ small{color:#d2dfec;display:block;margin:14px 0;line-height:1.7}
 const slider=document.querySelector('#mix'),topImage=document.querySelector('#uv');
 const output=document.querySelector('#amount');
 slider.addEventListener('input',()=>{const value=Number(slider.value);topImage.style.opacity=String(value/100);output.textContent=value+'%';});
-</script></body></html>\`;
+</script></body></html>`;
 }
