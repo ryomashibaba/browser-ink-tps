@@ -682,6 +682,15 @@ export class UndertowF3PlayablePreviewApp{
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
   this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
+  // Actual SOURCE play must never present unregistered source-study
+  // floor faces as its default fallback. The real 25 registered solids
+  // and matching ink meshes already render via buildTestStage above.
+  // Keep all exact-source reference meshes mounted for explicit F8/manual
+  // study, but don't draw them over a missing/loading F3L game stage.
+  if(this.nativeVerifiedStageVisualEligible){
+   this.sourceCompletion.root.enabled=false;
+   this.structures.root.enabled=false;
+  }
   // K1 optics are activated by the existing B245 REAL PLAYER/QA view
   // change below; never silently alter an original QA/ART comparison.
   // B251 only applies to actual 180s source player rounds. Optical
@@ -2809,14 +2818,21 @@ export class UndertowF3PlayablePreviewApp{
 
  private restoreNativeRegisteredStageWhenUvUnverified():void{
   if(!this.nativeVerifiedStageVisualEligible)return;
-  // False bridge markings must not replace the registered 25-solid
-  // physical SOURCE floor. Leave review mode and gameplay untouched.
+  // F3L unavailable: fall back to the ALREADY RENDERED registered
+  // collision/paint stage, not to F3E's unregistered floor-like source
+  // study. Never promote or display a speculative bridge as walkable.
   if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
   if(this.texturedF3l)this.texturedF3l.root.enabled=false;
-  this.sourceCompletion.root.enabled=true;
-  this.structures.root.enabled=true;
+  this.sourceCompletion.root.enabled=false;
+  this.structures.root.enabled=false;
   this.texturedF3lActive=false;
   this.canvas.dataset.t21F3lOriginalTexture='OFF';
+  const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
+  if(full)full.textContent='Full source OBJ: OFF';
+  const study=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
+  if(study)study.textContent='Source terrain study: OFF';
+  const structures=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
+  if(structures)structures.textContent='Original source: OFF';
  }
 
  private async loadWholeSource(){
@@ -4680,17 +4696,20 @@ export class UndertowF3PlayablePreviewApp{
   if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
   this.texturedF3l.root.enabled=visible;
   this.texturedF3lActive=visible;
-  this.sourceCompletion.root.enabled=!visible;
-  this.structures.root.enabled=!visible;
+  // T toggles verified F3L against the actual registered 25-solid stage.
+  // A "not F3L" state is not permission to draw F3E's unregistered
+  // floor/slope study or the noncolliding architectural reference group.
+  this.sourceCompletion.root.enabled=false;
+  this.structures.root.enabled=false;
   this.canvas.dataset.t21F3lOriginalTexture=visible?'ON':'OFF';
   const uv=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
   if(uv)uv.textContent='F3L original textures: '+(visible?'ON':'OFF')+' (T)';
   const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
   if(full)full.textContent='Full source OBJ: '+(visible?'ON':'OFF');
   const study=this.panel.querySelector('#t21-f3-completion') as HTMLButtonElement|null;
-  if(study)study.textContent='Source terrain study: '+(!visible?'ON':'OFF');
+  if(study)study.textContent='Source terrain study: OFF';
   const structures=this.panel.querySelector('#t21-f3-structures') as HTMLButtonElement|null;
-  if(structures)structures.textContent='Original source: '+(!visible?'ON':'OFF');
+  if(structures)structures.textContent='Original source: OFF';
   this.refresh();
  }
  private toggleTexturedF3l(){
