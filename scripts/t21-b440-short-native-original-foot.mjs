@@ -9,10 +9,11 @@
  */
 import {spawn,execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {existsSync} from 'node:fs';
+import {existsSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {b490ValidateSamePoseFrames} from './t21-f3l-same-pose-gate.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
-import {resolve,isAbsolute,sep} from 'node:path';
+import {resolve,isAbsolute,sep,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
@@ -76,6 +77,7 @@ if(b490LocalCompare){
 const out=process.env.T21_B440_OUT||'/tmp/t21-b440-short-native-foot';
 const children=[],pending=new Map();
 let ws=null,seq=0;
+let b490OwnedChromeProfile=null;
 const fail=(reason)=>{throw Error('B440_SHORT_REAL_NATIVE_HOLD_'+reason)};
 const proof={schema:'B440_ORIGINAL_SHORT_CHROMIUM_FOOT_PROOF',
   source:'25/17/26/0',testKind:'SHORT_FRESH_SOURCE_ONLY',
@@ -860,14 +862,36 @@ async function main(){
    try{execFileSync('which',[x],{stdio:'ignore'});return true;}catch{return false;}
   });
  if(!chrome)fail('CHROMIUM_NOT_INSTALLED');
- children.push(spawn('npm',['run','preview','--','--host','127.0.0.1',
-  '--port','4298','--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'}));
+ if(b490LocalCompare){
+  if(typeof WebSocket!=='function')fail('B490_NODE_GLOBAL_WEBSOCKET_REQUIRED');
+  // Any existing HTTP endpoint here may be a stale/foreign game.
+  for(const endpoint of [root,'http://127.0.0.1:9268/json']){
+   let occupied=false;
+   try{await fetch(endpoint,{signal:AbortSignal.timeout(1200)});
+    occupied=true;}catch{/* no existing HTTP endpoint */}
+   if(occupied)fail('B490_OWNED_PREVIEW_OR_CDP_PORT_ALREADY_IN_USE');
+  }
+ }
+ // Only B490 uses node.exe + Vite CLI, bypassing Windows npm.cmd spawn.
+ // Proven CI B441 still uses the existing npm command and flags.
+ const preview=b490LocalCompare?
+  spawn(process.execPath,[
+   resolve(import.meta.dirname,'../node_modules/vite/bin/vite.js'),
+   'preview','--host','127.0.0.1','--port','4298',
+   '--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'}):
+  spawn('npm',['run','preview','--','--host','127.0.0.1',
+   '--port','4298','--strictPort','--base','/browser-ink-tps/'],{stdio:'ignore'});
+ children.push(preview);
  await until(async()=>{try{return (await fetch(root)).ok;}catch{return false;}},30000);
+ // Unique owned Chrome profile; do not reuse /tmp on the user's Windows.
+ if(b490LocalCompare)
+  b490OwnedChromeProfile=mkdtempSync(join(tmpdir(),'t21-b490-chromium-'));
  const chromeProcess=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage',
   '--no-first-run','--disable-extensions','--enable-unsafe-swiftshader',
   '--use-angle=swiftshader','--window-size=1600,900','--hide-scrollbars',
   '--remote-debugging-port=9268','--remote-allow-origins=*',
-  '--user-data-dir=/tmp/t21-b440-native-short-profile','about:blank'],{stdio:'ignore'});
+  '--user-data-dir='+(b490OwnedChromeProfile??'/tmp/t21-b440-native-short-profile'),
+  'about:blank'],{stdio:'ignore'});
  children.push(chromeProcess);
  const page=await until(async()=>{
   if(chromeProcess.exitCode!==null)fail('CHROME_TERMINATED');
@@ -3830,6 +3854,10 @@ try{await main();}catch(e){
  if(ws){try{ws.close();}catch{}}
  for(const child of children.reverse()){
   try{child.kill('SIGTERM');}catch{}
+ }
+ if(b490OwnedChromeProfile){
+  try{rmSync(b490OwnedChromeProfile,{recursive:true,force:true});}
+  catch(e){console.error('B490_OWNED_TEMP_PROFILE_CLEANUP_WARNING',String(e));}
  }
 }
 

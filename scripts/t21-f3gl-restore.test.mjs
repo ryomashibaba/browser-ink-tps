@@ -70,6 +70,9 @@ function b490Sample(on){
   productionAuthorized:false,unrestricted4v4Certified:false,
   player:{position:[2.45555,3.93841,50.63159],mode:'HUMAN'},
   cpu:{physicalRejoins:Array(7).fill({})},
+  b112OriginalHumanGround:{genuineKccGrounded:true,
+   lastOriginalSourceHitId:'UndertowT21D:right-low-route-ramp-positive-z',
+   lastOriginalSourceGapMeters:.04239},
   originalSourceStudyVisible:false,sourceOpticalStructuresVisible:false,
   fullSource:{enabled:false},environmentF3i:{visible:false},
   texturedSourceF3l:{status:'READY',enabled:on,totalOriginalTriangles:57578,
@@ -95,6 +98,12 @@ test('B490 refuses mistaken visual/geometry success from a moving or unverified 
   [uv,{...plain,environmentF3i:{visible:true}}],
   [uv,{...plain,sourceScoreablePromotions:1}],
   [uv,{...plain,originalSourceSolids:26}],
+  [uv,{...plain,b112OriginalHumanGround:{...plain.b112OriginalHumanGround,
+   genuineKccGrounded:false}}],
+  [uv,{...plain,b112OriginalHumanGround:{...plain.b112OriginalHumanGround,
+   lastOriginalSourceHitId:'UndertowT21D:first-drop-landing-positive-z'}}],
+  [uv,{...plain,b112OriginalHumanGround:{...plain.b112OriginalHumanGround,
+   lastOriginalSourceGapMeters:.22}}],
   [{...uv,texturedSourceF3l:{...uv.texturedSourceF3l,status:'MISSING'}},plain],
   [uv,{...plain,b29VerifiedSourcePresentation:{selected:'F3L_ORIGINAL_UV'}}],
   [uv,{...plain,b399NativeCameraClearance:{cameraOpticalWitness:{
@@ -110,4 +119,9 @@ test('B490 only captures local pictures after real P1 success and never uploads 
  assert.match(r,/B490_LOCAL_ONLY_ONE_REAL_RAMP_REQUIRED/);
  assert.match(r,/if\(b490LocalCompare\)await b490CaptureLocalSamePosePair\(\)/);
  assert.match(r,/screenshotsUploaded:false/);
+ assert.match(r,/spawn\(process.execPath,/);
+ assert.match(r,/B490_NODE_GLOBAL_WEBSOCKET_REQUIRED/);
+ assert.match(r,/B490_OWNED_PREVIEW_OR_CDP_PORT_ALREADY_IN_USE/);
+ assert.match(r,/mkdtempSync\(join\(tmpdir\(\),'t21-b490-chromium-'\)\)/);
+ assert.match(r,/rmSync\(b490OwnedChromeProfile/);
 });

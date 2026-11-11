@@ -27,6 +27,14 @@ export function b490ValidateSamePoseFrames(on,off){
      frame.matchState!=='PLAYING'||frame.player?.mode!=='HUMAN'||
      frame.cpu?.physicalRejoins?.length!==7)
    return HOLD('NOT_FROZEN_LIVE_SEVEN_CPU_WORLD');
+  // Use true native KCC foot, not the prior milestone or F3L optical face.
+  const foot=frame.b112OriginalHumanGround;
+  if(foot?.genuineKccGrounded!==true||
+     foot.lastOriginalSourceHitId!==
+      'UndertowT21D:right-low-route-ramp-positive-z'||
+     !Number.isFinite(foot.lastOriginalSourceGapMeters)||
+     Math.abs(foot.lastOriginalSourceGapMeters)>.10)
+   return HOLD('REAL_REGISTERED_RAMP_FOOT_NOT_PRESENT');
   if(frame.originalSourceStudyVisible!==false||
      frame.sourceOpticalStructuresVisible!==false||
      frame.fullSource?.enabled!==false||

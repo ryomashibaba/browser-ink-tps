@@ -16,6 +16,9 @@ where npm.cmd >nul 2>nul
 if errorlevel 1 goto :FAIL
 node -e "const [m,n]=process.versions.node.split('.').map(Number);process.exit((m===20&&n>=19)||(m===22&&n>=12)||m>=24?0:1)"
 if errorlevel 1 goto :FAIL
+REM The real CDP uses global WebSocket; old Node 20 builds may lack it.
+node -e "process.exit(typeof WebSocket==='function'?0:1)"
+if errorlevel 1 goto :NO_WEBSOCKET
 if not defined T21_CHROME_PATH (
  if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "T21_CHROME_PATH=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
 )
@@ -62,6 +65,10 @@ echo behind PLAY_ORIGINAL_STAGE_WINDOWS.cmd, only if chosen by you.
 goto :FAIL
 :NO_CHROME
 echo HOLD: Google Chrome was not found in usual Windows locations.
+goto :FAIL
+:NO_WEBSOCKET
+echo HOLD: This Node.js lacks the global WebSocket required for Chrome CDP.
+echo Use a supported Node.js with WebSocket, usually 22.12+ or 24+.
 goto :FAIL
 :FAIL
 echo.
