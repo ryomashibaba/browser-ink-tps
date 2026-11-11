@@ -1555,14 +1555,15 @@ export class UndertowF3PlayablePreviewApp{
     (this.sourceCompletion.root.enabled?'ON':'OFF');
   });
   this.panel.querySelector('#t21-f3g-full')?.addEventListener('click',()=>{
-   if(!this.wholeSourceRoot)return;
    // The native game must NEVER switch to unsplit F3G FloorLine/FloorFence
    // geometry: its flat groups cannot distinguish false bridges from walls.
+   // Native only loads individually pinned F3L UV: no F3G root exists.
    if(this.nativeVerifiedStageVisualEligible){
     if(this.texturedF3lStatus!=='READY'||!this.texturedF3l)return;
     this.setNativeVerifiedOpticalScene(!this.texturedF3l.root.enabled);
     return;
    }
+   if(!this.wholeSourceRoot)return;
    const currentlyOn=this.wholeSourceRoot.enabled||!!this.texturedF3l?.root.enabled;
    const next=!currentlyOn;
    const layers=f3gSourceLayerVisibility(next,
@@ -2735,8 +2736,10 @@ export class UndertowF3PlayablePreviewApp{
    const uv=new URL('t21-f3g-source/f3l-original-textured.json',
     document.baseURI);
    if(uv.origin!==location.origin)return;
-   const present=await fetch(uv.href,{method:'HEAD',cache:'no-store'});
-   if(!present.ok||this.stopReason)return;
+   // The F3L loader itself checks HTTP status, manifest and every pinned
+   // binary/texture digest. A second HEAD probe may fail on static hosts
+   // that still serve the genuine GET: do not block native SOURCE optics.
+   if(this.stopReason)return;
    this.texturedF3lStatus='LOADING';
    const installed=await loadF3lTexturedSource(this.app);
    if(!installed){
@@ -2750,6 +2753,10 @@ export class UndertowF3PlayablePreviewApp{
    this.texturedF3lStatus='READY';
    const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
    if(button)button.hidden=false;
+   // Native opt-in now loads F3L without F3G. The existing full-source
+   // switch must use verified F3L directly, not a missing flat root.
+   const full=this.panel.querySelector('#t21-f3g-full') as HTMLButtonElement|null;
+   if(full)full.hidden=false;
    // No intermediate flat optical scene, no aliasing to gameplay solids:
    // this is an atomic visible switch from the existing registered stage.
    if(!this.stopReason)this.setNativeVerifiedOpticalScene(true);
@@ -4688,15 +4695,19 @@ export class UndertowF3PlayablePreviewApp{
  }
  private toggleTexturedF3l(){
   if(!this.texturedF3l||
-     (!this.nativeVerifiedStageVisualEligible&&!this.wholeSourceRoot)||
      this.texturedF3lStatus!=='READY'||this.galleryIndex>=0)return;
   if(this.nativeVerifiedStageVisualEligible){
    this.setNativeVerifiedOpticalScene(!this.texturedF3l.root.enabled);
    return;
   }
-  const visible=this.wholeSourceRoot.enabled||this.texturedF3l.root.enabled;
+  // The explicit F3G review still needs its flat root. Narrow this
+  // *after* the native return: strict TypeScript and missing F3G both
+  // fail closed without disabling the verified native T toggle.
+  const flat=this.wholeSourceRoot;
+  if(!flat)return;
+  const visible=flat.enabled||this.texturedF3l.root.enabled;
   this.texturedF3lActive=!this.texturedF3lActive;
-  this.wholeSourceRoot.enabled=visible&&!this.texturedF3lActive;
+  flat.enabled=visible&&!this.texturedF3lActive;
   this.texturedF3l.root.enabled=visible&&this.texturedF3lActive;
   const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
   if(button)button.textContent='F3L original textures: '+
