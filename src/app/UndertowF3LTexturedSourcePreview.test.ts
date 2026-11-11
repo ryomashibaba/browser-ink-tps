@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
 import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
- f3lIsUnverifiedBridgeOverlay,F3L_STAGE_READABILITY_MODES,
+ f3lIsUnverifiedBridgeOverlay,f3lIsUnverifiedStageSideOverlay,
+ F3L_STAGE_READABILITY_MODES,
  b253VerifiedInkVisualOptIn,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
@@ -175,5 +176,40 @@ describe('native SOURCE optics do not invent an original bridge or background',(
   expect(nativeF3iBackdropVisible(false,true)).toBe(false);
   expect(nativeF3iBackdropVisible(true,false)).toBe(false);
   expect(nativeF3iBackdropVisible(true,true)).toBe(true);
+ });
+});
+
+describe('B491 registered SOURCE PLAYER exact original edge-scene boundary',()=>{
+ it('shows pinned StageSide material only as translucent scenery over registered Rapier floors',()=>{
+  for(const name of ['Fld_Temple01_StageSide00','Fld_Temple01_StageSide01']){
+   expect(f3lIsUnverifiedStageSideOverlay(name)).toBe(true);
+   expect(f3lSourceReadabilityStyle('DETAIL','ORIGINAL_UV',true,name))
+    .toEqual({opacity:.22,depthWrite:false,opaque:false});
+   // Registered-floor priority is present only in real SOURCE PLAYER.
+   expect(f3lSourceReadabilityStyle('DETAIL','ORIGINAL_UV',false,name))
+    .toEqual({opacity:1,depthWrite:true,opaque:true});
+   expect(f3lSourceReadabilityStyle('DETAIL','SOURCE_CUTAWAY',false,name))
+    .toEqual({opacity:.24,depthWrite:false,opaque:false});
+  }
+ });
+ it('retains registered ramps, glass, pillars and wall architecture without broad false-floor masking',()=>{
+  for(const name of ['Fld_Temple01_FloorConcrete03',
+   'Fld_Temple01_WallMetal00','Fld_Temple01_PillarBase00',
+   'Fld_Temple01_Ceiling00','FldObj_Temple01_StageSide00',
+   'Fld_Temple01_StageSideAAA','Fld_Temple01_StageSide00_Unknown']){
+   expect(f3lIsUnverifiedStageSideOverlay(name)).toBe(false);
+  }
+  expect(f3lSourceReadabilityStyle('METAL','ORIGINAL_UV',true,
+   'Fld_Temple01_WallMetal00')).toEqual({
+    opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('SUPPORT','ORIGINAL_UV',true,
+   'Fld_Temple01_PillarBase00')).toEqual({
+    opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+   'Fld_Temple01_FloorConcrete03')).toEqual({
+    opacity:.14,depthWrite:false,opaque:false});
+  expect(f3lSourceReadabilityStyle('GLASS','ORIGINAL_UV',true,
+   'Fld_Temple01_Glass00')).toEqual({
+    opacity:.24,depthWrite:false,opaque:false});
  });
 });

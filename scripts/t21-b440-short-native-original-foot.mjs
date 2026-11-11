@@ -807,6 +807,13 @@ async function b490CaptureLocalSamePosePair(){
   return n.paused===true&&!(await locked())?n:false;
  },12000,120);
  await delay(450);
+ // B491 true SAME-POSE frame capture: pause the REAL SOURCE world, but
+ // do not let the large opaque PAUSE menu cover the very ramp/bridge
+ // alignment region being inspected. CSS changes visual UI only;
+ // native paused/tick, pointer, player/cpu feet, F3L and camera persist.
+ // Only the explicitly opt-in local B490 job ever executes this.
+ const unobstructed=await evaluate("(() => { const p=document.querySelector('#t21-f3-b202-real-pause'); if(!p||p.hidden||getComputedStyle(p).display==='none')return false; if(document.querySelector('#t21-b490-capture-only-pause-invisible'))return false; const style=document.createElement('style'); style.id='t21-b490-capture-only-pause-invisible'; style.textContent='#t21-f3-b202-real-pause{visibility:hidden!important}'; document.head.appendChild(style); return getComputedStyle(p).visibility==='hidden'; })()");
+ if(unobstructed!==true)fail('B490_REAL_PAUSE_MENU_NOT_HIDDEN_FOR_CAPTURE');
  const settle=async()=>{
   await evaluate('new Promise(ok=>requestAnimationFrame(()=>requestAnimationFrame(()=>ok(true))))');
   await delay(180);
@@ -854,6 +861,8 @@ async function b490CaptureLocalSamePosePair(){
   originalSourceMeshBytesCopied:0,originalTextureBytesCopied:0,
   screenshotsUploaded:false,visualAlignmentCertified:false,
   normalWindowsRenderingCertified:false,
+  pauseOverlayHiddenForBothScreenshots:true,
+  sourceGameplayUiModified:false,
   localViewer:'B490_LOCAL_COMPARE.html'};
  save();
  // Verify the local evidence set was fully persisted before reporting

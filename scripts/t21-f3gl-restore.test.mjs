@@ -132,6 +132,12 @@ test('B490 only captures local pictures after real P1 success and never uploads 
  assert.match(r,/B490_OWNED_PREVIEW_OR_CDP_PORT_ALREADY_IN_USE/);
  assert.match(r,/mkdtempSync\(join\(tmpdir\(\),'t21-b490-chromium-'\)\)/);
  assert.match(r,/rmSync\(b490OwnedChromeProfile/);
+ // Only hide the PAUSE DOM while capturing the local same-native-tick
+ // screenshots. This never calls resume(), moves a body, or hides QA.
+ assert.match(r,/B490_REAL_PAUSE_MENU_NOT_HIDDEN_FOR_CAPTURE/);
+ assert.match(r,/t21-b490-capture-only-pause-invisible/);
+ assert.match(r,/visibility:hidden!important/);
+ assert.match(r,/pauseOverlayHiddenForBothScreenshots:true/);
 });
 
 test('B490 same-pose report is offline, readable and never certifies stage alignment',()=>{

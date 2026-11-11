@@ -43,6 +43,13 @@ export function f3lIsUnverifiedFloorMarking(materialName:string):boolean{
 export function f3lIsUnverifiedBridgeOverlay(materialName:string):boolean{
  return /^Fld_Temple01_BridgeMetal[A-Za-z0-9_.-]*$/.test(materialName);
 }
+/** The pinned ORIGINAL StageSide00 albedo group is optical scenery,
+ * not a registered T21D collision or an authorized side ledge.
+ * It may look like a broad continuous walkable shelf in PLAYER.
+ * Never use this material name as proof of original Turf collision. */
+export function f3lIsUnverifiedStageSideOverlay(materialName:string):boolean{
+ return /^Fld_Temple01_StageSide[0-9]{2}$/.test(materialName);
+}
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
  registeredFloorPriority=false,sourceMaterialName=''){
  // Real SOURCE PLAYER: those original FloorLine/FloorFence overlays used to
@@ -52,6 +59,12 @@ export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode
     (f3lIsUnverifiedFloorMarking(sourceMaterialName)||
      f3lIsUnverifiedBridgeOverlay(sourceMaterialName)))
   return {opacity:.08,depthWrite:false,opaque:false};
+ // B491: preserve real original architecture, but make the *exact*
+ // source-only StageSide albedo group read as a backdrop rather than a
+ // second walkable wall/bridge above the 25 registered Rapier solids.
+ // Explicit F3L review and F8 QA retain their full original optics.
+ if(registeredFloorPriority&&f3lIsUnverifiedStageSideOverlay(sourceMaterialName))
+  return {opacity:.22,depthWrite:false,opaque:false};
  if(registeredFloorPriority&&(kind==='FLOOR'||kind==='SLOPE'))
   return {opacity:.14,depthWrite:false,opaque:false};
  if(mode==='ORIGINAL_UV'){
