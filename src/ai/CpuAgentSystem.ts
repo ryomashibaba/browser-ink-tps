@@ -24,7 +24,7 @@ import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
 import {b420MayLegacyMeleeChase} from './B420SourceMeleePursuitAuthority';
 import {b216OriginalFootBackfillCandidates} from './B216OriginalSourceBackfillInk';
-import {b178FootMask,b178FootRelation} from './B178OriginalSourceInkResources';
+import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
@@ -91,6 +91,9 @@ export type CpuKitRequest =
  * rejection before further simulation. T20 passes no authority. */
 export interface CpuSharedGroundStepAuthority {
   resetActors():void;
+  /** Read-only registered static support at the current synchronized CPU foot. */
+  sourceFootSupport?(id:string,foot:Readonly<{x:number;y:number;z:number}>):
+    {point:Vec3;solidId:string}|null;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
   /** A splatted CPU has no physical capsule; only source-QA shared world. */
@@ -1764,13 +1767,23 @@ export class CpuAgentSystem {
     }
   }
 
+  private sampleRegisteredSourceFoot(bot:CpuBot){
+    if(bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||!bot.agent)
+      return null;
+    const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+      bot.id,bot.position)??null;
+    return b178SampleRegisteredSourceFoot(
+      this.gameplayInk,this.stage.paintSurfaces,support);
+  }
+
   private updateResources(bot: CpuBot, dt: number): void {
     bot.inkRecoveryLockSeconds = Math.max(0, bot.inkRecoveryLockSeconds - dt);
     bot.hpRecoveryDelaySeconds = Math.max(0, bot.hpRecoveryDelaySeconds - dt);
 
     this.samplePoint.copy(bot.position);
     this.samplePoint.y += 0.10;
-    const sample = this.gameplayInk.sampleWorld(
+    const sample = this.b178RealSourceInkRecovery
+      ?this.sampleRegisteredSourceFoot(bot):this.gameplayInk.sampleWorld(
       this.samplePoint,
       0.48,
       b178FootMask(this.b178RealSourceInkRecovery),
@@ -3172,7 +3185,8 @@ export class CpuAgentSystem {
     // T20 and all other CPU modes preserve the old exact flags.
     const previewSourcePaintableOnly=this.phase14qF2RecoverableSteps&&
       this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa';
-    const sample = this.gameplayInk.sampleWorld(
+    const sample = previewSourcePaintableOnly
+      ?this.sampleRegisteredSourceFoot(bot):this.gameplayInk.sampleWorld(
       this.samplePoint,
       0.45,
       previewSourcePaintableOnly

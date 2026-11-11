@@ -129,6 +129,21 @@ export class UndertowPhase14QSharedActorCollision{
     }
   }
 
+  /** Read the registered static support at an already synchronized CPU
+   * foot. Use the existing SOURCE CPU endpoint band (0.25m); this query
+   * grants neither movement nor new collision/paint authority. */
+  public sourceFootSupport(id:string,foot:T21QFoot){
+    const actual=this.actors.get(id)?.sourceFoot;
+    if(!actual||![foot.x,foot.y,foot.z].every(Number.isFinite)||
+       Math.hypot(actual.x-foot.x,actual.y-foot.y,actual.z-foot.z)>1e-5)
+      return null;
+    const hit=this.physics.castStageSegment(
+      new Vec3(foot.x,foot.y+.65,foot.z),
+      new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    return hit&&Math.abs(hit.point.y-foot.y)<=.25&&
+      this.stage.solids.some(s=>s.id===hit.solidId)?hit:null;
+  }
+
   /** Exact current PlayerController KCC foot, NOT an invented CPU repellor. */
   public syncActualHumanFoot(foot:T21QFoot):void{
     if(![foot.x,foot.y,foot.z].every(Number.isFinite))
