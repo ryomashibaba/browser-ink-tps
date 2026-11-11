@@ -67,10 +67,15 @@ export class GameplayInkSystem {
       const x = Math.min(surface.widthCells - 1, Math.max(0, Math.floor(u / surface.cellSize)));
       const y = Math.min(surface.heightCells - 1, Math.max(0, Math.floor(v / surface.cellSize)));
       const index = surface.index(x, y);
+      // A continuous footprint may include the point while its raster
+      // cell is inactive. That cell cannot grant or mask genuine ground ink.
+      const cellFlags = surface.flagsGrid[index] ?? 0;
+      if ((cellFlags & requiredFlags) !== requiredFlags ||
+          (cellFlags & excludedFlags) !== 0) continue;
       const candidate: GameplayInkSample = {
         surface,
         owner: surface.ownerGrid[index] as Team,
-        flags: surface.flagsGrid[index] ?? surface.baseFlags,
+        flags: cellFlags,
         u,
         v,
         planeDistance: projected.planeDistance

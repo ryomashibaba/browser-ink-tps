@@ -96,6 +96,28 @@ describe('PaintSurface footprint authority', () => {
     expect(value.isCellActive(1, 1)).toBe(true);
   });
 
+  it('does not let an inactive footprint raster cell hide valid floor ink', () => {
+    const gameplay = new GameplayInkSystem();
+    const flags = SurfaceFlags.Paintable | SurfaceFlags.Swimmable | SurfaceFlags.Floor;
+    const active = new PaintSurface('registered-floor',new Vec3(0,0,0),
+      new Vec3(1,0,0),new Vec3(0,0,1),4,4,1,flags,2);
+    // The point is inside this thin outline, but its 1m cell is inactive.
+    const thin = new PaintSurface('inactive-raster-neighbor',new Vec3(0,.04,0),
+      new Vec3(1,0,0),new Vec3(0,0,1),4,4,1,flags,2,{
+        outer:[[1.05,1.05],[1.40,1.05],[1.05,1.40]],
+        holes:[],cellSizeMeters:1
+      });
+    gameplay.registerSurface(thin);
+    gameplay.registerSurface(active);
+    const point=thin.localToWorld(1.15,1.15).add(new Vec3(0,.04,0));
+    expect(thin.projectWorldPoint(point).inside).toBe(true);
+    expect(thin.flagsGrid[thin.index(1,1)]).toBe(0);
+    expect(gameplay.sampleWorld(point,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall)
+      ?.surface.id).toBe('registered-floor');
+    expect(gameplay.sampleWorld(point,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+      s=>s.id===thin.id)).toBeNull();
+  });
+
   it('samples the actually supported original floor before neighboring closer ink',()=>{
     const gameplay=new GameplayInkSystem();
     const sourceFlags=SurfaceFlags.Paintable|SurfaceFlags.Swimmable|SurfaceFlags.Floor;
