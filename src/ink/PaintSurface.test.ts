@@ -126,6 +126,8 @@ describe('PaintSurface footprint authority', () => {
     expect(sameBacking?.owner).toBe(Team.A);
     expect(gameplay.sampleWorld(foot,.4,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
       p=>p.id==='not-a-registered-backing')).toBeNull();
-    expect(gameplay.snapshot().totalScoreableArea).toBe(0);
+    // The snapshot uses a nonzero denominator even with zero scoreable turf.
+    expect(gameplay.snapshot().areaA).toBe(0);
+    expect(gameplay.snapshot().areaB).toBe(0);
   });
 });
