@@ -780,7 +780,9 @@ export class UndertowF3PlayablePreviewApp{
    this.camera,this.ink,this.stats);
   // Genuine human SOURCE only: physical KCC ground contact, not a nearby
   // optical false bridge, controls the floor-ink resource effects.
-  this.player.setNativeSourceGroundInkGuard(this.nativeLiveSourcePrestart);
+  this.player.setNativeSourceGroundInkGuard(
+   this.nativeLiveSourcePrestart,
+   this.nativeLiveSourcePrestart?this.rawStage.paintSurfaces:undefined);
   this.player.setTeam(Team.A);
   this.humanSpawn=new Vec3(
    slots.teamASlots[3]![0],

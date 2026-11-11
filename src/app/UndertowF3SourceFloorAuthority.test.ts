@@ -1,4 +1,5 @@
 import {beforeAll,describe,expect,it} from 'vitest';
+import {nativeSourceInkOnRegisteredFoot} from '../player/PlayerController';
 import {initializeRapier,RapierStagePhysics}
  from '../physics/RapierStagePhysics';
 import {undertowT21dConnectivityQaStage}
@@ -153,5 +154,37 @@ describe('Windows native 1498 unsupported fall / existing exact optical floor ca
     visibleExactSourceCandidates:r.opticalOnlySourceComponents.slice(0,4),
     originalCollisionAuthorized:false
    }))));
+ });
+});
+
+describe('B492 true native SOURCE floor ink follows same Rapier support ID',()=>{
+ it('accepts real 25-solid ramp OWN and ENEMY paint without changing 17 surfaces',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  expect([stage.solids.length,stage.paintSurfaces.length,stage.navigationLinks?.length])
+   .toEqual([25,17,26]);
+  const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+  expect(stage.paintSurfaces.some(p=>p.backingSolidId===ramp)).toBe(true);
+  expect(stage.paintSurfaces.every(p=>stage.solids.some(s=>s.id===p.backingSolidId)))
+   .toBe(true);
+  for(const owner of ['OWN','ENEMY'] as const)
+   expect(nativeSourceInkOnRegisteredFoot(owner,true,ramp,ramp,.04239))
+    .toBe(owner);
+ });
+ it('denies adjacent painted slabs, stale/no support and false airborne refill',()=>{
+  const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+  const landing='UndertowT21D:first-drop-landing-positive-z';
+  for(const owner of ['OWN','ENEMY'] as const){
+   for(const [ground,back,solid,gap] of [
+    [true,ramp,landing,.025],[true,ramp,null,.025],[true,null,ramp,.025],
+    [false,ramp,ramp,.025],[true,ramp,ramp,null],[true,ramp,ramp,NaN],
+    [true,ramp,ramp,.28],[true,ramp,ramp,-.21]
+   ] as const)
+    expect(nativeSourceInkOnRegisteredFoot(owner,ground,back,solid,gap))
+     .toBe('NONE');
+  }
+  expect(nativeSourceInkOnRegisteredFoot('NEUTRAL',false,null,null,null))
+   .toBe('NEUTRAL');
+  expect(nativeSourceInkOnRegisteredFoot('NONE',true,null,null,null))
+   .toBe('NONE');
  });
 });

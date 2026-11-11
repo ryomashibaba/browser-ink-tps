@@ -13,6 +13,7 @@ import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSys
 import { SurfaceFlags, Team } from '../ink/types';
 import type { PlayerInput } from '../input/PlayerInput';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import type {StagePaintSurfaceDefinition} from '../stage/StageDefinition';
 import {
   PLAYER_CHARACTER_PHYSICS,
   createConfiguredPlayerCharacterController
@@ -41,6 +42,21 @@ export function nativeSourcePhysicallyContactedInk(
  if(grounded||state==='SWIM_WALL'||state==='SURGE_CHARGE')
   return relation;
  return relation==='OWN'||relation==='ENEMY'?'NONE':relation;
+}
+/** Real SOURCE only: an optical/nearby paint surface cannot grant
+ * OWN/ENEMY resource or squid ground speed when a DIFFERENT registered
+ * 25-solid Rapier floor supports the character. No new collision. */
+export function nativeSourceInkOnRegisteredFoot(
+ relation:InkRelation,grounded:boolean,
+ backingSolidId:string|null,supportSolidId:string|null,
+ footGapMeters:number|null
+):InkRelation{
+ if(relation!=='OWN'&&relation!=='ENEMY')return relation;
+ if(!grounded||!backingSolidId||!supportSolidId||
+    backingSolidId!==supportSolidId||footGapMeters===null||
+    !Number.isFinite(footGapMeters)||
+    Math.abs(footGapMeters)>.12)return 'NONE';
+ return relation;
 }
 
 interface OwnWallSample {
@@ -95,6 +111,10 @@ export class PlayerController {
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
   private nativeSourceGroundInkGuard = false;
+  private sourcePaintBackingById:ReadonlyMap<string,string>|null=null;
+  private sourceSupportedSolidId:string|null=null;
+  private sourceFootGapMeters:number|null=null;
+  private readonly sourceFootCastPosition=new Vec3();
 
   private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
   private static readonly humanHalfHeight = PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters;
@@ -185,8 +205,33 @@ export class PlayerController {
 
   /** Only true human SOURCE full rounds; all T20 and deterministic QA remain
    * unchanged. This affects resource contact, NOT player steering. */
-  public setNativeSourceGroundInkGuard(enabled:boolean):void{
+  public setNativeSourceGroundInkGuard(
+    enabled:boolean,paint?:readonly StagePaintSurfaceDefinition[]
+  ):void{
     this.nativeSourceGroundInkGuard=enabled;
+    this.sourceSupportedSolidId=null;
+    this.sourceFootGapMeters=null;
+    this.sourcePaintBackingById=null;
+    if(!enabled)return;
+    if(!paint||paint.length!==17||
+       this.gameplayInk.getSurfaces().length!==paint.length)
+      throw Error('T21_SOURCE_PAINT_MUST_HAVE_17_BACKINGS');
+    const backings=new Map<string,string>();
+    for(const p of paint){
+      if(!this.gameplayInk.getSurface(p.id)||
+         !p.backingSolidId||backings.has(p.id))
+        throw Error('T21_SOURCE_INVALID_PAINT_BACKING');
+      backings.set(p.id,p.backingSolidId);
+    }
+    this.sourcePaintBackingById=backings;
+  }
+  private sourceFloorInk(
+    relation:InkRelation,sample:GameplayInkSample|null
+  ):InkRelation{
+    return nativeSourceInkOnRegisteredFoot(
+      relation,this.grounded,
+      sample?this.sourcePaintBackingById?.get(sample.surface.id)??null:null,
+      this.sourceSupportedSolidId,this.sourceFootGapMeters);
   }
 
   public requestWeaponDodge(): boolean {
@@ -268,6 +313,8 @@ export class PlayerController {
     this.position.copy(position);
     this.previousPosition.copy(position);
     this.renderPosition.copy(position);
+    this.sourceSupportedSolidId=null;
+    this.sourceFootGapMeters=null;
     this.footPoint.set(
       position.x,
       position.y - PlayerController.humanFootOffset + 0.06,
@@ -291,6 +338,8 @@ export class PlayerController {
       SurfaceFlags.Wall
     );
     this.inkRelation = this.relationFor(groundSample);
+    if(this.nativeSourceGroundInkGuard)
+      this.inkRelation=this.sourceFloorInk(this.inkRelation,groundSample);
 
     this.camera.getFlatForward(this.flatForward);
     this.right.set(-this.flatForward.z, 0, this.flatForward.x);
@@ -577,6 +626,14 @@ export class PlayerController {
     // Keep wall-swim/surge's independently verified OWN wall contact;
     // they never inherit floor ownership from an unrelated lower slab.
     if(this.nativeSourceGroundInkGuard){
+      // Only an existing SOURCE static Rapier collider may provide the
+      // real floor contact. Never write KCC, stage, nav or ink here.
+      const hit=this.grounded?this.physics.castCharacterFootSupport(
+        this.sourceFootCastPosition.set(p.x,p.y,p.z),
+        PlayerController.humanFootOffset,this.mode):null;
+      this.sourceSupportedSolidId=hit?.solidId??null;
+      this.sourceFootGapMeters=hit?
+        p.y-PlayerController.humanFootOffset-hit.point.y:null;
       this.footPoint.set(
         p.x,p.y-PlayerController.humanFootOffset+0.06,p.z);
     }
@@ -589,7 +646,7 @@ export class PlayerController {
     if(this.nativeSourceGroundInkGuard&&
        this.locomotionState!=='SWIM_WALL'&&
        this.locomotionState!=='SURGE_CHARGE'){
-      this.inkRelation=this.relationFor(debugSample);
+      this.inkRelation=this.sourceFloorInk(this.relationFor(debugSample),debugSample);
     }
     this.stats.playerInkRelation = this.currentInkRelation;
     this.stats.playerSampleSurface = debugSample?.surface.id ?? '-';
