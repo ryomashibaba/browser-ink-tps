@@ -11,6 +11,7 @@ on:
       - 'src/stage/undertow/UndertowB495OriginalRecastHeightFaceIsolation.test.ts'
       - 'src/app/UndertowB496RealRejectedRouteReprojectionQa.test.ts'
       - 'src/app/UndertowB497TenUnresolvedAndKccContinuityQa.test.ts'
+      - 'src/app/B499OriginalEightSeamsLiveRapierRecast.test.ts'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -280,6 +281,23 @@ jobs:
         with:
           name: b497-true-ten-source-failures-and-fifty-static-kcc
           path: /tmp/t21-b497-report.json
+          if-no-files-found: warn
+          retention-days: 14
+      # B499 genuine eight CI688 face-seam probes on unchanged 25 source
+      # solids. No browser, added geometry, KCC route, or staged scoring.
+      - name: Audit exact eight original-source face seams against current live Recast and Rapier
+        if: ${{ contains(github.event.head_commit.message, '[b499-eight-source-seams]') }}
+        env:
+          T21_B499_REPORT_PATH: /tmp/t21-b499-original-eight-seams.json
+        run: |
+          npx vitest run src/app/B499OriginalEightSeamsLiveRapierRecast.test.ts
+          node -e "const d=require('/tmp/t21-b499-original-eight-seams.json');if(d.schema!=='B499_REAL_8_CI688_FACE_SEAMS_CURRENT_RECAST_RAPIER_V1'||d.originalSource!=='25/17/26/0'||d.originalSourceTriangles!==42||d.seamDetails.length!==8||d.newFloorOrNavLinkAdded!==0||d.nativeCrossTeamTraversalCertified!==false)process.exit(1);console.log('B499_REAL_ORIGINAL_EIGHT_SEAMS_DID_NOT_PROMOTE')"
+      - name: Archive B499 authenticated source-face-to-original-stage 8-seam audit
+        if: ${{ contains(github.event.head_commit.message, '[b499-eight-source-seams]') && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b499-genuine-original-eight-source-face-seams
+          path: /tmp/t21-b499-original-eight-seams.json
           if-no-files-found: warn
           retention-days: 14
       - name: Existing short native runner syntax and binding preflight
