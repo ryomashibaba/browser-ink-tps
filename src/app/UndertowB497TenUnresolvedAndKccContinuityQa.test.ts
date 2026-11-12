@@ -67,6 +67,9 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
    routesWithProjectedVerticalJumps=0,
    speedLimitedKccChecked=0,speedLimitedKccWithin=0,
    speedLimitedKccHeld=0;
+  let routesWithHorizontalClipping=0,routesWithVerticalClipping=0,
+   routesWithVerticalOnlyClipping=0,routesWithHorizontalOnlyClipping=0,
+   routesWithMixedClipping=0,routesWithNeitherAxisOver1cm=0;
   for(const id of ids){
    const witness=data.perCpu[id];
    const start=foot(witness.actualPhysicalFoot);
@@ -269,6 +272,12 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
      let simulated60HzSteps=0,microClipsOver1cm=0,microClipsOver3cm=0,
       microStageContactSteps=0,microUnsupportedSteps=0,
       maxMicroAccumulated=0,maxMicroClip=0,maxMicroRequested=0;
+     let maxMicroHorizontalClip=0,maxMicroVerticalClip=0,
+      maxCumulativeXZDeviation=0,maxCumulativeYDeviation=0,
+      horizontalClipTicks=0,verticalClipTicks=0,
+      mixedClipTicks=0,verticalOnlyClipTicks=0,
+      horizontalOnlyClipTicks=0,other3DClipTicks=0;
+     const firstFiveDetailedClips:Array<unknown>=[];
      let firstMicroClip:null|{segment:number;substep:number;
       originalStaticColliders:(string|null)[];clipMeters:number}=null;
      for(let segment=1;segment<projectedPoints.length;segment++){
@@ -288,7 +297,44 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
        const clip=Math.hypot(moved.x-desired.x,
         moved.y-desired.y,moved.z-desired.z);
        maxMicroClip=Math.max(maxMicroClip,clip);
-       if(clip>.01)microClipsOver1cm++;
+       // KCC output is an actual 3D delta, and the intended projection
+       // path is already true CPU-speed bounded. Separate the physical
+       // horizontal slowdown from vertical floor snap/correction.
+       const clipXZ=Math.hypot(moved.x-desired.x,moved.z-desired.z);
+       const clipY=Math.abs(moved.y-desired.y);
+       maxMicroHorizontalClip=Math.max(maxMicroHorizontalClip,clipXZ);
+       maxMicroVerticalClip=Math.max(maxMicroVerticalClip,clipY);
+       if(clip>.01){
+        microClipsOver1cm++;
+        if(clipXZ>.01)horizontalClipTicks++;
+        if(clipY>.01)verticalClipTicks++;
+        if(clipXZ>.01&&clipY>.01)mixedClipTicks++;
+        else if(clipXZ>.01)horizontalOnlyClipTicks++;
+        else if(clipY>.01)verticalOnlyClipTicks++;
+        else other3DClipTicks++;
+        if(firstFiveDetailedClips.length<5){
+         const staticColliderIds:Array<string|null>=[];
+         for(let j=0;j<microKcc.numComputedCollisions();j++){
+          const col=microKcc.computedCollision(j)?.collider;
+          if(col)staticColliderIds.push(physics.sourceSolidIdForCollider(col));
+         }
+         const preSupport=origHit(place);
+         firstFiveDetailedClips.push({
+          pathSegment:segment,physicalSubstep:sub,
+          preStepFoot:{x:r6(place.x),y:r6(place.y),z:r6(place.z)},
+          originalRapierSolidBefore:preSupport.solidId,
+          originalRapierSupportGapBefore:preSupport.gap===null?null:r6(preSupport.gap),
+          desiredMovement:{x:r6(desired.x),y:r6(desired.y),z:r6(desired.z)},
+          actualKccMovement:{x:r6(moved.x),y:r6(moved.y),z:r6(moved.z)},
+          horizontalMovementDifference:r6(clipXZ),
+          verticalMovementDifference:r6(clipY),
+          totalMovementDifference:r6(clip),
+          staticCollisionIds:staticColliderIds,
+          classification:clipXZ>.01&&clipY>.01?'MIXED_XZ_AND_Y':
+           clipXZ>.01?'HORIZONTAL_XZ':
+           clipY>.01?'VERTICAL_Y':'SUBCENTIMETER_ON_EACH_AXIS'});
+        }
+       }
        if(clip>.03)microClipsOver3cm++;
        if(microKcc.numComputedCollisions()>0)microStageContactSteps++;
        if(clip>.01&&!firstMicroClip){
@@ -303,8 +349,12 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
        place.x+=moved.x;place.y+=moved.y;place.z+=moved.z;
        const ideal={x:prev.x+vx*sub/steps,
         y:prev.y+vy*sub/steps,z:prev.z+vz*sub/steps};
+       const cumulativeXZ=Math.hypot(place.x-ideal.x,place.z-ideal.z);
+       const cumulativeY=Math.abs(place.y-ideal.y);
+       maxCumulativeXZDeviation=Math.max(maxCumulativeXZDeviation,cumulativeXZ);
+       maxCumulativeYDeviation=Math.max(maxCumulativeYDeviation,cumulativeY);
        maxMicroAccumulated=Math.max(maxMicroAccumulated,Math.hypot(
-        place.x-ideal.x,place.y-ideal.y,place.z-ideal.z));
+        cumulativeXZ,cumulativeY));
        if(!origHit(place).supported)microUnsupportedSteps++;
        microBody.setTranslation({x:place.x,
         y:place.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
@@ -316,6 +366,12 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
      const speedLimitedWithin=microClipsOver1cm===0&&
       microUnsupportedSteps===0&&maxMicroAccumulated<=.03;
      speedLimitedKccChecked++;
+     if(horizontalClipTicks>0)routesWithHorizontalClipping++;
+     if(verticalClipTicks>0)routesWithVerticalClipping++;
+     if(mixedClipTicks>0)routesWithMixedClipping++;
+     if(horizontalOnlyClipTicks>0)routesWithHorizontalOnlyClipping++;
+     if(verticalOnlyClipTicks>0)routesWithVerticalOnlyClipping++;
+     if(other3DClipTicks>0)routesWithNeitherAxisOver1cm++;
      if(speedLimitedWithin)speedLimitedKccWithin++;
      else speedLimitedKccHeld++;
      staticKcc.speedBounded60HzProbe={
@@ -329,7 +385,18 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
       microStepsWithStaticKccContact:microStageContactSteps,
       microStepsWithoutStrictOriginalFloorSupport:microUnsupportedSteps,
       maxIndividualMicroClipMeters:r6(maxMicroClip),
+      maxIndividualHorizontalMovementDifferenceMeters:r6(maxMicroHorizontalClip),
+      maxIndividualVerticalMovementDifferenceMeters:r6(maxMicroVerticalClip),
       maxAccumulatedMicroPathDeviationMeters:r6(maxMicroAccumulated),
+      maxAccumulatedXZPathDeviationMeters:r6(maxCumulativeXZDeviation),
+      maxAccumulatedYPathDeviationMeters:r6(maxCumulativeYDeviation),
+      substepsWithHorizontalClipOver1cm:horizontalClipTicks,
+      substepsWithVerticalClipOver1cm:verticalClipTicks,
+      substepsWithBothHorizontalAndVerticalClipOver1cm:mixedClipTicks,
+      substepsWithOnlyHorizontalClipOver1cm:horizontalOnlyClipTicks,
+      substepsWithOnlyVerticalClipOver1cm:verticalOnlyClipTicks,
+      substepsWithTotalClipOver1cmButNeitherAxisOver1cm:other3DClipTicks,
+      firstFiveDetailedKccClips:firstFiveDetailedClips,
       firstClip: firstMicroClip,
       withinQaOnlySpeedBoundedTolerance:speedLimitedWithin,
       thisIsNotCpuAiSteeringOrDynamic7CpuSimulation:true};
@@ -398,6 +465,12 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
    speedLimitedKccPathsDiagnosed:speedLimitedKccChecked,
    speedLimitedKccWithinQaOnlyThreshold:speedLimitedKccWithin,
    speedLimitedKccHeld:speedLimitedKccHeld,
+   speedLimitedRoutesWithHorizontalClipOver1cm:routesWithHorizontalClipping,
+   speedLimitedRoutesWithVerticalClipOver1cm:routesWithVerticalClipping,
+   speedLimitedRoutesWithMixedClipOver1cm:routesWithMixedClipping,
+   speedLimitedRoutesWithHorizontalOnlyClipOver1cm:routesWithHorizontalOnlyClipping,
+   speedLimitedRoutesWithVerticalOnlyClipOver1cm:routesWithVerticalOnlyClipping,
+   speedLimitedRoutesWithTotalClipButNeitherAxisOver1cm:routesWithNeitherAxisOver1cm,
    sourceCpuSpeedMetersPerSecond:GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
    maxSpatialDisplacementFor60HzDiagnosticMeters:r6(
     GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60),
@@ -425,6 +498,10 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
   expect(staticKccZeroClip+staticKccHeld).toBe(50);
   expect(speedLimitedKccChecked).toBe(50);
   expect(speedLimitedKccWithin+speedLimitedKccHeld).toBe(50);
+  expect(routesWithHorizontalClipping).toBeGreaterThanOrEqual(0);
+  expect(routesWithVerticalClipping).toBeGreaterThanOrEqual(0);
+  expect(routesWithHorizontalClipping).toBeLessThanOrEqual(50);
+  expect(routesWithVerticalClipping).toBeLessThanOrEqual(50);
   expect(reprojectedPotential+stillUnsupported).toBe(60);
   if(process.env.T21_B497_REPORT_PATH)
    writeFileSync(process.env.T21_B497_REPORT_PATH,
@@ -437,6 +514,9 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
     })),
     staticKccChecked,staticKccZeroClip,staticKccHeld,
     speedLimitedKccChecked,speedLimitedKccWithin,speedLimitedKccHeld,
+    routesWithHorizontalClipping,routesWithVerticalClipping,
+    routesWithMixedClipping,routesWithHorizontalOnlyClipping,
+    routesWithVerticalOnlyClipping,routesWithNeitherAxisOver1cm,
     routesWithProjectedVerticalJumps,
     firstPointStillUnsupported:pathWithoutOriginalSubstitute,
     wouldPassRayOnly:reprojectedPotential,
