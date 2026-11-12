@@ -3,7 +3,7 @@ import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
-import { CpuAgentSystem, type CpuCombatHit } from './CpuAgentSystem';
+import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 
 /** No simulated gameplay actors are spawned: exercise the real production
@@ -89,7 +89,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
       .toBe(true);
     bot.fireRemaining=.27;
-    system.drainFireRequests(request=>{
+    system.drainFireRequests((request:CpuFireRequest)=>{
       system.rollbackUndeliveredSourceCpuMainShot(request);
     });
     expect(bot.fireRemaining).toBe(0);
