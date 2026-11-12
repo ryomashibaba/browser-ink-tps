@@ -4,6 +4,8 @@ on:
     branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103, research/t21-integrated-a1-c-patrol-four-mode-20261105]
     paths:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - 'scripts/t21-b492-source-height-isolation.mjs'
+      - 'scripts/t21-b492-source-height-isolation.test.mjs'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -143,6 +145,7 @@ jobs:
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+          node --test scripts/t21-b492-source-height-isolation.test.mjs
           npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts src/ai/B178OriginalSourceInkResources.test.ts src/ink/PaintSurface.test.ts src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts
