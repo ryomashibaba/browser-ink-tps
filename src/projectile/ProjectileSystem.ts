@@ -645,21 +645,6 @@ export class ProjectileSystem {
       this.delta.copy(slot.velocity).mulScalar(dt);
       const next = slot.position.clone().add(this.delta);
 
-      if (slot.trailPaintRadius > 0 && slot.trailPaintCooldown <= 0) {
-        this.paintWorldStamp(
-          slot.team,
-          next,
-          slot.trailPaintRadius * 1.15,
-          slot.trailPaintRadius * 0.62,
-          slot.velocity,
-          1.7,
-          PaintEventType.MidDroplet,
-          slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu,
-          slot.sourceKind === 'CPU' ? slot.sourceId : undefined
-        );
-        slot.trailPaintCooldown = 0.085;
-      }
-
       const paintHit = this.findNearestSurfaceHit(previous, next);
       const blockerHit = this.physics.castStageSegment(previous, next, 'ink-projectile');
       const qaHit = slot.sourceKind === 'HUMAN'
@@ -715,6 +700,30 @@ export class ProjectileSystem {
       if (playerHitDistance !== null && playerHitDistance < combatDistance) {
         combatDistance = playerHitDistance;
         combatKind = 'PLAYER';
+      }
+
+      // SOURCE uses the actual original Rapier/paint/actor collision for
+      // this entire 60Hz segment. A trail stamp at "next" BEFORE the hit
+      // query used to paint THROUGH a registered wall during the terminal
+      // tick (especially genuine CPU SLOSHER shots). Only a physically
+      // unobstructed SOURCE segment may issue an in-flight MidDroplet.
+      // The proper original paint impact remains handled below; the
+      // frozen non-SOURCE trail behavior stays exactly as before.
+      const sourceTerminalTrail=this.nativeSourceHumanPhysicalMode!==null&&
+        (!!paintHit||!!blockerHit||
+         (!!combatKind&&
+          combatDistance + GAME_CONFIG.combat.hitPriorityEpsilonMeters <
+           worldDistance));
+      if(slot.trailPaintRadius>0&&slot.trailPaintCooldown<=0&&
+         !sourceTerminalTrail){
+        this.paintWorldStamp(
+          slot.team,next,slot.trailPaintRadius*1.15,
+          slot.trailPaintRadius*0.62,slot.velocity,1.7,
+          PaintEventType.MidDroplet,
+          slot.sourceKind==='HUMAN'?PaintSource.Human:PaintSource.Cpu,
+          slot.sourceKind==='CPU'?slot.sourceId:undefined
+        );
+        slot.trailPaintCooldown=0.085;
       }
 
       if (

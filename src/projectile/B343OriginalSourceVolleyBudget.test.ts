@@ -1,4 +1,4 @@
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi} from 'vitest';
 import {b371RealSourceMissionCue} from '../app/B371RealSourceMissionCue';
 import {ProjectileSystem} from './ProjectileSystem';
 import {Vec3} from 'playcanvas';
@@ -179,5 +179,79 @@ describe('physical original Rapier precedence over near-coplanar paint',()=>{
   const impact=direct(false,5.05);
   expect(impact.point.z).toBeCloseTo(5.05,8);
   expect(impact.paintHit).not.toBeNull();
+ });
+});
+
+
+describe('SOURCE trail paint stops at original contact',()=>{
+ const oneActualProjectile=(nativeSource:boolean,
+   paintDistance:number|null,blockDistance:number|null)=>{
+  // Execute the real 60Hz projectile method; intercept only I/O.
+  // No fake CPU navigation, ownerGrid, score, clock or actor writes.
+  const projectile=Object.create(ProjectileSystem.prototype) as ProjectileSystem;
+  const trail=vi.fn(),impact=vi.fn(),finish=vi.fn((slot:{active:boolean})=>{
+   slot.active=false;
+  });
+  const slot={
+   active:true,position:new Vec3(),previousPosition:new Vec3(),
+   velocity:new Vec3(0,0,5),gravity:0,ttl:2,
+   trailPaintRadius:.34,trailPaintCooldown:0,
+   team:Team.B,sourceKind:'CPU',sourceId:'B2',paintRadius:.3,
+   qaSourceAim:undefined,entity:{setPosition:vi.fn()}
+  };
+  const paint=paintDistance===null?null:{
+   distance:paintDistance,worldPoint:new Vec3(0,0,paintDistance),
+   surface:{id:'registered-original-paint'}
+  };
+  const blocker=blockDistance===null?null:{
+   distance:blockDistance,point:new Vec3(0,0,blockDistance),
+   solidId:'registered-original-wall'
+  };
+  Object.assign(projectile,{
+   b367NativeFrame:0,playerWeaponId:'pulse-sprayer',
+   fireCooldown:0,wasFireHeld:false,burstCooldown:0,
+   rollPaintCooldown:0,meleeCooldown:0,
+   dualiesFocusSeconds:0,guardBreakSeconds:0,guardHp:100,
+   stats:{},feedback:{updateChargeVisual:vi.fn()},
+   currentHumanPosition:new Vec3(),currentHumanAimDirection:new Vec3(),
+   delta:new Vec3(),slots:[slot],queuedCpuShots:[],
+   nativeSourceHumanPhysicalMode:nativeSource?()=> 'HUMAN':null,
+   updateGuardVisual:vi.fn(),processDelayedBursts:vi.fn(),
+   spawnQueuedCpuShots:vi.fn(),paintWorldStamp:trail,
+   findNearestSurfaceHit:()=>paint,
+   physics:{castStageSegment:()=>blocker},
+   combatTargets:{findNearestHit:()=>null},
+   cpuAgents:{findNearestCombatHit:()=>null},
+   finishProjectile:finish,enqueueImpact:impact
+  });
+  projectile.fixedUpdate(.2,false,false,new Vec3(),new Vec3(0,0,1),
+   Team.A,new Vec3(),false,false);
+  return {trail,impact,finish,slot};
+ };
+ it('does NOT deposit behind a nearer registered wall when CPU SLOSHER ends',()=>{
+  const out=oneActualProjectile(true,.55,.5);
+  expect(out.trail).not.toHaveBeenCalled();
+  expect(out.impact).not.toHaveBeenCalled();
+  expect(out.finish).toHaveBeenCalledWith(
+   expect.anything(),expect.anything(),null,'ORIGINAL_SOLID'
+  );
+  expect(out.slot.active).toBe(false);
+ });
+ it('uses only the real registered paint impact on a terminal paint tick',()=>{
+  const out=oneActualProjectile(true,.45,.5);
+  expect(out.trail).not.toHaveBeenCalled();
+  expect(out.impact).toHaveBeenCalledTimes(1);
+  expect(out.slot.active).toBe(false);
+ });
+ it('retains actual midair source trail in unobstructed flight',()=>{
+  const out=oneActualProjectile(true,null,null);
+  expect(out.trail).toHaveBeenCalledTimes(1);
+  expect(out.finish).not.toHaveBeenCalled();
+  expect(out.slot.active).toBe(true);
+ });
+ it('leaves frozen non-SOURCE midair trail on a terminal tick unchanged',()=>{
+  const out=oneActualProjectile(false,.55,.5);
+  expect(out.trail).toHaveBeenCalledTimes(1);
+  expect(out.slot.active).toBe(false);
  });
 });
