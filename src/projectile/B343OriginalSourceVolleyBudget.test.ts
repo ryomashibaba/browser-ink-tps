@@ -1,8 +1,6 @@
 import {describe,it,expect,vi} from 'vitest';
 import {b371RealSourceMissionCue} from '../app/B371RealSourceMissionCue';
 import {ProjectileSystem} from './ProjectileSystem';
-import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
-import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {b343CanLaunchSourceVolley as allow,b343SourceShooterPracticeHref} from './B343OriginalSourceVolleyBudget';
@@ -256,65 +254,4 @@ describe('SOURCE trail paint stops at original contact',()=>{
   expect(out.trail).toHaveBeenCalledTimes(1);
   expect(out.slot.active).toBe(false);
  });
-});
-
-
-describe('native original SOURCE SUB collision precedence (real 60Hz methods)',()=>{
- const contact=(kind:'human'|'cpu',native:boolean,paintDist:number,solidDist:number)=>{
-  const human=kind==='human';
-  const subject=Object.create(
-   human?SubWeaponSystem.prototype:CpuKitSystem.prototype
-  ) as SubWeaponSystem|CpuKitSystem;
-  const observe=vi.fn();
-  const bomb={
-   active:true,landed:false,launchId:1,
-   subId:'pulse-bomb',team:Team.A,actorId:'A2',
-   position:new Vec3(),previousPosition:new Vec3(),
-   velocity:new Vec3(0,0,20),ttl:3,fuseSeconds:1,
-   entity:{setPosition:vi.fn()},
-   flightQueryTicks:0,paintCandidateTicks:0,
-   rapierCandidateTicks:0,dualCandidateTicks:0,
-   contactCandidates:null
-  };
-  Object.assign(subject,{
-   bombs:[bomb],delta:new Vec3(),
-   nativeSourceHumanSubBodyContactEnabled:human&&native,
-   nativeOriginalSourceCombatantSubContactEnabled:!human&&native,
-   onNativeExplosion:null,
-   physics:{castStageSegment:()=>({
-    solidId:'registered-original-cover',distance:solidDist,
-    point:new Vec3(0,0,solidDist)
-   })},
-   findNearestSurfaceHit:()=>({
-    distance:paintDist,worldPoint:new Vec3(0,0,paintDist),
-    surface:{id:'original-paint'}
-   }),
-   cpuAgents:{findNearestCombatHit:()=>null},
-   projectiles:{findNativeSourceHumanPhysicalHit:()=>null},
-   onContact:observe,onBombContact:observe
-  });
-  if(human)(subject as SubWeaponSystem).fixedUpdate(.05);
-  else (subject as unknown as {updateBombs:(dt:number)=>void})
-   .updateBombs(.05);
-  return observe.mock.calls[0] as unknown[]|undefined;
- };
- for(const kind of ['human','cpu'] as const){
-  it(kind+' SOURCE SUB stops on nearer registered original Rapier wall',()=>{
-   const args=contact(kind,true,.55,.5);
-   expect(args).toBeDefined();
-   expect((args![2] as Vec3).z).toBeCloseTo(.5,8);
-   if(kind==='human')expect(args![3]).toBe('RAPIER_STAGE_SOLID');
-  });
-  it(kind+' SOURCE SUB still contacts legitimate paint in front of wall',()=>{
-   const args=contact(kind,true,.45,.5);
-   expect(args).toBeDefined();
-   expect((args![2] as Vec3).z).toBeCloseTo(.45,8);
-   if(kind==='human')expect(args![3]).toBe('PAINT_SURFACE_SEGMENT');
-  });
-  it(kind+' legacy non-SOURCE retains historic 6cm paint priority',()=>{
-   const args=contact(kind,false,.55,.5);
-   expect(args).toBeDefined();
-   expect((args![2] as Vec3).z).toBeCloseTo(.55,8);
-  });
- }
 });

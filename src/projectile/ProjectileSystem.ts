@@ -24,12 +24,13 @@ import {
 } from '../weapons/WeaponCatalog';
 
 /**
- * Shared real 180s SOURCE contact order: only a paint plane physically
- * ahead of the nearest registered Rapier solid can win. T20 and manual
- * non-SOURCE QA retain their original 6cm paint-plane tolerance.
- * This selects an EXISTING hit; it creates no stage, actor, ink or score.
+ * Real SOURCE MAIN/CHARGER projectile hit order: physical original Rapier
+ * cover wins when nearer. Human/CPU thrown SUBs intentionally keep their
+ * tested 6cm near-coplanar paint-plane tolerance while actor/HP contact
+ * separately respects strict original cover. Frozen T20 stays unchanged.
+ * This reads existing hits only; no stage, actor, ink or score authority.
  */
-export function originalSourcePaintBeforeRapier(
+function originalSourcePaintBeforeRapier(
   paintHit:{readonly distance:number}|null,
   blockerHit:{readonly distance:number}|null,
   nativeSourcePhysical:boolean
