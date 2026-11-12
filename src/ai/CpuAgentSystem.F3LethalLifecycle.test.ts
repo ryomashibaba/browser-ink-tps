@@ -235,6 +235,40 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(bot.lifeState).toBe('SPLATTED');
     expect(system.sourceCommittedPaintAims.has('B1')).toBe(false);
   });
+  it('source main and kit sight reject non-rejoined or dead native CPU opponents',()=>{
+    const {system,bot}=fixture(true);
+    bot.role='PAINTER';bot.position.set(0,3,0);
+    bot.weaponId='splash-burst';
+    const enemy:any={
+      id:'A1',team:Team.A,position:new Vec3(3,3,0),
+      hp:100,lifeState:'ACTIVE',mobilityState:'GROUND'
+    };
+    system.bots.push(enemy);
+    system.b181OriginalCombatStageRay=vi.fn(()=>false);
+    system.b181CachedCombat=new Map();
+    system.b181NativeFrame=30;
+    system.b212NativeLeadEnabled=false;
+    system.b213SourceCounterfireEnabled=false;
+    system.b181ActualStageRays=0;
+    system.b181ActualSourceOcclusions=0;
+    system.b181VisibleSelections=0;
+    let rejoined=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
+      id==='A1'&&rejoined;
+    const aim=()=>system.chooseCombatTarget(
+      bot,Team.B,new Vec3(),false,1/60,true);
+    expect(aim()).toBeNull();
+    rejoined=true;expect(aim()).not.toBeNull();
+    enemy.hp=0;expect(aim()).toBeNull();
+    enemy.hp=100;enemy.lifeState='SPLATTED';
+    expect(aim()).toBeNull();
+    enemy.lifeState='ACTIVE';enemy.mobilityState='FIRST_DROP_FALL';
+    expect(aim()).toBeNull();
+    enemy.mobilityState='GROUND';rejoined=false;
+    expect(aim()).toBeNull();
+    rejoined=true;expect(aim()).not.toBeNull();
+  });
+
   it('keeps the frozen T20 late splat path and does not touch source feet', () => {
     const { system, bot, shot } = fixture(false);
     expect(system.applyProjectileHit(shot, 80, 'HUMAN')?.lethalHpZero)

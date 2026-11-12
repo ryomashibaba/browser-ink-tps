@@ -2564,6 +2564,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    throw Error('B454_ORIGINAL_RESEARCH_OPT_IN_REQUIRED');
   return this.b454Trace.snapshot();
  }
+ /** CPU main/kit sight uses the SAME actual-lifecycle + original
+  * physical-rejoin fact as traffic, without adding any stage/Actor power. */
+ isLiveRejoinedSourceCpu(id:string):boolean{
+  const bot=this.bots.find(b=>b.id===id);
+  return !!bot&&sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined);
+ }
  nativeCpuLifecycleFrames():B367NativeCpuState[]{
   return this.bots.map(b=>({
    id:b.id,

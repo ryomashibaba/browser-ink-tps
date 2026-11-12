@@ -131,6 +131,9 @@ export interface CpuQaSourceGoalAuthority {
   chooseSourceAllySupportInkTarget?(
     id:string,realFoot:Vec3,out:Vec3
   ):boolean;
+  /** Actual living SOURCE CPU's current original physical rejoin,
+   * never a historical landing from an earlier life. */
+  isLiveRejoinedSourceCpu?(id:string):boolean;
 }
 
 export interface CpuFireRequest {
@@ -2752,7 +2755,14 @@ export class CpuAgentSystem {
             ]}]:[]),
         ...this.bots.filter(enemy=>
           enemy.id!==bot.id&&enemy.team!==bot.team&&
-          enemy.lifeState==='ACTIVE'&&enemy.mobilityState==='GROUND')
+          enemy.lifeState==='ACTIVE'&&
+          Number.isFinite(enemy.hp)&&enemy.hp>0&&
+          enemy.mobilityState==='GROUND'&&
+          // SOURCE main weapon AND kit share the live physical-rejoin
+          // authority used by patrol; never target a dead or stale foot.
+          // Frozen non-SOURCE CPU decisions remain unchanged.
+          (!this.f3dSourceGoals?.isLiveRejoinedSourceCpu||
+           this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id)))
           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
             y:enemy.position.y+.68,z:enemy.position.z},
             // Actual native CPU hit spheres already used by projectile

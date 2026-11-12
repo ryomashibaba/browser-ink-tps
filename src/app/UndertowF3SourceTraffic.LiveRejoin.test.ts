@@ -92,6 +92,21 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   // route authorizer; historical B2 original-side state is irrelevant.
   enemy.team=own.team;expect(alive()).toBe(false);
  });
+ it('native weapon/kit sight reads current SOURCE HP life and rejoin',()=>{
+  const {traffic,bots,historical}=fixture();
+  const b1=bots[3]!;
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
+  expect(traffic.isLiveRejoinedSourceCpu('MISSING')).toBe(false);
+  b1.hp=0;expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(false);
+  b1.hp=100;b1.lifeState='SPLATTED';
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(false);
+  historical.delete('B1');b1.lifeState='ACTIVE';
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(false);
+  historical.add('B1');b1.mobilityState='FIRST_DROP_FALL';
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(false);
+  b1.mobilityState='GROUND';
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
+ });
  it('normal real source respawn must earn new physical rejoin',()=>{
   const {traffic,bots,historical}=fixture();
   bots[3]!.lifeState='SPLATTED';bots[3]!.hp=0;
