@@ -1005,6 +1005,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.realGoalRequests++;
      return true;
     }
+    // No genuine OWN retreat path was certified. Do not fall through to
+    // an aggressive player C order, enemy pursuit or forward patrol.
+    // Returning false makes CpuAgentSystem reset the native move target;
+    // the physical CPU stays under its ordinary Rapier authority and
+    // can continue real ink/HP recovery or defend using its weapon.
+    // Re-evaluate next tactical tick; never place a new waypoint/ink.
+    this.heldRequests++;
+    return false;
    }else this.originalSourceRecoveryIntent.delete(id);
   }else this.originalSourceRecoveryIntent.delete(id);
   // A pending true C-key teammate goal remains available once the

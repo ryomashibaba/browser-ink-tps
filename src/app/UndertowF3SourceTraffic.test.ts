@@ -96,6 +96,22 @@ describe('F3B playable 8-actor original source runtime',()=>{
   expect(goal.equals(recoveryFoot)).toBe(true);
   expect(fake.originalSourceRecoveryIntent.has('A1')).toBe(true);
   expect(fake.b471AllyOrder.goal.equals(commandedFoot)).toBe(true);
+  // An unavailable native retreat route must not silently resume
+  // player-C or ordinary attack patrol while the genuine CPU is wounded.
+  fake.nav.auditPath=()=>({
+   reachedTarget:false,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,pointCount:0,nativePathPoints:[]
+  });
+  const held=new Vec3(9,9,9);
+  expect(fake.chooseSourceGoal('A1',physical,held)).toBe(false);
+  expect(held.equals(new Vec3(9,9,9))).toBe(true);
+  expect(fake.originalSourceRecoveryIntent.has('A1')).toBe(true);
+  expect(fake.b471AllyOrder.goal.equals(commandedFoot)).toBe(true);
+  fake.nav.auditPath=(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,pointCount:2,
+   nativePathPoints:[from.clone(),to.clone()]
+  });
   // The existing 70%-HP hysteresis now clears intent before the
   // queued, still path-gated genuine C order is considered again.
   actor.hp=75;

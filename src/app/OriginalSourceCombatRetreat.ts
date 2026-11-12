@@ -88,12 +88,25 @@ export function rankOriginalSourceCombatRetreatGoals(x:OriginalSourceRetreatInpu
      !g.foot.every(Number.isFinite))return false;
   seen.add(g.index);
   const behind=(g.foot[2]-x.realFoot[2])*sign;
+  const meters=Math.hypot(
+   g.foot[0]-x.realFoot[0],g.foot[2]-x.realFoot[2]);
+  // Native original-source cover may be lateral even when no vetted
+  // backward patrol foot is reachable. Never chase a forward attack
+  // goal, cross the unbound middle, change physical layer, or invent a
+  // destination: only existing SOURCE feet reach the path authority.
   return g.foot[2]*sign>=33&&g.foot[1]>=2.7&&g.foot[1]<=5.25&&
-   Math.abs(g.foot[1]-x.realFoot[1])<=.30&&behind>=1.5&&behind<=18;
+   Math.abs(g.foot[1]-x.realFoot[1])<=.30&&
+   behind>=-.25&&behind<=18&&meters>=1.5&&meters<=18;
  }).sort((a,b)=>{
   const d=(g:OriginalSourceRetreatCandidate)=>
    Math.hypot(g.foot[0]-x.realFoot[0],g.foot[2]-x.realFoot[2]);
+  const backward=(g:OriginalSourceRetreatCandidate)=>
+   (g.foot[2]-x.realFoot[2])*sign>=1.5?0:1;
+  // Safe cover outranks exposed fire; if equally sheltered, retreat
+  // backward before laterally. Physical Recast+Rapier approval stays
+  // in the caller, never inferred from sorting or nearest distance.
   return Number(a.exposedToRealEnemy===true)-
-   Number(b.exposedToRealEnemy===true)||d(a)-d(b)||a.index-b.index;
+   Number(b.exposedToRealEnemy===true)||
+   backward(a)-backward(b)||d(a)-d(b)||a.index-b.index;
  }).map(g=>g.index);
 }

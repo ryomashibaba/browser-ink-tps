@@ -66,6 +66,26 @@ describe('F3 original SOURCE low-HP survival goal preference',()=>{
   expect(rank({...x,source:[25,17,26,1]})).toEqual([]);
   expect(rank({...x,hp:75,recoveringFromRealDamage:true})).toEqual([]);
  });
+ it('uses previously vetted sideways OWN cover when backward cover is absent',()=>{
+  const x={...genuine(),originalCandidates:[
+   {index:0,foot:[0,3,47] as const,actualOwnOriginalPaintCell:true,
+    exposedToRealEnemy:true},
+   {index:1,foot:[3,3,42] as const,actualOwnOriginalPaintCell:true,
+    exposedToRealEnemy:false},
+   {index:2,foot:[4,3,42] as const,actualOwnOriginalPaintCell:false},
+   {index:3,foot:[0,3,38] as const,actualOwnOriginalPaintCell:true},
+   {index:4,foot:[0,4,42] as const,actualOwnOriginalPaintCell:true},
+   {index:5,foot:[20,3,42] as const,actualOwnOriginalPaintCell:true}
+  ]};
+  expect(rank(x)).toEqual([1,0]);
+  expect(rank({...x,originalCandidates:[
+   {...x.originalCandidates[0]!,exposedToRealEnemy:false},
+   x.originalCandidates[1]!
+  ]})).toEqual([0,1]);
+  expect(rank({...x,team:'B',realFoot:[0,3,-42],
+   originalCandidates:[{index:6,foot:[-3,3,-42] as const,
+    actualOwnOriginalPaintCell:true}]})).toEqual([6]);
+ });
  it('a death, counterfeit source, detached CPU or invented ink cannot hold',()=>{
   for(const patch of [
    {hp:0},{source:[25,17,26,1] as const},
