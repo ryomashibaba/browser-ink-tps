@@ -1,5 +1,6 @@
-/** B345: Prevent idle -0.5s negative shooter cooldown from
- * producing a first-press burst in explicit frozen-source QA only. */
+/** B345: Bound idle negative weapon cooldown on the first real
+ * SHOOTER/DUALIES press in opt-in frozen or canonical SOURCE play.
+ * Preserve additive held-fire cadence and T20 without changing physics. */
 export function b345BoundOpeningCooldown(cooldown:number,dt:number):number{
  if(!Number.isFinite(cooldown)||!Number.isFinite(dt)||dt<=0||dt>.1)
   throw Error('B345_INVALID_NATIVE_STEP');

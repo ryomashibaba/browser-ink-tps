@@ -492,11 +492,14 @@ export class ProjectileSystem {
     const fallingFire = !fireHeld && this.wasFireHeld;
 
     this.fireCooldown = Math.max(-0.5, this.fireCooldown - dt);
-    // B345 explicit genuine SOURCE only, SHOOTER initial press only.
-    // B344 real 12-tick samples were [7,2,2,2,2] due to idle -0.5s
-    // debt being added to the existing projectile fire interval.
+    // Only the approved original-SOURCE firing-cadence gate.
+    // Both SHOOTER and DUALIES add their interval to the countdown;
+    // idle -0.5s debt otherwise creates a false first-press volley flood.
+    // Preserve genuine 60 Hz cadence, all paid ink/projectiles and
+    // post-roll DUALIES focus. Other weapons and frozen T20 unchanged.
     if(this.b345SourceShooterOpeningEnabled&&
-       profile.weaponClass==='SHOOTER'&&risingFire&&
+       (profile.weaponClass==='SHOOTER'||
+        profile.weaponClass==='DUALIES')&&risingFire&&
        playerWeaponEnabled){
       const bounded=b345BoundOpeningCooldown(this.fireCooldown,dt);
       if(bounded>this.fireCooldown)this.b345RealOpeningClamps++;
