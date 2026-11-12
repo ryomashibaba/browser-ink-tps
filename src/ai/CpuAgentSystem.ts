@@ -2401,7 +2401,8 @@ export class CpuAgentSystem {
 
     if (bot.weaponChargeSeconds + 1e-6 < profile.chargeSeconds) return;
 
-    if (this.queueCpuWeaponRequest(bot, target, 1)) {
+    if (this.queueCpuWeaponRequest(
+      bot,target,1,'PROJECTILE',undefined,turfShot)) {
       if (turfShot) this.recordQaSourceTurfShot(bot);
       bot.fireRemaining = profile.fireIntervalSeconds;
     } else {
@@ -2425,7 +2426,8 @@ export class CpuAgentSystem {
       }
       if (bot.weaponBurstCooldown > 0) return;
 
-      if (this.queueCpuWeaponRequest(bot, target, 1)) {
+      if (this.queueCpuWeaponRequest(
+      bot,target,1,'PROJECTILE',undefined,turfShot)) {
         if (turfShot) this.recordQaSourceTurfShot(bot);
         bot.weaponBurstShotsRemaining -= 1;
         bot.weaponBurstCooldown = profile.burstIntervalSeconds;

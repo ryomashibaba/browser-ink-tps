@@ -13,7 +13,7 @@ function fixture(originalF3: boolean) {
     hp: 50, lifeState: 'ACTIVE', mobilityState: 'GROUND',
     agent: { id: 'actual-recast-agent' }, entity: { enabled: true },
     guardEntity: { enabled: false }, weaponGuarding: false,
-    weaponId: 'splash-burst',
+    weaponId: 'pulse-sprayer',
     specialPoints: 0, subCooldownSeconds: 0,
     specialDecisionCooldownSeconds: 0,
     lethalHumanDirect: false, b213ActualAttackerId: null,
@@ -238,7 +238,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
   it('source main and kit sight reject non-rejoined or dead native CPU opponents',()=>{
     const {system,bot}=fixture(true);
     bot.role='PAINTER';bot.position.set(0,3,0);
-    bot.weaponId='splash-burst';
+    bot.weaponId='pulse-sprayer';
     const enemy:any={
       id:'A1',team:Team.A,position:new Vec3(3,3,0),
       hp:100,lifeState:'ACTIVE',mobilityState:'GROUND'
