@@ -137,9 +137,12 @@ export class UndertowPhase14QSharedActorCollision{
     if(!actual||![foot.x,foot.y,foot.z].every(Number.isFinite)||
        Math.hypot(actual.x-foot.x,actual.y-foot.y,actual.z-foot.z)>1e-5)
       return null;
-    const hit=this.physics.castStageSegment(
-      new Vec3(foot.x,foot.y+.65,foot.z),
-      new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    // A true HUMAN/CPU capsule stands on registered GRATE even when
+    // ordinary ink bullets pass through it. Never treat a projectile ray
+    // to a different slab below as the actor's resource-supporting foot.
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const hit=this.physics.castCharacterFootSupport(
+      new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
     return hit&&Math.abs(hit.point.y-foot.y)<=.25&&
       this.stage.solids.some(s=>s.id===hit.solidId)?hit:null;
   }

@@ -7,6 +7,7 @@ import {SurfaceFlags,Team} from '../ink/types';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition} from '../stage/StageDefinition';
 import {b178SampleRegisteredSourceFoot} from '../ai/B178OriginalSourceInkResources';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 
 /** In real SOURCE combat a wounded CPU may choose only OWN ink carried
  * by its actual registered original Rapier support. Nearest optical ink
@@ -15,7 +16,7 @@ import {b178SampleRegisteredSourceFoot} from '../ai/B178OriginalSourceInkResourc
 export function originalSourceRegisteredOwnFoot(
  ink:GameplayInkSystem,
  stage:StageDefinition,
- physics:Pick<RapierStagePhysics,'castStageSegment'>,
+ physics:Pick<RapierStagePhysics,'castCharacterFootSupport'>,
  foot:Vec3,
  team:Team.A|Team.B
 ):boolean{
@@ -24,9 +25,11 @@ export function originalSourceRegisteredOwnFoot(
     stage.navigationLinks?.length!==26||
     stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0)||
     ![foot.x,foot.y,foot.z].every(Number.isFinite))return false;
- const hit=physics.castStageSegment(
-  new Vec3(foot.x,foot.y+.65,foot.z),
-  new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+ // Use the same registered HUMAN support as the real CPU ink economy.
+ // A projectile ray passes a GRATE and may falsely read OWN ink below.
+ const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+ const hit=physics.castCharacterFootSupport(
+  new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
  if(!hit||Math.abs(hit.point.y-foot.y)>.25||
     !stage.solids.some(s=>s.id===hit.solidId))return false;
  const sample=b178SampleRegisteredSourceFoot(

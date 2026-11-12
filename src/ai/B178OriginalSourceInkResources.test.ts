@@ -5,6 +5,8 @@ import {defineTestSurfaces} from '../stage/TestStage';
 import {undertowT21dConnectivityQaStage} from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {UndertowPhase14QSharedActorCollision} from '../stage/undertow/UndertowPhase14QSharedActorCollision';
 import {beforeAll,describe,it,expect} from 'vitest';
+import {rasterizeStageFootprint} from '../stage/StageFootprint';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
 import {CpuAgentSystem} from './CpuAgentSystem';
 import {originalSourceRegisteredOwnFoot} from '../app/OriginalSourceCombatRetreat';
@@ -66,6 +68,58 @@ describe('B178 actual original non-scoring ink resource policy',()=>{
   expect(stage.solids).toHaveLength(25);
   expect(stage.paintSurfaces).toHaveLength(17);
   expect(stage.navigationLinks).toHaveLength(26);
+ });
+ it('uses real HUMAN collider support on both registered GRATEs, never bullet-through lower ink',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const inkSystem=new GameplayInkSystem();
+  defineTestSurfaces(inkSystem,stage);
+  const collision=new UndertowPhase14QSharedActorCollision(physics,stage,true);
+  try{
+   const grates=stage.solids.filter(s=>s.collisionBehavior==='GRATE');
+   expect(grates).toHaveLength(2);
+   for(const grate of grates){
+    const fp=grate.footprint!;
+    const cells=rasterizeStageFootprint(grate.size[0],grate.size[2],fp);
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const supportedFoot=cells.rectangles.map(cell=>new Vec3(
+     grate.center[0]-grate.size[0]/2+cell.centerU,
+     grate.center[1]+grate.size[1]/2,
+     grate.center[2]-grate.size[2]/2+cell.centerV
+    )).find(foot=>physics.castCharacterFootSupport(
+     new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN')
+     ?.solidId===grate.id);
+    expect(supportedFoot,'existing registered GRATE must have a genuine HUMAN hit')
+     .toBeDefined();
+    const foot=supportedFoot!;
+    expect(physics.castStageSegment(
+     new Vec3(foot.x,foot.y+.65,foot.z),
+     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile')
+     ?.solidId).not.toBe(grate.id);
+    collision.syncRealCpuFoot('A1',foot);
+    const support=collision.sourceFootSupport('A1',foot);
+    expect(support?.solidId).toBe(grate.id);
+    expect(b178SampleRegisteredSourceFoot(
+     inkSystem,stage.paintSurfaces,support)).toBeNull();
+    expect(originalSourceRegisteredOwnFoot(
+     inkSystem,stage,physics,foot,Team.A)).toBe(false);
+    expect(originalSourceRegisteredOwnFoot(
+     inkSystem,stage,physics,foot,Team.B)).toBe(false);
+    // A CPU hovering 30cm over the same supported GRATE cannot earn
+    // native grounded OWN/ENEMY resource contact.
+    const airborne=foot.clone().add(new Vec3(0,.30,0));
+    collision.syncRealCpuFoot('A1',airborne);
+    expect(collision.sourceFootSupport('A1',airborne)).toBeNull();
+    collision.removeRealCpuFoot('A1');
+   }
+   expect(stage.solids).toHaveLength(25);
+   expect(stage.paintSurfaces).toHaveLength(17);
+   expect(stage.navigationLinks).toHaveLength(26);
+   expect(stage.paintSurfaces.filter(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+    .toHaveLength(0);
+  }finally{
+   collision.dispose();physics.world.free();
+  }
  });
  it.each(['positive-z','negative-z'])(
   'reads the registered %s Rapier ramp cell instead of neighboring OWN ink',
