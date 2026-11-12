@@ -23,6 +23,23 @@ import {
   weaponProfile
 } from '../weapons/WeaponCatalog';
 
+/**
+ * Shared real 180s SOURCE contact order: only a paint plane physically
+ * ahead of the nearest registered Rapier solid can win. T20 and manual
+ * non-SOURCE QA retain their original 6cm paint-plane tolerance.
+ * This selects an EXISTING hit; it creates no stage, actor, ink or score.
+ */
+export function originalSourcePaintBeforeRapier(
+  paintHit:{readonly distance:number}|null,
+  blockerHit:{readonly distance:number}|null,
+  nativeSourcePhysical:boolean
+):boolean{
+  return !!paintHit&&(!blockerHit||
+    paintHit.distance<=blockerHit.distance+
+      (nativeSourcePhysical?0:
+        GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters));
+}
+
 interface ProjectileSlot {
   active: boolean;
   position: Vec3;
@@ -671,11 +688,8 @@ export class ProjectileSystem {
 
       // SOURCE pellets respect the nearest registered Rapier blocker.
       // The legacy near-coplanar paint tolerance remains outside SOURCE.
-      const paintWins = paintHit && (
-        !blockerHit ||
-        paintHit.distance <= blockerHit.distance +
-          (this.nativeSourceHumanPhysicalMode ? 0 :
-            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+      const paintWins=originalSourcePaintBeforeRapier(
+        paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
       );
       // In genuine SOURCE combat, actor contact never passes an earlier
       // registered Rapier solid; near-coplanar paint priority is separate.
@@ -1329,11 +1343,8 @@ export class ProjectileSystem {
     const cpuHit = this.cpuAgents.findNearestCombatHit(origin, end, team);
 
     // SOURCE human charger paint never passes a nearer original wall.
-    const paintWins = paintHit && (
-      !blockerHit ||
-      paintHit.distance <= blockerHit.distance +
-        (this.nativeSourceHumanPhysicalMode ? 0 :
-          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+    const paintWins=originalSourcePaintBeforeRapier(
+      paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
     // independent of the small paint/solid visual priority tolerance.
@@ -1963,11 +1974,8 @@ export class ProjectileSystem {
       : null;
 
     // SOURCE CPU charger paint obeys the same physical wall-first gate.
-    const paintWins = paintHit && (
-      !blockerHit ||
-      paintHit.distance <= blockerHit.distance +
-        (this.nativeSourceHumanPhysicalMode ? 0 :
-          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+    const paintWins=originalSourcePaintBeforeRapier(
+      paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
     // independent of the small paint/solid visual priority tolerance.

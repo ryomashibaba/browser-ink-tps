@@ -9,6 +9,7 @@ import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import {originalSourcePaintBeforeRapier} from '../projectile/ProjectileSystem';
 import {
   subWeaponProfile,
   type SubWeaponId,
@@ -225,11 +226,8 @@ export class SubWeaponSystem {
 
       // A real SOURCE SUB cannot land on paint beyond nearer original
       // Rapier cover. Non-SOURCE QA/T20 keeps its legacy 6cm tolerance.
-      const paintWins = paintHit && (
-        !blockerHit ||
-        paintHit.distance <= blockerHit.distance +
-          (this.nativeSourceHumanSubBodyContactEnabled?0:
-            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+      const paintWins=originalSourcePaintBeforeRapier(
+        paintHit,blockerHit,this.nativeSourceHumanSubBodyContactEnabled
       );
 
       // The true SOURCE human SUB and true SOURCE CPU SUB must obey the

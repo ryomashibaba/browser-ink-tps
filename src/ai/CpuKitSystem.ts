@@ -18,7 +18,7 @@ import {
   Team
 } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
-import type { ProjectileSystem } from '../projectile/ProjectileSystem';
+import {originalSourcePaintBeforeRapier, type ProjectileSystem} from '../projectile/ProjectileSystem';
 import {
   subWeaponProfile,
   type SpecialWeaponId,
@@ -247,11 +247,8 @@ export class CpuKitSystem {
       );
       // Physical SOURCE CPU SUBs share human/main collision precedence;
       // older manual kit QA retains its original paint epsilon.
-      const paintWins = paintHit && (
-        !blockerHit ||
-        paintHit.distance <= blockerHit.distance +
-          (this.nativeOriginalSourceCombatantSubContactEnabled?0:
-            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+      const paintWins=originalSourcePaintBeforeRapier(
+        paintHit,blockerHit,this.nativeOriginalSourceCombatantSubContactEnabled
       );
 
       // A real thrown SUB has finite diameter and may hit an ACTUAL
