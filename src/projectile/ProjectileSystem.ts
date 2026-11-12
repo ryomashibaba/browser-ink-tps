@@ -689,7 +689,7 @@ export class ProjectileSystem {
 
       // SOURCE pellets respect the nearest registered Rapier blocker.
       // The legacy near-coplanar paint tolerance remains outside SOURCE.
-      const paintWins=originalSourcePaintBeforeRapier(
+      const paintWins=paintHit&&originalSourcePaintBeforeRapier(
         paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
       );
       // In genuine SOURCE combat, actor contact never passes an earlier
@@ -1344,7 +1344,7 @@ export class ProjectileSystem {
     const cpuHit = this.cpuAgents.findNearestCombatHit(origin, end, team);
 
     // SOURCE human charger paint never passes a nearer original wall.
-    const paintWins=originalSourcePaintBeforeRapier(
+    const paintWins=paintHit&&originalSourcePaintBeforeRapier(
       paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
@@ -1975,7 +1975,7 @@ export class ProjectileSystem {
       : null;
 
     // SOURCE CPU charger paint obeys the same physical wall-first gate.
-    const paintWins=originalSourcePaintBeforeRapier(
+    const paintWins=paintHit&&originalSourcePaintBeforeRapier(
       paintHit,blockerHit,!!this.nativeSourceHumanPhysicalMode
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
