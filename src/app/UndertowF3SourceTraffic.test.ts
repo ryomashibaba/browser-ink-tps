@@ -67,6 +67,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
    traffic.physics=physics;
    traffic.sourceEndpointProbes=0;
    expect(traffic.hasSourceFootSupport(foot)).toBe(true);
+   expect(traffic.sourceNativeCharacterFootHit(foot)?.solidId).toBe(grate.id);
+   // A lower solid cannot count as CPU ground contact from 30 cm above it.
+   expect(traffic.sourceNativeCharacterFootHit(
+    new Vec3(foot.x,foot.y+.30,foot.z))).toBeNull();
    expect(traffic.hasSourceFootSupport(
     new Vec3(Number.NaN,foot.y,foot.z))).toBe(false);
    expect(traffic.sourceEndpointProbes).toBe(2);
@@ -115,6 +119,9 @@ describe('F3B playable 8-actor original source runtime',()=>{
   fake.physics={
    castStageSegment:(from:Vec3)=>({
     solidId:backing,point:new Vec3(from.x,from.y-.65,from.z)
+   }),
+   castCharacterFootSupport:(center:Vec3,offset:number)=>({
+    solidId:backing,point:new Vec3(center.x,center.y-offset,center.z)
    })
   };
   fake.sourceInk={

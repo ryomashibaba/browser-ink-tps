@@ -590,9 +590,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      gate.inspectedProposals++;
      this.b441ProposalsChecked++;
      const goal=new Vec3(...proposal.point);
-     const ray=this.physics.castStageSegment(
-      new Vec3(goal.x,goal.y+.65,goal.z),
-      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+     const ray=this.sourceNativeCharacterFootHit(goal);
      const flat=ray?inspectB130OriginalFlatSource({
       nativeTick:0,
       actualRapierBody:[goal.x,goal.y+
@@ -641,21 +639,26 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
  }
 
- /** Rapier original-source endpoint only; never certifies a KCC route. */
- private hasSourceFootSupport(foot:Readonly<{x:number;y:number;z:number}>):boolean{
-  this.sourceEndpointProbes++;
-  // Old disposable CI app source predates W10-B3. Without a supplied
-  // Rapier authority, refuse every goal; never silently accept a Nav point.
+ /** SOURCE-only observed registered HUMAN floor. Bullets passing through
+  * a genuine GRATE are not evidence of a hole under a CPU. Never invents
+  * a collider, authorizes a route or changes the original stage. */
+ private sourceNativeCharacterFootHit(
+  foot:Readonly<{x:number;y:number;z:number}>
+ ){
   if(!this.physics||![foot.x,foot.y,foot.z].every(Number.isFinite))
-   return false;
-  // Original registered GRATE supports HUMAN KCC but passes ordinary
-  // ink projectiles. CPU path checks must query the character collision
-  // authority, not mistake a bullet's passage for a hole in the floor.
+   return null;
   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const hit=this.physics.castCharacterFootSupport(
    new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
-  return !!hit&&Math.abs(hit.point.y-foot.y)<=.25&&
-   this.stage.solids.some(s=>s.id===hit.solidId);
+  return hit&&Math.abs(hit.point.y-foot.y)<=.25&&
+   this.stage.solids.some(s=>s.id===hit.solidId)?hit:null;
+ }
+
+ /** True registered Rapier support at a SOURCE endpoint, not a whole
+  * Recast path/capsule clearance authorization. */
+ private hasSourceFootSupport(foot:Readonly<{x:number;y:number;z:number}>):boolean{
+  this.sourceEndpointProbes++;
+  return this.sourceNativeCharacterFootHit(foot)!==null;
  }
 
  /** W10-B4: fail closed on any unsupported intermediate Recast waypoint.
@@ -719,8 +722,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(this.b137NativeTick-this.b151LastSupportInkProbeTick<8)return false;
   this.b151LastSupportInkProbeTick=this.b137NativeTick;
   const hit=(p:Readonly<{x:number;y:number;z:number}>)=>
-   this.physics!.castStageSegment(new Vec3(p.x,p.y+.65,p.z),
-    new Vec3(p.x,p.y-.65,p.z),'ink-projectile');
+   this.sourceNativeCharacterFootHit(p);
   const flat=(p:Vec3,id:string)=>{
    const f=inspectB130OriginalFlatSource({
     nativeTick:this.b137NativeTick,
@@ -1355,9 +1357,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      });
     if(retain){
      const sourceFlat=(v:Vec3)=>{
-      const hit=this.physics!.castStageSegment(
-       new Vec3(v.x,v.y+.65,v.z),
-       new Vec3(v.x,v.y-.65,v.z),'ink-projectile');
+      const hit=this.sourceNativeCharacterFootHit(v);
       return hit?inspectB130OriginalFlatSource({
        nativeTick:this.b137NativeTick,
        actualRapierBody:[v.x,v.y+
@@ -1403,9 +1403,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        realCpuFoot:realFoot,realHumanFoot:human
       })&&this.physics){
     // Both exact physical endpoint source solids, NOT a paint decal.
-    const nativeFootHit=(p:Vec3)=>this.physics!.castStageSegment(
-     new Vec3(p.x,p.y+.65,p.z),
-     new Vec3(p.x,p.y-.65,p.z),'ink-projectile');
+    const nativeFootHit=(p:Vec3)=>this.sourceNativeCharacterFootHit(p);
     const botHit=nativeFootHit(realFoot),humanHit=nativeFootHit(human);
     if(botHit&&humanHit){
      const originalFlat=(foot:Vec3,id:string)=>inspectB130OriginalFlatSource({
@@ -1492,9 +1490,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     for(const p of proposals){
      report.inspectedOriginalGoals++;
      const goal=new Vec3(...p.point);
-     const source=this.physics.castStageSegment(
-      new Vec3(goal.x,goal.y+.65,goal.z),
-      new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+     const source=this.sourceNativeCharacterFootHit(goal);
      const flat=source?inspectB130OriginalFlatSource({
       nativeTick:this.b137NativeTick,
       actualRapierBody:[goal.x,goal.y+
@@ -1586,9 +1582,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        Math.hypot(p.point[0]-goal.x,p.point[1]-goal.y,
         p.point[2]-goal.z)<.001);
       if(!proposal||goal.z<33)continue;
-      const hit=this.physics.castStageSegment(
-       new Vec3(goal.x,goal.y+.65,goal.z),
-       new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+      const hit=this.sourceNativeCharacterFootHit(goal);
       const flat=hit?inspectB130OriginalFlatSource({
        nativeTick:this.b137NativeTick,
        actualRapierBody:[goal.x,goal.y+
@@ -1638,9 +1632,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       (id==='B2'||id==='B4')&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
     const initial=this.b446LiveFootProbes.get(id);
-    const hit=this.physics.castStageSegment(
-     new Vec3(realFoot.x,realFoot.y+.65,realFoot.z),
-     new Vec3(realFoot.x,realFoot.y-.65,realFoot.z),'ink-projectile');
+    const hit=this.sourceNativeCharacterFootHit(realFoot);
     if(b467MayRetryOriginalBFrontFromRealFoot(this.stage,{
       id,nativeTick:this.b137NativeTick,
       firstDeniedNativeTick:initial?.nativeTick??null,
@@ -1701,9 +1693,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
           goal.z>-33||!this.hasSourceFootSupport(goal)){
         this.b467LiveRejectedCandidates++;continue;
        }
-       const goalHit=this.physics.castStageSegment(
-        new Vec3(goal.x,goal.y+.65,goal.z),
-        new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+       const goalHit=this.sourceNativeCharacterFootHit(goal);
        const sourceFlat=goalHit?inspectB130OriginalFlatSource({
         nativeTick:this.b137NativeTick,
         actualRapierBody:[goal.x,goal.y+
@@ -1752,10 +1742,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(this.sourceInk&&this.physics&&
       (id==='A2'||id==='A3'||id==='B1'||id==='B3')&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
-    const realHit=this.physics.castStageSegment(
-     new Vec3(realFoot.x,realFoot.y+.65,realFoot.z),
-     new Vec3(realFoot.x,realFoot.y-.65,realFoot.z),
-     'ink-projectile');
+    const realHit=this.sourceNativeCharacterFootHit(realFoot);
     const nativeSide=bot.team===Team.A?'A':'B';
     if(b470MayAuditRealInkRankedSameSideFront(this.stage,{
       id,team:nativeSide,nativeTick:this.b137NativeTick,
@@ -1792,9 +1779,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        // destination. Never add an unaudited Recast waypoint as terrain.
        if(candidate.sourceSolidId!==realHit!.solidId||
           fronts.some(p=>Math.hypot(p.x-goal.x,p.z-goal.z)<2))continue;
-       const goalHit=this.physics.castStageSegment(
-        new Vec3(goal.x,goal.y+.65,goal.z),
-        new Vec3(goal.x,goal.y-.65,goal.z),'ink-projectile');
+       const goalHit=this.sourceNativeCharacterFootHit(goal);
        const goalFlat=goalHit?inspectB130OriginalFlatSource({
         nativeTick:this.b137NativeTick,
         actualRapierBody:[goal.x,goal.y+
@@ -2358,9 +2343,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    for(const id of ['B2','B4'] as const){
     const bot=this.bots.find(b=>b.id===id)!;
     const foot=bot.position;
-    const ray=this.physics.castStageSegment(
-     new Vec3(foot.x,foot.y+.65,foot.z),
-     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    const ray=this.sourceNativeCharacterFootHit(foot);
     this.b454Trace.append({tick:frame,id,
      foot:[foot.x,foot.y,foot.z],
      mode:bot.mobilityState,life:bot.lifeState??'UNKNOWN',
@@ -2379,9 +2362,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const a1=this.bots.find(b=>b.id==='A1');
    if(a1){
     const foot=a1.position,g=this.b471AllyOrder?.goal;
-    const ray=this.physics.castStageSegment(
-     new Vec3(foot.x,foot.y+.65,foot.z),
-     new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+    const ray=this.sourceNativeCharacterFootHit(foot);
     this.b484A1Trace.observe({
      tick:frame,foot:[foot.x,foot.y,foot.z],mode:a1.mobilityState,
      rejoined:sourceNativeLiveRejoinedCpu(a1,this.physicallyRejoined),
