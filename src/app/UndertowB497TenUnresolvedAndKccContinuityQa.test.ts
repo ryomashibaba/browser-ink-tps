@@ -387,7 +387,7 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
     largestOriginalYVsProjectedY:r6(maxInterpolationYAdjustment),
     projectedRefusalCauses:uniqueReasons};
   }
-  const report={schema:'B496_TRUE_B450_REJECTED_ORIGINAL_ROUTE_Y_REPROJECTION_V1',
+  const report={schema:'B497_TRUE_ORIGINAL_TEN_AND_FIFTY_STATIC_CPU_KCC_SPEED_V1',
    originalSource:'25/17/26/0',sourceEvidenceRunId:43140584988,
    originalTrueRejectedRouteCount:rawRejectedCount,
    allSixtyOriginalRouteDiagnostics:allSixtyRoutes,
@@ -429,7 +429,7 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
   if(process.env.T21_B497_REPORT_PATH)
    writeFileSync(process.env.T21_B497_REPORT_PATH,
     JSON.stringify(report,null,2)+'\n');
-  console.log('B496_NATIVE_TRUE_REJECTION_Y_DIFFERENTIAL',
+  console.log('B497_NATIVE_TEN_AND_FIFTY_SPEED_BOUNDED_KCC',
    JSON.stringify({schema:report.schema,firstPointMatches,
     tenUnresolved:tenUnresolved.map(x=>({
      id:(x as {id:string}).id,goalIndex:(x as {goalIndex:number}).goalIndex,

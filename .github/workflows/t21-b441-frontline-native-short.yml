@@ -273,7 +273,7 @@ jobs:
           T21_B497_REPORT_PATH: /tmp/t21-b497-report.json
         run: |
           npx vitest run src/app/UndertowB497TenUnresolvedAndKccContinuityQa.test.ts
-          node -e "const d=require('/tmp/t21-b497-report.json');if(d.originalSource!=='25/17/26/0'||d.tenUnresolvedOriginalRoutes.length!==10||d.totalIsolatedStaticKccPathsTested!==50||d.originalCrossTeamRoutesAuthorized!==0)process.exit(1);console.log('B497_REPRODUCIBLE_SAFE_DIAGNOSTIC_ONLY')"
+          node -e "const d=require('/tmp/t21-b497-report.json');if(d.schema!=='B497_TRUE_ORIGINAL_TEN_AND_FIFTY_STATIC_CPU_KCC_SPEED_V1'||d.originalSource!=='25/17/26/0'||d.tenUnresolvedOriginalRoutes.length!==10||d.totalIsolatedStaticKccPathsTested!==50||d.speedLimitedKccPathsDiagnosed!==50||d.speedLimitedKccWithinQaOnlyThreshold+d.speedLimitedKccHeld!==50||d.originalCrossTeamRoutesAuthorized!==0)process.exit(1);console.log('B497_REPRODUCIBLE_SAFE_DIAGNOSTIC_ONLY')"
       - name: Archive B497 all sixty source routes and real CPU-size KCC diagnostics
         if: ${{ contains(github.event.head_commit.message, '[b497-path-kcc]') && always() }}
         uses: actions/upload-artifact@v4
