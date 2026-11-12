@@ -32,6 +32,76 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
+ it('prioritizes physically registered OWN retreat over an already approved A1 C-key order, then resumes the order',()=>{
+  // Isolated source goal-selection policy fixture: native feet and owner
+  // cells are controlled here. It is NOT a claimed real-Chromium arrival.
+  const original=undertowT21dConnectivityQaStage();
+  const backing='UndertowT21D:right-low-route-ramp-positive-z';
+  const paint=original.paintSurfaces.find(s=>s.backingSolidId===backing)!;
+  expect(paint).toBeDefined();
+  const physical=new Vec3(0,3,42);
+  const recoveryFoot=new Vec3(0,3,47);
+  const commandedFoot=new Vec3(0,3,35);
+  const actor={id:'A1',team:Team.A,hp:25,lifeState:'ACTIVE',
+   mobilityState:'GROUND',position:physical,agent:{}};
+  const fake:any=Object.create(UndertowF3SourceTraffic.prototype);
+  fake.freeCombat=true;
+  fake.physicallyRejoined=new Set(['A1']);
+  fake.patrolGoals=new Map([['A1',[recoveryFoot]]]);
+  fake.bots=[actor];
+  fake.b137NativeTick=1100;
+  fake.b171AllySyncPracticeRunning=true;
+  fake.b471AllyOrder={
+   requestedTick:1090,goal:commandedFoot,realAllyFootAtApproval:physical
+  };
+  fake.b471OrderStatus='MOVING';
+  fake.b471SourceDecision='ORIGINAL_GOAL_GRANTED';
+  fake.originalSourceRecoveryIntent=new Set();
+  fake.b443OriginalGoalLocks=new Map();
+  fake.b442LastApprovedFront=new Map();
+  fake.enableB192HumanCombat=true;
+  fake.enableOriginalSourceBattleRecovery=true;
+  fake.stage=original;
+  fake.realGoalRequests=0;
+  fake.hasSourceFootSupport=()=>true;
+  fake.hasSourceSupportedRoute=()=>true;
+  fake.physics={
+   castStageSegment:(from:Vec3)=>({
+    solidId:backing,point:new Vec3(from.x,from.y-.65,from.z)
+   })
+  };
+  fake.sourceInk={
+   sampleWorld:(point:Vec3,_radius:number,_need:number,_exclude:number,
+    filter:(surface:unknown)=>boolean)=>{
+    const surface={
+     id:paint.id,baseFlags:paint.flags,flags:paint.flags,
+     isScoreable:false
+    };
+    if(filter&&!filter(surface))return null;
+    return {owner:point.z>=46?Team.A:Team.Neutral,
+     flags:paint.flags,surface};
+   }
+  };
+  fake.nav={
+   closestPoint:(p:Vec3)=>p,
+   auditPath:(from:Vec3,to:Vec3)=>({
+    reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,pointCount:2,
+    nativePathPoints:[from.clone(),to.clone()]
+   })
+  };
+  const goal=new Vec3();
+  expect(fake.chooseSourceGoal('A1',physical,goal)).toBe(true);
+  expect(goal.equals(recoveryFoot)).toBe(true);
+  expect(fake.originalSourceRecoveryIntent.has('A1')).toBe(true);
+  expect(fake.b471AllyOrder.goal.equals(commandedFoot)).toBe(true);
+  // The existing 70%-HP hysteresis now clears intent before the
+  // queued, still path-gated genuine C order is considered again.
+  actor.hp=75;
+  expect(fake.chooseSourceGoal('A1',physical,goal)).toBe(true);
+  expect(goal.equals(commandedFoot)).toBe(true);
+  expect(fake.originalSourceRecoveryIntent.has('A1')).toBe(false);
+ });
  for(const humanWalkTicks of [0,28,60,120,180,240])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{

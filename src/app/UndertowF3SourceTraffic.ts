@@ -897,97 +897,6 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!candidates?.length){this.heldRequests++;return false;}
   const sign=bot.team===Team.A?1:-1;
-  // B471: PLAYER-C-key native co-op. Rank ALREADY-vetted original
-  // A1 SOURCE patrol feet by true OwnerGrid ink; never invent a point.
-  // Request goal from real A1 foot ONLY after original Recast + Rapier
-  // certify both endpoints and every <=0.30m intermediate source point.
-  const playerOrder=this.b471AllyOrder;
-  if(id==='A1'&&playerOrder){
-   if(this.b137NativeTick-playerOrder.requestedTick>900||
-      bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
-      !this.physicallyRejoined.has('A1')||
-      !this.b171AllySyncPracticeRunning){
-    this.b471AllyOrder=null;this.b471OrderStatus='EXPIRED';
-    this.b471SourceDecision='SOURCE_ORDER_EXPIRED';
-   }else if(this.sourceInk&&this.physics){
-    if(!playerOrder.goal){
-     // The genuine player-directed A1 also avoids crowding A2/A3's
-     // current physically observed feet AND their B443 in-flight ORIGINAL
-     // goal locks when native owner-grid opportunities are equal.
-     // Stronger real unpainted SOURCE opportunity still wins. The exact
-     // existing physical Recast/Rapier approval remains below.
-     const ranked=distributeOriginalSourceGoalCoverage(
-      rankOriginalSourcePatrolGoals(
-       candidates,Team.A,this.sourceInk,0),
-      candidates,this.actualTeamCoveragePositions('A1',Team.A));
-     let freshEligibleOriginalGoals=0;
-     for(const rank of ranked){
-      // The center may be already ours while real SAME-SURFACE
-      // neighbor owner-grid cells still need ink. Keep original-foot,
-      // full-path Rapier/Recast and 0 Scoreable authority unchanged.
-      if(!existingOriginalSourceInkOpportunity(rank))continue;
-      freshEligibleOriginalGoals++;
-      const goal=candidates[rank.index]!;
-      if(goal.z<33||goal.y<2.7||goal.y>5.25||
-         Math.hypot(goal.x-realFoot.x,
-          goal.y-realFoot.y,goal.z-realFoot.z)<2.5||
-         !this.hasSourceFootSupport(realFoot)||
-         !this.hasSourceFootSupport(goal))continue;
-      const path=this.nav.auditPath(realFoot,goal);
-      if(!path.reachedTarget||path.startSnapDistanceMeters>.20||
-         path.endSnapDistanceMeters>.20||
-         !this.hasSourceSupportedRoute(path,1)){
-       this.b471RejectedOriginalRoutes++;continue;
-      }
-      playerOrder.goal=goal.clone();
-      playerOrder.realAllyFootAtApproval=realFoot.clone();
-      this.b471StrictlyApprovedOriginalGoals++;
-      if(rank.priority==='OWN')
-       this.b471ApprovedOriginalNeighborhoodInkGoals++;
-      this.b471OrderStatus='MOVING';
-      this.b471SourceDecision='ORIGINAL_GOAL_GRANTED';break;
-     }
-     if(!playerOrder.goal){
-      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
-      this.b471SourceDecision=freshEligibleOriginalGoals===0?
-       'NO_VERIFIED_FRESH_SOURCE_TARGET':'NO_VERIFIED_ORIGINAL_PATH';
-     }
-    }
-    if(playerOrder.goal){
-     if(Math.hypot(realFoot.x-playerOrder.goal.x,
-         realFoot.z-playerOrder.goal.z)<=1.5){
-      // Arrival is TRUE only if the actual same-tick KCC foot and
-      // existing source goal are BOTH supported by registered Rapier.
-      if(this.hasSourceFootSupport(realFoot)&&
-         this.hasSourceFootSupport(playerOrder.goal)&&
-         Math.abs(realFoot.y-playerOrder.goal.y)<=.25){
-       this.b471ActualOriginalArrivals++;
-       this.b471OrderStatus='ARRIVED';
-       this.b471SourceDecision='ORIGINAL_ARRIVAL';
-      }else{
-       this.b471RejectedOriginalRoutes++;
-       this.b471OrderStatus='HOLD';
-       this.b471SourceDecision='ORIGINAL_ARRIVAL_UNSUPPORTED';
-      }
-      this.b471AllyOrder=null;
-     }else{
-      const path=this.nav.auditPath(realFoot,playerOrder.goal);
-      if(this.hasSourceFootSupport(realFoot)&&
-         this.hasSourceFootSupport(playerOrder.goal)&&
-         path.reachedTarget&&path.startSnapDistanceMeters<=.20&&
-         path.endSnapDistanceMeters<=.20&&
-         this.hasSourceSupportedRoute(path,1)){
-       out.copy(playerOrder.goal);
-       this.realGoalRequests++;this.b471ActualNativeGoalRequests++;
-       return true;
-      }
-      this.b471RejectedOriginalRoutes++;
-      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
-      this.b471SourceDecision='ORIGINAL_PATH_LOST';
-     }
-    }
-   }
-  }
   // Original F3 combat survival: genuine low native HP -> actual original
   // OWN ink -> safely remain until native regeneration reaches 70% -> resume
   // ordinary combat. No source geometry, real Actor, health, shots or clock
@@ -1098,6 +1007,101 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
    }else this.originalSourceRecoveryIntent.delete(id);
   }else this.originalSourceRecoveryIntent.delete(id);
+  // A pending true C-key teammate goal remains available once the
+  // wounded CPU can safely resume. An actually reachable OWN retreat
+  // takes priority over player-directed movement; no actor is moved by
+  // this decision and the original Recast/Rapier path gates still apply.
+  // B471: PLAYER-C-key native co-op. Rank ALREADY-vetted original
+  // A1 SOURCE patrol feet by true OwnerGrid ink; never invent a point.
+  // Request goal from real A1 foot ONLY after original Recast + Rapier
+  // certify both endpoints and every <=0.30m intermediate source point.
+  const playerOrder=this.b471AllyOrder;
+  if(id==='A1'&&playerOrder){
+   if(this.b137NativeTick-playerOrder.requestedTick>900||
+      bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
+      !this.physicallyRejoined.has('A1')||
+      !this.b171AllySyncPracticeRunning){
+    this.b471AllyOrder=null;this.b471OrderStatus='EXPIRED';
+    this.b471SourceDecision='SOURCE_ORDER_EXPIRED';
+   }else if(this.sourceInk&&this.physics){
+    if(!playerOrder.goal){
+     // The genuine player-directed A1 also avoids crowding A2/A3's
+     // current physically observed feet AND their B443 in-flight ORIGINAL
+     // goal locks when native owner-grid opportunities are equal.
+     // Stronger real unpainted SOURCE opportunity still wins. The exact
+     // existing physical Recast/Rapier approval remains below.
+     const ranked=distributeOriginalSourceGoalCoverage(
+      rankOriginalSourcePatrolGoals(
+       candidates,Team.A,this.sourceInk,0),
+      candidates,this.actualTeamCoveragePositions('A1',Team.A));
+     let freshEligibleOriginalGoals=0;
+     for(const rank of ranked){
+      // The center may be already ours while real SAME-SURFACE
+      // neighbor owner-grid cells still need ink. Keep original-foot,
+      // full-path Rapier/Recast and 0 Scoreable authority unchanged.
+      if(!existingOriginalSourceInkOpportunity(rank))continue;
+      freshEligibleOriginalGoals++;
+      const goal=candidates[rank.index]!;
+      if(goal.z<33||goal.y<2.7||goal.y>5.25||
+         Math.hypot(goal.x-realFoot.x,
+          goal.y-realFoot.y,goal.z-realFoot.z)<2.5||
+         !this.hasSourceFootSupport(realFoot)||
+         !this.hasSourceFootSupport(goal))continue;
+      const path=this.nav.auditPath(realFoot,goal);
+      if(!path.reachedTarget||path.startSnapDistanceMeters>.20||
+         path.endSnapDistanceMeters>.20||
+         !this.hasSourceSupportedRoute(path,1)){
+       this.b471RejectedOriginalRoutes++;continue;
+      }
+      playerOrder.goal=goal.clone();
+      playerOrder.realAllyFootAtApproval=realFoot.clone();
+      this.b471StrictlyApprovedOriginalGoals++;
+      if(rank.priority==='OWN')
+       this.b471ApprovedOriginalNeighborhoodInkGoals++;
+      this.b471OrderStatus='MOVING';
+      this.b471SourceDecision='ORIGINAL_GOAL_GRANTED';break;
+     }
+     if(!playerOrder.goal){
+      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+      this.b471SourceDecision=freshEligibleOriginalGoals===0?
+       'NO_VERIFIED_FRESH_SOURCE_TARGET':'NO_VERIFIED_ORIGINAL_PATH';
+     }
+    }
+    if(playerOrder.goal){
+     if(Math.hypot(realFoot.x-playerOrder.goal.x,
+         realFoot.z-playerOrder.goal.z)<=1.5){
+      // Arrival is TRUE only if the actual same-tick KCC foot and
+      // existing source goal are BOTH supported by registered Rapier.
+      if(this.hasSourceFootSupport(realFoot)&&
+         this.hasSourceFootSupport(playerOrder.goal)&&
+         Math.abs(realFoot.y-playerOrder.goal.y)<=.25){
+       this.b471ActualOriginalArrivals++;
+       this.b471OrderStatus='ARRIVED';
+       this.b471SourceDecision='ORIGINAL_ARRIVAL';
+      }else{
+       this.b471RejectedOriginalRoutes++;
+       this.b471OrderStatus='HOLD';
+       this.b471SourceDecision='ORIGINAL_ARRIVAL_UNSUPPORTED';
+      }
+      this.b471AllyOrder=null;
+     }else{
+      const path=this.nav.auditPath(realFoot,playerOrder.goal);
+      if(this.hasSourceFootSupport(realFoot)&&
+         this.hasSourceFootSupport(playerOrder.goal)&&
+         path.reachedTarget&&path.startSnapDistanceMeters<=.20&&
+         path.endSnapDistanceMeters<=.20&&
+         this.hasSourceSupportedRoute(path,1)){
+       out.copy(playerOrder.goal);
+       this.realGoalRequests++;this.b471ActualNativeGoalRequests++;
+       return true;
+      }
+      this.b471RejectedOriginalRoutes++;
+      this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
+      this.b471SourceDecision='ORIGINAL_PATH_LOST';
+     }
+    }
+   }
+  }
   // F3-B: in this opt-in source game only, real B-team CPUs can pursue
   // the real grounded HUMAN when the human actually occupies their
   // registered B-side source floor. Recast is a goal, never movement.
