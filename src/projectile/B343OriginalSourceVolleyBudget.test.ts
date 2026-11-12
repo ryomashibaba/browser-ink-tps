@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {b371RealSourceMissionCue} from '../app/B371RealSourceMissionCue';
+import {ProjectileSystem} from './ProjectileSystem';
 import {b343CanLaunchSourceVolley as allow,b343SourceShooterPracticeHref} from './B343OriginalSourceVolleyBudget';
 describe('B343 real SOURCE volley capacity',()=>{
  it('rejects exhausted or partial physical pool without synthetic slots',()=>{
@@ -93,5 +94,48 @@ describe('B372 actual SOURCE physical shooter HUD budget integration',()=>{
   expect(b371RealSourceMissionCue(original)?.resourceState).toBe('INK_AND_SLOT_AVAILABLE');
   original.shooterResources.inkUnits=4;
   expect(b371RealSourceMissionCue(original)?.resourceState).toBe('LOW_INK');
+ });
+});
+
+describe('B384 actual SOURCE life witness alongside canonical B343 native volley',()=>{
+ const stage={id:'undertow-t21d-partial-connectivity-qa',solids:25,
+  paint:17,nav:26,scoreable:0};
+ const subject=(budget:boolean,fair:boolean,surfaceCount=17)=>{
+  // Isolated internal wiring test: no mock CPU damage, no physics/world
+  // simulation and no Chromium. Invoke the ORIGINAL method on its class.
+  const p=Object.create(ProjectileSystem.prototype) as ProjectileSystem;
+  Object.assign(p,{surfaces:Array.from({length:surfaceCount},()=>({})),
+   b343SourceVolleyAtomic:budget,sourceCpuFairVolleyDispatch:fair,
+   b367Enabled:false,b367SelectedRealLoadout:false,
+   b367RealHumanCpuHits:0,b367PhysicalEvents:[]});
+  return p;
+ };
+ it('allows the real canonical B343 budget + fair CPU dispatch + B384 life observer',()=>{
+  const x=subject(true,true);
+  expect(()=>x.enableB384SelectedSourceCpuLifeWitness(stage)).not.toThrow();
+  expect(x.b343OriginalSourceVolleyBudgetSnapshot).toBeDefined();
+  expect(x.b367RealCpuLifecycleEvidenceSnapshot()).toMatchObject({
+   enabled:true,physicalHumanCpuHpHits:0,syntheticHits:0,
+   actorRelocations:0,scoreable:0,productionAuthorized:false
+  });
+ });
+ it('still rejects standalone B343 researcher wiring without canonical dispatch',()=>{
+  expect(()=>subject(true,false).enableB384SelectedSourceCpuLifeWitness(stage))
+   .toThrow('B384_NATIVE_SOURCE_LIFECYCLE_AUTHORITY_HOLD');
+ });
+ it('preserves historical non-B343 B384 life witness',()=>{
+  expect(()=>subject(false,false).enableB384SelectedSourceCpuLifeWitness(stage))
+   .not.toThrow();
+ });
+ it('rejects unregistered stage size, score authority and missing source paint',()=>{
+  for(const mutation of [
+   {solids:24},{paint:16},{nav:27},{scoreable:1},{id:'other'}
+  ]){
+   expect(()=>subject(true,true).enableB384SelectedSourceCpuLifeWitness({
+    ...stage,...mutation
+   })).toThrow('B384_NATIVE_SOURCE_LIFECYCLE_AUTHORITY_HOLD');
+  }
+  expect(()=>subject(true,true,16).enableB384SelectedSourceCpuLifeWitness(stage))
+   .toThrow('B384_NATIVE_SOURCE_LIFECYCLE_AUTHORITY_HOLD');
  });
 });

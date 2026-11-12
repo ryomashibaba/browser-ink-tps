@@ -308,11 +308,15 @@ export class ProjectileSystem {
      productionAuthorized:false as const};
   }
 
-  /** B384 native 12-weapon SOURCE session: evidence only, never damage. */
+  /** B384 native 12-weapon SOURCE session: evidence only, never damage.
+   * Canonical SOURCE now enables B343 real physical-slot budget FIRST.
+   * Accept both only after its separate, canonical-only fair dispatch gate.
+   * An isolated B343 shooter QA never gains B384 life authority. */
   public enableB384SelectedSourceCpuLifeWitness(stage:{
     id:string;solids:number;paint:number;nav:number;scoreable:number
   }):void{
-    if(this.b343SourceVolleyAtomic||this.surfaces.length!==17||
+    if((this.b343SourceVolleyAtomic&&!this.sourceCpuFairVolleyDispatch)||
+       this.surfaces.length!==17||
        stage.id!=='undertow-t21d-partial-connectivity-qa'||
        stage.solids!==25||stage.paint!==17||stage.nav!==26||
        stage.scoreable!==0)
