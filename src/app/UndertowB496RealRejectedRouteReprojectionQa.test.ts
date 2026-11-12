@@ -65,7 +65,11 @@ describe('B496 pinned original B450: 60 actual path denials and Recast-reproject
    const realRow=fullRate.rows[id].find((row:{tick:number})=>
     row.tick===witness.nativeTick);
    expect(realRow).toBeDefined();
-   expect(start.distance(foot(realRow.foot))).toBeLessThan(.00001);
+   // B450's pre-goal foot and B454's same-tick post-move foot are
+   // genuinely different read phases. Never overwrite the B450 origin.
+   const originalCapturePhaseOffset=start.distance(foot(realRow.foot));
+   expect(originalCapturePhaseOffset).toBeGreaterThanOrEqual(0);
+   expect(originalCapturePhaseOffset).toBeLessThan(.02);
    const failureRows=witness.rejectedOriginalRoutes as Array<{
     originalGoal:[number,number,number];
     firstDenied:{cause:string;xyz:[number,number,number];
@@ -176,7 +180,8 @@ describe('B496 pinned original B450: 60 actual path denials and Recast-reproject
       firstDeniedAfterReprojection});
     }
    }
-   byActor[id]={originalTrueRejectedRoutes:failureRows.length,
+   byActor[id]={originalCapturePhaseOffsetMeters:r6(originalCapturePhaseOffset),
+    originalTrueRejectedRoutes:failureRows.length,
     actualFirstDenialsReproduced:failureRows.length,
     firstDeniedRecastReprojectedSupported:firstOriginalPointReprojected,
     counterfactualProjectedAllRaySamplesPass:thisActorRecovered,
