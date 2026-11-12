@@ -1,6 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
+import {nativeSourceCpuCanStartActionsBeforeTickEnd}
+ from './NativeSourceRoundActionWindow';
 import {UndertowF3SourceTraffic,sourceNativeLiveRejoinedCpu,
  sourceNativeEligibleOpponentForCombat,type F3TrafficCpu} from './UndertowF3SourceTraffic';
 
@@ -35,6 +37,25 @@ function fixture(){
  return {traffic,bots,historical};
 }
 describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
+ it('native live SOURCE human and seven CPU cannot prepaint during the 7/7 STAGING lock',()=>{
+  const tick=(matchState:string,locked:boolean,remainingSeconds=180)=>
+   nativeSourceCpuCanStartActionsBeforeTickEnd({
+    matchState,nativeHumanPrestartLocked:locked,
+    remainingSeconds,nativeDtSeconds:1/60,stopReason:null
+   });
+  expect(tick('STAGING',true)).toBe(false);
+  expect(tick('PLAYING',true)).toBe(true);
+  expect(tick('PLAYING',true,1/60)).toBe(false);
+  expect(tick('TIME_UP',true)).toBe(false);
+  // The frozen deterministic and T20 callers without live-source flag
+  // continue to use their old staging semantics.
+  expect(tick('STAGING',false)).toBe(true);
+  expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
+   matchState:'STAGING',remainingSeconds:180,
+   nativeDtSeconds:1/60,stopReason:null
+  })).toBe(true);
+ });
+
  it('all seven real living native CPUs retain their true prior rejoin',()=>{
   const {traffic}=fixture();
   expect(traffic.nativeCpuLifecycleFrames().map(c=>c.rejoined))

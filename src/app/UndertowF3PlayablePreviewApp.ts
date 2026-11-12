@@ -1047,9 +1047,16 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
    this.feedback,this.stats);
-  // B343 requires explicit frozen SOURCE world; no change to default/T20.
-  if(b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
-     b31Params.get('t21QaDrive')==='source'&&this.b203FullRound){
+  // The four authenticated, human-selected SOURCE-only 180s game
+  // entrances now reuse the proven real physical-slot budget: a full
+  // projectile pool must NOT spend the human's real ink for zero shots.
+  // Explicit older B343 QA remains selectable; T20, deterministic
+  // scripts and all unknown/extra-param URLs retain their old behavior.
+  const playableOriginalSourceRound=this.b203FullRound&&
+    sourceCanonicalPlayableMode(location.href)!==null;
+  if((b31Params.get('t21W10B343')==='sourceVolleyAtomic'&&
+      b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)||
+     playableOriginalSourceRound){
     const s=this.rawStage;
     this.projectiles.enableB343OriginalSourceVolleyBudget({
       id:s.metadata.id,solids:s.solids.length,paint:s.paintSurfaces.length,
@@ -1057,9 +1064,13 @@ export class UndertowF3PlayablePreviewApp{
       scoreable:s.paintSurfaces.filter(p=>
        (p.flags&SurfaceFlags.Scoreable)!==0).length});
   }
-  // B345 is separate explicit frozen-SOURCE QA opt-in, requiring B343.
-  if(b31Params.get('t21W10B345')==='sourceShooterOpening'&&
-     b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
+  // Native SOURCE player SHOOTER no longer releases up to 0.5 seconds
+  // of idle cooldown debt as a first-click bullet flood. The existing
+  // B345 one-real-tick clamp is limited to authenticated playable SOURCE
+  // rounds or independently opted-in legacy frozen-source QA.
+  if(playableOriginalSourceRound||
+     (b31Params.get('t21W10B345')==='sourceShooterOpening'&&
+      b31Params.get('t21QaDrive')==='source'&&this.b203FullRound))
     this.projectiles.enableB345SourceShooterOpening();
   if(b31Params.get('t21W10B346')==='nativeShooterPhysicsWitness'&&
      b31Params.get('t21QaDrive')==='source'&&this.b203FullRound)
@@ -5384,7 +5395,11 @@ export class UndertowF3PlayablePreviewApp{
     // boundary rather than dropping already-paid CPU projectiles later.
     const cpuCanStartActions=nativeSourceCpuCanStartActionsBeforeTickEnd({
      matchState:this.matchState,remainingSeconds:this.remainingSeconds,
-     nativeDtSeconds:seconds,stopReason:this.stopReason
+     nativeDtSeconds:seconds,stopReason:this.stopReason,
+     // A locked human cannot fire/move during genuine 7/7 staging.
+     // Do not let earlier-rejoined CPU pay for first attacks while
+     // remaining CPU bodies are still completing actual F2 drops.
+     nativeHumanPrestartLocked:this.nativeLiveSourcePrestart
     });
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14,

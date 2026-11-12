@@ -7,11 +7,13 @@ export function nativeSourceCpuCanStartActionsBeforeTickEnd(input:{
  readonly remainingSeconds:number;
  readonly nativeDtSeconds:number;
  readonly stopReason:string|null;
+ readonly nativeHumanPrestartLocked?:boolean;
 }):boolean{
  if(input.stopReason||!Number.isFinite(input.remainingSeconds)||
     !Number.isFinite(input.nativeDtSeconds)||
     input.nativeDtSeconds<=0)return false;
- return input.matchState==='STAGING'||
+ return (input.matchState==='STAGING'&&
+    !input.nativeHumanPrestartLocked)||
   input.matchState==='PLAYING'&&
    Math.max(0,input.remainingSeconds-input.nativeDtSeconds)>0;
 }
