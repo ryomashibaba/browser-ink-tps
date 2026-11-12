@@ -422,12 +422,100 @@ jobs:
           T21_B441_REAL_SWEEP_ONCE: ${{ (contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]')) && '1' || '0' }}
           T21_B441_REAL_SWEEP_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
           T21_B441_REAL_CHARGER_ONCE: ${{ contains(github.event.head_commit.message, '[real-charger-once]') && '1' || '0' }}
+          T21_B491_CPU_PAID_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[b491-paid-cpu-once]') && '1' || '0' }}
           T21_B441_NATIVE_OBSERVE_TICKS: '720'
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
+      # B491 independent proof of genuine CPU impacts and OWN recovery,
+      # after the one already-running B441 Chromium world, not a rerun.
+      - name: Independently audit one true 7CPU paid SOURCE ink and OWN recovery
+        if: ${{ contains(github.event.head_commit.message, '[b491-paid-cpu-once]') }}
+        run: |
+          node --input-type=module <<'B491_INDEPENDENT'
+          import {readFileSync,statSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {join} from 'node:path';
+          const dir='/tmp/t21-b441-short-native-frontline';
+          const d=JSON.parse(readFileSync(join(dir,
+           'b440-short-real-original-human-foot.json'),'utf8'));
+          const b=d.b491RealCpuPaidOwn,k=d.k2PerActorNativeShotAndInk;
+          const ids=['A1','A2','A3','B1','B2','B3','B4'];
+          const before=k?.nativeCountersStart,after=k?.nativeCountersEnd;
+          if(!b||b.schema!=='B491_TRUE_CHROMIUM_SEVEN_CPU_PAID_OWN_RECOVERY_V1'||
+             b.verdict!=='PASS_LIMITED_REAL_7CPU_PAID_IMPACT_OWN_RECOVERY'||
+             b.source!=='25/17/26/0'||d.source!=='25/17/26/0'||
+             d.b441ResearchOnly!==true||
+             d.full180sCertified!==false||d.formal4v4Certified!==false||
+             b.formal4v4Certified!==false||b.replayCertified!==false||
+             b.naturalOpponentRouteCertified!==false||
+             b.officialWinner!=='NONE'||b.originalScoreable!==0||
+             b.actorWrites!==0||b.inkWrites!==0||b.nativeClockWrites!==0||
+             b.sourceGeometryWrites!==0||d.actorWrites!==0||
+             d.nativeClockWrites!==0||d.scoreWrites!==0||
+             d.sourceGeometryWrites!==0||k?.source!=='25/17/26/0'||
+             k?.sameUnmodifiedSourceWorld!==true||
+             k?.verdict!=='PASS_SEVEN_REAL_CPU_PROJECTILE_INK'||
+             b.sameOriginalBrowserWorld!==true||
+             b.physicalSevenCpuRejoins!==7||
+             b.firstNativeTick!==k.beforeNativeTick||
+             b.lastNativeTick!==k.afterNativeTick||
+             b.nativeTicks!==k.nativeTicksObserved||
+             b.nativeTicks<600||b.nativeTicks>900||
+             !Number.isFinite(b.actuallyRecoveredOwnSourceInk)||
+             b.actuallyRecoveredOwnSourceInk<=0||
+             !Number.isSafeInteger(b.ownInkRealRecoveryNativeTicks)||
+             b.ownInkRealRecoveryNativeTicks<=0||
+             !Number.isSafeInteger(b.ownInkContactNativeTicks)||
+             b.ownInkContactNativeTicks<=0||
+             before?.sourceInkResource?.enabled!==true||
+             after?.sourceInkResource?.enabled!==true||
+             !b.zeroUnpaidFootStampEvents||
+             k.actualProjectileImpactInkByActors.length!==7||
+             k.realSourceTurfShotRequestActors.length!==7||
+             b.perActor?.length!==7)
+            throw Error('B491_NATIVE_AUTHORITY_AND_PAID_INK_GATE_HOLD');
+          const first=before.sourceInkResource,last=after.sourceInkResource;
+          const delta=(field)=>Number((last[field]-first[field]).toFixed(6));
+          if(Math.abs(delta('b179ActuallyRecoveredOwnSourceInk')-
+                b.actuallyRecoveredOwnSourceInk)>0.000002||
+             delta('b179OwnInkNativeRecoveryTicks')!==
+              b.ownInkRealRecoveryNativeTicks||
+             delta('actualOwnPaintFootTicks')!==
+              b.ownInkContactNativeTicks||
+             b.actualAcceptedProjectileCells!==
+              k.totalCpuActualImpactChangedCells||
+             b.cpuRealWeaponShotRequests!==k.totalCpuShotRequests)
+            throw Error('B491_RAW_NATIVE_COUNTER_MISMATCH');
+          for(const id of ids){
+            const x=k.byActor[id],p=b.perActor.find(x=>x.id===id);
+            if(!x||!p||!p.noUnpaidFootStamp||
+               x.footChangedCells!==0||
+               before.byActor[id].footChangedCells!==0||
+               after.byActor[id].footChangedCells!==0||
+               x.impactChangedCells<=0||x.sourceTurfShotRequests<=0||
+               p.impactChangedCells!==x.impactChangedCells||
+               p.sourceTurfShotRequests!==x.sourceTurfShotRequests)
+              throw Error('B491_ACTUAL_CPU_IMPACT_OR_UNPAID_FOOT_'+id);
+          }
+          const file='b491-actual-seven-cpu-paid-source-ink.png';
+          const bytes=readFileSync(join(dir,file));
+          if(b.screenshot?.file!==file||statSync(join(dir,file)).size<10000||
+             bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+             bytes.readUInt32BE(16)!==1600||bytes.readUInt32BE(20)!==900||
+             b.screenshot.width!==1600||b.screenshot.height!==900||
+             createHash('sha256').update(bytes).digest('hex')!==
+              b.screenshot.sha256)
+            throw Error('B491_TRUE_BROWSER_FRAMEBUFFER_SHA_HOLD');
+          console.log('B491_INDEPENDENT_REAL_NATIVE_PAID_CPU_OWN_PASS',
+           JSON.stringify({nativeTicks:b.nativeTicks,ids,
+            impactCells:b.actualAcceptedProjectileCells,
+            ownRecovered:b.actuallyRecoveredOwnSourceInk,
+            recoveredNativeTicks:b.ownInkRealRecoveryNativeTicks,
+            footStamps:0,scoreable:0,formal4v4:false}));
+          B491_INDEPENDENT
       # One explicit SOURCE user-input vertical slice. Inspect the actual
       # same-world RAW and three Chromium framebuffer images, without running
       # another browser or treating player ink as official Turf score.

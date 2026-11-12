@@ -29,6 +29,11 @@ const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
 // Prepared short acceptance mode; enabling it requires individual approval.
 // Reuse the K3 real input/ink path, ending after reshoot, never 180s/replay.
 const p1InkLoopOnce=process.env.T21_P1_REGISTERED_INK_LOOP_ONCE==='1';
+const b491PaidCpuOnce=process.env.T21_B491_CPU_PAID_OWN_ONCE==='1';
+if(b491PaidCpuOnce&&(!b441Experiment||p0NormalHuman||
+   k3IntegratedSource180||process.env.GITHUB_ACTIONS!=='true'||
+   process.platform!=='linux'))
+ throw Error('B491_ONLY_ONE_B441_PUBLIC_LINUX_NATIVE_WORLD');
 if(p1InkLoopOnce&&(!p0NormalHuman||!p1RampOnce||b441Experiment||
    b490LocalCompare||k3IntegratedSource180||
    process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux'))
@@ -3216,6 +3221,81 @@ async function main(){
     byActor:k2Actors,from:k2First.tick,to:k2Last.tick,
     sourceInkBefore:k2First.sourceInkResource,
     sourceInkAfter:k2Last.sourceInkResource}));
+  // B491: one pre-approved, bounded genuine seven-CPU SOURCE world.
+  // Compare real PaintCoordinator impact changes and actual CPU resource
+  // gains AFTER all seven rejoin. No extra game, virtual tick, actor
+  // relocation, ink injection or official score. Existing B441 still
+  // runs unchanged when this explicit flag is absent.
+  if(b491PaidCpuOnce){
+   const start=k2First.sourceInkResource,last=k2Last.sourceInkResource;
+   const realIds=k2Ids;
+   const ownTicks=last?.actualOwnPaintFootTicks-
+    start?.actualOwnPaintFootTicks;
+   const recovered=Number((
+    last?.b179ActuallyRecoveredOwnSourceInk-
+    start?.b179ActuallyRecoveredOwnSourceInk).toFixed(6));
+   const refillTicks=last?.b179OwnInkNativeRecoveryTicks-
+    start?.b179OwnInkNativeRecoveryTicks;
+   const exactZeroFoot=realIds.every(id=>
+    k2First.byActor[id]?.footChangedCells===0&&
+    k2Last.byActor[id]?.footChangedCells===0&&
+    k2Actors[id]?.footChangedCells===0);
+   const perActor=realIds.map(id=>({
+    id,...k2Actors[id],
+    noUnpaidFootStamp:
+     k2First.byActor[id]?.footChangedCells===0&&
+     k2Last.byActor[id]?.footChangedCells===0
+   }));
+   const authoritative=k2Last.tick-k2First.tick>=600&&
+    k2Last.tick-k2First.tick<=900&&
+    start?.enabled===true&&last?.enabled===true&&
+    Number.isSafeInteger(ownTicks)&&ownTicks>0&&
+    Number.isFinite(recovered)&&recovered>0&&
+    Number.isSafeInteger(refillTicks)&&refillTicks>0&&
+    k2TotalImpacts>0&&exactZeroFoot&&
+    k2Ids.every(id=>k2Actors[id].impactChangedCells>0&&
+     k2Actors[id].sourceTurfShotRequests>0)&&
+    proof.actorWrites===0&&proof.nativeClockWrites===0&&
+    proof.scoreWrites===0&&proof.sourceGeometryWrites===0&&
+    proof.full180sCertified===false&&
+    await origin()===proof.browserOrigin;
+   proof.b491RealCpuPaidOwn={
+    schema:'B491_TRUE_CHROMIUM_SEVEN_CPU_PAID_OWN_RECOVERY_V1',
+    source:'25/17/26/0',sameOriginalBrowserWorld:true,
+    firstNativeTick:k2First.tick,lastNativeTick:k2Last.tick,
+    nativeTicks:k2Last.tick-k2First.tick,
+    physicalSevenCpuRejoins:actual.cpu.physicalRejoins.length,
+    actualAcceptedProjectileCells:k2TotalImpacts,
+    cpuRealWeaponShotRequests:k2Sum('sourceTurfShotRequests'),
+    ownInkContactNativeTicks:ownTicks,
+    actuallyRecoveredOwnSourceInk:recovered,
+    ownInkRealRecoveryNativeTicks:refillTicks,
+    zeroUnpaidFootStampEvents:exactZeroFoot,
+    perActor,originalScoreable:0,officialWinner:'NONE',
+    naturalOpponentRouteCertified:false,formal4v4Certified:false,
+    replayCertified:false,actorWrites:0,inkWrites:0,
+    nativeClockWrites:0,sourceGeometryWrites:0,
+    verdict:authoritative?
+     'PASS_LIMITED_REAL_7CPU_PAID_IMPACT_OWN_RECOVERY':
+     'HOLD_NO_PAID_ORIGINAL_SOURCE_OWN_RECOVERY'};
+   save();
+   if(!authoritative)fail('B491_REAL_NATIVE_PAID_SEVEN_CPU_OWN_HOLD');
+   const image=await cdp('Page.captureScreenshot',{
+    format:'png',captureBeyondViewport:false});
+   const bytes=Buffer.from(image?.data??'','base64');
+   if(bytes.length<10000||bytes.subarray(0,8).toString('hex')!==
+      '89504e470d0a1a0a'||bytes.readUInt32BE(16)!==1600||
+      bytes.readUInt32BE(20)!==900)
+    fail('B491_NO_REAL_CHROMIUM_FRAMEBUFFER');
+   const filename='b491-actual-seven-cpu-paid-source-ink.png';
+   writeFileSync(resolve(out,filename),bytes);
+   proof.b491RealCpuPaidOwn.screenshot={
+    file:filename,width:1600,height:900,
+    sha256:createHash('sha256').update(bytes).digest('hex')};
+   save();
+   console.log('B491_LIMITED_REAL_NATIVE_CPU_PAID_OWN_OUTCOME',
+    JSON.stringify(proof.b491RealCpuPaidOwn));
+  }
   // B454: collect every *actual* native post-KCC B2/B4 foot once,
   // rather than inferring continuous original contact from 24-tick polls.
   // Do not add these large rows to B440 log; save one independent Artifact.
