@@ -119,6 +119,75 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSplats).toBe(1);
   });
 
+  it('paid SOURCE STRINGER fires all three real arrows or refunds everything',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.weaponId='chord-stringer';
+    bot.ink=88;
+    bot.inkRecoveryLockSeconds=.12;
+    system.stats.cpuShots=0;
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false},{active:false}];
+    launcher.cpuAimDirection=new Vec3();
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.feedback={shot:vi.fn()};
+    const addPaidShot=()=>{
+      expect(system.queueCpuWeaponRequest(
+        bot,new Vec3(5,0,0),.7,'STRINGER_RELEASE')).toBe(true);
+      const req=system.pendingShots.pop()!;
+      launcher.queueCpuShot(req);
+      return req;
+    };
+    addPaidShot();
+    launcher.spawnQueuedCpuShots(
+      Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).not.toHaveBeenCalled();
+    expect(launcher.feedback.shot).not.toHaveBeenCalled();
+    expect(launcher.stats.projectilePoolDrops).toBe(1);
+    expect(bot.ink).toBeCloseTo(88);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.12);
+    expect(system.stats.cpuShots).toBe(0);
+    launcher.slots.push({active:false});
+    addPaidShot();
+    launcher.spawnQueuedCpuShots(
+      Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).toHaveBeenCalledTimes(3);
+    expect(launcher.feedback.shot).toHaveBeenCalledTimes(1);
+    expect(bot.ink).toBeLessThan(88);
+    expect(system.stats.cpuShots).toBe(1);
+  });
+
+  it('paid SOURCE CHARGER with coincident muzzle and target cannot lose ink without a ray',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.weaponId='rail-charger';
+    bot.ink=74;
+    bot.inkRecoveryLockSeconds=.2;
+    system.stats.cpuShots=0;
+    // The real CPU muzzle is not the body's foot.
+    const target=new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0);
+    expect(system.queueCpuWeaponRequest(bot,target,1)).toBe(true);
+    const request=system.pendingShots.pop()!;
+    expect(request.origin.distance(target)).toBe(0);
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.cpuAgents=system;
+    launcher.queueCpuShot(request);
+    launcher.spawnQueuedCpuShots(
+      Team.A,new Vec3(),false,false,new Vec3());
+    expect(launcher.queuedCpuShots).toHaveLength(0);
+    expect(bot.ink).toBeCloseTo(74);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.2);
+    expect(system.stats.cpuShots).toBe(0);
+  });
+
   it('seven real SOURCE CPUs share a scarce physical slot rather than permanent roster priority',()=>{
     const launcher:any=Object.create(ProjectileSystem.prototype);
     launcher.queuedCpuShots=[];

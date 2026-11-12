@@ -1681,8 +1681,23 @@ export class ProjectileSystem {
       this.cpuAimDirection,
       profile
     );
-    if (this.cpuAimDirection.lengthSq() <= 1e-8) return;
+    if (this.cpuAimDirection.lengthSq() <= 1e-8) {
+      // A paid SOURCE stringer without a valid physical launch vector
+      // releases no original projectile and may not consume native ink.
+      if(request.sourceInkTransaction)
+        this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+      return;
+    }
 
+    // One real STRINGER volley always requires three existing physical
+    // projectile slots. Do not emit a truncated charged three-arrow
+    // pattern while charging full CPU ink for a partial volley.
+    if(request.sourceInkTransaction&&
+       this.slots.filter(slot=>!slot.active).length<3){
+      this.stats.projectilePoolDrops+=1;
+      this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+      return;
+    }
     const charge = clamp(request.charge, 0, 1);
     const chargeSeconds = charge * profile.chargeSeconds;
     const stage = chargeStageProgress(profile, chargeSeconds);
@@ -1820,7 +1835,13 @@ export class ProjectileSystem {
     playerAimDirection: Vec3
   ): void {
     const direction = request.target.clone().sub(request.origin);
-    if (direction.lengthSq() <= 1e-8) return;
+    if (direction.lengthSq() <= 1e-8) {
+      // The actual CPU charger ray cannot paint or deal damage when
+      // origin and target coincide. Return SOURCE-only precharged ink.
+      if(request.sourceInkTransaction)
+        this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+      return;
+    }
     direction.normalize();
 
     const charge = Math.max(0, Math.min(1, request.charge));
