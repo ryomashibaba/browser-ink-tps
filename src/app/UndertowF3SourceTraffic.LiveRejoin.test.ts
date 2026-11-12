@@ -23,6 +23,13 @@ function fixture(){
   respawnOriginalDrops:new Set(),cleared:new Set(),released:new Set(),
   lastMoved:new Map(),patrolIndex:new Map(),patrolGoals:new Map(),
   b93UpperDetours:new Map(),routePlan:{distinctFirstDropLinks:[]},
+  // The snapshot has accumulated additional observational ledgers since
+  // this lightweight lifecycle fixture was introduced. Keep them empty,
+  // not undefined, so the read-only snapshot can be exercised honestly.
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map(),
+  b467NativeRetargetWitnesses:[],b467LiveSourceGoals:new Map(),
+  b470NativeRetargetWitnesses:[],b442LastApprovedFront:new Map(),
+  b471ReadOnlyAllyCoverageOrder:()=>null,
   freeCombat:true
  });
  return {traffic,bots,historical};
