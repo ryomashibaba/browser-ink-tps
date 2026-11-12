@@ -84,14 +84,17 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     const {system,bot,shot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;
     bot.ink=75;
+    bot.inkRecoveryLockSeconds=.23;
     const subId=weaponKit(bot.weaponId).sub;
     const cost=subWeaponProfile(subId).inkCost;
     system.stats.cpuSubUses=1;
     bot.ink-=cost;
+    bot.inkRecoveryLockSeconds=GAME_CONFIG.inkEconomy.recoveryLockSeconds;
     bot.subCooldownSeconds=8;
     const req={kind:'SUB',sourceId:'B1',team:Team.B,
       position:new Vec3(),target:new Vec3(4,0,0),
-      direction:new Vec3(1,0,0),subId} as const;
+      direction:new Vec3(1,0,0),subId,
+      sourceSubRecovery:{lockBefore:.23,expectedInkAfterCharge:bot.ink}} as const;
     system.pendingKitRequests.push(req);
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
     const delivered=vi.fn(()=>true);
@@ -99,6 +102,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(delivered).not.toHaveBeenCalled();
     expect(bot.ink).toBeCloseTo(75);
     expect(bot.subCooldownSeconds).toBe(0);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.23);
     expect(system.stats.cpuSubUses).toBe(0);
     expect(system.stats.cpuKitLast).toContain('REJOIN_HOLD');
     // A real HP-zero splat removes queued effects without granting

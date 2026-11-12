@@ -73,6 +73,13 @@ export type CpuKitRequest =
       target: Vec3;
       direction: Vec3;
       subId: SubWeaponId;
+      /** SOURCE-only precharge lock: restore only if this paid SUB never
+       * reaches the real physics effect engine and no later ink spend is
+       * observed. Never used to waive a death or accepted weapon cooldown. */
+      sourceSubRecovery?:{
+        lockBefore:number;
+        expectedInkAfterCharge:number;
+      };
     }
   | {
       kind: 'SPECIAL';
@@ -1470,13 +1477,17 @@ export class CpuAgentSystem {
     if (kind === 'SUB') {
       const profile = subWeaponProfile(kit.sub);
       if (bot.ink + 1e-6 < profile.inkCost || bot.subCooldownSeconds > 0) return false;
+      const priorRecoveryLock=bot.inkRecoveryLockSeconds;
       bot.ink = Math.max(0, bot.ink - profile.inkCost);
       bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
       bot.subCooldownSeconds = cpuSubCooldownSeconds(kit.sub, bot.role);
       this.pendingKitRequests.push({
         kind: 'SUB', sourceId: bot.id, team: bot.team,
         position: bot.position.clone(), target: goal.clone(),
-        direction, subId: kit.sub
+        direction, subId: kit.sub,
+        sourceSubRecovery:{
+          lockBefore:priorRecoveryLock,expectedInkAfterCharge:bot.ink
+        }
       });
       this.stats.cpuSubUses += 1;
       this.stats.cpuKitLast = bot.id + ':MANUAL_QA_SUB:' + profile.shortName;
@@ -2017,6 +2028,7 @@ export class CpuAgentSystem {
     const subProfile = subWeaponProfile(kit.sub);
     if (bot.ink + 1e-6 < subProfile.inkCost) return;
 
+    const priorRecoveryLock=bot.inkRecoveryLockSeconds;
     bot.ink = Math.max(0, bot.ink - subProfile.inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
     bot.subCooldownSeconds = cpuSubCooldownSeconds(kit.sub, bot.role);
@@ -2028,7 +2040,12 @@ export class CpuAgentSystem {
       position: bot.position.clone(),
       target: target.clone(),
       direction,
-      subId: kit.sub
+      subId: kit.sub,
+      sourceSubRecovery:this.f3dSourceGoals&&
+        this.phase14qF2RecoverableSteps&&
+        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'?{
+          lockBefore:priorRecoveryLock,expectedInkAfterCharge:bot.ink
+        }:undefined
     });
     this.stats.cpuSubUses += 1;
     this.stats.cpuKitLast =
@@ -2058,10 +2075,21 @@ export class CpuAgentSystem {
     }
 
     const profile = subWeaponProfile(request.subId);
+    const lockEvidence=request.sourceSubRecovery;
+    const noLaterInkSpend=lockEvidence&&
+      Number.isFinite(lockEvidence.lockBefore)&&
+      Number.isFinite(lockEvidence.expectedInkAfterCharge)&&
+      Math.abs(bot.ink-lockEvidence.expectedInkAfterCharge)<=1e-6;
     bot.ink = Math.min(
       GAME_CONFIG.inkEconomy.capacity,
       bot.ink + profile.inkCost
     );
+    // The rejected SUB did not start real ink recovery lock. Never clear
+    // a lock if another genuine weapon/kit payment may have followed it.
+    // Death cancellation intentionally never reaches this rollback.
+    if(reason==='REJOIN_HOLD'&&noLaterInkSpend)
+      bot.inkRecoveryLockSeconds=Math.min(
+        bot.inkRecoveryLockSeconds,lockEvidence.lockBefore);
     bot.subCooldownSeconds=reason==='REJOIN_HOLD'?0:
       GAME_CONFIG.cpu.kit.subPoolRetrySeconds;
     this.stats.cpuSubUses=Math.max(0,this.stats.cpuSubUses-1);
