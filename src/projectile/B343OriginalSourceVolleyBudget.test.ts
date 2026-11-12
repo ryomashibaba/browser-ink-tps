@@ -1,6 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {b371RealSourceMissionCue} from '../app/B371RealSourceMissionCue';
 import {ProjectileSystem} from './ProjectileSystem';
+import {Vec3} from 'playcanvas';
+import {Team} from '../ink/types';
 import {b343CanLaunchSourceVolley as allow,b343SourceShooterPracticeHref} from './B343OriginalSourceVolleyBudget';
 describe('B343 real SOURCE volley capacity',()=>{
  it('rejects exhausted or partial physical pool without synthetic slots',()=>{
@@ -137,5 +139,45 @@ describe('B384 actual SOURCE life witness alongside canonical B343 native volley
   }
   expect(()=>subject(true,true,16).enableB384SelectedSourceCpuLifeWitness(stage))
    .toThrow('B384_NATIVE_SOURCE_LIFECYCLE_AUTHORITY_HOLD');
+ });
+});
+
+
+describe('physical original Rapier precedence over near-coplanar paint',()=>{
+ const direct=(nativeSource:boolean,paintDistance:number)=>{
+  // The actual SOURCE ray function, with collision READS only.
+  // No fake HP, game physics, navigation or paint writes are made.
+  const subject=Object.create(ProjectileSystem.prototype) as ProjectileSystem;
+  const paint={distance:paintDistance,
+   worldPoint:new Vec3(0,0,paintDistance),surface:{id:'original-paint'}};
+  Object.assign(subject,{
+   nativeSourceHumanPhysicalMode:nativeSource?()=> 'HUMAN':null,
+   findNearestSurfaceHit:()=>paint,
+   physics:{castStageSegment:()=>({
+    distance:5,point:new Vec3(0,0,5),solidId:'registered-original-cover'
+   })},
+   combatTargets:{findNearestHit:()=>null},
+   cpuAgents:{findNearestCombatHit:()=>null}
+  });
+  const ray=subject as unknown as {resolveDirectRay:(
+   from:Vec3,direction:Vec3,range:number,team:Team,damage:number
+  )=>{point:Vec3;paintHit:unknown;hitCombat:boolean}};
+  return ray.resolveDirectRay(new Vec3(),new Vec3(0,0,1),15,Team.A,60);
+ };
+ it('SOURCE charger stops at nearest real wall, not paint 5cm behind',()=>{
+  const impact=direct(true,5.05);
+  expect(impact.point.z).toBeCloseTo(5,8);
+  expect(impact.paintHit).toBeNull();
+  expect(impact.hitCombat).toBe(false);
+ });
+ it('SOURCE can still paint a surface physically ahead of original cover',()=>{
+  const impact=direct(true,4.95);
+  expect(impact.point.z).toBeCloseTo(4.95,8);
+  expect(impact.paintHit).not.toBeNull();
+ });
+ it('legacy non-SOURCE paint epsilon and play remains unchanged',()=>{
+  const impact=direct(false,5.05);
+  expect(impact.point.z).toBeCloseTo(5.05,8);
+  expect(impact.paintHit).not.toBeNull();
  });
 });

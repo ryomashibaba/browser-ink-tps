@@ -684,10 +684,13 @@ export class ProjectileSystem {
               GAME_CONFIG.cpu.playerHitRadiusMeters))
         : null;
 
+      // SOURCE pellets respect the nearest registered Rapier blocker.
+      // The legacy near-coplanar paint tolerance remains outside SOURCE.
       const paintWins = paintHit && (
         !blockerHit ||
-        paintHit.distance <=
-          blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+        paintHit.distance <= blockerHit.distance +
+          (this.nativeSourceHumanPhysicalMode ? 0 :
+            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
       );
       // In genuine SOURCE combat, actor contact never passes an earlier
       // registered Rapier solid; near-coplanar paint priority is separate.
@@ -1316,9 +1319,12 @@ export class ProjectileSystem {
     const qaHit = this.combatTargets.findNearestHit(origin, end, team);
     const cpuHit = this.cpuAgents.findNearestCombatHit(origin, end, team);
 
+    // SOURCE human charger paint never passes a nearer original wall.
     const paintWins = paintHit && (
       !blockerHit ||
-      paintHit.distance <= blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      paintHit.distance <= blockerHit.distance +
+        (this.nativeSourceHumanPhysicalMode ? 0 :
+          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
     // independent of the small paint/solid visual priority tolerance.
@@ -1947,11 +1953,12 @@ export class ProjectileSystem {
             GAME_CONFIG.cpu.playerHitRadiusMeters))
       : null;
 
+    // SOURCE CPU charger paint obeys the same physical wall-first gate.
     const paintWins = paintHit && (
       !blockerHit ||
-      paintHit.distance <=
-        blockerHit.distance +
-          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      paintHit.distance <= blockerHit.distance +
+        (this.nativeSourceHumanPhysicalMode ? 0 :
+          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
     );
     // Genuine SOURCE rays must respect the nearest real stage blocker,
     // independent of the small paint/solid visual priority tolerance.
