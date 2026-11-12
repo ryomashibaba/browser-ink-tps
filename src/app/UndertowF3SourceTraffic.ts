@@ -71,6 +71,30 @@ export function sourceNativeLiveRejoinedCpu(
 ):boolean{
  return cpu.lifeState==='ACTIVE'&&genuinePriorRejoins.has(cpu.id);
 }
+/**
+ * SOURCE combat may pursue only an actual, independently physically rejoined
+ * and living opponent. A prior F2 historical rejoin, unknown lifecycle,
+ * zero-HP frame or inactive/falling actor is NOT a live target.
+ * Read-only filtering; never fabricates a bot, path, source floor, hit or HP.
+ */
+export function sourceNativeEligibleOpponentForCombat(
+ self:Pick<F3TrafficCpu,'id'|'team'>,
+ other:Pick<F3TrafficCpu,
+  'id'|'team'|'lifeState'|'mobilityState'|'position'|'hp'>,
+ actualSelfFoot:Vec3,originalSide:1|-1,
+ genuinePriorRejoins:ReadonlySet<string>
+):boolean{
+ return other.id!==self.id&&other.team!==self.team&&
+  sourceNativeLiveRejoinedCpu(other,genuinePriorRejoins)&&
+  other.mobilityState==='GROUND'&&
+  Number.isFinite(other.hp)&&other.hp!>0&&
+  [other.position.x,other.position.y,other.position.z,
+   actualSelfFoot.x,actualSelfFoot.y,actualSelfFoot.z]
+   .every(Number.isFinite)&&
+  other.position.z*originalSide>=33&&
+  Math.abs(other.position.y-actualSelfFoot.y)<=.30;
+}
+
 /** B445 read-only per-CPU audit for existing B441 original SOURCE goals.
  * A denial is not permission to relax physics or invent a link. */
 export interface B445RealSourceGoalGate{
@@ -1168,10 +1192,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // with the source Rapier human-size KCC and actor collision gate.
   if(realFoot.z*sign>=33&&realFoot.y>=2.7&&realFoot.y<=5.25){
    const opponents=this.bots.filter(other=>
-    other.id!==id&&other.team!==bot.team&&
-    other.mobilityState==='GROUND'&&other.lifeState!=='SPLATTED'&&
-    other.position.z*sign>=33&&
-    Math.abs(other.position.y-realFoot.y)<=.30)
+    sourceNativeEligibleOpponentForCombat(
+     bot,other,realFoot,sign,this.physicallyRejoined))
     .map(other=>({other,distance:Math.hypot(
      other.position.x-realFoot.x,other.position.z-realFoot.z)}))
     .filter(candidate=>candidate.distance>=1.7&&candidate.distance<=

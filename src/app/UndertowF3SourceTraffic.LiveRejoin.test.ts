@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {UndertowF3SourceTraffic,sourceNativeLiveRejoinedCpu,
- type F3TrafficCpu} from './UndertowF3SourceTraffic';
+ sourceNativeEligibleOpponentForCombat,type F3TrafficCpu} from './UndertowF3SourceTraffic';
 
 function fixture(){
  const ids=['A1','A2','A3','B1','B2','B3','B4'];
@@ -57,6 +57,31 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
    id:'B1',lifeState:'UNKNOWN',rejoined:false
   });
   expect(traffic.snapshot().physicalRejoins).not.toContain('B1');
+ });
+ it('strictly excludes stale, dead and ungrounded real enemy feet before any native path query',()=>{
+  const {bots,historical}=fixture();
+  const own=bots[0]!,enemy=bots[3]!;
+  // This mock is eligibility policy only; no fake full source match.
+  enemy.position.set(0,3,40);
+  const actorFoot=new Vec3(0,3,42);
+  const alive=()=>sourceNativeEligibleOpponentForCombat(
+   own,enemy,actorFoot,1,historical);
+  expect(alive()).toBe(true);
+  enemy.lifeState=undefined;expect(alive()).toBe(false);
+  enemy.lifeState='SPLATTED';expect(alive()).toBe(false);
+  enemy.lifeState='ACTIVE';enemy.hp=0;expect(alive()).toBe(false);
+  enemy.hp=100;enemy.mobilityState='FALLING';expect(alive()).toBe(false);
+  enemy.mobilityState='GROUND';historical.delete(enemy.id);
+  expect(alive()).toBe(false);
+  historical.add(enemy.id);expect(alive()).toBe(true);
+  enemy.position.z=-40;expect(alive()).toBe(false);
+  enemy.position.z=40;enemy.position.y=3.6;expect(alive()).toBe(false);
+  enemy.position.y=3;enemy.position.x=Number.NaN;expect(alive()).toBe(false);
+  enemy.position.x=0;enemy.hp=Number.NaN;expect(alive()).toBe(false);
+  enemy.hp=100;expect(alive()).toBe(true);
+  // This is a real physical enemy filter, not ally homing or a free
+  // route authorizer; historical B2 original-side state is irrelevant.
+  enemy.team=own.team;expect(alive()).toBe(false);
  });
  it('normal real source respawn must earn new physical rejoin',()=>{
   const {traffic,bots,historical}=fixture();
