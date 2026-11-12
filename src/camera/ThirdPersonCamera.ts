@@ -386,11 +386,15 @@ export class ThirdPersonCamera {
       from.z+direction.z*fallbackDistance
     );
     const blocker = this.physics.castStageSegment(from, blockerEnd, 'ink-projectile');
+    // Genuine SOURCE combat uses the same nearest original Rapier cover
+    // as physical actor/projectile hit resolution. The legacy paint-plane
+    // priority tolerance remains unchanged outside SOURCE combat aiming.
+    const paintPriorityEpsilon = this.sourceCombatAimQuery === null
+      ? GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters : 0;
     if (
       best &&
       (!blocker ||
-        best.distance <=
-          blocker.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
+        best.distance <= blocker.distance + paintPriorityEpsilon)
     ) {
       out.copy(best.worldPoint);
     } else if (blocker) {

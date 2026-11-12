@@ -105,6 +105,45 @@ describe('SOURCE combat center-ray distance',()=>{
   const query:CombatAimQuery=(a,b)=>({point:b.clone(),distance:a.distance(b)});
   view.enableSourceCombatAim(query);expect(view.getAimTarget().equals(block)).toBe(true);
  });
+ it('uses the nearer real Rapier blocker for SOURCE aim when paint is slightly behind cover',()=>{
+  // 5cm source paint-plane separation falls within the historical 6cm
+  // visual tolerance; SOURCE physical shots already respect the .48m solid.
+  const worldPoint=new Vec3(0,0,.53);
+  const originalCover=new Vec3(0,0,.48);
+  const surface={intersectRay:vi.fn(()=>({
+   distance:.53,worldPoint
+  }))};
+  const physics={castStageSegment:vi.fn(()=>({
+   distance:.48,point:originalCover,solidId:'UNIT_SOURCE_COVER'
+  }))};
+  const entity={camera:{nearClip:0,farClip:100,
+   screenToWorld:(_x:number,_y:number,d:number)=>new Vec3(0,0,d)}};
+  const canvas={addEventListener:vi.fn(),
+   getBoundingClientRect:()=>({width:1600,height:900})};
+  const view=new ThirdPersonCamera(
+   canvas as never,entity as never,[surface] as never,physics as never);
+  // T20/historical camera still keeps its paint-plane visual tolerance.
+  expect(view.getAimTarget().z).toBeCloseTo(.53,5);
+  view.enableSourcePracticeControls();
+  let opponentDistance=.49;
+  const query=vi.fn(() =>({
+   botId:'UNIT_ONLY_B1',guarded:false,distance:opponentDistance,
+   point:new Vec3(0,0,opponentDistance)
+  }));
+  view.enableSourceCombatAim(query);
+  // A live CPU .01m BEHIND the true collider must never become a valid
+  // center-ray aim target, even if painted geometry lies .05m beyond.
+  expect(view.getAimTarget().z).toBeCloseTo(.48,5);
+  expect(view.sourceCombatAimSnapshot()).toBeNull();
+  expect(query).toHaveBeenCalledOnce();
+  // A genuinely visible CPU .05m in FRONT of the same real cover stays
+  // targetable; no loss of actual legitimate aim.
+  opponentDistance=.42;
+  expect(view.getAimTarget().z).toBeCloseTo(.42,5);
+  expect(view.sourceCombatAimSnapshot()).toMatchObject({
+   id:'UNIT_ONLY_B1',distanceMeters:.42
+  });
+ });
  it('rejects malformed queries',()=>{
   const {view}=camera();view.enableSourcePracticeControls();
   for(const distance of [NaN,Infinity,-1,1000]){
