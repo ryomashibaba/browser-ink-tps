@@ -245,11 +245,13 @@ export class CpuKitSystem {
         next,
         'thrown-sub'
       );
+      // Physical SOURCE CPU SUBs share human/main collision precedence;
+      // older manual kit QA retains its original paint epsilon.
       const paintWins = paintHit && (
         !blockerHit ||
-        paintHit.distance <=
-          blockerHit.distance +
-          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+        paintHit.distance <= blockerHit.distance +
+          (this.nativeOriginalSourceCombatantSubContactEnabled?0:
+            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
       );
 
       // A real thrown SUB has finite diameter and may hit an ACTUAL

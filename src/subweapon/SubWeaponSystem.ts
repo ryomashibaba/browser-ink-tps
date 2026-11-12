@@ -218,14 +218,18 @@ export class SubWeaponSystem {
           paintDistance:paintHit?.distance??null,
           rapierId:blockerHit?.solidId??null,
           rapierDistance:blockerHit?.distance??null,
-          priorityEpsilon:GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+          priorityEpsilon:this.nativeSourceHumanSubBodyContactEnabled?0:
+            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
         };
       }
 
+      // A real SOURCE SUB cannot land on paint beyond nearer original
+      // Rapier cover. Non-SOURCE QA/T20 keeps its legacy 6cm tolerance.
       const paintWins = paintHit && (
         !blockerHit ||
-        paintHit.distance <=
-          blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+        paintHit.distance <= blockerHit.distance +
+          (this.nativeSourceHumanSubBodyContactEnabled?0:
+            GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters)
       );
 
       // The true SOURCE human SUB and true SOURCE CPU SUB must obey the
