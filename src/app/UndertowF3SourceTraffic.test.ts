@@ -46,6 +46,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
    mobilityState:'GROUND',position:physical,agent:{}};
   const fake:any=Object.create(UndertowF3SourceTraffic.prototype);
   fake.freeCombat=true;
+  fake.respawnOriginalDrops=new Set();
   fake.physicallyRejoined=new Set(['A1']);
   fake.patrolGoals=new Map([['A1',[recoveryFoot]]]);
   fake.bots=[actor];
