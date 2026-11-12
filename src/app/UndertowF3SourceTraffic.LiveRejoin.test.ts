@@ -107,6 +107,35 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   b1.mobilityState='GROUND';
   expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
  });
+ it('invalidates newborn SOURCE CPU old life before traffic.observe, leaving six teammates',()=>{
+  const {traffic,bots,historical}=fixture();
+  const t:any=traffic;
+  t.originalSourceRecoveryIntent=new Set(['B1']);
+  t.b443OriginalGoalLocks=new Map([['B1',{target:new Vec3(0,3,-40)}]]);
+  t.cleared=new Set(['B1']);
+  const b1=bots[3]!;
+  b1.lifeState='SPLATTED';b1.hp=0;
+  expect(historical.has('B1')).toBe(true);
+  traffic.onNativeSourceCpuRespawn('B1');
+  b1.position.set(0,9,-40);
+  b1.hp=100;b1.lifeState='ACTIVE';
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(false);
+  expect(traffic.nativeCpuLifecycleFrames()[3]!.rejoined).toBe(false);
+  expect(traffic.nativeSourceLiveRejoinedIds()).not.toContain('B1');
+  expect(historical.has('B1')).toBe(false);
+  expect(t.cleared.has('B1')).toBe(false);
+  expect(t.b443OriginalGoalLocks.has('B1')).toBe(false);
+  expect(t.originalSourceRecoveryIntent.has('B1')).toBe(false);
+  expect(traffic.nativeSourceLiveRejoinedIds()).toHaveLength(6);
+  expect(traffic.isLiveRejoinedSourceCpu('A1')).toBe(true);
+  expect(()=>traffic.onNativeSourceCpuRespawn('B1'))
+   .toThrow('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
+  expect(()=>traffic.onNativeSourceCpuRespawn('NOT_A_CPU'))
+   .toThrow('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
+  // Fresh genuine F2 fall/rejoin is still the only way to restore it.
+  historical.add('B1');
+  expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
+ });
  it('normal real source respawn must earn new physical rejoin',()=>{
   const {traffic,bots,historical}=fixture();
   bots[3]!.lifeState='SPLATTED';bots[3]!.hp=0;

@@ -2564,6 +2564,31 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    throw Error('B454_ORIGINAL_RESEARCH_OPT_IN_REQUIRED');
   return this.b454Trace.snapshot();
  }
+ /** A real 150-tick CPU respawn begins a NEW physical life before
+  * traffic.observe. Discard the prior life's landing, teammate orders,
+  * and local-source tactical state immediately, without editing any
+  * actual CPU foot, NavMesh, stage, shot, paint or HP. */
+ onNativeSourceCpuRespawn(id:string):void{
+  const bot=this.bots.find(b=>b.id===id);
+  if(!bot||bot.lifeState!=='SPLATTED')
+   throw Error('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
+  this.physicallyRejoined.delete(id);
+  this.physicallyFalling.delete(id);
+  this.cleared.delete(id);
+  this.respawnOriginalDrops.delete(id);
+  this.originalSourceRecoveryIntent.delete(id);
+  this.b443OriginalGoalLocks.delete(id);
+  this.b442LastApprovedFront.delete(id);
+  this.patrolIndex.set(id,-1);
+  if(id==='A1'){
+   this.b143ApprovedNativeAllyGoal=null;
+   if(this.b471AllyOrder){
+    this.b471AllyOrder=null;
+    this.b471OrderStatus='HOLD';
+    this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
+   }
+  }
+ }
  /** CPU main/kit sight uses the SAME actual-lifecycle + original
   * physical-rejoin fact as traffic, without adding any stage/Actor power. */
  isLiveRejoinedSourceCpu(id:string):boolean{

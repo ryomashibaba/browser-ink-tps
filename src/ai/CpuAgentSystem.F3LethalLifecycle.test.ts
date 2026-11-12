@@ -269,6 +269,37 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     rejoined=true;expect(aim()).not.toBeNull();
   });
 
+  it('native SOURCE respawn clears old-life rejoin before restoring actual HP and high spawn',()=>{
+    const {system,bot}=fixture(true);
+    bot.slot=0;
+    bot.lifeState='SPLATTED';bot.hp=0;
+    bot.previousPosition=new Vec3();
+    bot.jumpStartPosition=new Vec3();
+    bot.jumpTargetPosition=new Vec3();
+    bot.weaponFacing=new Vec3(0,0,1);
+    bot.jumpMarker={enabled:false};
+    bot.entity.setLocalEulerAngles=vi.fn();
+    bot.entity.setPosition=vi.fn();
+    system.spawnPosition=vi.fn(()=>new Vec3(0,9,-40));
+    system.navigation.addAgent=vi.fn(()=>({id:'new-real-native-agent'}));
+    system.phase14qGroundCollision.syncRealCpuFoot=vi.fn();
+    system.stats.cpuRespawns=0;
+    const expireOldLife=vi.fn(()=>{
+      expect(bot.lifeState).toBe('SPLATTED');
+      expect(bot.hp).toBe(0);
+    });
+    system.f3dSourceGoals.onNativeSourceCpuRespawn=expireOldLife;
+    system.respawnBot(bot);
+    expect(expireOldLife).toHaveBeenCalledTimes(1);
+    expect(expireOldLife).toHaveBeenCalledWith('B1');
+    expect(expireOldLife.mock.invocationCallOrder[0]).toBeLessThan(
+      system.phase14qGroundCollision.syncRealCpuFoot.mock.invocationCallOrder[0]);
+    expect(bot.lifeState).toBe('ACTIVE');
+    expect(bot.hp).toBe(GAME_CONFIG.combat.playerMaxHp);
+    expect(bot.position.toArray()).toEqual([0,9,-40]);
+    expect(system.stats.cpuRespawns).toBe(1);
+  });
+
   it('ordinary SOURCE aim without optional stage sight never attacks a stale respawn foot',()=>{
     const {system,bot}=fixture(true);
     bot.position.set(0,3,0);

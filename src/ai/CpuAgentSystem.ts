@@ -134,6 +134,9 @@ export interface CpuQaSourceGoalAuthority {
   /** Actual living SOURCE CPU's current original physical rejoin,
    * never a historical landing from an earlier life. */
   isLiveRejoinedSourceCpu?(id:string):boolean;
+  /** Real CPU respawn starts a new SOURCE life before traffic.observe.
+   * Invalidate prior physical-rejoin evidence before another bot can aim. */
+  onNativeSourceCpuRespawn?(id:string):void;
 }
 
 export interface CpuFireRequest {
@@ -3362,6 +3365,10 @@ export class CpuAgentSystem {
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
+    // CPU fixedUpdate runs all seven actors before traffic.observe.
+    // A newborn HIGH-spawn actor cannot inherit the old lower-floor
+    // physical rejoin during the intervening native weapon decisions.
+    this.f3dSourceGoals?.onNativeSourceCpuRespawn?.(bot.id);
     if (bot.agent) this.navigation.removeAgent(bot.agent);
     bot.agent = this.navigation.addAgent(start);
     bot.position.copy(start);
