@@ -786,9 +786,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     nativeTick:this.b137NativeTick,
     coOpActuallyRunning:this.b171AllySyncPracticeRunning&&
      this.enableB137OriginalAllyRally&&this.enableB150AllySupportInk,
-    actualAllyRejoined:this.physicallyRejoined.has('A1'),
-    actualAllyActiveGrounded:ally.lifeState==='ACTIVE'&&
-     ally.mobilityState==='GROUND',
+    actualAllyRejoined:sourceNativeLiveRejoinedCpu(
+      ally,this.physicallyRejoined),
+     actualAllyActiveGrounded:ally.lifeState==='ACTIVE'&&
+      Number.isFinite(ally.hp)&&ally.hp!>0&&
+      ally.mobilityState==='GROUND',
     trueHumanAliveGrounded:this.b137HumanFootValid,
     actualAllyFoot:[foot.x,foot.y,foot.z],
     actualHumanFoot:[human.x,human.y,human.z]
@@ -1150,7 +1152,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    cpuId:id,cpuTeam:bot.team,
    cpuGrounded:bot.mobilityState==='GROUND',
    cpuRejoined:this.physicallyRejoined.has(id),
-   sevenRejoined:this.physicallyRejoined.size===7,
+   // The seven real SOURCE CPUs must join before the match starts. Once
+   // freeCombat is latched, a subsequent genuine splat must not silence
+   // other living, individually rejoined defenders' legal pursuit.
+   sevenRejoined:this.freeCombat,
    humanAliveGrounded:this.b192HumanAliveGrounded,
    cpuFoot:realFoot,humanFoot:h,
    solids:this.stage.solids.length,paint:this.stage.paintSurfaces.length,
@@ -2251,6 +2256,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.physicallyFalling.delete(bot.id);
     this.respawnOriginalDrops.delete(bot.id);
     this.patrolIndex.set(bot.id,-1);
+    // A new real life cannot inherit the splatted actor's previously
+    // approved tactical destination, or A1's old player C-key order.
+    // Leave all surviving teammates' independent source goals intact.
+    this.b443OriginalGoalLocks.delete(bot.id);
+    this.b442LastApprovedFront.delete(bot.id);
+    if(bot.id==='A1'){
+     this.b143ApprovedNativeAllyGoal=null;
+     if(this.b471AllyOrder){
+      this.b471AllyOrder=null;
+      this.b471OrderStatus='HOLD';
+      this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
+     }
+    }
    }
    if(this.freeCombat&&priorLife==='SPLATTED'&&
       bot.lifeState==='ACTIVE'){

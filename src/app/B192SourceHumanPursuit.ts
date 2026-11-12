@@ -5,6 +5,8 @@ import {chooseB142OriginalAllyStandoff, type B142Foot}
 export interface B192HumanCandidate{
  enabled:boolean;nativeTick:number;humanTick:number;
  cpuId:string;cpuTeam:Team.A|Team.B;
+ /** True only after the real first seven-CPU rejoin has started the match;
+  * subsequent legitimate splats must not globally suspend surviving CPUs. */
  cpuGrounded:boolean;cpuRejoined:boolean;sevenRejoined:boolean;
  humanAliveGrounded:boolean;
  cpuFoot:Readonly<{x:number;y:number;z:number}>;

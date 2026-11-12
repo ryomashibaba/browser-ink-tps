@@ -16,11 +16,15 @@ describe('B192 source-only actual HUMAN pursuit',()=>{
   expect(can({...v,humanFoot:{x:4,y:4,z:-32}})).toBe(false);
   expect(can({...v,humanFoot:{x:4,y:4.5,z:-40}})).toBe(false);
  });
- it('requires actual seven-CPU native rejoin + same-tick grounded alive HUMAN',()=>{
+ it('requires initial seven-CPU start and same-tick grounded alive HUMAN',()=>{
   expect(can({...v,humanTick:99})).toBe(false);
   expect(can({...v,cpuGrounded:false})).toBe(false);
   expect(can({...v,cpuRejoined:false})).toBe(false);
   expect(can({...v,sevenRejoined:false})).toBe(false);
+  // Once the match's real seven-actor start latched, a splat of another
+  // actor does not disable this individually rejoined, living defender.
+  expect(can({...v,sevenRejoined:true,cpuRejoined:true})).toBe(true);
+  expect(can({...v,sevenRejoined:true,cpuRejoined:false})).toBe(false);
   expect(can({...v,humanAliveGrounded:false})).toBe(false);
  });
  it('rejects bad Actor identities, unknown source and false scoring',()=>{

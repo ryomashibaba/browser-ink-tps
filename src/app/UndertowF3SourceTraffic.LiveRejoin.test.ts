@@ -105,4 +105,40 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   historical.add('B1');
   expect(traffic.nativeCpuLifecycleFrames()[3]!.rejoined).toBe(true);
  });
+ it('a genuine A1 splat cancels stale C orders and in-flight goals while six teammates survive',()=>{
+  const {traffic,bots,historical}=fixture();
+  const t:any=traffic;
+  const ids=bots.map(bot=>bot.id);
+  t.previousLife=new Map(ids.map(id=>[id,'ACTIVE']));
+  t.previous=new Map(bots.map(bot=>[bot.id,bot.mobilityState]));
+  t.previousFeet=new Map(bots.map(bot=>[bot.id,bot.position.clone()]));
+  t.b34StationarySourceTicks=new Map();
+  t.originalSourceRecoveryIntent=new Set(['A1']);
+  t.cleared=new Set(ids);
+  t.b443OriginalGoalLocks=new Map([['A1',{
+   target:new Vec3(0,3,39),firstApprovedTick:5,arrivedSinceTick:20
+  }]]);
+  t.b442LastApprovedFront=new Map([['A1',{
+   target:new Vec3(0,3,39),nativeTick:80
+  }]]);
+  t.b143ApprovedNativeAllyGoal={target:new Vec3(0,3,39)};
+  t.b471AllyOrder={requestedTick:90,goal:new Vec3(0,3,39),
+   realAllyFootAtApproval:new Vec3(0,3,40)};
+  t.b471OrderStatus='MOVING';
+  t.b471SourceDecision='ORIGINAL_GOAL_GRANTED';
+  bots[0]!.hp=0;bots[0]!.lifeState='SPLATTED';
+  traffic.observe(100);
+  expect(historical.has('A1')).toBe(false);
+  expect(traffic.nativeCpuLifecycleFrames().filter(bot=>bot.rejoined))
+   .toHaveLength(6);
+  expect(t.freeCombat).toBe(true);
+  expect(t.b471AllyOrder).toBeNull();
+  expect(t.b471OrderStatus).toBe('HOLD');
+  expect(t.b471SourceDecision).toBe('PHYSICAL_SOURCE_HOLD');
+  expect(t.b143ApprovedNativeAllyGoal).toBeNull();
+  expect(t.b443OriginalGoalLocks.has('A1')).toBe(false);
+  expect(t.b442LastApprovedFront.has('A1')).toBe(false);
+  expect(t.originalSourceRecoveryIntent.has('A1')).toBe(false);
+ });
+
 });
