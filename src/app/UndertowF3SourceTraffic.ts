@@ -66,10 +66,13 @@ export interface F3TrafficCpu{
  * native actor is SPLATTED (or its life state is unknown).
  * Never clears or adds original navigation/physics authority. */
 export function sourceNativeLiveRejoinedCpu(
- cpu:Pick<F3TrafficCpu,'id'|'lifeState'>,
+ cpu:Pick<F3TrafficCpu,'id'|'lifeState'|'hp'|'mobilityState'>,
  genuinePriorRejoins:ReadonlySet<string>
 ):boolean{
- return cpu.lifeState==='ACTIVE'&&genuinePriorRejoins.has(cpu.id);
+ // A past F2 landing cannot make a dead, HP-zero or currently airborne
+ // CPU count as a playable source actor, even before observe() runs.
+ return cpu.lifeState==='ACTIVE'&&Number.isFinite(cpu.hp)&&cpu.hp!>0&&
+  cpu.mobilityState==='GROUND'&&genuinePriorRejoins.has(cpu.id);
 }
 /**
  * SOURCE combat may pursue only an actual, independently physically rejoined

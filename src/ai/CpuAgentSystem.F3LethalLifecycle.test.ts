@@ -113,6 +113,35 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSplats).toBe(1);
   });
 
+  it('removes pre-dispatch fire and kit requests of a truly splatted SOURCE CPU, not its ally', () => {
+    const { system, bot, shot } = fixture(true);
+    system.bots.push({
+      id: 'A1', team: Team.A, lifeState: 'ACTIVE', hp: 100,
+      mobilityState: 'GROUND'
+    });
+    system.pendingShots = [{ sourceId: 'B1' }, { sourceId: 'A1' }];
+    system.pendingKitRequests = [{ sourceId: 'B1' }, { sourceId: 'A1' }];
+    system.applyProjectileHit(shot, 80, 'HUMAN');
+    expect(system.pendingShots.map((x: any) => x.sourceId)).toEqual(['A1']);
+    expect(system.pendingKitRequests.map((x: any) => x.sourceId)).toEqual(['A1']);
+    const shots: string[] = [];
+    const kits: string[] = [];
+    system.drainFireRequests((x: any) => shots.push(x.sourceId));
+    system.drainKitRequests((x: any) => { kits.push(x.sourceId); return true; });
+    expect(shots).toEqual(['A1']);
+    expect(kits).toEqual(['A1']);
+    // Neither a delayed stale action nor a false respawn shot is emitted.
+    system.pendingShots.push({ sourceId: 'B1' });
+    system.drainFireRequests((x: any) => shots.push(x.sourceId));
+    expect(shots).toEqual(['A1']);
+    bot.lifeState = 'ACTIVE';
+    bot.hp = 100;
+    bot.mobilityState = 'GROUND';
+    system.pendingShots.push({ sourceId: 'B1' });
+    system.drainFireRequests((x: any) => shots.push(x.sourceId));
+    expect(shots).toEqual(['A1', 'B1']);
+  });
+
   it('keeps the frozen T20 late splat path and does not touch source feet', () => {
     const { system, bot, shot } = fixture(false);
     expect(system.applyProjectileHit(shot, 80, 'HUMAN')?.lethalHpZero)

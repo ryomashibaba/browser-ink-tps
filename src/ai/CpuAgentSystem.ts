@@ -1275,7 +1275,17 @@ export class CpuAgentSystem {
   }
 
   public drainFireRequests(consumer: (request: CpuFireRequest) => void): void {
-    for (const request of this.pendingShots) consumer(request);
+    for (const request of this.pendingShots) {
+      // An F3 source projectile has not left the muzzle until dispatched.
+      // A CPU splatted earlier in this native tick cannot fire from its
+      // former physical foot; only the frozen T21D practice uses this gate.
+      if (this.f3dSourceGoals) {
+        const shooter = this.bots.find(bot => bot.id === request.sourceId);
+        if (!shooter || shooter.lifeState !== 'ACTIVE' || shooter.hp <= 0 ||
+            shooter.mobilityState !== 'GROUND') continue;
+      }
+      consumer(request);
+    }
     this.pendingShots.length = 0;
   }
 
@@ -1283,6 +1293,13 @@ export class CpuAgentSystem {
     consumer: (request: CpuKitRequest) => boolean
   ): void {
     for (const request of this.pendingKitRequests) {
+      // Same native shooter life as the main weapon: a queued sub/special
+      // cannot materialize after this real source CPU has been splatted.
+      if (this.f3dSourceGoals) {
+        const shooter = this.bots.find(bot => bot.id === request.sourceId);
+        if (!shooter || shooter.lifeState !== 'ACTIVE' || shooter.hp <= 0 ||
+            shooter.mobilityState !== 'GROUND') continue;
+      }
       const accepted = consumer(request);
       if (!accepted) this.rollbackRejectedKitRequest(request);
     }
@@ -3232,6 +3249,17 @@ export class CpuAgentSystem {
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
     this.qaMotionGoals.delete(bot.id);
+    // Only in the original SOURCE game: do not release weapon requests
+    // that were queued before a genuine same-tick lethal hit. Keep every
+    // surviving teammate's paid real shots/kit actions intact.
+    if (this.f3dSourceGoals) {
+      for (let i = this.pendingShots.length - 1; i >= 0; i--)
+        if (this.pendingShots[i]!.sourceId === bot.id)
+          this.pendingShots.splice(i, 1);
+      for (let i = this.pendingKitRequests.length - 1; i >= 0; i--)
+        if (this.pendingKitRequests[i]!.sourceId === bot.id)
+          this.pendingKitRequests.splice(i, 1);
+    }
     this.phase14eFirstDrop?.cancel(bot.id);
 
     if (bot.agent) {

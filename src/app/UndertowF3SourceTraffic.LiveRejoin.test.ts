@@ -77,7 +77,9 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   enemy.lifeState=undefined;expect(alive()).toBe(false);
   enemy.lifeState='SPLATTED';expect(alive()).toBe(false);
   enemy.lifeState='ACTIVE';enemy.hp=0;expect(alive()).toBe(false);
+  expect(sourceNativeLiveRejoinedCpu(enemy,historical)).toBe(false);
   enemy.hp=100;enemy.mobilityState='FALLING';expect(alive()).toBe(false);
+  expect(sourceNativeLiveRejoinedCpu(enemy,historical)).toBe(false);
   enemy.mobilityState='GROUND';historical.delete(enemy.id);
   expect(alive()).toBe(false);
   historical.add(enemy.id);expect(alive()).toBe(true);
