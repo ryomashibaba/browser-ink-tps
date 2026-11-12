@@ -226,6 +226,10 @@ describe('B494 same original SOURCE world: three continuously integrated real-si
     pB4.x,pB4.y+.68,pB4.z));
   const collider4=physical.world.createCollider(
    RAPIER.ColliderDesc.capsule(.39,.29),body4);
+  // Rapier's broadphase must see both newly registered kinematic CPU
+  // colliders before the intentional dynamic-contact sensitivity probe.
+  // This is a separate QA world, not a real gameplay clock step.
+  physical.step();
   const dynamicKcc=createConfiguredPlayerCharacterController(physical.world);
   const dx=(pB4.x-pB2.x)/actualSeparation*.14;
   const dz=(pB4.z-pB2.z)/actualSeparation*.14;
