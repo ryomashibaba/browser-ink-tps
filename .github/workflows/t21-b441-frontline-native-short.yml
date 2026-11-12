@@ -10,6 +10,7 @@ on:
       - 'src/stage/undertow/UndertowB494SameWorldThreeCpuContinuousKcc.test.ts'
       - 'src/stage/undertow/UndertowB495OriginalRecastHeightFaceIsolation.test.ts'
       - 'src/app/UndertowB496RealRejectedRouteReprojectionQa.test.ts'
+      - 'src/app/UndertowB497TenUnresolvedAndKccContinuityQa.test.ts'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -254,6 +255,31 @@ jobs:
         with:
           name: b496-source-recast-route-y-reprojection
           path: /tmp/t21-b496-reprojected-path.json
+          if-no-files-found: warn
+          retention-days: 14
+      # B497 pinned original 60 paths only; no new true-browser world.
+      - name: Download immutable B450 B454 B487 B488 for B497
+        if: ${{ contains(github.event.head_commit.message, '[b497-path-kcc]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 43140584988
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b497-pinned-original
+      - name: Locate ten real rejected floor points and KCC-check fifty projected source paths
+        if: ${{ contains(github.event.head_commit.message, '[b497-path-kcc]') }}
+        env:
+          T21_B497_EVIDENCE_DIR: /tmp/t21-b497-pinned-original
+          T21_B497_REPORT_PATH: /tmp/t21-b497-report.json
+        run: |
+          npx vitest run src/app/UndertowB497TenUnresolvedAndKccContinuityQa.test.ts
+          node -e "const d=require('/tmp/t21-b497-report.json');if(d.originalSource!=='25/17/26/0'||d.tenUnresolvedOriginalRoutes.length!==10||d.totalIsolatedStaticKccPathsTested!==50||d.originalCrossTeamRoutesAuthorized!==0)process.exit(1);console.log('B497_REPRODUCIBLE_SAFE_DIAGNOSTIC_ONLY')"
+      - name: Archive B497 all sixty source routes and real CPU-size KCC diagnostics
+        if: ${{ contains(github.event.head_commit.message, '[b497-path-kcc]') && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b497-true-ten-source-failures-and-fifty-static-kcc
+          path: /tmp/t21-b497-report.json
           if-no-files-found: warn
           retention-days: 14
       - name: Existing short native runner syntax and binding preflight
