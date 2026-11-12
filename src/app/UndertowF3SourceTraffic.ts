@@ -1016,7 +1016,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Request goal from real A1 foot ONLY after original Recast + Rapier
   // certify both endpoints and every <=0.30m intermediate source point.
   const playerOrder=this.b471AllyOrder;
-  if(id==='A1'&&playerOrder){
+  // An injured A1 cannot carry out a queued C-key attack/move order
+  // simply because no safe OWN retreat route was available this tick.
+  // Keep the real order pending until genuine HP recovery ends.
+  if(id==='A1'&&playerOrder&&!this.originalSourceRecoveryIntent.has(id)){
    if(this.b137NativeTick-playerOrder.requestedTick>900||
       bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
       !this.physicallyRejoined.has('A1')||
