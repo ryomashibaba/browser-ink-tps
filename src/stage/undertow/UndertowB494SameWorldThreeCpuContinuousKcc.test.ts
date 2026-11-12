@@ -175,4 +175,97 @@ describe('B494 same original SOURCE world: three continuously integrated real-si
    physics.world.removeRigidBody(s.body);
   }
  });
+} it.skipIf(!directory)('positive controls: identical original KCC detects real floor and another full CPU capsule',()=>{
+  const raw=JSON.parse(readFileSync(join(directory!,
+   'b454-native-b2-b4-physical-60hz.json'),'utf8'));
+  const stage=undertowT21dConnectivityQaStage();
+  const physical=new RapierStagePhysics(dt,stage);
+  physical.step();
+  const src=raw.rows.B2.find((r:Foot)=>r.tick===1153)!;
+  const foot=f(src.foot);
+  const floor=physical.castStageSegment(
+   new Vec3(foot.x,foot.y+.65,foot.z),
+   new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+  expect(floor?.solidId).toBe(
+   'UndertowT21D:first-drop-landing-negative-z');
+  const floorBody=physical.world.createRigidBody(
+   RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+    foot.x,foot.y+.68,foot.z));
+  const floorCapsule=physical.world.createCollider(
+   RAPIER.ColliderDesc.capsule(.39,.29),floorBody);
+  const floorKcc=createConfiguredPlayerCharacterController(physical.world);
+  floorKcc.computeColliderMovement(floorCapsule,{x:0,y:-.3,z:0},
+   undefined,undefined,(other:RAPIER.Collider)=>
+    other.handle!==floorCapsule.handle&&
+    physical.shouldCharacterCollide(other,'HUMAN'));
+  const floorMovement=floorKcc.computedMovement();
+  const floorCollisions=Array.from({length:floorKcc.numComputedCollisions()},
+   (_,i)=>floorKcc.computedCollision(i)?.collider)
+   .filter((x):x is RAPIER.Collider=>!!x);
+  const floorOriginalContact=floorCollisions.some(x=>
+   physical.sourceSolidIdForCollider(x)===
+    'UndertowT21D:first-drop-landing-negative-z');
+  expect(floorOriginalContact).toBe(true);
+  expect(floorMovement.y).toBeGreaterThan(-.25);
+  physical.world.removeCharacterController(floorKcc);
+  physical.world.removeRigidBody(floorBody);
+  // Real B2/B4 shortest actual separation, NOT a claim that the
+  // following deliberately forced contact occurred in the game.
+  const pB2=f(raw.rows.B2.find((r:Foot)=>r.tick===1724)!.foot);
+  const pB4=f(raw.rows.B4.find((r:Foot)=>r.tick===1724)!.foot);
+  const actualSeparation=xz(pB2,pB4);
+  expect(actualSeparation).toBeGreaterThan(.58);
+  expect(actualSeparation).toBeLessThan(.65);
+  const body2=physical.world.createRigidBody(
+   RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+    pB2.x,pB2.y+.68,pB2.z));
+  const collider2=physical.world.createCollider(
+   RAPIER.ColliderDesc.capsule(.39,.29),body2);
+  const body4=physical.world.createRigidBody(
+   RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+    pB4.x,pB4.y+.68,pB4.z));
+  const collider4=physical.world.createCollider(
+   RAPIER.ColliderDesc.capsule(.39,.29),body4);
+  const dynamicKcc=createConfiguredPlayerCharacterController(physical.world);
+  const dx=(pB4.x-pB2.x)/actualSeparation*.14;
+  const dz=(pB4.z-pB2.z)/actualSeparation*.14;
+  dynamicKcc.computeColliderMovement(collider2,{x:dx,y:0,z:dz},
+   undefined,undefined,(other:RAPIER.Collider)=>
+    other.handle!==collider2.handle&&
+    physical.shouldCharacterCollide(other,'HUMAN'));
+  const dynamicMovement=dynamicKcc.computedMovement();
+  const dynamicCollisions=Array.from(
+   {length:dynamicKcc.numComputedCollisions()},
+   (_,i)=>dynamicKcc.computedCollision(i)?.collider)
+   .filter((x):x is RAPIER.Collider=>!!x);
+  const realCpuCapsuleDetected=dynamicCollisions.some(x=>
+   x.handle===collider4.handle);
+  expect(realCpuCapsuleDetected).toBe(true);
+  expect(Math.hypot(dynamicMovement.x,dynamicMovement.z))
+   .toBeLessThan(.14-.02);
+  const calibrate={
+   schema:'B494_SOURCE_KCC_COLLISION_POSITIVE_CONTROLS_V1',
+   source:'25/17/26/0',
+   forcedDownwardProbeMeters:.3,
+   originalLandingColliderDetected:floorOriginalContact,
+   actualB2B4ClosestSourceTick:1724,
+   actuallyRecordedPairDistanceMeters:rnd(actualSeparation),
+   forcedHorizontalProbeMeters:.14,
+   otherRealSizedCpuCapsuleDetected:realCpuCapsuleDetected,
+   controlsWereGenuineGameplayMoves:false,
+   stageColliderCountUnchanged:true,
+   gameplayRouteAuthorizationGranted:false
+  };
+  if(process.env.T21_B494_REPORT_PATH){
+   const prev=JSON.parse(readFileSync(process.env.T21_B494_REPORT_PATH,'utf8'));
+   prev.sensitivityPositiveControls=calibrate;
+   writeFileSync(process.env.T21_B494_REPORT_PATH,
+    JSON.stringify(prev,null,2)+'\n');
+  }
+  console.log('B494_ORIGINAL_RAPIER_COLLISION_SENSITIVITY_PASS',
+   JSON.stringify(calibrate));
+  physical.world.removeCharacterController(dynamicKcc);
+  physical.world.removeRigidBody(body2);
+  physical.world.removeRigidBody(body4);
+ });
 });
