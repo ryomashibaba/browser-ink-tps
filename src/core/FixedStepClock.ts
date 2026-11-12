@@ -29,6 +29,7 @@ export class FixedStepClock {
     this.accumulator += dt;
 
     let ticks = 0;
+    let terminalTickCompleted = false;
     while (this.accumulator >= this.stepSeconds && ticks < this.maxCatchUpTicksPerFrame) {
       this.tick += 1;
       const keepSimulating = simulateTick(this.tick, this.stepSeconds);
@@ -39,6 +40,7 @@ export class FixedStepClock {
         // This is not dropped simulation time: the match has ended.
         // Historical void callbacks still consume their usual frames.
         this.accumulator = 0;
+        terminalTickCompleted = true;
         break;
       }
     }
@@ -52,7 +54,12 @@ export class FixedStepClock {
 
     return {
       ticks,
-      alpha: this.accumulator / this.stepSeconds,
+      // Render the LAST actually completed Rapier/KCC state when SOURCE
+      // TIME_UP happens inside a low-FPS catch-up batch. alpha=0 would
+      // interpolate back to the PREVIOUS tick and leave the stopped
+      // human/CPU images one true physics frame behind their colliders.
+      // Historical void-returning clocks keep normal interpolation.
+      alpha: terminalTickCompleted ? 1 : this.accumulator / this.stepSeconds,
       droppedSeconds: this.droppedSeconds
     };
   }

@@ -72,7 +72,14 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   expect(nativeCount).toBe(2);
   expect(clock.tick).toBe(2);
   expect(started.ticks).toBe(2);
-  expect(started.alpha).toBe(0);
+  // The 180s end frame renders the ACTUAL final KCC/body pose, not the
+  // preceding frame: the native world pauses immediately after this.
+  expect(started.alpha).toBe(1);
+  const beforeLastRealBodyX=5;
+  const lastRealBodyX=5.3;
+  const frozenImageX=beforeLastRealBodyX+
+   (lastRealBodyX-beforeLastRealBodyX)*started.alpha;
+  expect(frozenImageX).toBeCloseTo(lastRealBodyX);
   expect(started.droppedSeconds).toBe(0);
   // All old T20/F3 QA clock clients return void, not false.
   const old=new FixedStepClock(60,4,.12);
@@ -81,6 +88,13 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   expect(legacy.ticks).toBe(4);
   expect(visited).toEqual([1,2,3,4]);
   expect(old.tick).toBe(4);
+  expect(legacy.alpha).toBeCloseTo(0);
+  // A partially accumulated normal render still interpolates normally;
+  // the final-pose override exists ONLY when the callback returns false.
+  const ordinary=new FixedStepClock(60,4,.12);
+  const partial=ordinary.advance(1.5/60,()=>undefined);
+  expect(partial.ticks).toBe(1);
+  expect(partial.alpha).toBeCloseTo(.5);
  });
 
  it('all seven real living native CPUs retain their true prior rejoin',()=>{
