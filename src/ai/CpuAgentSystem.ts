@@ -237,6 +237,11 @@ export class CpuAgentSystem {
   }>();
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
+  /** Preserve an already selected ORIGINAL paint aim through a genuine
+   * charge/burst. Never licenses a new floor, shot, route, or enemy. */
+  private readonly sourceCommittedPaintAims = new Map<string,{
+    weaponId:WeaponId;target:Vec3
+  }>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
   private b152AcceptedSourceAimShots=0;
   // B64 experimental source-local alternate AIM only. Original FIXED
@@ -645,6 +650,7 @@ export class CpuAgentSystem {
     this.b35RealNativeRequests=0;
     this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
+    this.sourceCommittedPaintAims.clear();
     this.qaTurfShotsByActor.clear();
     this.b152AcceptedSourceAimShots=0;
     this.b64NoTargetCooldown.clear();
@@ -2015,6 +2021,29 @@ export class CpuAgentSystem {
     return false;
   }
 
+  /** A charged SOURCE weapon must not silently lose its real burst when
+   * another actor paints the chosen cell during charge/cooldown. An old aim
+   * is NOT an authority: recheck the live CPU's registered Rapier support,
+   * the original non-scoreable paint surface and native stage shot ray
+   * before every subsequent shot. No navigation or collision is changed. */
+  private revalidateSourceCommittedPaintAim(
+    bot:CpuBot,profile:ReturnType<typeof weaponProfile>
+  ):Vec3|null{
+    const aim=this.sourceCommittedPaintAims.get(bot.id);
+    if(!aim||aim.weaponId!==bot.weaponId||
+       bot.lifeState!=='ACTIVE'||bot.hp<=0||
+       bot.mobilityState!=='GROUND'||!bot.agent||
+       !this.b216SourceStageAimValidated||
+       !this.sampleRegisteredSourceFoot(bot))return null;
+    const paint=this.gameplayInk.sampleWorld(
+      aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+    if(!paint||paint.surface.isScoreable||
+       !this.cpuTargetInRange(bot,aim.target,profile)||
+       !this.b216OriginalSourceTurfSightClear(bot,aim.target))
+      return null;
+    return aim.target;
+  }
+
   private updateCpuWeapon(
     bot: CpuBot,
     dt: number,
@@ -2085,13 +2114,33 @@ export class CpuAgentSystem {
     if(this.b215SelectedBattlePaintPacing&&canTurfPaint&&
        !hasCombatInRange&&cooldown<=0&&!b215QueryPaint)
       this.b215RealWeaponCooldownPaintScansDeferred++;
-    const turfTarget = canTurfPaint && !hasCombatInRange &&
+    let turfTarget = canTurfPaint && !hasCombatInRange &&
       b215QueryPaint&&(cooldown <= 0 || finishTurfBurst)
       ? allyInk ?? (this.b64InkAngleSweepEnabled?
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
+    // An actual original-floor aim is held ONLY while a real charger is
+    // charging or a splatling is charging/bursting. Never preserve combat
+    // enemy coordinates, and drop stale aims on a fresh life or weapon.
+    const chargedSourceWeapon=canTurfPaint&&
+      (profile.weaponClass==='CHARGER'||profile.weaponClass==='SPLATLING');
+    const continuingCharge=profile.weaponClass==='CHARGER'
+      ? bot.weaponChargeSeconds>0
+      : bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0;
+    if(!chargedSourceWeapon||hasCombatInRange){
+      this.sourceCommittedPaintAims.delete(bot.id);
+    }else if(turfTarget){
+      this.sourceCommittedPaintAims.set(bot.id,{
+        weaponId:bot.weaponId,target:turfTarget.clone()
+      });
+    }else if(continuingCharge){
+      turfTarget=this.revalidateSourceCommittedPaintAim(bot,profile);
+      if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
+    }else{
+      this.sourceCommittedPaintAims.delete(bot.id);
+    }
     const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);
@@ -3107,6 +3156,7 @@ export class CpuAgentSystem {
   }
 
   private resetCpuWeaponRuntime(bot: CpuBot, resetGuard = false): void {
+    this.sourceCommittedPaintAims.delete(bot.id);
     bot.weaponChargeSeconds = 0;
     bot.weaponBurstShotsRemaining = 0;
     bot.weaponBurstCooldown = 0;
@@ -3249,6 +3299,7 @@ export class CpuAgentSystem {
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
     this.qaMotionGoals.delete(bot.id);
+    this.sourceCommittedPaintAims.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
     // that were queued before a genuine same-tick lethal hit. Keep every
     // surviving teammate's paid real shots/kit actions intact.
@@ -3288,6 +3339,7 @@ export class CpuAgentSystem {
 
   private respawnBot(bot: CpuBot): void {
     this.qaMotionGoals.delete(bot.id);
+    this.sourceCommittedPaintAims.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
     if (bot.agent) this.navigation.removeAgent(bot.agent);
     bot.agent = this.navigation.addAgent(start);

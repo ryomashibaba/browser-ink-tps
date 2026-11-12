@@ -146,6 +146,94 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(shots).toEqual(['A1', 'B1']);
   });
 
+
+  it('continues only source-authorized REAL splatling burst shots after the painted aim becomes unavailable for fresh selection',()=>{
+    const {system,bot}=fixture(true);
+    bot.weaponId='rotor-splatling';
+    bot.position.set(0,3,0);
+    bot.weaponFacing=new Vec3(0,0,1);
+    bot.hp=100;bot.ink=100;bot.fireRemaining=0;
+    bot.weaponBurstShotsRemaining=2;bot.weaponBurstCooldown=0;
+    bot.weaponChargeSeconds=0;bot.weaponRollPaintCooldown=0;
+    bot.weaponGuardHp=100;bot.weaponGuardBreakSeconds=0;
+    system.sourceCommittedPaintAims=new Map([['B1',{
+      weaponId:'rotor-splatling',target:new Vec3(2,3,0)
+    }]]);
+    system.phase14qF2RecoverableSteps=true;
+    system.b216SourceStageAimValidated=vi.fn(()=>true);
+    system.sampleRegisteredSourceFoot=vi.fn(()=>({owner:Team.B,
+      surface:{isScoreable:false}}));
+    system.gameplayInk={sampleWorld:vi.fn(()=>({
+      surface:{isScoreable:false}
+    }))};
+    system.qaTurfShotCooldown=new Map([['B1',.85]]);
+    system.qaTurfShotsByActor=new Map();
+    system.b215SelectedBattlePaintPacing=true;
+    system.b64InkAngleSweepEnabled=false;
+    system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
+    system.chooseCombatTarget=vi.fn(()=>null);
+    system.b216OriginalTurfSightChecks=0;
+    system.b216OriginalTurfCoverVetoes=0;
+    system.stats.cpuSourceTurfShots=0;system.stats.cpuShots=0;
+
+    system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+    expect(system.pendingShots).toHaveLength(1);
+    expect(system.pendingShots[0].sourceId).toBe('B1');
+    expect(system.pendingShots[0].sourceFloorPaint).toBe(true);
+    expect(bot.ink).toBeLessThan(100);
+    expect(bot.weaponBurstShotsRemaining).toBe(1);
+    const inkAfterFirst=bot.ink;
+    bot.weaponBurstCooldown=0;
+
+    // A real blocking Rapier source solid vetoes the next shot despite
+    // the remembered aim. No invented impact, projectile or ink spend.
+    system.b216SourceStageAimValidated=vi.fn(()=>false);
+    system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+    expect(system.pendingShots).toHaveLength(1);
+    expect(bot.ink).toBe(inkAfterFirst);
+    expect(bot.weaponBurstShotsRemaining).toBe(0);
+    expect(system.sourceCommittedPaintAims.has('B1')).toBe(false);
+  });
+
+  it('keeps a real SOURCE charger charging at an independently reverified floor aim, then clears it on splat',()=>{
+    const {system,bot}=fixture(true);
+    bot.weaponId='rail-charger';bot.hp=100;bot.ink=100;
+    bot.position.set(0,3,0);bot.weaponFacing=new Vec3(0,0,1);
+    bot.weaponChargeSeconds=.01;bot.weaponBurstShotsRemaining=0;
+    bot.weaponBurstCooldown=0;bot.weaponRollPaintCooldown=0;
+    bot.weaponGuardHp=100;bot.weaponGuardBreakSeconds=0;
+    bot.fireRemaining=0;
+    system.sourceCommittedPaintAims=new Map([['B1',{
+      weaponId:'rail-charger',target:new Vec3(2,3,0)
+    }]]);
+    system.phase14qF2RecoverableSteps=true;
+    system.b216SourceStageAimValidated=vi.fn(()=>true);
+    system.sampleRegisteredSourceFoot=vi.fn(()=>({owner:Team.B,
+      surface:{isScoreable:false}}));
+    system.gameplayInk={sampleWorld:vi.fn(()=>({
+      surface:{isScoreable:false}
+    }))};
+    system.qaTurfShotCooldown=new Map([['B1',.85]]);
+    system.qaTurfShotsByActor=new Map();
+    system.b215SelectedBattlePaintPacing=true;
+    system.b64InkAngleSweepEnabled=false;
+    system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
+    system.chooseCombatTarget=vi.fn(()=>null);
+    system.b216OriginalTurfSightChecks=0;
+    system.b216OriginalTurfCoverVetoes=0;
+    system.stats.cpuSourceTurfShots=0;system.stats.cpuShots=0;
+
+    system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+    expect(bot.weaponChargeSeconds).toBeGreaterThan(.01);
+    expect(system.pendingShots).toHaveLength(0);
+    expect(bot.ink).toBe(100);
+
+    system.applyProjectileHit({
+      botId:'B1',distance:1,point:new Vec3(),guarded:false
+    },120,'HUMAN');
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.sourceCommittedPaintAims.has('B1')).toBe(false);
+  });
   it('keeps the frozen T20 late splat path and does not touch source feet', () => {
     const { system, bot, shot } = fixture(false);
     expect(system.applyProjectileHit(shot, 80, 'HUMAN')?.lethalHpZero)
