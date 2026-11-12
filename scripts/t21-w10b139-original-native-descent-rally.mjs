@@ -1832,6 +1832,16 @@ async function doPhysicalTrial(coopAttempt=1){
      practiceStatus:'ARMED',realActorRejoins:0,
      realNativeTimeElapsed:0,syntheticCpuWrites:0}));
   }
+  // The real READY A1 mission is armed in this same tab. Unlike the
+  // older B426 entry/retry paths, this first B162 click previously omitted
+  // foreground confirmation. Never treat an unfocused CDP gesture as
+  // evidence of a CPU/F2 or original-floor gameplay failure.
+  await cmd('Page.bringToFront');
+  const focusedEntry=await evaluate(`({
+   focused:document.hasFocus(),visible:!document.hidden
+  })`);
+  if(!focusedEntry?.focused||!focusedEntry.visible)
+   fail('B162_REAL_READY_POINTER_START_NOT_FOREGROUND');
   await clickButton('#t21-f3-b202-resume');
  }else await click(800,450);
  await until(()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")'),20000);
