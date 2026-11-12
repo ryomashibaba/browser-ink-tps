@@ -30,7 +30,7 @@ import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
-import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk} from './OriginalSourceCombatRetreat';
+import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk,originalSourceRegisteredOwnFoot} from './OriginalSourceCombatRetreat';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
@@ -1009,18 +1009,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.stage.paintSurfaces.filter(
      p=>(p.flags&SurfaceFlags.Scoreable)!==0).length
    ] as [number,number,number,number];
-   const actualOriginalOwnInk=(foot:Vec3)=>{
-    const sample=ink.sampleWorld(
-     new Vec3(foot.x,foot.y+.06,foot.z),.38,SurfaceFlags.Paintable);
-    const surface=sample?.surface;
-    const cx=sample&&surface?Math.floor(sample.u/surface.cellSize):-1;
-    const cy=sample&&surface?Math.floor(sample.v/surface.cellSize):-1;
-    return !!sample&&!!surface&&
-     surface.id.startsWith('UndertowT21D:')&&!surface.isScoreable&&
-     (surface.baseFlags&SurfaceFlags.Paintable)!==0&&
-     sample.owner===bot.team&&cx>=0&&cx<surface.widthCells&&
-     cy>=0&&cy<surface.heightCells&&surface.isCellActive(cx,cy);
-   };
+   // Use the same real Rapier support/backing and active owner-grid cell
+   // as native CPU resources. A nearby OWN surface on a different slab
+   // must not send a wounded bot to a false recovery destination.
+   const actualOriginalOwnInk=(foot:Vec3)=>
+    originalSourceRegisteredOwnFoot(
+     ink,this.stage,this.physics!,foot,bot.team);
    // Only CURRENT, living, genuinely grounded original actors may be
    // tactical threats. This registered Rapier ray is a cover *preference*,
    // never a damage, path, actor-spawn or artificial enemy authorization.

@@ -1,6 +1,42 @@
 /** A low-HP CPU may seek ACTUAL same-side OWN original ink. This module
  * chooses only previously vetted native patrol indices; it never grants
  * movement, a hit, HP recovery, a source collider or Turf scoring. */
+import {Vec3} from 'playcanvas';
+import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
+import {SurfaceFlags,Team} from '../ink/types';
+import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
+import type {StageDefinition} from '../stage/StageDefinition';
+import {b178SampleRegisteredSourceFoot} from '../ai/B178OriginalSourceInkResources';
+
+/** In real SOURCE combat a wounded CPU may choose only OWN ink carried
+ * by its actual registered original Rapier support. Nearest optical ink
+ * can belong to a different stacked slab or an adjacent ramp raster row.
+ * This is a goal preference, not a collision, nav or HP permission. */
+export function originalSourceRegisteredOwnFoot(
+ ink:GameplayInkSystem,
+ stage:StageDefinition,
+ physics:Pick<RapierStagePhysics,'castStageSegment'>,
+ foot:Vec3,
+ team:Team.A|Team.B
+):boolean{
+ if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+    stage.solids.length!==25||stage.paintSurfaces.length!==17||
+    stage.navigationLinks?.length!==26||
+    stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0)||
+    ![foot.x,foot.y,foot.z].every(Number.isFinite))return false;
+ const hit=physics.castStageSegment(
+  new Vec3(foot.x,foot.y+.65,foot.z),
+  new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+ if(!hit||Math.abs(hit.point.y-foot.y)>.25||
+    !stage.solids.some(s=>s.id===hit.solidId))return false;
+ const sample=b178SampleRegisteredSourceFoot(
+  ink,stage.paintSurfaces,hit);
+ return !!sample&&sample.owner===team&&
+   sample.surface.id.startsWith('UndertowT21D:')&&
+   !sample.surface.isScoreable&&
+   (sample.flags&SurfaceFlags.Paintable)!==0;
+}
+
 export interface OriginalSourceRetreatCandidate {
  readonly index:number;
  readonly foot:readonly [number,number,number];

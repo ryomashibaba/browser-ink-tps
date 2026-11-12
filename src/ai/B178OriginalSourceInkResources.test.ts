@@ -6,6 +6,7 @@ import {undertowT21dConnectivityQaStage} from '../stage/undertow/UndertowSpillwa
 import {UndertowPhase14QSharedActorCollision} from '../stage/undertow/UndertowPhase14QSharedActorCollision';
 import {beforeAll,describe,it,expect} from 'vitest';
 import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
+import {originalSourceRegisteredOwnFoot} from '../app/OriginalSourceCombatRetreat';
 import {PaintSource,PaintEventType,SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSample} from '../ink/GameplayInkSystem';
 const ink=(owner:Team,flags=SurfaceFlags.Paintable)=>
@@ -67,6 +68,23 @@ describe('B178 actual original non-scoring ink resource policy',()=>{
     expect(sampled?.owner).toBe(Team.B);
     expect(sampled?.v).toBeCloseTo(actual.v,5);
     expect(b178FootRelation(sampled,Team.A,true)).toBe('ENEMY');
+    // The nearest elevated OWN cell is NOT recovery ink for a CPU whose
+    // actual Rapier foot is supported by the ENEMY row on this ramp.
+    expect(originalSourceRegisteredOwnFoot(
+     gameplay,stage,physics,foot,Team.A)).toBe(false);
+    expect(originalSourceRegisteredOwnFoot(
+     gameplay,stage,physics,foot,Team.B)).toBe(true);
+    // Real same-backing ownership may authorize a recovery preference;
+    // the test grants no synthetic movement, HP or official score.
+    gameplay.apply({tick:2,source:PaintSource.Debug,team:Team.A,
+     surfaceId:surface.id,centerU:(x+.5)*cell,centerV:(row+.5)*cell,
+     radiusU:cell*.45,radiusV:cell*.45,angle:0,
+     type:PaintEventType.Debug,strength:1});
+    expect(originalSourceRegisteredOwnFoot(
+     gameplay,stage,physics,foot,Team.A)).toBe(true);
+    expect(originalSourceRegisteredOwnFoot(
+     gameplay,stage,physics,foot.clone().add(new Vec3(0,3,0)),
+     Team.A)).toBe(false);
     expect(b178SampleRegisteredSourceFoot(gameplay,[],support)).toBeNull();
     expect(b178SampleRegisteredSourceFoot(gameplay,stage.paintSurfaces,null)).toBeNull();
     expect(collision.sourceFootSupport('B4',foot)).toBeNull();
