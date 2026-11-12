@@ -42,6 +42,7 @@ on:
       - 'src/app/B441OriginalSourceFrontline.ts'
       - 'src/app/B441OriginalSourceFrontline.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts'
       - 'src/app/UndertowF3NativeHumanCrowd.ts'
       - 'src/app/UndertowF3NativeHumanCrowd.test.ts'
       - 'src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.ts'
