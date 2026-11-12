@@ -6253,7 +6253,10 @@ export class UndertowF3PlayablePreviewApp{
     // After the SAME native tick reaches TIME_UP, do not advance a
     // phantom clock tick that never processed the original SOURCE world.
     // The final actual tick and its projectile/ink/HP effects are kept.
-    return this.matchState!=='TIME_UP';
+    // Test the post-step live phases positively. TypeScript otherwise
+    // incorrectly assumes the pre-step narrowing survives stepFixed(),
+    // which can synchronously transition PLAYING to TIME_UP.
+    return this.matchState==='PLAYING'||this.matchState==='STAGING';
    });
    this.b20ProfileStop('fixedClockCatchup',simulationStart);
    if(this.matchState==='TIME_UP'){
