@@ -2,6 +2,43 @@
 
 **2026-11-12 JST／本人が明示した全体再検討と次チャット移行のための一回限りの記録。新規企画・上位目標の変更ではない。文書作成自体はゲーム進捗0。次回以降、惰性でV29・B番号・細かいQA・HUD・文書を増殖させない。**
 
+## 【2026-11-12 本人明示・追補】ステージ未完成の根本再評価と次チャット固定実行方針
+
+**適用方法**：この追補は既存V28本文に対する今回限りの本人明示の批判的見直し。上位F1〜F5、通常ナワバリVer.7.2.0・人間1＋実CPU7・180秒、Fast Track/永続DECISIONSとすべての保護は不変。新V29/QA/HUDを惰性で増殖させない。この文書更新は**ゲーム実装の改善ではなく、進捗0**。
+
+### 現段階の客観的判定：STAGE INCOMPLETE / OFFICIAL 4v4 HOLD
+
+- 現研究用ステージは25 Rapier solids、17 PaintSurfaces、26 NavLinks、正式Scoreable0。**全マップに対する25や17の割合・完成パーセントは不明**。既存の高精細F3L光学モデルの見た目が良くても、歩ける原作物理床/原作正式スコアを保証しない。
+- B499の真正原作候補10部品・42原作三角面は現25-solidに0/10登録。原作面中心のRecast 0.35m以内0/42・Rapier支持hit0/42、原作8隣接組の現Recast接続0/8。旧Pass18の8 gapとB218の8 seamは対応未確定。**表示OBJの面を全部Rapier colliderにしてよいという証拠ではない。**
+- 自然な敵味方対戦の検査対象16経路は0/16成功。正式Scoreable0、Winner NONE、正式4v4・自然敵HP→撃破→復活・ART・公開は未認証/HOLD。0/16は**その16検査経路の結果**であって全原作通行不可能の数学的証明ではない。
+- 原作改修版`Vss_Temple01`を示す720 SceneInfo等の版資料はあるが、対象表示OBJのVer.7.2.0 Turf確定、個別原作Faceのゲーム用Phive/Actor/collision flag・`col_disable_flags`意味論と正式得点権限は未認証。Ver.7.2.0に関する根拠不足Faceは`HOLD_REFERENCE_REQUIRED`と判定する。
+- 本人Windows実試遊では以前に床抜け/視覚床不一致、CPU少数、SAFE STOPを観測。既存の`Documents/BrowserInkTPS_F3L_15864_5030`のB490同一視点原本UVと登録物理床の2比較画像/HTMLを**再利用**する。最新HEADで全域改善したという実機証拠はない。元43MB原作、同一B490画像、clone、PowerShellログを本人に再提出させない。
+- 今回のレビュー前ゲームHEAD=`0156467ec31c0a3704f557b0fb1cf9c428d57c91`。直近CPUライフ/合法rejoin、真人射撃・インク消費、DUALIES/SHOOTER開幕連射、CPU空弾返金/巡回/STRINGER・CHARGERの弾経済修正は**コード実装**として存在し、[#43177214078](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43177214078) 軽量SOURCEテスト＋型＋Vite build SUCCESS。ただし最新SHAの真正180秒ChromiumはSKIPPED。旧SHAの人間移動→射撃→OWN回復→再射撃、CPU7や180秒再戦の**個別限定成功**を最新全機能同一試合のPASSと誤認しない。
+
+### 過去の方法の批判と修正
+
+1. 「次の工程へ進む」への対応で**小さな射撃ガードとコード単体CIが続きすぎた**。CPU弾返金は有用だが、ステージの最大阻害要因0/16・物理床未完成は動かず、実ゲームの新たな同一SHAプレイ成果は未証明。以後は一つの完成条件に結びつく関連コードをまとめる。テスト数/コミット数/単体CODE_PASS_ONLYを遊べるゲーム完成と呼ばない。
+2. **F4ステージの原本衝突権限を後回しにしない。** 一方で未知の橋/床/NavLink/ワープ/公式得点を推測追加するのも禁止。原本のない各FaceだけHOLDにし、残り25登録床のF1/F2/F3実プレイを並走させる。空転するF4同条件テストは禁止。
+3. プレイヤーとCPU7、実KCC、見た目と物理、SOURCEインク、同一180秒、CPUライフ・復活、STOP→再戦を**同一世界・同一ゲームHEAD**で独立に判定。以前の局所CI結果はその条件とSHAに限定して再利用。
+4. HUD/透明化/報告文書では原作衝突やARTを完成させられない。本人が床を抜ける/CPUが少ない/SAFE STOPの**最初の再現箇所**を根拠優先で調査。むやみに障害閾値を緩めず、原作当たり判定と人間カプセル/0.30m CPU Recastを区別。
+5. 良い方針は維持：研究ブランチ`research/t21-integrated-a1-c-patrol-four-mode-20261105`のみ単親・expected_sha CAS・force:false。main/T19C/T20/PR#5/Pages/正式QA/原本/PRIVATE/本人PC書換禁止。未取得PhiveやPRIVATEの外部アップロード禁止。本人操作原則0・追加課金原則0、Windows/Work/真正長時間Chromiumは個別事前承認。
+
+### 次工程の固定優先順位（F1〜F5の目標は変更しない）
+
+**1. 原作ステージ阻害箇所の一点突破（F2/F4）**：GitHub最新HEAD、B490比較既存証拠、B499 10部品42面/8隣接/0/16、実Rapier/原作Faceの現登録を対照し、**本人が普通に歩けない「最初の場所」**のIDと視覚・物理・ナビ差を具体的に特定する。欠落モデルだけで床を追加せず、元のBanc/BYML/Phive/Actorの7.2.0 Turf整合と個別material/disable flagを確かめ、同じ座標の全身Rapier KCC＋CPU Recast連続歩行を証明。既存`scripts/f4_phive_original_collision_probe.py`は元衝突データが正当に揃った場合だけ利用し、PRIVATEはローカル保持。根拠がない場合**その面だけHOLD_REFERENCE_REQUIRED**、新しい捏造地形や同条件CIを増やさない。
+
+**2. 並走：既登録SOURCEの実ゲーム一体化（F1/F2/F3）**：同じ本物の60Hz世界で、人間WASD→着弾/17塗装面→インク減→元Rapier backingSolidIdのOWN SQUID回復→再射撃、7CPU全員の実物理rejoin/合法な移動・射撃・塗装/HP・150tick復活、必要なCキー支援、180秒TIME_UP・同武器再戦を一機能として検証・修正。最近のCPU射撃返金・公平巡回などの副作用も**同一試合**で確認。軽量CIのCODE_PASS_ONLYはTRUE_RUNへ昇格しない。真正Chromiumや実機は事前承認を得た時だけ実施。
+
+**3. 原作権限成立後に正式4v4得点（F3/F4）**：元Faceの安全な連続経路で自然敵味方ルートが成立した証拠が出て初めて、本物の遭遇→HP0→150 native tick復活を確認。元Scoreable権限が確定するまで正式Turf面や得点/勝敗を実装しない。`UNSCORED/WINNER NONE`を守る。
+
+**4. F5本人実機判定はできるだけ1回**：実装をまとめ、既存研究clone、B490資料を使って、普通のWindows操作で床抜け・CPU7・SAFE STOP・視覚衝突一致・FPS・180秒・再戦を確認。本人操作は必要な場合だけ**単一の安全な手順**を提示。無断のPC操作/高負荷/設定変更なし。
+
+**工程ゲート**：各機能バッチは「ゲームでできることの変化→関連コード→原則1回軽量CI→許可のある真正/本人評価→結果とHOLD」の順。2工程連続で実ゲームの進展が見えなければ小修正を停止し、最大阻害要因から再選択。原作資料不足の個別Face以外は無期限で開発を止めない。現時点で原作ステージの完成率は**わからない**。本追補作成自体はdocs-onlyでゲーム進捗0。
+
+### 次チャットの最短再開命令
+
+Browser Ink TPS/T21 Ver.7.2.0マテガイ放水路通常ナワバリの既存開発継続。F1〜F5/Fast Track/DECISIONSと過去成功・失敗・保護を変更しない。GitHub`ryomashibaba/browser-ink-tps`の研究`research/t21-integrated-a1-c-patrol-four-mode-20261105`で`START_HERE.md`最上段→V28の**2026-11-12追補**→V27以前を読み、最新HEAD/CI/main/PR5をライブ確認。追補前の最新ゲームコードは`0156467ec31c0a3704f557b0fb1cf9c428d57c91`で軽量CI#43177214078 SUCCESSだが真正180秒SKIPPED。**ステージ未完成**：25/17/26/0は完成率ではない、元候補10部品42面が現未登録、原作8隣接現Recast0/8、敵味方自然経路0/16、正式Scoreable0/Winner NONE、本人Windows床抜け/CPU少数/SAFE STOP全域修復未認証。射撃小修正/書類/HUDでなくF4原作Face/Phive衝突権限・最初の通常プレイ床不整合を最優先、証拠不足FaceだけHOLD、既登録SOURCE実床で人間射撃→OWN回復→再射撃＋7CPU＋180秒の一体化を並走。偽橋/床/NavLink/ワープ/得点禁止。main/PR5/Pages/正式QA/PRIVATE/本人PC保護、研究branchのみCAS非force。本人作業0原則/追加課金0円、高負荷/Work/Windowsは個別承認。実ゲームの成果・根拠・残HOLD・本人操作必要性を短く報告。
+
 ## 0. 読順・最新証拠・操作許可
 
 - GitHub: https://github.com/ryomashibaba/browser-ink-tps
