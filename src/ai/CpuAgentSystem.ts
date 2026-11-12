@@ -1173,7 +1173,7 @@ export class CpuAgentSystem {
       // after source time expires. The corresponding CPU ink cost, stats
       // and cooldown are charged inside these calls, so dropping their
       // requests later would create phantom shots and wasted ink.
-      if (canStartNewCombatActions) {
+      if (canStartNewCombatActions&&this.sourceCpuMayStartActions(bot)) {
         this.updateCpuWeapon(
           bot,
           dt,
@@ -1286,16 +1286,26 @@ export class CpuAgentSystem {
     }
   }
 
+  /** Only the selected real SOURCE game has physical rejoin proof.
+   * An ACTIVE/GROUND high-spawn respawn is not yet a frontline actor.
+   * Check BEFORE actual ink/kit spending and again before shot dispatch;
+   * default T20 and legacy QA without the adapter hook are unchanged. */
+  private sourceCpuMayStartActions(bot:CpuBot|undefined):boolean{
+    if(!this.f3dSourceGoals)return true;
+    return !!bot&&bot.lifeState==='ACTIVE'&&
+      Number.isFinite(bot.hp)&&bot.hp>0&&
+      bot.mobilityState==='GROUND'&&
+      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
+       this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
+  }
+
   public drainFireRequests(consumer: (request: CpuFireRequest) => void): void {
     for (const request of this.pendingShots) {
       // An F3 source projectile has not left the muzzle until dispatched.
       // A CPU splatted earlier in this native tick cannot fire from its
       // former physical foot; only the frozen T21D practice uses this gate.
-      if (this.f3dSourceGoals) {
-        const shooter = this.bots.find(bot => bot.id === request.sourceId);
-        if (!shooter || shooter.lifeState !== 'ACTIVE' || shooter.hp <= 0 ||
-            shooter.mobilityState !== 'GROUND') continue;
-      }
+      if (this.f3dSourceGoals&&!this.sourceCpuMayStartActions(
+        this.bots.find(bot=>bot.id===request.sourceId)))continue;
       consumer(request);
     }
     this.pendingShots.length = 0;
@@ -1307,11 +1317,8 @@ export class CpuAgentSystem {
     for (const request of this.pendingKitRequests) {
       // Same native shooter life as the main weapon: a queued sub/special
       // cannot materialize after this real source CPU has been splatted.
-      if (this.f3dSourceGoals) {
-        const shooter = this.bots.find(bot => bot.id === request.sourceId);
-        if (!shooter || shooter.lifeState !== 'ACTIVE' || shooter.hp <= 0 ||
-            shooter.mobilityState !== 'GROUND') continue;
-      }
+      if (this.f3dSourceGoals&&!this.sourceCpuMayStartActions(
+        this.bots.find(bot=>bot.id===request.sourceId)))continue;
       const accepted = consumer(request);
       if (!accepted) this.rollbackRejectedKitRequest(request);
     }

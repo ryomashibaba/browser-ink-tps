@@ -118,6 +118,44 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSplats).toBe(1);
   });
 
+  it('genuine SOURCE newborn upper-spawn CPU cannot spend weapons or dispatch attacks before its new lower rejoin',()=>{
+    const {system,bot}=fixture(true);
+    const ally:any={id:'A1',team:Team.A,lifeState:'ACTIVE',
+      hp:100,mobilityState:'GROUND'};
+    system.bots.push(ally);
+    let physicalReturn=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
+      id==='A1'||(id==='B1'&&physicalReturn);
+    expect(system.sourceCpuMayStartActions(bot)).toBe(false);
+    expect(system.sourceCpuMayStartActions(ally)).toBe(true);
+    const shots:string[]=[],kits:string[]=[];
+    system.pendingShots=[{sourceId:'B1'},{sourceId:'A1'}];
+    system.pendingKitRequests=[{sourceId:'B1'},{sourceId:'A1'}];
+    system.drainFireRequests((x:any)=>shots.push(x.sourceId));
+    system.drainKitRequests((x:any)=>{kits.push(x.sourceId);return true});
+    expect(shots).toEqual(['A1']);
+    expect(kits).toEqual(['A1']);
+    expect(system.pendingShots).toHaveLength(0);
+    expect(system.pendingKitRequests).toHaveLength(0);
+    // A new original F2 drop + physical Recast/Rapier return alone
+    // unlocks paid weapon actions without granting an invented route.
+    physicalReturn=true;
+    expect(system.sourceCpuMayStartActions(bot)).toBe(true);
+    system.pendingShots=[{sourceId:'B1'}];
+    system.pendingKitRequests=[{sourceId:'B1'}];
+    system.drainFireRequests((x:any)=>shots.push(x.sourceId));
+    system.drainKitRequests((x:any)=>{kits.push(x.sourceId);return true});
+    expect(shots).toEqual(['A1','B1']);
+    expect(kits).toEqual(['A1','B1']);
+    bot.hp=0;
+    expect(system.sourceCpuMayStartActions(bot)).toBe(false);
+    bot.hp=100;bot.lifeState='SPLATTED';
+    expect(system.sourceCpuMayStartActions(bot)).toBe(false);
+    // Original T20 does not acquire SOURCE rejoin restrictions.
+    system.f3dSourceGoals=null;
+    expect(system.sourceCpuMayStartActions(bot)).toBe(true);
+  });
+
   it('removes pre-dispatch fire and kit requests of a truly splatted SOURCE CPU, not its ally', () => {
     const { system, bot, shot } = fixture(true);
     system.bots.push({
