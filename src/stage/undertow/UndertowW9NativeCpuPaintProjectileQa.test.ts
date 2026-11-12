@@ -119,6 +119,11 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   }
   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
   cpu.useF3dOriginalSourceGoals(traffic);
+  // Same real seven Rapier actors, now under the selected native SOURCE
+  // ink economy: footsteps are no longer free paint; only actual weapon
+  // impacts can produce new OWN cells for subsequent CPU replenishment.
+  cpu.enableB64NativeSourceInkAngleSweep();
+  cpu.enableB178OriginalSourceInkRecovery();
   const initialFeet=new Map(bots.map(b=>[b.id,b.position.clone()]));
   const acceptedSteps=new Map(bots.map(b=>[b.id,0]));
   const postRejoinSteps=new Map(bots.map(b=>[b.id,0]));
@@ -252,6 +257,9 @@ describe('W9: source turf ink and real projectile effects after seven physical C
    }else if(frame>=PRE_RELEASE_LIMIT)break;
   }
   const snap=traffic.snapshot();
+  const realInk=cpu.b178SourceInkResourceSnapshot();
+  const freeFootStamps=paintRequests.filter(req=>
+   req.source===PaintSource.Cpu&&req.type===PaintEventType.Foot);
   const record={
    source:'ACTUAL_F3_TRAFFIC_REAL_PLAYER_SEVEN_RAPIER_CPU',
    frames,lastFrame:frames,firstUnsafeFrame,firstUnsafe,
@@ -274,6 +282,8 @@ describe('W9: source turf ink and real projectile effects after seven physical C
    firstShots:trueShotRequests.slice(0,20),
    originalSourcePaintRequests:paintRequests.length,
    sourceCpuPaintEvents:paintRequests.filter(req=>req.source===PaintSource.Cpu).length,
+   unpaidFootStampEvents:freeFootStamps.length,
+   realSourceOwnInk:realInk,
    cpuInkCellsChanged:stats.cpuInkCellsChanged,
    cpuImpactInkCellsChanged:stats.cpuImpactInkCellsChanged,
    projectileImpacts:stats.projectileImpacts,
@@ -336,6 +346,13 @@ describe('W9: source turf ink and real projectile effects after seven physical C
    stage.paintSurfaces.some(s=>s.id===req.surfaceId))).toBe(true);
   expect(stats.cpuInkCellsChanged).toBeGreaterThan(0);
   expect(stats.cpuImpactInkCellsChanged).toBeGreaterThan(0);
+  // The selected B178 game must derive actual source ownership only
+  // from paid weapon impacts, never the legacy passive foot paint.
+  expect(realInk.enabled).toBe(true);
+  expect(freeFootStamps).toHaveLength(0);
+  expect(realInk.actualOwnPaintFootTicks).toBeGreaterThan(0);
+  expect(realInk.b179ActuallyRecoveredOwnSourceInk).toBeGreaterThan(0);
+  expect(realInk.b179OwnInkNativeRecoveryTicks).toBeGreaterThan(0);
   expect(scoreablePaintChanged).toBe(0);
   expect(ink.snapshot().areaA).toBe(0);
   expect(ink.snapshot().areaB).toBe(0);
