@@ -6247,7 +6247,13 @@ export class UndertowF3PlayablePreviewApp{
    // waiting up to twelve slow software-rendered WebGL frames.
    const priorNativeRoundPhase=this.matchState;
    const report=this.clock.advance(dt,(frame,seconds)=>{
-    if(this.matchState!=='TIME_UP')this.stepFixed(frame,seconds);
+    if(this.matchState==='TIME_UP')return false;
+    this.stepFixed(frame,seconds);
+    // A slow visible browser frame may contain 2-4 real Rapier ticks.
+    // After the SAME native tick reaches TIME_UP, do not advance a
+    // phantom clock tick that never processed the original SOURCE world.
+    // The final actual tick and its projectile/ink/HP effects are kept.
+    return this.matchState!=='TIME_UP';
    });
    this.b20ProfileStop('fixedClockCatchup',simulationStart);
    if(this.matchState==='TIME_UP'){

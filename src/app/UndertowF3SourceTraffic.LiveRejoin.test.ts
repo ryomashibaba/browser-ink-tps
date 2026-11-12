@@ -3,6 +3,7 @@ import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {nativeSourceCpuCanStartActionsBeforeTickEnd}
  from './NativeSourceRoundActionWindow';
+import {FixedStepClock} from '../core/FixedStepClock';
 import {UndertowF3SourceTraffic,sourceNativeLiveRejoinedCpu,
  sourceNativeEligibleOpponentForCombat,type F3TrafficCpu} from './UndertowF3SourceTraffic';
 
@@ -54,6 +55,32 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
    matchState:'STAGING',remainingSeconds:180,
    nativeDtSeconds:1/60,stopReason:null
   })).toBe(true);
+ });
+
+ it('stops the real 180s SOURCE clock on the exact TIME_UP physics tick inside a slow render-frame catch-up',()=>{
+  // The native game callback processes two genuine 60Hz ticks; the
+  // 3rd/4th attempts cannot silently increment the clock after TIME_UP.
+  const clock=new FixedStepClock(60,4,.12);
+  let nativeCount=0,phase:'PLAYING'|'TIME_UP'='PLAYING';
+  const started=clock.advance(4/60,(tick,dt)=>{
+    expect(phase).toBe('PLAYING');
+    expect(dt).toBeCloseTo(1/60);
+    nativeCount++;
+    if(nativeCount===2)phase='TIME_UP';
+    return phase!=='TIME_UP';
+  });
+  expect(nativeCount).toBe(2);
+  expect(clock.tick).toBe(2);
+  expect(started.ticks).toBe(2);
+  expect(started.alpha).toBe(0);
+  expect(started.droppedSeconds).toBe(0);
+  // All old T20/F3 QA clock clients return void, not false.
+  const old=new FixedStepClock(60,4,.12);
+  const visited:number[]=[];
+  const legacy=old.advance(4/60,tick=>{visited.push(tick)});
+  expect(legacy.ticks).toBe(4);
+  expect(visited).toEqual([1,2,3,4]);
+  expect(old.tick).toBe(4);
  });
 
  it('all seven real living native CPUs retain their true prior rejoin',()=>{
