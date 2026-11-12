@@ -111,8 +111,12 @@ export interface SourceSessionMetrics {
  cpuSplats:number;
  humanSplats:number;
  humanRespawns:number;
- /** Optional true physical shooter: no scripted enemy placement or Turf result. */
+ /** B343 is physical projectile slot protection shared by normal SOURCE
+  * modes, not proof of opting into the legacy B343 shooter benchmark. */
  b343OriginalSourceVolleyBudget?:{enabled:boolean};
+ /** Explicit B343 benchmark URL selection, distinct from runtime slot budget.
+  * Absent for historical standalone summary callers only. */
+ b343ExplicitShooterBenchmarkSelected?:boolean;
  /** B384 actual native selectable source circuit flag. */
  b384OpenLoadoutCircuit?:boolean;
  humanCpuDirectHits?:number;
@@ -171,7 +175,16 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
    scoreable:0 as const,cpuHitCertified:false as const,
    gameplayWrites:0 as const};
  })();
- const selectedShooter=s.b343OriginalSourceVolleyBudget?.enabled===true;
+ // Canonical B384 rounds use the exact same B343 physical slot budget,
+ // but never opt into the separate legacy B343 benchmark URL.
+ // Unannotated legacy callers remain conservative and fail closed.
+ if(s.b343ExplicitShooterBenchmarkSelected!==undefined&&
+    typeof s.b343ExplicitShooterBenchmarkSelected!=='boolean')
+  throw Error('B343_INVALID_BENCHMARK_MODE');
+ const physicalBudget=s.b343OriginalSourceVolleyBudget?.enabled===true;
+ const selectedShooter=s.b343ExplicitShooterBenchmarkSelected??physicalBudget;
+ if(selectedShooter&&!physicalBudget)
+  throw Error('B343_SHOOTER_WITHOUT_PHYSICAL_BUDGET');
  if(s.b384OpenLoadoutCircuit!==undefined&&typeof s.b384OpenLoadoutCircuit!=='boolean')
   throw Error('B384_INVALID_SOURCE_MODE');
  if(selectedShooter&&s.b384OpenLoadoutCircuit===true)

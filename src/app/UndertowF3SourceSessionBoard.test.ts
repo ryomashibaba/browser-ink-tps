@@ -104,6 +104,31 @@ describe('B373 real native 180s shooter circuit and combat recap',()=>{
    expect(()=>sourceSessionSummary(f)).toThrow('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
   }
  });
+ it('genuine B384 and real B343 slot protection coexist without an invented benchmark conflict',()=>{
+  const f=source();
+  f.b384OpenLoadoutCircuit=true;
+  f.b343ExplicitShooterBenchmarkSelected=false;
+  const v=sourceSessionSummary(f);
+  expect(v).toMatchObject({state:'PLAYING',
+   sourceShooter:{currentLifeStatus:'REAL_LOCAL_CIRCUIT_CLEAR',
+    trueHumanImpactCells:90,officialWinner:'NONE'},
+   officialWinner:'NONE',officialScoreableSurfaces:0,
+   naturallyConnectedOpposingPathsCertified:0});
+  f.b343ExplicitShooterBenchmarkSelected=true;
+  expect(()=>sourceSessionSummary(f)).toThrow('B384_BENCHMARK_CONFLICT');
+  delete f.b343ExplicitShooterBenchmarkSelected;
+  expect(()=>sourceSessionSummary(f)).toThrow('B384_BENCHMARK_CONFLICT');
+ });
+ it('B343 benchmark selection must match the actual physical budget',()=>{
+  const f=source();
+  f.b343OriginalSourceVolleyBudget={enabled:false};
+  f.b343ExplicitShooterBenchmarkSelected=true;
+  expect(()=>sourceSessionSummary(f))
+   .toThrow('B343_SHOOTER_WITHOUT_PHYSICAL_BUDGET');
+  f.b343OriginalSourceVolleyBudget={enabled:true};
+  f.b343ExplicitShooterBenchmarkSelected=false;
+  expect(sourceSessionSummary(f).sourceShooter).toBeNull();
+ });
  it('preserves all non-shooter existing source session views',()=>{
   const f=input();
   expect(sourceSessionSummary(f).sourceShooter).toBeNull();

@@ -7979,6 +7979,10 @@ export class UndertowF3PlayablePreviewApp{
    },
    b343OriginalSourceVolleyBudget:
      this.projectiles.b343OriginalSourceVolleyBudgetSnapshot(),
+   // The shared real CPU/HUMAN projectile budget is not the B343-only
+   // research benchmark. Pass explicit URL provenance to the recap.
+   b343ExplicitShooterBenchmarkSelected:
+     new URL(location.href).searchParams.get('t21W10B343')==='sourceVolleyAtomic',
     b384OpenLoadoutCircuit:this.b384Circuit&&this.b183DropPlayEnabled&&
       this.b203FullRound&&
       this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
