@@ -9,6 +9,7 @@ on:
       - 'src/stage/undertow/UndertowB493OriginalCpuKccReplay.test.ts'
       - 'src/stage/undertow/UndertowB494SameWorldThreeCpuContinuousKcc.test.ts'
       - 'src/stage/undertow/UndertowB495OriginalRecastHeightFaceIsolation.test.ts'
+      - 'src/app/UndertowB496RealRejectedRouteReprojectionQa.test.ts'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -227,6 +228,32 @@ jobs:
         with:
           name: b495-source-face-nav-height-isolation
           path: /tmp/t21-b495-original-nav-y-report.json
+          if-no-files-found: warn
+          retention-days: 14
+      # B496 real original B450 rejected 0.30m route points: raw vs
+      # genuine Recast nearest-poly query. Diagnostic only, no route promotion.
+      - name: Retrieve pinned B450 original denied routes and genuine B454 feet
+        if: ${{ contains(github.event.head_commit.message, '[b496-route-reprojection]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 43140584988
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b496-pinned-original
+      - name: Replay 60 actual original route denials and compare projected full-path support
+        if: ${{ contains(github.event.head_commit.message, '[b496-route-reprojection]') }}
+        env:
+          T21_B496_EVIDENCE_DIR: /tmp/t21-b496-pinned-original
+          T21_B496_REPORT_PATH: /tmp/t21-b496-reprojected-path.json
+        run: |
+          npx vitest run src/app/UndertowB496RealRejectedRouteReprojectionQa.test.ts
+          node -e "const d=require('/tmp/t21-b496-reprojected-path.json');if(d.originalSource!=='25/17/26/0'||d.originalRejectionFirstSamplesReproduced!==60||d.counterfactualFullPathRayPasses+d.counterfactualFullPathRayHeld!==60||d.originalCrossTeamRoutesAuthorized!==0)process.exit(1);console.log('B496_REAL_REJECTION_ALL_PATHS_READONLY_SAVED')"
+      - name: Archive B496 pinned real denial vs path-projection report
+        if: ${{ contains(github.event.head_commit.message, '[b496-route-reprojection]') && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b496-source-recast-route-y-reprojection
+          path: /tmp/t21-b496-reprojected-path.json
           if-no-files-found: warn
           retention-days: 14
       - name: Existing short native runner syntax and binding preflight
