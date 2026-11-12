@@ -22,7 +22,7 @@ export type SubWeaponNativeExplosionWitness=Readonly<{
  initialNativeVelocity:readonly [number,number,number];
  explosionPoint:readonly [number,number,number];
  trigger:'CONTACT_IMPACT'|'LANDED_FUSE'|'FLIGHT_TTL';
- contactKind:'NONE'|'PAINT_SURFACE_SEGMENT'|'RAPIER_STAGE_SOLID';
+ contactKind:'NONE'|'PAINT_SURFACE_SEGMENT'|'RAPIER_STAGE_SOLID'|'NATIVE_SOURCE_CPU_BODY';
  contactSourceId:string|null;
  contactPoint:readonly [number,number,number]|null;
  enqueuedStampSurfaceIds:readonly string[];
@@ -68,6 +68,7 @@ export class SubWeaponSystem {
   private readonly materialA: StandardMaterial;
   private readonly materialB: StandardMaterial;
   private readonly delta = new Vec3();
+  private nativeSourceHumanSubBodyContactEnabled=false;
   private nextLaunchId=0;
   private currentEnqueuedStampSurfaceIds:string[]|null=null;
 
@@ -122,6 +123,14 @@ export class SubWeaponSystem {
         entity
       });
     }
+  }
+
+  /** Native original-SOURCE 180s only: a thrown HUMAN sub may touch the
+   * existing real ACTIVE enemy CPU combat body before hitting an original
+   * blocker. No character, solid, path, paint or score authority is added.
+   * Frozen T20 and opt-in deterministic QA keep their historical contact. */
+  public enableNativeSourceHumanSubBodyContact():void{
+    this.nativeSourceHumanSubBodyContactEnabled=true;
   }
 
   public tryThrow(
@@ -219,6 +228,25 @@ export class SubWeaponSystem {
           blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
 
+      // The true SOURCE human SUB and true SOURCE CPU SUB must obey the
+      // same existing living-opponent contact before real stage cover.
+      // A nearest paintable original surface or blocker still wins when
+      // it is closer. This uses CpuAgentSystem's actual active bot HP,
+      // team, position and combat volume; no synthetic actor is spawned.
+      if(this.nativeSourceHumanSubBodyContactEnabled){
+        const opponent=this.cpuAgents.findNearestCombatHit(
+          slot.position,next,slot.team);
+        const sourceCoverDistance=paintWins&&paintHit
+          ?paintHit.distance:(blockerHit?.distance??Infinity);
+        if(opponent&&Number.isFinite(opponent.distance)&&
+           opponent.distance>=0&&
+           opponent.distance+GAME_CONFIG.combat.hitPriorityEpsilonMeters<
+            sourceCoverDistance){
+          this.onContact(slot,profile,opponent.point,
+            'NATIVE_SOURCE_CPU_BODY',opponent.botId);
+          continue;
+        }
+      }
       if (paintWins && paintHit) {
         this.onContact(slot, profile, paintHit.worldPoint,
           'PAINT_SURFACE_SEGMENT', paintHit.surface.id);

@@ -5,6 +5,7 @@ import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {CpuKitSystem} from './CpuKitSystem';
 import {nativeSourceCpuKitRuntimeAuthorized}
@@ -1127,5 +1128,62 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(bot.lifeState).toBe('ACTIVE');
     expect(system.stats.cpuSplats).toBe(0);
     expect(system.stats.cpuWeaponGuardBlocks).toBe(1);
+  });
+
+  it('true SOURCE human SUB hits a living real CPU before original cover, but not through it or in T20',()=>{
+    // Exercise the existing production 60Hz bomb flight method without
+    // manufacturing stage surfaces, enemy actors or fake damage events.
+    const bomb:any={
+      active:true,landed:false,subId:'pulse-bomb',team:Team.A,
+      position:new Vec3(0,2,0),previousPosition:new Vec3(),
+      velocity:new Vec3(120,0,0),ttl:2,fuseSeconds:.5,
+      entity:{setPosition:vi.fn()}
+    };
+    const stageHit={
+      distance:1,point:new Vec3(1,2,0),solidId:'REGISTERED_SOURCE_WALL'
+    };
+    const enemyHit={
+      botId:'B1',distance:.5,point:new Vec3(.5,2,0),guarded:false
+    };
+    const sub:any=Object.create(SubWeaponSystem.prototype);
+    sub.bombs=[bomb];
+    sub.delta=new Vec3();
+    sub.physics={castStageSegment:vi.fn(()=>stageHit)};
+    sub.cpuAgents={findNearestCombatHit:vi.fn(()=>enemyHit)};
+    sub.findNearestSurfaceHit=vi.fn(()=>null);
+    sub.onContact=vi.fn();
+    const flight=()=>{
+      bomb.active=true;bomb.landed=false;bomb.ttl=2;
+      bomb.position.set(0,2,0);bomb.velocity.set(120,0,0);
+      sub.onContact.mockClear();
+      sub.fixedUpdate(1/60);
+    };
+    // Frozen T20 never acquires unapproved actor collision.
+    flight();
+    expect(sub.cpuAgents.findNearestCombatHit).not.toHaveBeenCalled();
+    expect(sub.onContact).toHaveBeenCalledWith(
+      bomb,subWeaponProfile('pulse-bomb'),stageHit.point,
+      'RAPIER_STAGE_SOLID',stageHit.solidId);
+    sub.enableNativeSourceHumanSubBodyContact();
+    flight();
+    expect(sub.onContact).toHaveBeenCalledWith(
+      bomb,subWeaponProfile('pulse-bomb'),enemyHit.point,
+      'NATIVE_SOURCE_CPU_BODY','B1');
+    // The same genuine 25-solid cover still protects the opponent.
+    sub.cpuAgents.findNearestCombatHit.mockReturnValue({
+      ...enemyHit,distance:1.4,point:new Vec3(1.4,2,0)});
+    flight();
+    expect(sub.onContact).toHaveBeenCalledWith(
+      bomb,subWeaponProfile('pulse-bomb'),stageHit.point,
+      'RAPIER_STAGE_SOLID',stageHit.solidId);
+    // Existing closer original paintable surface stays authoritative.
+    sub.cpuAgents.findNearestCombatHit.mockReturnValue(enemyHit);
+    const paintHit={distance:.2,worldPoint:new Vec3(.2,2,0),
+      surface:{id:'REGISTERED_SOURCE_PAINT'}};
+    sub.findNearestSurfaceHit.mockReturnValue(paintHit);
+    flight();
+    expect(sub.onContact).toHaveBeenCalledWith(
+      bomb,subWeaponProfile('pulse-bomb'),paintHit.worldPoint,
+      'PAINT_SURFACE_SEGMENT','REGISTERED_SOURCE_PAINT');
   });
 });
