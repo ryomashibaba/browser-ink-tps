@@ -166,6 +166,8 @@ export interface CpuFireRequest {
     chargedInkCost:number;
     expectedInkAfterCharge:number;
     originalRecoveryLockSeconds:number;
+    /** SOURCE launch was not completed; preserve the real pre-shot cadence. */
+    originalFireRemainingSeconds:number;
   };
 }
 
@@ -1333,9 +1335,16 @@ export class CpuAgentSystem {
     const noLaterSpend=Math.abs(bot.ink-tx.expectedInkAfterCharge)<=1e-6;
     bot.ink=Math.min(GAME_CONFIG.inkEconomy.capacity,
       bot.ink+tx.chargedInkCost);
-    if(noLaterSpend)
+    if(noLaterSpend){
       bot.inkRecoveryLockSeconds=Math.min(bot.inkRecoveryLockSeconds,
         tx.originalRecoveryLockSeconds);
+      // The rejected SOURCE request did not fire. Restore only this
+      // unspent attack's cooldown, never a subsequent paid action.
+      if(Number.isFinite(tx.originalFireRemainingSeconds)&&
+         Number.isFinite(bot.fireRemaining))
+        bot.fireRemaining=Math.min(
+          bot.fireRemaining,tx.originalFireRemainingSeconds);
+    }
     this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
   }
 
@@ -2760,6 +2769,7 @@ export class CpuAgentSystem {
     if (bot.ink + 1e-6 < inkCost) return false;
 
     const oldRecoveryLock=bot.inkRecoveryLockSeconds;
+    const oldFireRemaining=bot.fireRemaining;
     bot.ink = Math.max(0, bot.ink - inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
 
@@ -2784,7 +2794,8 @@ export class CpuAgentSystem {
       sourceInkTransaction:this.f3dSourceGoals&&
         this.phase14qF2RecoverableSteps?{
           chargedInkCost:inkCost,expectedInkAfterCharge:bot.ink,
-          originalRecoveryLockSeconds:oldRecoveryLock
+          originalRecoveryLockSeconds:oldRecoveryLock,
+          originalFireRemainingSeconds:oldFireRemaining
         }:undefined
     });
     this.stats.cpuShots += 1;

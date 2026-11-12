@@ -59,24 +59,40 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;
     bot.ink=72;bot.inkRecoveryLockSeconds=.3;
+    bot.fireRemaining=0;
     system.stats.cpuShots=0;
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
     expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
       .toBe(true);
     expect(bot.ink).toBeLessThan(72);
+    // Scheduler reserved cadence, but no actual round was launched.
+    bot.fireRemaining=.27;
     const delivered=vi.fn();
     system.drainFireRequests(delivered);
     expect(delivered).not.toHaveBeenCalled();
     expect(system.pendingShots).toHaveLength(0);
     expect(bot.ink).toBeCloseTo(72);
     expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.3);
+    expect(bot.fireRemaining).toBe(0);
     expect(system.stats.cpuShots).toBe(0);
     // Only a subsequent genuine rejoin may release a paid new shot.
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
     expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
       .toBe(true);
+    bot.fireRemaining=.27;
     system.drainFireRequests(delivered);
     expect(delivered).toHaveBeenCalledOnce();
+    expect(bot.fireRemaining).toBeCloseTo(.27);
+    expect(system.stats.cpuShots).toBe(1);
+    // A real projectile pool refusal also leaves no paid cooldown.
+    bot.fireRemaining=0;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    bot.fireRemaining=.27;
+    system.drainFireRequests(request=>{
+      system.rollbackUndeliveredSourceCpuMainShot(request);
+    });
+    expect(bot.fireRemaining).toBe(0);
     expect(system.stats.cpuShots).toBe(1);
   });
 
