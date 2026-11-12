@@ -5,6 +5,8 @@ import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {nativeSourceCpuKitRuntimeAuthorized}
+ from '../app/NativeSourceRoundActionWindow';
 
 /** No simulated gameplay actors are spawned: exercise the real production
  * methods with a controlled, isolated real-CpuBot-shaped unit fixture. */
@@ -55,6 +57,24 @@ function fixture(originalF3: boolean) {
 }
 
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
+  it('activates genuine CPU SUB physics only for the selected 180s immutable original source',()=>{
+    const original={
+      fullRound:true,canonicalMode:'combat',stageId:
+       'undertow-t21d-partial-connectivity-qa',
+      solids:25,paint:17,links:26,scoreable:0
+    };
+    for(const mode of ['combat','circuit','coop','frontline'])
+      expect(nativeSourceCpuKitRuntimeAuthorized({
+       ...original,canonicalMode:mode})).toBe(true);
+    for(const changed of [
+      {fullRound:false},{canonicalMode:null},
+      {canonicalMode:'preview'},{canonicalMode:'qa'},
+      {stageId:'inkworks-junction'},{solids:26},
+      {paint:18},{links:27},{scoreable:1}
+    ])expect(nativeSourceCpuKitRuntimeAuthorized({
+     ...original,...changed})).toBe(false);
+  });
+
   it('refunds a live SOURCE CPU main shot if physical rejoin is lost before dispatch',()=>{
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;

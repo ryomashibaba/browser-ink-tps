@@ -36,3 +36,24 @@ export function nativeSourceRoundActionWindow(input:{
    input.actualHumanHp>0
  };
 }
+
+/** Real 180s ORIGINAL SOURCE only: attach the EXISTING physical CPU
+ * SUB/SPECIAL runtime to user-selected gameplay instead of leaving it
+ * permanently QA-only. This is not a grant to populate missing center
+ * routes, earn special gauge, modify floor/score or spawn a new enemy.
+ * All normal T20, noncanonical source, and deterministic QA are unchanged. */
+export function nativeSourceCpuKitRuntimeAuthorized(input:{
+ readonly fullRound:boolean;
+ readonly canonicalMode:string|null;
+ readonly stageId:string;
+ readonly solids:number;
+ readonly paint:number;
+ readonly links:number;
+ readonly scoreable:number;
+}):boolean{
+ return input.fullRound&&
+  ['combat','circuit','coop','frontline'].includes(input.canonicalMode??'')&&
+  input.stageId==='undertow-t21d-partial-connectivity-qa'&&
+  input.solids===25&&input.paint===17&&
+  input.links===26&&input.scoreable===0;
+}

@@ -146,7 +146,8 @@ import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVol
 import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
-import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd} from './NativeSourceRoundActionWindow';
+import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd,
+ nativeSourceCpuKitRuntimeAuthorized} from './NativeSourceRoundActionWindow';
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
@@ -1117,9 +1118,25 @@ export class UndertowF3PlayablePreviewApp{
      }:undefined);
   this.stats.playerSubWeaponName=subWeaponProfile(
    weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName;
-  // Uses the real existing weapon/ink/physics systems, but only on the
-  // explicit F3 + source QA route. No scoreable promotion is authorized.
-  this.cpuKit=this.cpuKitQaEnabled ? new CpuKitSystem(app,surfaces,
+  // The genuine human-selected 180s SOURCE game previously built ZERO
+  // CPU SUB/SPECIAL runtime objects: legitimate CPU kit choices were
+  // rejected/refunded every tick. Connect the existing real projectile,
+  // Rapier collision and paint systems only with exact ORIGINAL SOURCE
+  // 25/17/26/0 provenance. Special points still need actual earned gauge
+  // (0 scoreable surfaces grant none); no synthetic QA gauges are enabled.
+  // Historical explicit kit QA stays independently opt-in.
+  const nativeSourceCpuKits=nativeSourceCpuKitRuntimeAuthorized({
+   fullRound:this.b203FullRound,
+   canonicalMode:sourceCanonicalPlayableMode(location.href),
+   stageId:this.rawStage.metadata.id,
+   solids:this.rawStage.solids.length,
+   paint:this.rawStage.paintSurfaces.length,
+   links:this.rawStage.navigationLinks?.length??0,
+   scoreable:this.rawStage.paintSurfaces.filter(s=>
+    (s.flags&SurfaceFlags.Scoreable)!==0).length
+  });
+  this.cpuKit=(this.cpuKitQaEnabled||nativeSourceCpuKits)
+   ?new CpuKitSystem(app,surfaces,
    this.physics,this.coordinator,this.projectiles,this.cpu,
    this.feedback,this.stats) : null;
   ui.innerHTML='';
