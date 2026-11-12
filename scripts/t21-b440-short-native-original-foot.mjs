@@ -143,6 +143,9 @@ async function waitForRealSourceReady(entry,requireWebgl2=true){
   try{
    page=await evaluate(`(() => {
     const c=document.querySelector('#app-canvas');
+    // Main entrypoint renders a thrown boot exception in #boot-error.
+    // Preserve it on the EXISTING READY HOLD, without a new browser run.
+    const bootError=document.querySelector('#boot-error');
     let native=null;
     try{
      const s=window.__t21F3?.snapshot?.();
@@ -155,7 +158,8 @@ async function waitForRealSourceReady(entry,requireWebgl2=true){
      documentHidden:document.hidden,focused:document.hasFocus(),
      canvasExists:!!c,nativeReady:c?.dataset.t21F3Ready??null,
      nativeRenderer:c?.dataset.t21F3Renderer??null,
-     gameApiExists:!!window.__t21F3,native};
+     gameApiExists:!!window.__t21F3,native,
+     bootError:bootError?.textContent?.slice(0,2400)??null};
    })()`);
   }catch(readError){page={pageReadError:String(readError).slice(0,240)}}
   proof.realSourceReadyFailure={entry,reason:String(error).slice(0,300),
