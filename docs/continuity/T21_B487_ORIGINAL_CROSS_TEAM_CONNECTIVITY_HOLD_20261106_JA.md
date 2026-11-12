@@ -53,3 +53,15 @@ B454の60Hzでは、拒否されたRecast点の平面近傍（B2 0.029m、B4 0.0
 - 真正Artifact `13488422870` 内 `b488-real-original-f4-gap-authority-hold.json` を独立にJSON.parse確認：実native tick **1782**、人間/CPU現在位置からの原作Recast **0/16**、元26リンクは全て同側一方通行、実人間↔敵最短 **104.586172m**、味方CPU↔敵最短 **78.852567m**。過去2026-09-30監査との一致は **8局所ギャップ（各陣地4）**、独立に衝突認証されたgap Face **0**。判定 `HOLD_REFERENCE_REQUIRED_NO_AUTHORIZED_CROSSING`。**これは自然な中央経路完成、相手HPヒット、原作Collision権限、正式4v4のPASSではない**。
 - 同Artifactの `b486-original-human-7cpu-enemy-distance-60hz.json` だけ、末尾にリテラル `\\n` が追加されJSON.parseが失敗した。実距離測定自体・ブラウザー試験結果を否定するものではないが、そのまま機械可読なRAWと呼ばない。今回の後続候補でB486出力を正しい改行に修正し、既存B441にJSONパーサー独立検証を追加。**修正後の真正CI結果が出るまでは、この修正をPASSとしない**。
 - 원本の25 Rapier solids /17 PaintSurfaces /26 NavLinks /0 Scoreableを変えない。個別8箇所のVer7.2.0 Turf collision/mesh Face認証と全身0.30m CPUカプセル経路は未入手。B488はread-only証拠レーンの結果として完了し、同じ8件を小監査で繰り返さず、**次の主バッチは許可済みSOURCEでのF3本物プレイ機能（実射撃・Ink・A1協力、必要時だけ敵HP自然交戦）へ戻す**。main/T19C/T20/原本/Pages/正式QA/Draft PR #5/本番/ART全て保護。
+
+## 2026-11-12 B499追補 — 8組の原作三角面と実Rapier/Recastの独立照会
+
+- **コードHEAD**：`f69351a6823df812574f83ad58d266c6275d67c8`、軽量CI [#43156897600](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43156897600) **SUCCESS（1回）**。実ゲームに書き込まず、25 solid／17 paint／26 navigation link／0 scoreableを保持。真正Chromium再起動なし。
+- **対象が異なる「8」への注意**：旧Pass18の「左右各4件の局所ギャップ」は歩行候補グラフの集約値。一方、B218の8件はCI688原作OBJ由来5つのSOURCE床・坂部品を隣り合わせた4組×左右。**旧Pass18の8局所ギャップとB218の8三角面対とのID対応は未認証**。同じ8だからといって同一位置や完全な中央欠損リストと解釈しない。
+- B218の原作正本：`FldObj_Temple01_PntSet_mesh01_low139_1__FloorSlope01` → `Fld_Temple01_pCube21595_1__FloorConcrete01` → `Fld_Temple01_pCube21000_1__FloorSlope00`（外側）→ `Fld_Temple01_pCube20989_1__FloorConcrete02` → `Fld_Temple01_pCube21000_1__FloorSlope00`（内側）。左右を含め**10 SOURCE部品／合計42原作三角面**。原作三角形同士の幾何学的な最短距離は各側 **0.170000m／2.074235m／0.518559m／0.518559m**。同じOBJ由来であることは、Ver7.2.0 Turfで衝突有効との認証ではない。
+- **B499の実Rapier/Recast観測**：現在の元の25固体へこれら10部品を登録したSolid IDは **0/10**。42原作三角形中心での、Recastの0.35m以内の近傍点照会は **0/42**、既存Rapierステージから上下1.2mの範囲内での床ヒットは **0/42**。原作隣接8組の現行Recast経路問い合わせも **0/8**。16個の選択した三角形中心からの追加Ray／Recast投影照会も床支持認証0。これは**現ゲームの局所的な地形登録欠損を示す**が、全ての面の全領域に床がないという形式的証明ではない。
+- **過去の反証も維持**：CI #691の非採用試験ではSOURCE由来の5部品×左右を一時的にRecastへ追加したが右低地→アンダーパスの目的地へ到達せず、元の終端誤差31.716227m、2点の不完全経路のままだった。今回の「未登録」を解消しただけで経路が開通するとは断定できない。
+- **結論**：ゲーム本体の「原作中央部8箇所のGap」を、今回のCI688原作面8組と完全同一視しない。10部品を即ゲーム用のCollision/Nav/Scoreableに昇格させない。原作Ver7.2.0の面単位衝突・必要な追加隣接SOURCE面、正しいナビレイヤーと実CPUカプセルの連続経路が揃うまで **HOLD**。原作25/17/26/0、自然な敵味方経路0/16、正式4v4、得点、ART、公開HOLDを維持する。
+- **次の工程で最も効果的な調査**：原作OBJの外側床（右低地）から上記10部品へ入る「最初の未登録接続」と、内側の原作通路へ出る「最後の接続」を、SOURCEの顔ID・原作衝突属性と既存床の接地高さで独立照合すること。再び単に同じ5部品を追加するCI試験を繰り返さない。新しい床・リンク・テレポート・Scoreableを作らない。
+
+**証拠**：Actions #43156897600 artifact `b499-genuine-original-eight-source-face-seams`（8原作面対のOBJ名、厳格な3D分離、Recast経路・16端点投影、42原作三角形中心のRecast/Rapier照会JSON）。テスト：`src/app/B499OriginalEightSeamsLiveRapierRecast.test.ts`。
