@@ -3185,6 +3185,12 @@ export class CpuAgentSystem {
   }
 
   private paintAtBot(bot: CpuBot): void {
+    // Genuine selected SOURCE combat uses paid, physically spawned weapon
+    // projectiles and their original registered impact cells for turf.
+    // The legacy per-foot paint stamp charges no shot ink: do not let
+    // merely walking silently recolor the native OWN/enemy ink resource
+    // grid. Keep the T20 and legacy source QA paint behavior untouched.
+    if(this.b178RealSourceInkRecovery)return;
     this.samplePoint.copy(bot.position);
     this.samplePoint.y += 0.10;
 

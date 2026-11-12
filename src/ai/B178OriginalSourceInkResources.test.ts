@@ -6,6 +6,7 @@ import {undertowT21dConnectivityQaStage} from '../stage/undertow/UndertowSpillwa
 import {UndertowPhase14QSharedActorCollision} from '../stage/undertow/UndertowPhase14QSharedActorCollision';
 import {beforeAll,describe,it,expect} from 'vitest';
 import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
+import {CpuAgentSystem} from './CpuAgentSystem';
 import {originalSourceRegisteredOwnFoot} from '../app/OriginalSourceCombatRetreat';
 import {PaintSource,PaintEventType,SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSample} from '../ink/GameplayInkSystem';
@@ -32,6 +33,39 @@ describe('B178 actual original non-scoring ink resource policy',()=>{
    SurfaceFlags.Paintable|SurfaceFlags.Wall,SurfaceFlags.Floor
   ])expect(()=>b178FootRelation(ink(Team.A,flags),Team.A,true))
    .toThrow('B178_UNTRUSTED_SCOREABLE_OR_NONPAINTABLE_SOURCE_FOOT');
+ });
+ it('selected original SOURCE walking never creates unpaid CPU foot paint; legacy mode remains unchanged',()=>{
+  const requests:{type:PaintEventType;surfaceId:string}[]=[];
+  const stage=undertowT21dConnectivityQaStage();
+  const p=stage.paintSurfaces[0]!;
+  const actor={
+   id:'A1',team:Team.A,position:new Vec3(0,3,42)
+  };
+  const run=(selectedSourceRecovery:boolean)=>{
+   const cpu=Object.create(CpuAgentSystem.prototype) as any;
+   cpu.b178RealSourceInkRecovery=selectedSourceRecovery;
+   cpu.phase14qF2RecoverableSteps=true;
+   cpu.stage=stage;
+   cpu.samplePoint=new Vec3();
+   cpu.stats={cpuPaintRequests:0};
+   cpu.coordinator={enqueue:(req:typeof requests[number])=>
+    requests.push(req)};
+   cpu.sampleRegisteredSourceFoot=()=>({
+    surface:{id:p.id},u:.3,v:.3
+   });
+   cpu.paintAtBot(actor);
+   return cpu.stats.cpuPaintRequests as number;
+  };
+  expect(run(true)).toBe(0);
+  expect(requests).toHaveLength(0);
+  expect(run(false)).toBe(1);
+  expect(requests).toEqual([{type:PaintEventType.Foot,
+   surfaceId:p.id}].map(({type,surfaceId})=>expect.objectContaining({
+    type,surfaceId
+   })));
+  expect(stage.solids).toHaveLength(25);
+  expect(stage.paintSurfaces).toHaveLength(17);
+  expect(stage.navigationLinks).toHaveLength(26);
  });
  it.each(['positive-z','negative-z'])(
   'reads the registered %s Rapier ramp cell instead of neighboring OWN ink',
