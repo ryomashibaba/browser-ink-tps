@@ -428,6 +428,100 @@ jobs:
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
+      # One explicit SOURCE user-input vertical slice. Inspect the actual
+      # same-world RAW and three Chromium framebuffer images, without running
+      # another browser or treating player ink as official Turf score.
+      - name: Independently verify one original 7CPU real FIRE OWN-SQUID RESHOOT cycle
+        if: ${{ contains(github.event.head_commit.message, '[p1-ramp-walk-once]') }}
+        run: |
+          node --input-type=module <<'P1_REAL_INK_LOOP'
+          import {readFileSync,statSync} from 'node:fs';
+          import {join} from 'node:path';
+          import {createHash} from 'node:crypto';
+          const dir='/tmp/t21-b441-short-native-frontline';
+          const proof=JSON.parse(readFileSync(join(dir,
+            'b440-short-real-original-human-foot.json'),'utf8'));
+          const ink=proof.p1RegisteredRampInkLoop;
+          const ramp='UndertowT21D:right-low-route-ramp-positive-z';
+          const required=[
+            'FIRST_REAL_HUMAN_PAINT_SHOTS',
+            'REAL_WASD_TO_GENUINE_OWNER_CELL',
+            'GENUINE_SHIFT_SQUID_OWN_REFILL',
+            'ACTUAL_POST_OWN_REFILL_RESHOT'
+          ];
+          if(proof.verdict!=='PASS_LIMITED_REAL_REGISTERED_SOURCE_FIRE_REFILL_RESHOT'||
+             proof.testKind!=='P1_SHORT_SAME_WORLD_REGISTERED_SOURCE_INK_LOOP'||
+             ink?.verdict!==proof.verdict||
+             ink.schema!=='P1_REGISTERED_SOURCE_REAL_INK_LOOP'||
+             ink.source!=='25/17/26/0'||ink.officialWinner!=='NONE'||
+             ink.formal4v4!==false||proof.full180sCertified!==false||
+             proof.genuineReplayClickCertified!==false||
+             ink.origin==null||!Number.isSafeInteger(ink.firstNativeTick)||
+             !Number.isSafeInteger(ink.finalNativeTick)||
+             ink.finalNativeTick<=ink.firstNativeTick||
+             ink.actualNativeElapsedTicks!==ink.finalNativeTick-ink.firstNativeTick||
+             ink.actorTeleports!==0||ink.syntheticTicks!==0||
+             ink.syntheticInk!==0||ink.scoreablePromotions!==0||
+             proof.actorWrites!==0||proof.scoreWrites!==0||
+             proof.nativeClockWrites!==0||proof.sourceGeometryWrites!==0)
+            throw Error('P1_REAL_SOURCE_INK_LOOP_AUTHORITY_OR_TIME_HOLD');
+          const actions=ink.humanActions;
+          if(!Array.isArray(actions)||!required.every(tag=>
+             actions.some(a=>a.tag===tag))||
+             !actions.filter(a=>a.tag===required[0]||a.tag===required[3])
+              .every(a=>a.realPlayerShotsVerified===true&&
+               a.actualShots>=3&&Number.isFinite(a.paidInk)&&a.paidInk>=1)||
+             !actions.some(a=>a.tag===required[0]&&
+               a.realPaintImpactCells>0)||
+             !Number.isSafeInteger(ink.humanRampImpactCellDelta)||
+             ink.humanRampImpactCellDelta<1)
+            throw Error('P1_REAL_SOURCE_PAID_HUMAN_SHOTS_OR_PAINT_HOLD');
+          const refill=ink.refillSamples;
+          if(!Array.isArray(refill)||refill.length<3||
+             refill.some((f,i)=>f.mode!=='SQUID'||f.recovery!=='SQUID_OWN'||
+              f.relation!=='OWN'||!Number.isFinite(f.ink)||
+              !Number.isSafeInteger(f.tick)||
+              f.floorInk?.actualKccGrounded!==true||
+              f.floorInk?.actualRapierSolidId!==ramp||
+              f.floorInk?.sampledBackingSolidId!==ramp||
+              f.floorInk?.floorContactVerified!==true||
+              f.floorInk?.originalAuthority!=='25/17/26/0'||
+              (i>0&&(f.tick<=refill[i-1].tick||f.ink<=refill[i-1].ink))))
+            throw Error('P1_REAL_NATIVE_OWN_SQUID_BACKED_RECOVERY_HOLD');
+          const s=ink.samples;
+          if(!Array.isArray(s)||s.length<4||
+             s[0]?.tag!=='P1_RAMP'||
+             s.at(-1)?.tag!=='HUMAN_REAL_RESHOT'||
+             s.at(-1)?.tick!==ink.finalNativeTick||
+             s.some((f,i)=>!Number.isSafeInteger(f.tick)||
+               f.rosterCount!==7||f.nativeFreeCombat!==true||
+               (i>0&&f.tick<s[i-1].tick)))
+            throw Error('P1_REAL_ONE_WORLD_7_CPU_NATIVE_SAMPLES_HOLD');
+          const screenshots=[
+            'p1-real-ink-loop-after-first-shot.png',
+            'p1-real-ink-loop-own-squid-recovery.png',
+            'p1-real-ink-loop-human-reshoot.png'
+          ];
+          if(!Array.isArray(ink.screenshots)||ink.screenshots.length!==3||
+             screenshots.some((file,i)=>ink.screenshots[i]?.file!==file))
+            throw Error('P1_REAL_SOURCE_THREE_FRAME_MANIFEST_HOLD');
+          for(const [i,file] of screenshots.entries()){
+            const bytes=readFileSync(join(dir,file));
+            if(statSync(join(dir,file)).size<10000||
+               bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+               bytes.readUInt32BE(16)!==1600||
+               bytes.readUInt32BE(20)!==900||
+               createHash('sha256').update(bytes).digest('hex')!==
+                ink.screenshots[i].sha256)
+              throw Error('P1_REAL_SOURCE_FRAMEBUFFER_OR_SHA_HOLD_'+i);
+          }
+          console.log('P1_LIMITED_NATIVE_7CPU_REGISTERED_SOURCE_INK_LOOP_PASS',
+           JSON.stringify({firstTick:ink.firstNativeTick,
+            lastTick:ink.finalNativeTick,shotActions:required,
+            ownRefillFrames:refill.length,rampHumanInkCells:
+             ink.humanRampImpactCellDelta,images:screenshots.length,
+            formal4v4:false,officialWinner:'NONE'}));
+          P1_REAL_INK_LOOP
       - name: Verify exactly one real canonical combat KeyQ and native screenshots
         if: ${{ contains(github.event.head_commit.message, '[real-q-once]') }}
         run: |
