@@ -77,6 +77,11 @@ export class ProjectileSystem {
   private readonly queuedCpuShots: CpuFireRequest[] = [];
   private b343SourceVolleyAtomic=false;
   private b343RejectedVolleys=0;
+  // Strictly human-selected ORIGINAL SOURCE rounds only. Seven real CPUs
+  // must share scarce physical projectile slots; fixed array order would
+  // otherwise prioritize the same actors on every contention tick.
+  private sourceCpuFairVolleyDispatch=false;
+  private sourceCpuVolleyRotation=0;
   private b345SourceShooterOpeningEnabled=false;
   private b345RealOpeningClamps=0;
   private readonly b346ShooterWitness=new B346NativeShooterWitness();
@@ -194,6 +199,14 @@ export class ProjectileSystem {
        stage.scoreable!==0||this.surfaces.length!==17)
       throw Error('B343_NONORIGINAL_SOURCE_FORBIDDEN');
     this.b343SourceVolleyAtomic=true;
+  }
+  /** Real canonical 25/17/26/0 SOURCE game only, after the full B343
+   * physical-world gate. T20, standalone QA and projectile physics stay
+   * unchanged; this only selects which paid real CPU fires first. */
+  public enableSourceCpuFairVolleyDispatch():void{
+    if(!this.b343SourceVolleyAtomic||this.surfaces.length!==17)
+      throw Error('T21_SOURCE_CPU_FAIR_VOLLEY_REQUIRES_ORIGINAL_WORLD');
+    this.sourceCpuFairVolleyDispatch=true;
   }
   public b343OriginalSourceVolleyBudgetSnapshot(){
     return {enabled:this.b343SourceVolleyAtomic,
@@ -377,6 +390,7 @@ export class ProjectileSystem {
     this.b152OriginalAllyAimProjectilesSpawned=0;
     this.b152OriginalAllyAimSurfaceCollisions=0;
     this.b343RejectedVolleys=0;
+    this.sourceCpuVolleyRotation=0;
     this.b345RealOpeningClamps=0;
     this.b346ShooterWitness.reset();
     this.b348AcceptedHumanShots=0;
@@ -1429,7 +1443,24 @@ export class ProjectileSystem {
   ): void {
     if (this.queuedCpuShots.length === 0) return;
 
-    for (const request of this.queuedCpuShots) {
+    // CPU fixedUpdate emits paid requests in permanent roster order.
+    // Under a real 7-CPU pool bottleneck this gives early A/B actors
+    // all available slots, while later actors are repeatedly refunded.
+    // In human-selected SOURCE play only, rotate dispatch priority
+    // between simultaneous paid original-physics volleys. No extra
+    // shots, positions, targets, navigation, scores or capacity.
+    const fairSource=this.sourceCpuFairVolleyDispatch&&
+      this.queuedCpuShots.length>1&&
+      this.queuedCpuShots.every(req=>req.sourceInkTransaction!==undefined);
+    const first=fairSource?
+      this.sourceCpuVolleyRotation%this.queuedCpuShots.length:0;
+    const ordered=fairSource?[
+      ...this.queuedCpuShots.slice(first),
+      ...this.queuedCpuShots.slice(0,first)
+    ]:this.queuedCpuShots;
+    if(fairSource)this.sourceCpuVolleyRotation++;
+
+    for (const request of ordered) {
       const profile = weaponProfile(request.weaponId);
 
       if (profile.weaponClass === 'CHARGER') {

@@ -119,6 +119,55 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSplats).toBe(1);
   });
 
+  it('seven real SOURCE CPUs share a scarce physical slot rather than permanent roster priority',()=>{
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}];
+    launcher.surfaces=new Array(17);
+    launcher.b343SourceVolleyAtomic=true;
+    launcher.sourceCpuVolleyRotation=0;
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.cpuAgents={rollbackUndeliveredSourceCpuMainShot:vi.fn()};
+    launcher.stats={projectilePoolDrops:0};
+    launcher.feedback={shot:vi.fn()};
+    const req=(id:string):any=>({
+      sourceId:id,team:id==='A1'?Team.A:Team.B,
+      origin:new Vec3(),bodyPosition:new Vec3(),target:new Vec3(3,0,0),
+      weaponId:'pulse-sprayer',charge:0,action:'PROJECTILE',
+      sourceInkTransaction:{
+        chargedInkCost:.95,expectedInkAfterCharge:79,
+        originalRecoveryLockSeconds:0
+      }
+    });
+    const fireBoth=()=>{
+      launcher.slots[0].active=false;launcher.queueCpuShot(req('A1'));
+      launcher.queueCpuShot(req('B1'));
+      launcher.spawnQueuedCpuShots(
+        Team.A,new Vec3(),true,false,new Vec3());
+    };
+    // The frozen source QA ordering is unchanged without the new opt-in.
+    fireBoth();fireBoth();
+    const ids=()=>launcher.spawnProjectile.mock.calls.map(
+      (args:any[])=>args.find(x=>x==='A1'||x==='B1'));
+    expect(ids()).toEqual(['A1','A1']);
+    expect(launcher.cpuAgents.rollbackUndeliveredSourceCpuMainShot)
+      .toHaveBeenCalledTimes(2);
+    launcher.spawnProjectile.mockClear();
+    launcher.cpuAgents.rollbackUndeliveredSourceCpuMainShot.mockClear();
+    launcher.enableSourceCpuFairVolleyDispatch();
+    fireBoth();fireBoth();
+    expect(ids()).toEqual(['A1','B1']);
+    expect(launcher.cpuAgents.rollbackUndeliveredSourceCpuMainShot)
+      .toHaveBeenCalledTimes(2);
+    expect(launcher.stats.projectilePoolDrops).toBe(4);
+    expect(launcher.queuedCpuShots).toHaveLength(0);
+    expect(launcher.slots).toHaveLength(1); // no forged capacity
+  });
+
   it('actual SOURCE CPU pool exhaustion conserves ink and prevents partial dualies volleys',()=>{
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;

@@ -1064,6 +1064,11 @@ export class UndertowF3PlayablePreviewApp{
       scoreable:s.paintSurfaces.filter(p=>
        (p.flags&SurfaceFlags.Scoreable)!==0).length});
   }
+  // Rotate paid, physically valid CPU shots between the seven genuine
+  // original SOURCE actors when simultaneous volleys contend. This
+  // does not add projectile slots or change original CPU destinations.
+  if(playableOriginalSourceRound)
+    this.projectiles.enableSourceCpuFairVolleyDispatch();
   // Native SOURCE player SHOOTER no longer releases up to 0.5 seconds
   // of idle cooldown debt as a first-click bullet flood. The existing
   // B345 one-real-tick clamp is limited to authenticated playable SOURCE
