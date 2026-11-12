@@ -593,9 +593,20 @@ export class PlayerController {
       this.setSnapToGround(true);
 
       const tuning = GAME_CONFIG.player;
+      // True SOURCE human feet obey enemy ink as well as squid feet.
+      // Only actual registered Rapier backing contact can set ENEMY here;
+      // an optical nearby slab, air or unrelated PaintSurface cannot slow.
+      // Reuse the existing enemy-ink movement tuning, not a fabricated
+      // SOURCE-only speed or a new collision/navigation rule.
+      const sourceEnemyInk = this.nativeSourceGroundInkGuard &&
+        this.grounded && this.inkRelation === 'ENEMY';
       this.applyHorizontalTarget(
-        tuning.humanSpeedMetersPerSecond * this.weaponMoveMultiplier,
-        tuning.groundAccelerationMetersPerSecond2,
+        (sourceEnemyInk
+          ? tuning.squidEnemyInkSpeedMetersPerSecond
+          : tuning.humanSpeedMetersPerSecond) * this.weaponMoveMultiplier,
+        sourceEnemyInk
+          ? tuning.squidDryAccelerationMetersPerSecond2
+          : tuning.groundAccelerationMetersPerSecond2,
         dt
       );
       this.tryJump(jumpPressed, tuning.jumpSpeedMetersPerSecond);

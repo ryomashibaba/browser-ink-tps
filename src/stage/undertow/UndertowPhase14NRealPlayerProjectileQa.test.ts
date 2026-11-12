@@ -219,6 +219,47 @@ describe('T21 Phase14N original-source real PlayerController and actual CPU proj
   }));
  });
 
+ it('slows HUMAN only on actual ENEMY registered-source foot ink, not on dry floor',()=>{
+   vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+   const rampId='UndertowT21D:right-low-route-ramp-positive-z:paint';
+   const travel=(enemy:boolean)=>{
+    const w=qaWorld(rampId);
+    try{
+     for(let i=0;i<90;i++)w.tickPlayer();
+     expect(w.stats.playerGrounded).toBe(true);
+     if(enemy){
+      const surface=w.ink.getSurface(rampId)!;
+      w.ink.apply({
+       tick:1,source:PaintSource.Debug,team:Team.B,surfaceId:rampId,
+       centerU:surface.widthMeters*.5,centerV:surface.heightMeters*.5,
+       radiusU:Math.hypot(surface.widthMeters,surface.heightMeters),
+       radiusV:Math.hypot(surface.widthMeters,surface.heightMeters),
+       angle:0,type:PaintEventType.Debug,strength:1
+      });
+     }
+     w.player.syncAfterPhysics(DT);
+     expect(w.player.currentInkRelation).toBe(enemy?'ENEMY':'NEUTRAL');
+     const start=w.player.getPosition();
+     w.setMove(.55);
+     for(let i=0;i<18;i++)w.tickPlayer();
+     const end=w.player.getPosition();
+     expect(w.player.currentMode).toBe('HUMAN');
+     expect(w.stats.playerGrounded).toBe(true);
+     expect(w.player.sourceNativeFloorInkWitness().floorContactVerified)
+      .toBe(true);
+     return Math.hypot(end.x-start.x,end.z-start.z);
+    }finally{w.physics.world.free();}
+   };
+   const dryMeters=travel(false);
+   const enemyMeters=travel(true);
+   expect(dryMeters).toBeGreaterThan(.1);
+   expect(enemyMeters).toBeGreaterThan(0);
+   expect(enemyMeters).toBeLessThan(dryMeters*.8);
+   expect(stage.solids).toHaveLength(25);
+   expect(stage.paintSurfaces).toHaveLength(17);
+   expect(stage.navigationLinks).toHaveLength(26);
+  });
+
  it.each(['positive-z','negative-z'])(
   'uses the real registered %s ramp support cell across HUMAN/SQUID resource updates',
   side=>{
