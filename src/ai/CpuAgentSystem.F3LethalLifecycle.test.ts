@@ -5,6 +5,7 @@ import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {CpuKitSystem} from './CpuKitSystem';
 import {nativeSourceCpuKitRuntimeAuthorized}
  from '../app/NativeSourceRoundActionWindow';
 
@@ -226,6 +227,68 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(ally.fireRemaining).toBeCloseTo(.25);
     expect(system.stats.cpuShots).toBe(1);
     expect(launcher.queuedCpuShots).toHaveLength(0);
+  });
+
+  it('genuine SOURCE combat spends CPU SUB ink and launches an existing physical bomb, but refuses an exhausted kit pool',()=>{
+    const {system,bot}=fixture(true);
+    bot.position.set(0,3,42);
+    bot.role='SKIRMISHER';
+    bot.ink=95;
+    bot.inkRecoveryLockSeconds=.18;
+    bot.subCooldownSeconds=0;
+    bot.weaponChargeSeconds=0;
+    bot.weaponBurstShotsRemaining=0;
+    bot.fireRemaining=0;
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.stats.cpuSubUses=0;
+    system.syncStats=vi.fn();
+    const target=new Vec3(1,3,48);
+    system.chooseCombatTarget=vi.fn(()=>target.clone());
+    const slot:any={active:false,landed:false,actorId:'-',subId:'pulse-bomb',
+      team:Team.A,position:new Vec3(),previousPosition:new Vec3(),
+      velocity:new Vec3(),ttl:0,fuseSeconds:0,
+      entity:{render:null,enabled:false,setPosition:vi.fn(),
+       setLocalScale:vi.fn()}};
+    const kit:any=Object.create(CpuKitSystem.prototype);
+    kit.bombs=[slot];
+    kit.stats={cpuSubProjectilesLaunched:0,cpuKitPoolDrops:0};
+    kit.feedback={subThrow:vi.fn()};
+    kit.syncStats=vi.fn();
+    kit.materialA={};kit.materialB={};
+
+    // This is the actual existing CPU decision and SUB launch code,
+    // not a manufactured projectile, Scoreable cell or enemy hit.
+    system.updateCpuKit(bot,Team.A,target,true);
+    expect(system.pendingKitRequests).toHaveLength(1);
+    expect(system.pendingKitRequests[0].kind).toBe('SUB');
+    expect(bot.ink).toBeLessThan(95);
+    expect(system.stats.cpuSubUses).toBe(1);
+    system.drainKitRequests((req:any)=>kit.queue(req));
+    expect(system.pendingKitRequests).toHaveLength(0);
+    expect(slot.active).toBe(true);
+    expect(slot.actorId).toBe('B1');
+    expect(slot.team).toBe(Team.B);
+    expect(slot.position.y).toBeGreaterThan(bot.position.y);
+    expect(slot.velocity.length()).toBeGreaterThan(0);
+    expect(kit.stats.cpuSubProjectilesLaunched).toBe(1);
+    expect(kit.feedback.subThrow).toHaveBeenCalledOnce();
+    const afterFirst=bot.ink;
+    const oldLock=bot.inkRecoveryLockSeconds;
+
+    // Never create a 17th/virtual slot: a genuine pool refusal returns
+    // only the second unlaunched SUB's ink, preserving the first effect.
+    bot.subCooldownSeconds=0;
+    system.updateCpuKit(bot,Team.A,target,true);
+    expect(system.pendingKitRequests).toHaveLength(1);
+    expect(bot.ink).toBeLessThan(afterFirst);
+    system.drainKitRequests((req:any)=>kit.queue(req));
+    expect(kit.stats.cpuSubProjectilesLaunched).toBe(1);
+    expect(kit.stats.cpuKitPoolDrops).toBe(1);
+    expect(bot.ink).toBeCloseTo(afterFirst);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(oldLock);
+    expect(system.stats.cpuSubUses).toBe(1);
+    expect(slot.active).toBe(true);
   });
 
   it('refunds a live SOURCE rejected SUB only, keeping original splat resource penalties',()=>{
