@@ -260,7 +260,7 @@ export class CpuKitSystem {
       if(this.nativeOriginalSourceCombatantSubContactEnabled){
         const cpu=this.cpuAgents.findNearestCombatHit(
           slot.position,next,slot.team);
-        const human=this.projectiles.findNativeSourceHumanThrownSubHit(
+        const human=this.projectiles.findNativeSourceHumanPhysicalHit(
           slot.position,next,slot.team);
         const actor=cpu&&human?
           (cpu.distance<=human.distance?cpu:human):cpu??human;

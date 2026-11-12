@@ -5,6 +5,7 @@ import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {weaponProfile} from '../weapons/WeaponCatalog';
 import {CpuKitSystem} from './CpuKitSystem';
 import {nativeSourceCpuKitRuntimeAuthorized}
  from '../app/NativeSourceRoundActionWindow';
@@ -229,6 +230,59 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(launcher.queuedCpuShots).toHaveLength(0);
   });
 
+  it('real SOURCE CPU CHARGER uses the same living physical player collider as SUB instead of an upper-body phantom',()=>{
+    const projectile:any=Object.create(ProjectileSystem.prototype);
+    projectile.currentHumanDamageable=true;
+    projectile.currentHumanTeam=Team.A;
+    projectile.currentHumanPosition=new Vec3(0,.87,0);
+    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.stats={cpuPlayerHits:0};
+    projectile.cpuAgents={findNearestCombatHit:vi.fn(()=>null)};
+    projectile.physics={castStageSegment:vi.fn(()=>null)};
+    projectile.findNearestSurfaceHit=vi.fn(()=>null);
+    projectile.feedback={beam:vi.fn()};
+    projectile.enqueueChargerLine=vi.fn();
+    let mode:'HUMAN'|'SQUID'='HUMAN';
+    projectile.enableNativeSourceHumanPhysicalContact(()=>mode);
+    const attack=(y:number)=>{
+      const request:any={sourceId:'B1',team:Team.B,charge:1,
+        origin:new Vec3(-3,y,0),target:new Vec3(0,y,0)};
+      projectile.fireCpuChargerRay(
+        request,weaponProfile('rail-charger'),Team.A,
+        projectile.currentHumanPosition,true,false,new Vec3(1,0,0));
+    };
+    // Valid upper HUMAN capsule, missed by old single sphere centered
+    // at body y=.87 with 0.42m radius.
+    attack(1.56);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+    expect(projectile.feedback.beam).toHaveBeenCalledOnce();
+    // Same geometry must not hit an actual low SQUID player.
+    mode='SQUID';
+    attack(1.56);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+    // A genuine SQUID near-floor shot can hit the true Rapier sphere.
+    attack(.33);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(2);
+    expect(projectile.stats.cpuPlayerHits).toBe(2);
+    // A true splat within this native tick eliminates later CPU
+    // hits even if the earlier fixedUpdate caller passed alive=true.
+    projectile.resources.currentHp=0;
+    attack(.33);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(2);
+    expect(projectile.stats.cpuPlayerHits).toBe(2);
+    // No fabricated friendly fire from another real A-team CPU.
+    projectile.resources.currentHp=100;
+    projectile.fireCpuChargerRay({
+      sourceId:'A1',team:Team.A,charge:1,
+      origin:new Vec3(-3,.33,0),target:new Vec3(0,.33,0)
+    },weaponProfile('rail-charger'),Team.A,
+      projectile.currentHumanPosition,true,false,new Vec3(1,0,0));
+    expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(2);
+    expect(projectile.stats.cpuPlayerHits).toBe(2);
+  });
+
   it('real SOURCE enemy SUB respects physical HUMAN capsule, SQUID sphere, living HP and native blast overlap',()=>{
     const projectile:any=Object.create(ProjectileSystem.prototype);
     projectile.currentHumanDamageable=true;
@@ -241,7 +295,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.combatTargets={applyAreaDamage:vi.fn()};
     let mode:'HUMAN'|'SQUID'='HUMAN';
     projectile.enableNativeSourceHumanPhysicalContact(()=>mode);
-    const flight=(height:number)=>projectile.findNativeSourceHumanThrownSubHit(
+    const flight=(height:number)=>projectile.findNativeSourceHumanPhysicalHit(
       new Vec3(-2,height,0),new Vec3(2,height,0),Team.B);
     // Lower/upper body are inside the original Rapier HUMAN capsule,
     // although an approximate central sphere would miss them.
@@ -251,7 +305,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(footHit.distance).toBeLessThan(2);
     expect(flight(1.58)).not.toBeNull();
     expect(flight(1.85)).toBeNull();
-    expect(projectile.findNativeSourceHumanThrownSubHit(
+    expect(projectile.findNativeSourceHumanPhysicalHit(
       new Vec3(-2,.87,0),new Vec3(2,.87,0),Team.A)).toBeNull();
 
     // Actual SQUID Rapier sphere is low: a waist-height HUMAN hit is
@@ -290,7 +344,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
         botId:'A1',guarded:false};
       const realHuman={distance:.10,point:new Vec3(.10,3,0)};
       kit.cpuAgents={findNearestCombatHit:vi.fn(()=>realCpu)};
-      kit.projectiles={findNativeSourceHumanThrownSubHit:
+      kit.projectiles={findNativeSourceHumanPhysicalHit:
         vi.fn(()=>realHuman)};
       kit.physics={castStageSegment:vi.fn(()=>({
         distance:.17,point:new Vec3(.17,3,0),solidId:'ORIGINAL'
@@ -306,7 +360,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       .toEqual(first.realCpu.point);
     expect(first.kit.cpuAgents.findNearestCombatHit)
       .toHaveBeenCalledOnce();
-    expect(first.kit.projectiles.findNativeSourceHumanThrownSubHit)
+    expect(first.kit.projectiles.findNativeSourceHumanPhysicalHit)
       .toHaveBeenCalledOnce();
 
     const humanFirst=make();
@@ -328,7 +382,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     historicalQa.kit.updateBombs(1/60);
     expect(historicalQa.kit.cpuAgents.findNearestCombatHit)
       .not.toHaveBeenCalled();
-    expect(historicalQa.kit.projectiles.findNativeSourceHumanThrownSubHit)
+    expect(historicalQa.kit.projectiles.findNativeSourceHumanPhysicalHit)
       .not.toHaveBeenCalled();
     expect(historicalQa.kit.onBombContact.mock.calls[0][2])
       .toEqual(new Vec3(.17,3,0));

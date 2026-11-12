@@ -449,10 +449,11 @@ export class ProjectileSystem {
     this.nativeSourceHumanPhysicalMode=realMode;
   }
 
-  /** SUB contact against the real HUMAN Rapier capsule or current SQUID
-   * sphere, never a synthesized enemy. The physical CPU kit invokes this
-   * AFTER ProjectileSystem has captured the same tick's KCC position. */
-  public findNativeSourceHumanThrownSubHit(
+  /** All genuine SOURCE CPU weapons (real main bullet, CHARGER ray and
+   * physical SUB) share the same actual HUMAN Rapier capsule / SQUID
+   * sphere, current HP and team authority. Never a synthetic player hit.
+   * CPU kit runs AFTER ProjectileSystem has captured this tick's KCC. */
+  public findNativeSourceHumanPhysicalHit(
     from:Vec3,to:Vec3,sourceTeam:Team.A|Team.B
   ):{distance:number;point:Vec3}|null{
     if(!this.currentHumanDamageable||this.currentHumanTeam===sourceTeam||
@@ -661,17 +662,22 @@ export class ProjectileSystem {
         ? this.combatTargets.findNearestHit(previous, next, slot.team)
         : null;
       const cpuHit = this.cpuAgents.findNearestCombatHit(previous, next, slot.team);
+      // The original 180s player is either an actual Rapier HUMAN capsule
+      // or a lowered SQUID sphere. CPU MAIN bullets must use the same
+      // collision as real thrown SUBs; an HP-zero human cannot absorb a
+      // second bullet later in this same native frame.
       const playerHitDistance = (
         playerDamageable &&
         slot.sourceKind === 'CPU' &&
-        slot.team !== team
+        slot.team !== team &&
+        (!this.nativeSourceHumanPhysicalMode||this.resources.currentHp>0)
       )
-        ? segmentSphereDistance(
-            previous,
-            next,
-            playerPosition,
-            GAME_CONFIG.cpu.playerHitRadiusMeters
-          )
+        ? (this.nativeSourceHumanPhysicalMode
+          ? this.findNativeSourceHumanPhysicalHit(
+              previous,next,slot.team)?.distance??null
+          : segmentSphereDistance(
+              previous,next,playerPosition,
+              GAME_CONFIG.cpu.playerHitRadiusMeters))
         : null;
 
       const paintWins = paintHit && (
@@ -1910,16 +1916,20 @@ export class ProjectileSystem {
       end,
       request.team
     );
+    // The genuine SOURCE CPU CHARGER must not fall back to the old
+    // single ball while MAIN and SUB are physical-capsule accurate.
+    // Same team, live HP, actual KCC body and ORIGINAL cover apply.
     const playerHitDistance = (
       playerDamageable &&
-      request.team !== humanTeam
+      request.team !== humanTeam &&
+      (!this.nativeSourceHumanPhysicalMode||this.resources.currentHp>0)
     )
-      ? segmentSphereDistance(
-          request.origin,
-          end,
-          playerPosition,
-          GAME_CONFIG.cpu.playerHitRadiusMeters
-        )
+      ? (this.nativeSourceHumanPhysicalMode
+        ? this.findNativeSourceHumanPhysicalHit(
+            request.origin,end,request.team)?.distance??null
+        : segmentSphereDistance(
+            request.origin,end,playerPosition,
+            GAME_CONFIG.cpu.playerHitRadiusMeters))
       : null;
 
     const paintWins = paintHit && (
