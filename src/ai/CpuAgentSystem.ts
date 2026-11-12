@@ -1401,6 +1401,36 @@ export class CpuAgentSystem {
     this.pendingShots.length = 0;
   }
 
+  /**
+   * Actual SOURCE SPECIAL activation is deferred until CpuKitSystem's
+   * native effect phase. An already-queued human projectile or true SUB
+   * can splat its owner before that phase within the same 60Hz tick.
+   * Recheck living Rapier-rejoined ownership at the LAST effect boundary.
+   * Never strip a successfully launched bomb or award fictitious gauge.
+   */
+  public approveQueuedSourceCpuSpecialAtActivation(
+    request:Extract<CpuKitRequest,{kind:'SPECIAL'}>
+  ):boolean{
+    if(!this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+      return true;
+    const bot=this.bots.find(b=>b.id===request.sourceId);
+    if(bot?.team===request.team&&this.sourceCpuMayStartActions(bot))
+      return true;
+    if(bot?.lifeState==='ACTIVE'&&Number.isFinite(bot.hp)&&bot.hp>0&&
+       bot.team===request.team){
+      // A still-alive actor lost the current genuine physical rejoin:
+      // the never-activated effect keeps none of its reserved gauge.
+      this.rollbackRejectedKitRequest(request,'REJOIN_HOLD');
+    }else{
+      // A real splat keeps the normal retained/forfeited resource amount.
+      // An effect not executed is not a CPU special activation.
+      this.stats.cpuSpecialActivations=Math.max(0,
+        this.stats.cpuSpecialActivations-1);
+    }
+    return false;
+  }
+
   public drainKitRequests(
     consumer: (request: CpuKitRequest) => boolean
   ): void {

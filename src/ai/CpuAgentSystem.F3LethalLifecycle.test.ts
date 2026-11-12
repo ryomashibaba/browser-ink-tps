@@ -291,6 +291,85 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(slot.active).toBe(true);
   });
 
+  it('refuses a queued original SOURCE SPECIAL after a true same-tick CPU splat, preserving death penalties',()=>{
+    const {system,bot,shot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.stats.cpuSpecialActivations=1;
+    bot.specialPoints=35;
+    const kit:any=Object.create(CpuKitSystem.prototype);
+    kit.pendingSpecials=[];
+    kit.cpuAgents=system;
+    kit.activateSpecial=vi.fn();
+    const request:any={kind:'SPECIAL',sourceId:'B1',team:Team.B,
+      position:new Vec3(),target:new Vec3(3,0,0),
+      direction:new Vec3(1,0,0),
+      specialId:weaponKit(bot.weaponId).special,
+      rollbackBefore:{
+        specialPoints:90,specialDecisionCooldownSeconds:0,
+        subCooldownSeconds:0
+      }};
+    expect(kit.queue(request)).toBe(true);
+    expect(kit.pendingSpecials).toHaveLength(1);
+    expect(kit.pendingSpecials[0].rollbackBefore).toEqual(request.rollbackBefore);
+    const splat=system.applyProjectileHit(shot,80,'HUMAN');
+    expect(splat?.lethalHpZero).toBe(true);
+    const retained=bot.specialPoints;
+    kit.activatePendingSpecials();
+    expect(kit.activateSpecial).not.toHaveBeenCalled();
+    expect(kit.pendingSpecials).toHaveLength(0);
+    expect(system.stats.cpuSpecialActivations).toBe(0);
+    expect(bot.specialPoints).toBe(retained);
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.stats.cpuSplats).toBe(1);
+  });
+
+  it('does not activate SOURCE SPECIAL without a current physical return, but keeps a real teammate effect',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.specialPoints=0;
+    bot.subCooldownSeconds=5;
+    bot.specialDecisionCooldownSeconds=12;
+    system.stats.cpuSpecialActivations=2;
+    system.syncStats=vi.fn();
+    let b1Rejoined=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
+      id==='A1'||(id==='B1'&&b1Rejoined);
+    const ally:any={id:'A1',team:Team.A,lifeState:'ACTIVE',
+      hp:100,mobilityState:'GROUND',specialPoints:0,
+      specialDecisionCooldownSeconds:0,subCooldownSeconds:0};
+    system.bots.push(ally);
+    const kit:any=Object.create(CpuKitSystem.prototype);
+    kit.pendingSpecials=[];
+    kit.cpuAgents=system;
+    kit.activateSpecial=vi.fn();
+    const req=(id:string,team:Team.A|Team.B):any=>({
+      kind:'SPECIAL',sourceId:id,team,
+      position:new Vec3(),target:new Vec3(3,0,0),
+      direction:new Vec3(1,0,0),
+      specialId:weaponKit(bot.weaponId).special,
+      rollbackBefore:{
+        specialPoints:80,specialDecisionCooldownSeconds:0,
+        subCooldownSeconds:0
+      }
+    });
+    kit.queue(req('B1',Team.B));
+    kit.queue(req('A1',Team.A));
+    kit.activatePendingSpecials();
+    expect(kit.activateSpecial).toHaveBeenCalledOnce();
+    expect(kit.activateSpecial.mock.calls[0][0]).toBe('A1');
+    expect(bot.specialPoints).toBe(80);
+    expect(bot.specialDecisionCooldownSeconds).toBe(0);
+    expect(bot.subCooldownSeconds).toBe(0);
+    expect(system.stats.cpuSpecialActivations).toBe(1);
+    b1Rejoined=true;
+    kit.queue(req('B1',Team.B));
+    kit.activatePendingSpecials();
+    expect(kit.activateSpecial).toHaveBeenCalledTimes(2);
+    expect(kit.activateSpecial.mock.calls[1][0]).toBe('B1');
+    expect(system.stats.cpuSpecialActivations).toBe(1);
+  });
+
   it('refunds a live SOURCE rejected SUB only, keeping original splat resource penalties',()=>{
     const {system,bot,shot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;

@@ -124,7 +124,10 @@ export class CpuKitSystem {
       position: request.position.clone(),
       target: request.target.clone(),
       direction: request.direction.clone(),
-      specialId: request.specialId
+      specialId: request.specialId,
+      // Preserve the already-paid SOURCE transaction through the real
+      // effect phase, so an unactivated rejoin-loss can be refunded.
+      rollbackBefore:request.rollbackBefore
     });
     return true;
   }
@@ -325,6 +328,8 @@ export class CpuKitSystem {
 
   private activatePendingSpecials(): void {
     for (const request of this.pendingSpecials) {
+      if(!this.cpuAgents.approveQueuedSourceCpuSpecialAtActivation(request))
+        continue;
       this.activateSpecial(
         request.sourceId,
         request.team,
