@@ -2,13 +2,14 @@ import {Entity,Vec3} from 'playcanvas';
 import {beforeAll,describe,expect,it,vi} from 'vitest';
 import type {CrowdAgent} from 'recast-navigation';
 import {CpuAgentSystem} from '../ai/CpuAgentSystem';
-import {Team} from '../ink/types';
+import {SurfaceFlags,Team} from '../ink/types';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {PerformanceStats} from '../core/PerformanceStats';
 import {PlayerController} from '../player/PlayerController';
 import type {PlayerInput} from '../input/PlayerInput';
 import type {ThirdPersonCamera} from '../camera/ThirdPersonCamera';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {rasterizeStageFootprint} from '../stage/StageFootprint';
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../navigation/RecastStageNavigation';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
@@ -32,6 +33,51 @@ beforeAll(async()=>{
  await Promise.all([initializeRecastNavigation(),initializeRapier()]);
 });
 describe('F3B playable 8-actor original source runtime',()=>{
+ it('uses real HUMAN Rapier support for both original registered grates without adding a floor or route',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const originalGrates=stage.solids.filter(s=>s.collisionBehavior==='GRATE');
+  expect(originalGrates).toHaveLength(2);
+  for(const grate of originalGrates){
+   expect(grate.footprint).toBeDefined();
+   // Exact existing stage solid only: no synthetic adjoining bridge,
+   // NavLink, scoreable face, or claim of a connected playable route.
+   const isolated={...stage,solids:[grate],paintSurfaces:[],
+    navigationLinks:[]};
+   const physics=new RapierStagePhysics(DT,isolated);
+   physics.step();
+   const rects=rasterizeStageFootprint(
+    grate.size[0],grate.size[2],grate.footprint!).rectangles;
+   const interior=[...rects].sort((a,b)=>
+    b.widthMeters*b.depthMeters-a.widthMeters*a.depthMeters)[0];
+   expect(interior).toBeDefined();
+   const foot=new Vec3(
+    grate.center[0]+interior!.centerU-grate.size[0]/2,
+    grate.center[1]+grate.size[1]/2,
+    grate.center[2]+interior!.centerV-grate.size[2]/2);
+   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   expect(physics.castCharacterFootSupport(
+    new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN')?.solidId)
+    .toBe(grate.id);
+   expect(physics.castStageSegment(
+    new Vec3(foot.x,foot.y+.3,foot.z),
+    new Vec3(foot.x,foot.y-.3,foot.z),'ink-projectile'))
+    .toBeNull();
+   const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+   traffic.stage=isolated;
+   traffic.physics=physics;
+   traffic.sourceEndpointProbes=0;
+   expect(traffic.hasSourceFootSupport(foot)).toBe(true);
+   expect(traffic.hasSourceFootSupport(
+    new Vec3(Number.NaN,foot.y,foot.z))).toBe(false);
+   expect(traffic.sourceEndpointProbes).toBe(2);
+   physics.world.free();
+  }
+  expect(stage.solids).toHaveLength(25);
+  expect(stage.paintSurfaces).toHaveLength(17);
+  expect(stage.navigationLinks).toHaveLength(26);
+  expect(stage.paintSurfaces.every(s=>
+   (s.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+ });
  it('prioritizes physically registered OWN retreat over an already approved A1 C-key order, then resumes the order',()=>{
   // Isolated source goal-selection policy fixture: native feet and owner
   // cells are controlled here. It is NOT a claimed real-Chromium arrival.

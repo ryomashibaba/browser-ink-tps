@@ -646,10 +646,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.sourceEndpointProbes++;
   // Old disposable CI app source predates W10-B3. Without a supplied
   // Rapier authority, refuse every goal; never silently accept a Nav point.
-  if(!this.physics)return false;
-  const hit=this.physics.castStageSegment(
-   new Vec3(foot.x,foot.y+.65,foot.z),
-   new Vec3(foot.x,foot.y-.65,foot.z),'ink-projectile');
+  if(!this.physics||![foot.x,foot.y,foot.z].every(Number.isFinite))
+   return false;
+  // Original registered GRATE supports HUMAN KCC but passes ordinary
+  // ink projectiles. CPU path checks must query the character collision
+  // authority, not mistake a bullet's passage for a hole in the floor.
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const hit=this.physics.castCharacterFootSupport(
+   new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
   return !!hit&&Math.abs(hit.point.y-foot.y)<=.25&&
    this.stage.solids.some(s=>s.id===hit.solidId);
  }
@@ -1520,9 +1524,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       if(id==='B2'||id==='B4'){
        const firstDenied=b450FirstSourceDenial(
         route.nativePathPoints,sign,point=>{
-         const hit=this.physics!.castStageSegment(
-          new Vec3(point.x,point.y+.65,point.z),
-          new Vec3(point.x,point.y-.65,point.z),'ink-projectile');
+         // Classify the denied route using the same existing HUMAN
+         // support semantics as the true CPU goal gate.
+         const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+         const hit=this.physics!.castCharacterFootSupport(
+          new Vec3(point.x,point.y+offset,point.z),offset,'HUMAN');
          const gap=hit?Math.abs(hit.point.y-point.y):null;
          return {supported:!!hit&&gap!==null&&gap<=.25&&
           this.stage.solids.some(s=>s.id===hit.solidId),
