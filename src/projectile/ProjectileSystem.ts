@@ -685,9 +685,15 @@ export class ProjectileSystem {
         paintHit.distance <=
           blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
-      const worldDistance = paintWins
-        ? paintHit.distance
-        : (blockerHit?.distance ?? Number.POSITIVE_INFINITY);
+      // In genuine SOURCE combat, actor contact never passes an earlier
+      // registered Rapier solid; near-coplanar paint priority is separate.
+      // Frozen T20 keeps its historical contact order.
+      const worldDistance = this.nativeSourceHumanPhysicalMode
+        ? Math.min(paintHit?.distance??Infinity,
+          blockerHit?.distance??Infinity)
+        : paintWins
+          ? paintHit.distance
+          : (blockerHit?.distance??Infinity);
 
       let combatDistance = Number.POSITIVE_INFINITY;
       let combatKind: 'QA' | 'CPU' | 'PLAYER' | null = null;
@@ -1310,9 +1316,14 @@ export class ProjectileSystem {
       !blockerHit ||
       paintHit.distance <= blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
     );
-    const worldDistance = paintWins
-      ? paintHit.distance
-      : (blockerHit?.distance ?? range);
+    // Genuine SOURCE rays must respect the nearest real stage blocker,
+    // independent of the small paint/solid visual priority tolerance.
+    const worldDistance = this.nativeSourceHumanPhysicalMode
+      ? Math.min(paintHit?.distance??range,
+        blockerHit?.distance??range)
+      : paintWins
+        ? paintHit.distance
+        : (blockerHit?.distance??range);
 
     let combatDistance = Number.POSITIVE_INFINITY;
     let combatKind: 'QA' | 'CPU' | null = null;
@@ -1938,9 +1949,14 @@ export class ProjectileSystem {
         blockerHit.distance +
           GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
     );
-    const worldDistance = paintWins
-      ? paintHit.distance
-      : (blockerHit?.distance ?? range);
+    // Genuine SOURCE rays must respect the nearest real stage blocker,
+    // independent of the small paint/solid visual priority tolerance.
+    const worldDistance = this.nativeSourceHumanPhysicalMode
+      ? Math.min(paintHit?.distance??range,
+        blockerHit?.distance??range)
+      : paintWins
+        ? paintHit.distance
+        : (blockerHit?.distance??range);
 
     let combatDistance = Number.POSITIVE_INFINITY;
     let combatKind: 'CPU' | 'PLAYER' | null = null;

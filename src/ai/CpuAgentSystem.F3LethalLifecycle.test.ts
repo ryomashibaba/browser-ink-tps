@@ -1186,4 +1186,86 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       bomb,subWeaponProfile('pulse-bomb'),paintHit.worldPoint,
       'PAINT_SURFACE_SEGMENT','REGISTERED_SOURCE_PAINT');
   });
+  it('SOURCE HUMAN/CPU SUB body collision cannot pass a nearer original Rapier blocker',()=>{
+    // A SOURCE paint plane 5cm beyond a real solid is within the old
+    // paint-priority epsilon. Actor contact 1cm beyond that solid must
+    // still NOT become HP damage through original cover.
+    const stageHit={distance:.48,point:new Vec3(.48,2,0),solidId:'SOURCE_WALL'};
+    const paintHit={distance:.53,worldPoint:new Vec3(.53,2,0),
+      surface:{id:'SOURCE_PAINT'}};
+    const actorHit={botId:'B1',distance:.49,
+      point:new Vec3(.49,2,0),guarded:false};
+    const makeBomb=()=>({
+      active:true,landed:false,subId:'pulse-bomb',team:Team.A,
+      actorId:'A1',position:new Vec3(0,2,0),previousPosition:new Vec3(),
+      velocity:new Vec3(120,0,0),ttl:2,fuseSeconds:.5,
+      entity:{setPosition:vi.fn()}
+    });
+    const human:any=Object.create(SubWeaponSystem.prototype);
+    human.bombs=[makeBomb()];human.delta=new Vec3();
+    human.physics={castStageSegment:vi.fn(()=>stageHit)};
+    human.cpuAgents={findNearestCombatHit:vi.fn(()=>actorHit)};
+    human.findNearestSurfaceHit=vi.fn(()=>paintHit);
+    human.onContact=vi.fn();
+    human.enableNativeSourceHumanSubBodyContact();
+    human.fixedUpdate(1/60);
+    expect(human.cpuAgents.findNearestCombatHit).toHaveBeenCalledOnce();
+    expect(human.onContact).toHaveBeenCalledWith(
+      human.bombs[0],subWeaponProfile('pulse-bomb'),paintHit.worldPoint,
+      'PAINT_SURFACE_SEGMENT','SOURCE_PAINT');
+
+    const cpu:any=Object.create(CpuKitSystem.prototype);
+    cpu.bombs=[makeBomb()];cpu.delta=new Vec3();
+    cpu.nativeOriginalSourceCombatantSubContactEnabled=true;
+    cpu.physics={castStageSegment:vi.fn(()=>stageHit)};
+    cpu.cpuAgents={findNearestCombatHit:vi.fn(()=>actorHit)};
+    cpu.projectiles={findNativeSourceHumanPhysicalHit:vi.fn(()=>null)};
+    cpu.findNearestSurfaceHit=vi.fn(()=>paintHit);
+    cpu.onBombContact=vi.fn();
+    cpu.updateBombs(1/60);
+    expect(cpu.cpuAgents.findNearestCombatHit).toHaveBeenCalledOnce();
+    expect(cpu.onBombContact).toHaveBeenCalledWith(
+      cpu.bombs[0],subWeaponProfile('pulse-bomb'),paintHit.worldPoint);
+  });
+
+  it('SOURCE HUMAN and CPU CHARGER rays cannot damage an actor behind near-coplanar real cover',()=>{
+    const stageHit={distance:.48,point:new Vec3(.48,2,0),solidId:'SOURCE_WALL'};
+    const paintHit={distance:.53,worldPoint:new Vec3(.53,2,0),
+      surface:{id:'SOURCE_PAINT'}};
+    const actorHit={botId:'B1',distance:.49,
+      point:new Vec3(.49,2,0),guarded:false};
+    const ray:any=Object.create(ProjectileSystem.prototype);
+    ray.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+    ray.findNearestSurfaceHit=vi.fn(()=>paintHit);
+    ray.physics={castStageSegment:vi.fn(()=>stageHit)};
+    ray.combatTargets={findNearestHit:vi.fn(()=>null)};
+    ray.cpuAgents={findNearestCombatHit:vi.fn(()=>actorHit),
+      applyProjectileHit:vi.fn()};
+    const result=ray.resolveDirectRay(new Vec3(0,2,0),
+      new Vec3(1,0,0),2,Team.A,100);
+    expect(result.hitCombat).toBe(false);
+    expect(ray.cpuAgents.applyProjectileHit).not.toHaveBeenCalled();
+
+    // The same source-ordering issue also affected CPU CHARGER->real HUMAN.
+    const cpuRay:any=Object.create(ProjectileSystem.prototype);
+    cpuRay.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+    cpuRay.findNearestSurfaceHit=vi.fn(()=>paintHit);
+    cpuRay.physics={castStageSegment:vi.fn(()=>stageHit)};
+    cpuRay.cpuAgents={findNearestCombatHit:vi.fn(()=>null)};
+    cpuRay.findNativeSourceHumanPhysicalHit=vi.fn(()=>
+      ({distance:.49,point:new Vec3(.49,2,0)}));
+    cpuRay.resources={currentHp:100,applyDamage:vi.fn()};
+    cpuRay.feedback={beam:vi.fn()};
+    cpuRay.enqueueChargerLine=vi.fn();
+    cpuRay.stats={cpuPlayerHits:0};
+    const cpuRequest:any={
+      sourceId:'A1',team:Team.A,origin:new Vec3(0,2,0),
+      target:new Vec3(3,2,0),charge:1
+    };
+    cpuRay.fireCpuChargerRay(cpuRequest,weaponProfile('rail-charger'),
+      Team.B,new Vec3(.49,2,0),true,false,new Vec3(1,0,0));
+    expect(cpuRay.resources.applyDamage).not.toHaveBeenCalled();
+    expect(cpuRay.feedback.beam).toHaveBeenCalledOnce();
+  });
+
 });

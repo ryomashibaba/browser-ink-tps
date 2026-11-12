@@ -264,8 +264,11 @@ export class CpuKitSystem {
           slot.position,next,slot.team);
         const actor=cpu&&human?
           (cpu.distance<=human.distance?cpu:human):cpu??human;
-        const worldDistance=paintWins&&paintHit?
-          paintHit.distance:blockerHit?.distance??Infinity;
+        // Preserve original SOURCE cover even when a nearby paint plane
+        // wins the independent paint-vs-stage contact priority.
+        const worldDistance=Math.min(
+          paintHit?.distance??Infinity,
+          blockerHit?.distance??Infinity);
         if(actor&&Number.isFinite(actor.distance)&&
            actor.distance>=0&&
            actor.distance+GAME_CONFIG.combat.hitPriorityEpsilonMeters<

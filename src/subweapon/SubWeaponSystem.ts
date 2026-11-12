@@ -236,8 +236,11 @@ export class SubWeaponSystem {
       if(this.nativeSourceHumanSubBodyContactEnabled){
         const opponent=this.cpuAgents.findNearestCombatHit(
           slot.position,next,slot.team);
-        const sourceCoverDistance=paintWins&&paintHit
-          ?paintHit.distance:(blockerHit?.distance??Infinity);
+        // Paint-plane priority only selects a visual/ink impact. An actor
+        // can never be struck beyond an earlier genuine Rapier blocker.
+        const sourceCoverDistance=Math.min(
+          paintHit?.distance??Infinity,
+          blockerHit?.distance??Infinity);
         if(opponent&&Number.isFinite(opponent.distance)&&
            opponent.distance>=0&&
            opponent.distance+GAME_CONFIG.combat.hitPriorityEpsilonMeters<
