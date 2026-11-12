@@ -269,6 +269,36 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     rejoined=true;expect(aim()).not.toBeNull();
   });
 
+  it('ordinary SOURCE aim without optional stage sight never attacks a stale respawn foot',()=>{
+    const {system,bot}=fixture(true);
+    bot.position.set(0,3,0);
+    bot.role='PAINTER';
+    system.targetPoint=new Vec3();
+    system.b181OriginalCombatStageRay=null;
+    const opponent:any={
+      id:'A1',team:Team.A,lifeState:'ACTIVE',hp:100,
+      mobilityState:'GROUND',position:new Vec3(3,3,0)
+    };
+    system.bots.push(opponent);
+    let sourceRejoined=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
+      id==='A1'&&sourceRejoined;
+    const target=()=>system.chooseCombatTarget(
+      bot,Team.B,new Vec3(),false,1/60,true);
+    expect(target()).toBeNull(); // respawn awaiting real first drop
+    sourceRejoined=true;expect(target()?.x).toBe(3);
+    opponent.hp=0;expect(target()).toBeNull();
+    opponent.hp=100;opponent.mobilityState='FIRST_DROP_REJOIN';
+    expect(target()).toBeNull();
+    opponent.mobilityState='GROUND';sourceRejoined=false;
+    expect(target()).toBeNull();
+    sourceRejoined=true;expect(target()?.x).toBe(3);
+    // Without SOURCE opt-in, retain the frozen legacy closest-actor aim.
+    system.f3dSourceGoals=null;
+    opponent.hp=0;
+    expect(target()?.x).toBe(3);
+  });
+
   it('keeps the frozen T20 late splat path and does not touch source feet', () => {
     const { system, bot, shot } = fixture(false);
     expect(system.applyProjectileHit(shot, 80, 'HUMAN')?.lethalHpZero)

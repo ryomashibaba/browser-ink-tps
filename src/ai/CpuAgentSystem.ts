@@ -2730,6 +2730,16 @@ export class CpuAgentSystem {
     this.b212NativeAimAccepted++;
     return new Vec3(predicted.x,predicted.y,predicted.z);
   }
+  /** Both native CPU sight paths (registered Rapier or fixed legacy aim)
+   * must agree about an actual SOURCE opponent's CURRENT life and real
+   * physical return. No extra shots, actor, floor or stage permission. */
+  private liveSourceCombatOpponent(enemy:CpuBot):boolean{
+    if(!this.f3dSourceGoals)return true; // frozen T20 behavior
+    return Number.isFinite(enemy.hp)&&enemy.hp>0&&
+      enemy.mobilityState==='GROUND'&&
+      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
+       this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id));
+  }
   private chooseCombatTarget(
     bot: CpuBot,
     humanTeam: Team.A | Team.B,
@@ -2756,13 +2766,8 @@ export class CpuAgentSystem {
         ...this.bots.filter(enemy=>
           enemy.id!==bot.id&&enemy.team!==bot.team&&
           enemy.lifeState==='ACTIVE'&&
-          Number.isFinite(enemy.hp)&&enemy.hp>0&&
           enemy.mobilityState==='GROUND'&&
-          // SOURCE main weapon AND kit share the live physical-rejoin
-          // authority used by patrol; never target a dead or stale foot.
-          // Frozen non-SOURCE CPU decisions remain unchanged.
-          (!this.f3dSourceGoals?.isLiveRejoinedSourceCpu||
-           this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id)))
+          this.liveSourceCombatOpponent(enemy))
           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
             y:enemy.position.y+.68,z:enemy.position.z},
             // Actual native CPU hit spheres already used by projectile
@@ -2853,7 +2858,11 @@ export class CpuAgentSystem {
         candidate.id === bot.id ||
         candidate.team === bot.team ||
         candidate.lifeState !== 'ACTIVE' ||
-        isCpuJumpAirborne(candidate)
+        isCpuJumpAirborne(candidate) ||
+        // The fixed-aim SOURCE path is still used by existing practice
+        // choices that do not opt into B181 source-stage sight.
+        // Do not resurrect an earlier life's body as a combat target.
+        !this.liveSourceCombatOpponent(candidate)
       ) {
         continue;
       }
