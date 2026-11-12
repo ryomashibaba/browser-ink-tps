@@ -7,6 +7,7 @@ on:
       - 'scripts/t21-b492-source-height-isolation.mjs'
       - 'scripts/t21-b492-source-height-isolation.test.mjs'
       - 'src/stage/undertow/UndertowB493OriginalCpuKccReplay.test.ts'
+      - 'src/stage/undertow/UndertowB494SameWorldThreeCpuContinuousKcc.test.ts'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -173,6 +174,32 @@ jobs:
         with:
           name: b493-readonly-cpu-rapier-recast-report
           path: /tmp/t21-b493-kcc-report.json
+          if-no-files-found: warn
+          retention-days: 14
+      # B494: read the same original Chromium A1/B2/B4 native 60Hz feet.
+      # No new browser, stage permission, artificial actor or navigation.
+      - name: Download immutable genuine A1 B2 B4 same-world native foot traces
+        if: ${{ contains(github.event.head_commit.message, '[b494-continuous-shared]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 43140584988
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b494-source-evidence
+      - name: Integrate three original-sized Rapier CPU capsules without per-frame reseeding
+        if: ${{ contains(github.event.head_commit.message, '[b494-continuous-shared]') }}
+        env:
+          T21_B494_EVIDENCE_DIR: /tmp/t21-b494-source-evidence
+          T21_B494_REPORT_PATH: /tmp/t21-b494-continuous-3cpu.json
+        run: |
+          npx vitest run src/stage/undertow/UndertowB494SameWorldThreeCpuContinuousKcc.test.ts
+          node -e "const d=require('/tmp/t21-b494-continuous-3cpu.json');if(d.source!=='25/17/26/0'||d.continuousStepsPerCpu!==671||d.eachFrameReanchoredToActualFoot||d.naturalOpposingRoutesAuthorized!==0)process.exit(1);console.log('B494_BOUNDED_CONTINUOUS_3CPU_DIAGNOSTIC_SAVED')"
+      - name: Archive B494 3CPU continuous KCC result from pinned genuine RAW
+        if: ${{ contains(github.event.head_commit.message, '[b494-continuous-shared]') && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b494-original-three-cpu-continuous-report
+          path: /tmp/t21-b494-continuous-3cpu.json
           if-no-files-found: warn
           retention-days: 14
       - name: Existing short native runner syntax and binding preflight
