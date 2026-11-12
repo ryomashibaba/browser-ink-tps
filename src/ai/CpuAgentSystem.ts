@@ -1342,8 +1342,8 @@ export class CpuAgentSystem {
       // unspent attack's cooldown, never a subsequent paid action.
       if(Number.isFinite(tx.originalFireRemainingSeconds)&&
          Number.isFinite(bot.fireRemaining))
-        bot.fireRemaining=Math.min(
-          bot.fireRemaining,tx.originalFireRemainingSeconds);
+        bot.fireRemaining=Math.max(0,Math.min(
+          bot.fireRemaining,tx.originalFireRemainingSeconds));
     }
     this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
   }

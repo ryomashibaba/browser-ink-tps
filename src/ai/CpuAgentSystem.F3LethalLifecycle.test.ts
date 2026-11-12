@@ -94,6 +94,18 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     });
     expect(bot.fireRemaining).toBe(0);
     expect(system.stats.cpuShots).toBe(1);
+    // Another genuine ink payment after the request must keep its own
+    // cooldown; the rejected projectile cannot erase later action timing.
+    bot.fireRemaining=0;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    bot.ink-=1;
+    bot.fireRemaining=.27;
+    system.drainFireRequests((request:CpuFireRequest)=>{
+      system.rollbackUndeliveredSourceCpuMainShot(request);
+    });
+    expect(bot.fireRemaining).toBeCloseTo(.27);
+    expect(system.stats.cpuShots).toBe(1);
   });
 
   it('refunds a live SOURCE rejected SUB only, keeping original splat resource penalties',()=>{
