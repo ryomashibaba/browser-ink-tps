@@ -175,7 +175,7 @@ describe('B494 same original SOURCE world: three continuously integrated real-si
    physics.world.removeRigidBody(s.body);
   }
  });
-} it.skipIf(!directory)('positive controls: identical original KCC detects real floor and another full CPU capsule',()=>{
+ it.skipIf(!directory)('positive controls: identical original KCC detects real floor and another full CPU capsule',()=>{
   const raw=JSON.parse(readFileSync(join(directory!,
    'b454-native-b2-b4-physical-60hz.json'),'utf8'));
   const stage=undertowT21dConnectivityQaStage();
