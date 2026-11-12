@@ -274,18 +274,26 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(kit.stats.cpuSubProjectilesLaunched).toBe(1);
     expect(kit.feedback.subThrow).toHaveBeenCalledOnce();
     const afterFirst=bot.ink;
-    const oldLock=bot.inkRecoveryLockSeconds;
+    expect(afterFirst).toBeLessThan(95);
 
-    // Never create a 17th/virtual slot: a genuine pool refusal returns
-    // only the second unlaunched SUB's ink, preserving the first effect.
+    // The second SUB is a separate possible late-life action after
+    // sufficient normal ink recovery/cooldown. Restore the resource
+    // balance only in this isolated test fixture, never in game code.
+    // Do not incorrectly demand two full-cost SUBs from 95 initial ink.
+    bot.ink=GAME_CONFIG.inkEconomy.capacity;
+    bot.inkRecoveryLockSeconds=0;
     bot.subCooldownSeconds=0;
+    const beforeSecond=bot.ink;
+    const oldLock=bot.inkRecoveryLockSeconds;
+    // Never create a 17th/virtual slot: a real pool refusal returns only
+    // the second unlaunched SUB's ink, preserving the first effect.
     system.updateCpuKit(bot,Team.A,target,true);
     expect(system.pendingKitRequests).toHaveLength(1);
-    expect(bot.ink).toBeLessThan(afterFirst);
+    expect(bot.ink).toBeLessThan(beforeSecond);
     system.drainKitRequests((req:any)=>kit.queue(req));
     expect(kit.stats.cpuSubProjectilesLaunched).toBe(1);
     expect(kit.stats.cpuKitPoolDrops).toBe(1);
-    expect(bot.ink).toBeCloseTo(afterFirst);
+    expect(bot.ink).toBeCloseTo(beforeSecond);
     expect(bot.inkRecoveryLockSeconds).toBeCloseTo(oldLock);
     expect(system.stats.cpuSubUses).toBe(1);
     expect(slot.active).toBe(true);
@@ -367,6 +375,17 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     kit.activatePendingSpecials();
     expect(kit.activateSpecial).toHaveBeenCalledTimes(2);
     expect(kit.activateSpecial.mock.calls[1][0]).toBe('B1');
+    expect(system.stats.cpuSpecialActivations).toBe(1);
+    // A queued request for an unequipped special cannot activate from
+    // this genuine actor's current physical muzzle after a kit change.
+    const wrong=['turf-pulse','triple-strike','drift-storm'].find(
+      id=>id!==weaponKit(bot.weaponId).special)!;
+    const invalid=req('B1',Team.B);
+    invalid.specialId=wrong;
+    system.stats.cpuSpecialActivations+=1;
+    kit.queue(invalid);
+    kit.activatePendingSpecials();
+    expect(kit.activateSpecial).toHaveBeenCalledTimes(2);
     expect(system.stats.cpuSpecialActivations).toBe(1);
   });
 

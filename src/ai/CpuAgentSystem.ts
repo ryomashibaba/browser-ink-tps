@@ -1415,7 +1415,9 @@ export class CpuAgentSystem {
        this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
       return true;
     const bot=this.bots.find(b=>b.id===request.sourceId);
-    if(bot?.team===request.team&&this.sourceCpuMayStartActions(bot))
+    if(bot?.team===request.team&&
+       weaponKit(bot.weaponId).special===request.specialId&&
+       this.sourceCpuMayStartActions(bot))
       return true;
     if(bot?.lifeState==='ACTIVE'&&Number.isFinite(bot.hp)&&bot.hp>0&&
        bot.team===request.team){
