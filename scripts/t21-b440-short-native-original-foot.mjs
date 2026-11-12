@@ -129,6 +129,44 @@ async function evaluate(expression){
  return r.result?.value;
 }
 const snap=()=>evaluate('window.__t21F3.snapshot()');
+// Read-only actual page evidence if a real SOURCE navigation fails
+// the existing 120s READY gate. No gameplay, stage, clock or actor writes.
+async function waitForRealSourceReady(entry,requireWebgl2=true){
+ try{
+  await until(()=>evaluate(`(() => {
+   const c=document.querySelector('#app-canvas');
+   return c?.dataset.t21F3Ready==='READY'&&
+    (!${requireWebgl2}||c.dataset.t21F3Renderer==='webgl2');
+  })()`),120000);
+ }catch(error){
+  let page;
+  try{
+   page=await evaluate(`(() => {
+    const c=document.querySelector('#app-canvas');
+    let native=null;
+    try{
+     const s=window.__t21F3?.snapshot?.();
+     if(s)native={tick:s.tick,matchState:s.matchState,
+      paused:s.paused,stopReason:s.stopReason,
+      physicalRejoins:s.cpu?.physicalRejoins?.length??null};
+    }catch(e){native={snapshotReadError:String(e).slice(0,180)}}
+    return {path:location.pathname,query:location.search,
+     documentState:document.readyState,
+     documentHidden:document.hidden,focused:document.hasFocus(),
+     canvasExists:!!c,nativeReady:c?.dataset.t21F3Ready??null,
+     nativeRenderer:c?.dataset.t21F3Renderer??null,
+     gameApiExists:!!window.__t21F3,native};
+   })()`);
+  }catch(readError){page={pageReadError:String(readError).slice(0,240)}}
+  proof.realSourceReadyFailure={entry,reason:String(error).slice(0,300),
+   page,source:'25/17/26/0',nativeWrites:0,
+   stagePromotions:0,officialScoreWrites:0,verdict:'READY_NOT_CERTIFIED'};
+  save();
+  console.error('B440_REAL_SOURCE_READY_HOLD',
+   JSON.stringify(proof.realSourceReadyFailure));
+  throw error;
+ }
+}
 function authority(n){
  if(n?.originalSourceSolids!==25||n.originalPaintSurfaces!==17||
   n.originalSourceNavigationLinks!==26||n.sourceScoreablePromotions!==0||
@@ -1099,7 +1137,7 @@ async function main(){
   }
   proof.stage='P0_REAL_STANDARD_SOURCE_PORTAL_CLICK';save();
   await buttonClick('#play-circuit');
-  await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'`),120000);
+  await waitForRealSourceReady('PORTAL_CIRCUIT_LEGACY',false);
   const actualHref=await evaluate('location.href');
   const actualUrl=new URL(actualHref);
   if(actualHref!==portals.circuit||
@@ -2223,10 +2261,7 @@ async function main(){
   fail('PORTAL_REAL_CDP_CLICK_DID_NOT_START_EXISTING_SOURCE_GAME');
  // Wait for the genuine PlayCanvas/Rapier world to initialize before
  // querying its snapshot: incomplete boot is not negative weapon evidence.
- await until(()=>evaluate(`document.querySelector('#app-canvas')
-  ?.dataset.t21F3Ready==='READY'&&
-  document.querySelector('#app-canvas')
-  ?.dataset.t21F3Renderer==='webgl2'`),120000);
+ await waitForRealSourceReady('PORTAL_WEAPON_CIRCUIT');
  const native=await until(async()=>{
   const s=await evaluate('window.__t21F3?.snapshot?.()??null');
   return s?.b361NativePlayerWeapon?.id==='ink-saber'?s:null;
@@ -2295,10 +2330,7 @@ async function main(){
   proof.fullReplayRealHumanPortalWeaponChoice=choice;save();
  }
  await buttonClick('#play-combat-frontline');
- await until(()=>evaluate(`document.querySelector('#app-canvas')
-  ?.dataset.t21F3Ready==='READY'&&
-  document.querySelector('#app-canvas')
-  ?.dataset.t21F3Renderer==='webgl2'`),120000);
+ await waitForRealSourceReady('FRONTLINE_BOOT');
  const optionalBoot=await snap();authority(optionalBoot);
  if(optionalBoot.b361NativePlayerWeapon?.id!==fullReplayHumanKit||
     optionalBoot.matchState!=='STAGING')
@@ -2370,8 +2402,7 @@ async function main(){
   query+'&t21W10B389='+fullReplayHumanKit:query;
  if(!proveFullSourceReplay)
   await cdp('Page.navigate',{url:root+query});
- await until(()=>evaluate(`document.querySelector('#app-canvas')?.dataset.t21F3Ready==='READY'&&
-  document.querySelector('#app-canvas')?.dataset.t21F3Renderer==='webgl2'`),120000);
+ await waitForRealSourceReady('DIRECT_SOURCE_REOPEN');
  const actualQuery=await evaluate('location.search');
  if(proveFullSourceReplay){
   const a=new URLSearchParams(actualQuery);
