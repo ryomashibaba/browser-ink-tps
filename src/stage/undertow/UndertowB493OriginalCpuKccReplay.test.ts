@@ -1,8 +1,12 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import {Vec3} from 'playcanvas';
 import {beforeAll,describe,expect,it} from 'vitest';
+// Node-only pinned evidence fixture: production tsconfig intentionally omits @types/node.
+// @ts-ignore Node built-in exists at Vitest runtime but has no shipped type mapping
 import {readFileSync,writeFileSync} from 'node:fs';
+// @ts-ignore Node built-in exists at Vitest runtime but has no shipped type mapping
 import {join} from 'node:path';
+declare const process: {env:Record<string,string|undefined>};
 import {PerformanceStats} from '../../core/PerformanceStats';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
 import {initializeRecastNavigation,RecastStageNavigation} from '../../navigation/RecastStageNavigation';
