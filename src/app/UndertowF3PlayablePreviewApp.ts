@@ -1138,7 +1138,7 @@ export class UndertowF3PlayablePreviewApp{
   this.cpuKit=(this.cpuKitQaEnabled||nativeSourceCpuKits)
    ?new CpuKitSystem(app,surfaces,
    this.physics,this.coordinator,this.projectiles,this.cpu,
-   this.feedback,this.stats) : null;
+   this.feedback,this.stats,nativeSourceCpuKits) : null;
   ui.innerHTML='';
   this.panel=document.createElement('section');
   this.panel.id='t21-f3-play-panel';

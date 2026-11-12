@@ -229,6 +229,65 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(launcher.queuedCpuShots).toHaveLength(0);
   });
 
+  it('SOURCE thrown CPU SUB strikes only a real opponent ahead of the original stage blocker',()=>{
+    const make=()=>{
+      const slot:any={active:true,landed:false,actorId:'B1',
+        subId:'pulse-bomb',team:Team.B,
+        position:new Vec3(0,3,0),previousPosition:new Vec3(),
+        velocity:new Vec3(12,0,0),ttl:10,fuseSeconds:3,
+        entity:{setPosition:vi.fn()}};
+      const kit:any=Object.create(CpuKitSystem.prototype);
+      kit.bombs=[slot];
+      kit.delta=new Vec3();
+      kit.nativeOriginalSourceCombatantSubContactEnabled=true;
+      const realCpu={distance:.07,point:new Vec3(.07,3,0),
+        botId:'A1',guarded:false};
+      const realHuman={distance:.10,point:new Vec3(.10,3,0)};
+      kit.cpuAgents={findNearestCombatHit:vi.fn(()=>realCpu)};
+      kit.projectiles={findNativeSourceHumanThrownSubHit:
+        vi.fn(()=>realHuman)};
+      kit.physics={castStageSegment:vi.fn(()=>({
+        distance:.17,point:new Vec3(.17,3,0),solidId:'ORIGINAL'
+      }))};
+      kit.findNearestSurfaceHit=vi.fn(()=>null);
+      kit.onBombContact=vi.fn();
+      return {kit,slot,realCpu,realHuman};
+    };
+    const first=make();
+    first.kit.updateBombs(1/60);
+    expect(first.kit.onBombContact).toHaveBeenCalledOnce();
+    expect(first.kit.onBombContact.mock.calls[0][2])
+      .toEqual(first.realCpu.point);
+    expect(first.kit.cpuAgents.findNearestCombatHit)
+      .toHaveBeenCalledOnce();
+    expect(first.kit.projectiles.findNativeSourceHumanThrownSubHit)
+      .toHaveBeenCalledOnce();
+
+    const humanFirst=make();
+    humanFirst.kit.cpuAgents.findNearestCombatHit=vi.fn(()=>null);
+    humanFirst.kit.updateBombs(1/60);
+    expect(humanFirst.kit.onBombContact.mock.calls[0][2])
+      .toEqual(humanFirst.realHuman.point);
+
+    const wallFirst=make();
+    wallFirst.kit.physics.castStageSegment=vi.fn(()=>({
+      distance:.04,point:new Vec3(.04,3,0),solidId:'ORIGINAL'
+    }));
+    wallFirst.kit.updateBombs(1/60);
+    expect(wallFirst.kit.onBombContact.mock.calls[0][2])
+      .toEqual(new Vec3(.04,3,0));
+
+    const historicalQa=make();
+    historicalQa.kit.nativeOriginalSourceCombatantSubContactEnabled=false;
+    historicalQa.kit.updateBombs(1/60);
+    expect(historicalQa.kit.cpuAgents.findNearestCombatHit)
+      .not.toHaveBeenCalled();
+    expect(historicalQa.kit.projectiles.findNativeSourceHumanThrownSubHit)
+      .not.toHaveBeenCalled();
+    expect(historicalQa.kit.onBombContact.mock.calls[0][2])
+      .toEqual(new Vec3(.17,3,0));
+  });
+
   it('genuine SOURCE combat spends CPU SUB ink and launches an existing physical bomb, but refuses an exhausted kit pool',()=>{
     const {system,bot}=fixture(true);
     bot.position.set(0,3,42);

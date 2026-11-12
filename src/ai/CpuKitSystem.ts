@@ -75,7 +75,10 @@ export class CpuKitSystem {
     private readonly projectiles: ProjectileSystem,
     private readonly cpuAgents: CpuAgentSystem,
     private readonly feedback: GameFeedback,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    /** Exact canonical SOURCE 180s mode only; historic manual kit QA
+     * and frozen T20 retain their original stage-only SUB collision. */
+    private readonly nativeOriginalSourceCombatantSubContactEnabled = false
   ) {
     this.materialA = makeCpuKitMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuKitMaterial(GAME_CONFIG.visual.teamB);
@@ -249,6 +252,28 @@ export class CpuKitSystem {
           GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
 
+      // A real thrown SUB has finite diameter and may hit an ACTUAL
+      // opposing human/CPU before reaching the original registered
+      // floor/wall. Use the existing CPU combat sphere and this same
+      // 60Hz human KCC position. An original solid at equal/shorter
+      // distance always wins: no shots through source-stage cover.
+      if(this.nativeOriginalSourceCombatantSubContactEnabled){
+        const cpu=this.cpuAgents.findNearestCombatHit(
+          slot.position,next,slot.team);
+        const human=this.projectiles.findNativeSourceHumanThrownSubHit(
+          slot.position,next,slot.team);
+        const actor=cpu&&human?
+          (cpu.distance<=human.distance?cpu:human):cpu??human;
+        const worldDistance=paintWins&&paintHit?
+          paintHit.distance:blockerHit?.distance??Infinity;
+        if(actor&&Number.isFinite(actor.distance)&&
+           actor.distance>=0&&
+           actor.distance+GAME_CONFIG.combat.hitPriorityEpsilonMeters<
+            worldDistance){
+          this.onBombContact(slot,profile,actor.point);
+          continue;
+        }
+      }
       if (paintWins && paintHit) {
         this.onBombContact(slot, profile, paintHit.worldPoint);
         continue;

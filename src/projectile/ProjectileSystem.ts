@@ -435,6 +435,21 @@ export class ProjectileSystem {
     this.applyAreaDamage(point, radius, damage, team);
   }
 
+  /** The genuine SOURCE SUB is integrated AFTER this tick's player KCC
+   * and human projectile context. Return only a real, currently damageable
+   * opposing human sphere contact; no nav, enemy or hit is synthesized.
+   * Called only by the immutable ORIGINAL 25/17/26/0 CPU kit runtime. */
+  public findNativeSourceHumanThrownSubHit(
+    from:Vec3,to:Vec3,sourceTeam:Team.A|Team.B
+  ):{distance:number;point:Vec3}|null{
+    if(!this.currentHumanDamageable||this.currentHumanTeam===sourceTeam)
+      return null;
+    const distance=segmentSphereDistance(from,to,this.currentHumanPosition,
+      GAME_CONFIG.cpu.playerHitRadiusMeters);
+    if(distance===null)return null;
+    return {distance,point:pointOnSegment(from,to,distance)};
+  }
+
   public queueCpuShot(request: CpuFireRequest): void {
     this.queuedCpuShots.push({
       sourceId: request.sourceId,
