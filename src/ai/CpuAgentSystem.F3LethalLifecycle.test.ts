@@ -108,6 +108,106 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuShots).toBe(1);
   });
 
+  it('does not launch a paid real SOURCE CPU projectile after a same-tick genuine human HP-zero splat',()=>{
+    const {system,bot,shot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    bot.ink=80;
+    bot.inkRecoveryLockSeconds=.22;
+    bot.fireRemaining=0;
+    system.stats.cpuShots=0;
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}];
+    launcher.cpuAimDirection=new Vec3();
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.solveLaunchDirection=vi.fn((_:Vec3,__:Vec3,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.feedback={shot:vi.fn()};
+
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    const chargedInk=bot.ink;
+    system.drainFireRequests((request:CpuFireRequest)=>
+      launcher.queueCpuShot(request));
+    expect(launcher.queuedCpuShots).toHaveLength(1);
+    expect(system.stats.cpuShots).toBe(1);
+
+    // Human CHARGER ray can kill now, before queued CPU projectile spawns.
+    const confirmed=system.applyProjectileHit(shot,80,'HUMAN');
+    expect(confirmed?.lethalHpZero).toBe(true);
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.pendingShots).toHaveLength(0);
+    expect(launcher.queuedCpuShots).toHaveLength(1);
+
+    launcher.spawnQueuedCpuShots(
+      Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).not.toHaveBeenCalled();
+    expect(launcher.feedback.shot).not.toHaveBeenCalled();
+    expect(launcher.queuedCpuShots).toHaveLength(0);
+    expect(system.stats.cpuShots).toBe(0);
+    expect(bot.ink).toBeCloseTo(chargedInk);
+    expect(system.stats.cpuSplats).toBe(1);
+    expect(system.stats.humanCpuDirectSplats).toBe(1);
+  });
+
+  it('refunds a last-moment SOURCE rejoin loss without stealing a live teammate volley',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    let liveB1=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
+      id==='A1'||(id==='B1'&&liveB1);
+    bot.ink=80;
+    bot.inkRecoveryLockSeconds=.2;
+    bot.fireRemaining=0;
+    system.stats.cpuShots=0;
+    const ally:any={
+      id:'A1',team:Team.A,position:new Vec3(1,3,0),
+      lifeState:'ACTIVE',hp:100,mobilityState:'GROUND',
+      weaponId:'pulse-sprayer',ink:80,
+      inkRecoveryLockSeconds:.1,fireRemaining:0
+    };
+    system.bots.push(ally);
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}];
+    launcher.cpuAimDirection=new Vec3();
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.solveLaunchDirection=vi.fn((_:Vec3,__:Vec3,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.feedback={shot:vi.fn()};
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    expect(system.queueCpuWeaponRequest(ally,new Vec3(4,3,0),0))
+      .toBe(true);
+    const allyCharged=ally.ink;
+    bot.fireRemaining=.25;
+    ally.fireRemaining=.25;
+    system.drainFireRequests((request:CpuFireRequest)=>
+      launcher.queueCpuShot(request));
+    expect(launcher.queuedCpuShots).toHaveLength(2);
+
+    // SOURCE rejoin invalidates after paid queue, before physical emit.
+    liveB1=false;
+    launcher.spawnQueuedCpuShots(
+      Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).toHaveBeenCalledOnce();
+    expect(launcher.feedback.shot).toHaveBeenCalledOnce();
+    expect(bot.ink).toBeCloseTo(80);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.2);
+    expect(bot.fireRemaining).toBe(0);
+    expect(ally.ink).toBeCloseTo(allyCharged);
+    expect(ally.fireRemaining).toBeCloseTo(.25);
+    expect(system.stats.cpuShots).toBe(1);
+    expect(launcher.queuedCpuShots).toHaveLength(0);
+  });
+
   it('refunds a live SOURCE rejected SUB only, keeping original splat resource penalties',()=>{
     const {system,bot,shot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;
@@ -295,7 +395,8 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
       out.set(1,0,0));
     launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
-    launcher.cpuAgents={rollbackUndeliveredSourceCpuMainShot:vi.fn()};
+    launcher.cpuAgents={rollbackUndeliveredSourceCpuMainShot:vi.fn(),
+      approveQueuedSourceCpuMainShotAtLaunch:vi.fn(()=>true)};
     launcher.stats={projectilePoolDrops:0};
     launcher.feedback={shot:vi.fn()};
     const req=(id:string):any=>({

@@ -1348,6 +1348,34 @@ export class CpuAgentSystem {
     this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
   }
 
+  /**
+   * A real HUMAN hitscan shot can splat a CPU AFTER CpuAgentSystem has
+   * drained a paid shot but BEFORE ProjectileSystem actually emits it in
+   * that same 60 Hz tick. Recheck the original living/rejoined source
+   * shooter at the LAST physical launch boundary. No new AI/physics path.
+   * Legacy T20 or uncharged practice requests retain their old behavior.
+   */
+  public approveQueuedSourceCpuMainShotAtLaunch(request:CpuFireRequest):boolean{
+    if(!request.sourceInkTransaction||!this.f3dSourceGoals||
+       !this.phase14qF2RecoverableSteps||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+      return true;
+    const bot=this.bots.find(b=>b.id===request.sourceId);
+    if(bot?.team===request.team&&bot.weaponId===request.weaponId&&
+       this.sourceCpuMayStartActions(bot))return true;
+    if(bot?.lifeState==='ACTIVE'&&Number.isFinite(bot.hp)&&bot.hp>0&&
+       bot.team===request.team&&bot.weaponId===request.weaponId){
+      // The physical rejoin was lost, but the original shooter is alive:
+      // an unlaunched action does not charge ink or cooldown.
+      this.rollbackUndeliveredSourceCpuMainShot(request);
+    }else{
+      // Actual HP-zero splat retains its normal ink/death penalties.
+      // Only its unlaunched shot statistic must be removed.
+      this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
+    }
+    return false;
+  }
+
   public drainFireRequests(consumer: (request: CpuFireRequest) => void): void {
     for (const request of this.pendingShots) {
       // An F3 source projectile has not left the muzzle until dispatched.

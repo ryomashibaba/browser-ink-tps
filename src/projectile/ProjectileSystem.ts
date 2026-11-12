@@ -1461,6 +1461,13 @@ export class ProjectileSystem {
     if(fairSource)this.sourceCpuVolleyRotation++;
 
     for (const request of ordered) {
+      // CPU requests were paid in CpuAgentSystem.fixedUpdate. Human CHARGER
+      // hitscan resolves earlier in THIS ProjectileSystem.fixedUpdate; a
+      // newly splatted CPU must not fire its pre-queued original SOURCE
+      // shot after death. This SOURCE-only check leaves normal T20 intact.
+      if(request.sourceInkTransaction&&
+         !this.cpuAgents.approveQueuedSourceCpuMainShotAtLaunch(request))
+        continue;
       const profile = weaponProfile(request.weaponId);
 
       if (profile.weaponClass === 'CHARGER') {
