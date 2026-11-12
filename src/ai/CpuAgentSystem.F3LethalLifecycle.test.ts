@@ -344,7 +344,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=(id:string)=>
       id==='A1'||(id==='B1'&&b1Rejoined);
     const ally:any={id:'A1',team:Team.A,lifeState:'ACTIVE',
-      hp:100,mobilityState:'GROUND',specialPoints:0,
+      hp:100,mobilityState:'GROUND',weaponId:'pulse-sprayer',specialPoints:0,
       specialDecisionCooldownSeconds:0,subCooldownSeconds:0};
     system.bots.push(ally);
     const kit:any=Object.create(CpuKitSystem.prototype);

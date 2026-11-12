@@ -2153,10 +2153,13 @@ export class CpuAgentSystem {
       GAME_CONFIG.inkEconomy.capacity,
       bot.ink + profile.inkCost
     );
-    // The rejected SUB did not start real ink recovery lock. Never clear
-    // a lock if another genuine weapon/kit payment may have followed it.
-    // Death cancellation intentionally never reaches this rollback.
-    if(reason==='REJOIN_HOLD'&&noLaterInkSpend)
+    // The genuine original SOURCE rejected SUB launched no bomb and did
+    // not buy a recovery lock, whether the physical rejoin was lost or
+    // the real CPU bomb pool was full. Restore only when the SOURCE
+    // transaction proves no later paid weapon/kit effect intervened.
+    // Legacy T20 has no sourceSubRecovery and retains its normal timing;
+    // a real splat never goes through this refund path.
+    if(noLaterInkSpend)
       bot.inkRecoveryLockSeconds=Math.min(
         bot.inkRecoveryLockSeconds,lockEvidence.lockBefore);
     bot.subCooldownSeconds=reason==='REJOIN_HOLD'?0:
