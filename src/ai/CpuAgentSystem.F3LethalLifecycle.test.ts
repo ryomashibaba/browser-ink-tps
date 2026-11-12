@@ -25,6 +25,7 @@ function fixture(originalF3: boolean) {
   // This isolated real-method fixture deliberately bypasses the constructor.
   system.pendingShots = [];
   system.pendingKitRequests = [];
+  system.sourceCommittedPaintAims = new Map();
   system.f3dSourceGoals = originalF3
     ? { chooseSourceGoal: () => false } : null;
   system.stage = {
