@@ -6,6 +6,7 @@ on:
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'scripts/t21-b492-source-height-isolation.mjs'
       - 'scripts/t21-b492-source-height-isolation.test.mjs'
+      - 'src/stage/undertow/UndertowB493OriginalCpuKccReplay.test.ts'
       - 'PLAY_SOURCE_WINDOWS.cmd'
       - 'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'
       - 'scripts/t21-f3gl-restore.mjs'
@@ -149,6 +150,31 @@ jobs:
           npx vitest run src/app/UndertowF3SourceTraffic.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts src/ai/B178OriginalSourceInkResources.test.ts src/ink/PaintSurface.test.ts src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts
+      # B493 pinned RAW only. No Chromium or source gameplay simulation.
+      - name: Download immutable original B2 B4 60Hz Chromium foot ledger
+        if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: b441-true-native-source-frontline-short
+          run-id: 43140584988
+          github-token: ${{ github.token }}
+          path: /tmp/t21-b493-pinned-real
+      - name: Recheck actual CPU-size capsule steps vs native Rapier and Recast
+        if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') }}
+        env:
+          T21_B493_EVIDENCE_DIR: /tmp/t21-b493-pinned-real
+          T21_B493_REPORT_PATH: /tmp/t21-b493-kcc-report.json
+        run: |
+          npx vitest run src/stage/undertow/UndertowB493OriginalCpuKccReplay.test.ts
+          node -e "const d=require('/tmp/t21-b493-kcc-report.json');if(d.source!=='25/17/26/0'||d.originalOpponentRoutesAuthorized!==0||Object.keys(d.actors||{}).length!==2)process.exit(1);console.log('B493_READONLY_INDEPENDENT_KCC_DIAGNOSTIC_RECORDED')"
+      - name: Preserve one immutable CPU KCC diagnostic report
+        if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b493-readonly-cpu-rapier-recast-report
+          path: /tmp/t21-b493-kcc-report.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Existing short native runner syntax and binding preflight
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
