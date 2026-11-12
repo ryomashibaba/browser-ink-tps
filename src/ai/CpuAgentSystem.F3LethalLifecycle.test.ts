@@ -229,6 +229,52 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(launcher.queuedCpuShots).toHaveLength(0);
   });
 
+  it('real SOURCE enemy SUB respects physical HUMAN capsule, SQUID sphere, living HP and native blast overlap',()=>{
+    const projectile:any=Object.create(ProjectileSystem.prototype);
+    projectile.currentHumanDamageable=true;
+    projectile.currentHumanTeam=Team.A;
+    projectile.currentHumanPosition=new Vec3(0,.87,0);
+    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.stats={cpuPlayerHits:0};
+    projectile.currentHumanGuarding=false;
+    projectile.cpuAgents={applyAreaDamage:vi.fn()};
+    projectile.combatTargets={applyAreaDamage:vi.fn()};
+    let mode:'HUMAN'|'SQUID'='HUMAN';
+    projectile.enableNativeSourceHumanPhysicalContact(()=>mode);
+    const flight=(height:number)=>projectile.findNativeSourceHumanThrownSubHit(
+      new Vec3(-2,height,0),new Vec3(2,height,0),Team.B);
+    // Lower/upper body are inside the original Rapier HUMAN capsule,
+    // although an approximate central sphere would miss them.
+    const footHit=flight(.12);
+    expect(footHit).not.toBeNull();
+    expect(footHit.distance).toBeGreaterThan(1);
+    expect(footHit.distance).toBeLessThan(2);
+    expect(flight(1.58)).not.toBeNull();
+    expect(flight(1.85)).toBeNull();
+    expect(projectile.findNativeSourceHumanThrownSubHit(
+      new Vec3(-2,.87,0),new Vec3(2,.87,0),Team.A)).toBeNull();
+
+    // Actual SQUID Rapier sphere is low: a waist-height HUMAN hit is
+    // no longer a fictitious hit on a swimmer.
+    mode='SQUID';
+    expect(flight(1.14)).toBeNull();
+    expect(flight(.34)).not.toBeNull();
+
+    // Real floor-contact blast catches the HUMAN capsule; the previous
+    // body-center +0.68 fake height would miss a .3m explosion.
+    mode='HUMAN';
+    projectile.applyExternalAreaDamage(new Vec3(0,0,0),.3,24,Team.B);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+    // HP zero in this same tick cannot absorb another SUB explosion or
+    // count a second attacker hit.
+    projectile.resources.currentHp=0;
+    expect(flight(.4)).toBeNull();
+    projectile.applyExternalAreaDamage(new Vec3(0,0,0),.3,24,Team.B);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+  });
+
   it('SOURCE thrown CPU SUB strikes only a real opponent ahead of the original stage blocker',()=>{
     const make=()=>{
       const slot:any={active:true,landed:false,actorId:'B1',

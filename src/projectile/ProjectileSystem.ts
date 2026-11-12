@@ -3,6 +3,8 @@ import type { CpuAgentSystem, CpuFireRequest } from '../ai/CpuAgentSystem';
 import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
 import type { PlayerResources } from '../combat/PlayerResources';
 import { GAME_CONFIG } from '../config/game/gameConfig';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import type {PlayerMode} from '../player/PlayerController';
 import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
 import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
 import {B346NativeShooterWitness, type B346ShooterExitKind} from './B346NativeShooterWitness';
@@ -122,6 +124,9 @@ export class ProjectileSystem {
   private currentHumanTeam: Team.A | Team.B = Team.A;
   private currentHumanDamageable = false;
   private currentHumanGuarding = false;
+  // Exact real PlayerController mode; immutable SOURCE 180s only.
+  // Default null preserves every T20 and historical opt-in QA hit rule.
+  private nativeSourceHumanPhysicalMode:(()=>PlayerMode)|null=null;
   private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
@@ -435,19 +440,35 @@ export class ProjectileSystem {
     this.applyAreaDamage(point, radius, damage, team);
   }
 
-  /** The genuine SOURCE SUB is integrated AFTER this tick's player KCC
-   * and human projectile context. Return only a real, currently damageable
-   * opposing human sphere contact; no nav, enemy or hit is synthesized.
-   * Called only by the immutable ORIGINAL 25/17/26/0 CPU kit runtime. */
+  /** The real 180s SOURCE world has only the existing HUMAN capsule or
+   * SQUID sphere. Use the current physical player mode to resolve enemy
+   * bombs and their AoE; never change the T20/default hit approximation. */
+  public enableNativeSourceHumanPhysicalContact(
+    realMode:()=>PlayerMode
+  ):void{
+    this.nativeSourceHumanPhysicalMode=realMode;
+  }
+
+  /** SUB contact against the real HUMAN Rapier capsule or current SQUID
+   * sphere, never a synthesized enemy. The physical CPU kit invokes this
+   * AFTER ProjectileSystem has captured the same tick's KCC position. */
   public findNativeSourceHumanThrownSubHit(
     from:Vec3,to:Vec3,sourceTeam:Team.A|Team.B
   ):{distance:number;point:Vec3}|null{
-    if(!this.currentHumanDamageable||this.currentHumanTeam===sourceTeam)
-      return null;
-    const distance=segmentSphereDistance(from,to,this.currentHumanPosition,
-      GAME_CONFIG.cpu.playerHitRadiusMeters);
-    if(distance===null)return null;
-    return {distance,point:pointOnSegment(from,to,distance)};
+    if(!this.currentHumanDamageable||this.currentHumanTeam===sourceTeam||
+       this.resources.currentHp<=0)return null;
+    const mode=this.nativeSourceHumanPhysicalMode?.()??'HUMAN';
+    const body=this.currentHumanPosition;
+    const physical=PLAYER_CHARACTER_PHYSICS;
+    const distance=mode==='SQUID'
+      ?segmentSphereDistance(from,to,
+        new Vec3(body.x,body.y+physical.squidCenterOffsetYMeters,body.z),
+        physical.squidRadiusMeters)
+      :segmentVerticalCapsuleDistance(from,to,body,
+        physical.humanHalfHeightMeters,physical.humanRadiusMeters);
+    return distance===null?null:{
+      distance,point:pointOnSegment(from,to,distance)
+    };
   }
 
   public queueCpuShot(request: CpuFireRequest): void {
@@ -2176,10 +2197,21 @@ export class ProjectileSystem {
       return;
     }
 
-    const dx = this.currentHumanPosition.x - point.x;
-    const dy = this.currentHumanPosition.y + 0.68 - point.y;
-    const dz = this.currentHumanPosition.z - point.z;
-    if (dx * dx + dy * dy + dz * dz > radius * radius) return;
+    if(this.nativeSourceHumanPhysicalMode){
+      // In the real SOURCE round playerPosition is Rapier BODY center.
+      // Adding the CPU-foot +.68m offset moved blast damage ABOVE the
+      // human capsule. Test actual 3D blast sphere vs true player shape.
+      // Dead players are never damaged again in the same physical tick.
+      if(this.resources.currentHp<=0||!nativeSourceHumanInBlast(
+        point,radius,this.currentHumanPosition,
+        this.nativeSourceHumanPhysicalMode()))return;
+    }else{
+      // Frozen T20 and historical QA remain byte-for-byte compatible.
+      const dx = this.currentHumanPosition.x - point.x;
+      const dy = this.currentHumanPosition.y + 0.68 - point.y;
+      const dz = this.currentHumanPosition.z - point.z;
+      if (dx * dx + dy * dy + dz * dz > radius * radius) return;
+    }
 
     if (
       this.currentHumanGuarding &&
@@ -2520,6 +2552,59 @@ function segmentSphereDistance(
   if (discriminant < 0) return null;
   const distance = Math.max(0, -b - Math.sqrt(discriminant));
   return distance <= length ? distance : null;
+}
+
+/** True Rapier HUMAN capsule: vertical axial half-segment plus two sphere
+ * caps. Return FIRST finite collision distance along this genuine flight,
+ * rather than approximating a tall player with one small head-height ball. */
+function segmentVerticalCapsuleDistance(
+  from:Vec3,to:Vec3,body:Vec3,halfHeight:number,radius:number
+):number|null{
+  const low=new Vec3(body.x,body.y-halfHeight,body.z);
+  const high=new Vec3(body.x,body.y+halfHeight,body.z);
+  let best:number|null=null;
+  for(const cap of [low,high]){
+    const d=segmentSphereDistance(from,to,cap,radius);
+    if(d!==null&&(best===null||d<best))best=d;
+  }
+  const dx=to.x-from.x,dz=to.z-from.z;
+  const dy=to.y-from.y;
+  const length=Math.hypot(dx,dy,dz);
+  if(length<=1e-8)return best;
+  const fx=from.x-body.x,fz=from.z-body.z;
+  const a=dx*dx+dz*dz,c=fx*fx+fz*fz-radius*radius;
+  if(c<=0&&from.y>=low.y&&from.y<=high.y)return 0;
+  if(a>1e-12){
+    const b=2*(fx*dx+fz*dz);
+    const disc=b*b-4*a*c;
+    if(disc>=0){
+      for(const t of [(-b-Math.sqrt(disc))/(2*a),
+                      (-b+Math.sqrt(disc))/(2*a)]){
+        if(t<0||t>1)continue;
+        const y=from.y+dy*t;
+        if(y<low.y||y>high.y)continue;
+        const d=t*length;
+        if(best===null||d<best)best=d;
+      }
+    }
+  }
+  return best;
+}
+
+/** Sphere/capsule collision uses the SAME dimensions as PlayerController.
+ * Radius is explosion radius, not a fabricated actor or scoreable zone. */
+function nativeSourceHumanInBlast(
+  point:Vec3,radius:number,body:Vec3,mode:PlayerMode
+):boolean{
+  const physical=PLAYER_CHARACTER_PHYSICS;
+  const axisY=mode==='SQUID'
+    ?body.y+physical.squidCenterOffsetYMeters:
+    Math.max(body.y-physical.humanHalfHeightMeters,
+      Math.min(body.y+physical.humanHalfHeightMeters,point.y));
+  const effectiveRadius=radius+(mode==='SQUID'
+    ?physical.squidRadiusMeters:physical.humanRadiusMeters);
+  const dx=point.x-body.x,dy=point.y-axisY,dz=point.z-body.z;
+  return dx*dx+dy*dy+dz*dz<=effectiveRadius*effectiveRadius;
 }
 
 function pointOnSegment(from: Vec3, to: Vec3, distance: number): Vec3 {
