@@ -1338,7 +1338,20 @@ export class CpuAgentSystem {
       // A CPU splatted earlier in this native tick cannot fire from its
       // former physical foot; only the frozen T21D practice uses this gate.
       if (this.f3dSourceGoals&&!this.sourceCpuMayStartActions(
-        this.bots.find(bot=>bot.id===request.sourceId)))continue;
+        this.bots.find(bot=>bot.id===request.sourceId))){
+        // A previously charged, still-ALIVE SOURCE CPU may lose its
+        // genuine physical rejoin before dispatch. No real bullet means
+        // no spent ink, recovery lock or recorded shot. A splatted CPU
+        // keeps the normal death resource penalty; only undo its count.
+        const bot=this.bots.find(b=>b.id===request.sourceId);
+        if(bot?.lifeState==='ACTIVE'&&bot.hp>0)
+          this.rollbackUndeliveredSourceCpuMainShot(request);
+        else if(request.sourceInkTransaction&&
+                this.phase14qF2RecoverableSteps&&
+                this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa')
+          this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
+        continue;
+      }
       consumer(request);
     }
     this.pendingShots.length = 0;
@@ -1351,7 +1364,17 @@ export class CpuAgentSystem {
       // Same native shooter life as the main weapon: a queued sub/special
       // cannot materialize after this real source CPU has been splatted.
       if (this.f3dSourceGoals&&!this.sourceCpuMayStartActions(
-        this.bots.find(bot=>bot.id===request.sourceId)))continue;
+        this.bots.find(bot=>bot.id===request.sourceId))){
+        // SOURCE only: an unspent SUB/SPECIAL from a still-living but
+        // physically unjoined CPU is rejected as an actual failed effect.
+        // Never refund the resource penalty of an already splatted actor.
+        const bot=this.bots.find(b=>b.id===request.sourceId);
+        if(this.phase14qF2RecoverableSteps&&
+           this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+           bot?.lifeState==='ACTIVE'&&bot.hp>0&&bot.team===request.team)
+          this.rollbackRejectedKitRequest(request,'REJOIN_HOLD');
+        continue;
+      }
       const accepted = consumer(request);
       if (!accepted) this.rollbackRejectedKitRequest(request);
     }
@@ -2012,7 +2035,9 @@ export class CpuAgentSystem {
       `${bot.id}:SUB:${subProfile.shortName}`;
   }
 
-  private rollbackRejectedKitRequest(request: CpuKitRequest): void {
+  private rollbackRejectedKitRequest(
+    request: CpuKitRequest,reason:'POOL_DROP'|'REJOIN_HOLD'='POOL_DROP'
+  ): void {
     const bot = this.bots.find(
       (candidate) => candidate.id === request.sourceId
     );
@@ -2026,7 +2051,8 @@ export class CpuAgentSystem {
       this.stats.cpuSpecialActivations = Math.max(
         0, this.stats.cpuSpecialActivations - 1
       );
-      this.stats.cpuKitLast = bot.id + ':SPECIAL:REJECTED_NO_EFFECT';
+      this.stats.cpuKitLast=bot.id+':SPECIAL:'+
+        (reason==='REJOIN_HOLD'?'REJOIN_HOLD':'REJECTED_NO_EFFECT');
       this.syncStats();
       return;
     }
@@ -2036,10 +2062,11 @@ export class CpuAgentSystem {
       GAME_CONFIG.inkEconomy.capacity,
       bot.ink + profile.inkCost
     );
-    bot.subCooldownSeconds = GAME_CONFIG.cpu.kit.subPoolRetrySeconds;
-    this.stats.cpuSubUses = Math.max(0, this.stats.cpuSubUses - 1);
-    this.stats.cpuKitLast =
-      `${bot.id}:SUB:${profile.shortName}:POOL_DROP`;
+    bot.subCooldownSeconds=reason==='REJOIN_HOLD'?0:
+      GAME_CONFIG.cpu.kit.subPoolRetrySeconds;
+    this.stats.cpuSubUses=Math.max(0,this.stats.cpuSubUses-1);
+    this.stats.cpuKitLast=
+      `${bot.id}:SUB:${profile.shortName}:${reason}`;
   }
 
   private shouldUseCpuSpecial(
@@ -3374,12 +3401,27 @@ export class CpuAgentSystem {
     // that were queued before a genuine same-tick lethal hit. Keep every
     // surviving teammate's paid real shots/kit actions intact.
     if (this.f3dSourceGoals) {
-      for (let i = this.pendingShots.length - 1; i >= 0; i--)
-        if (this.pendingShots[i]!.sourceId === bot.id)
-          this.pendingShots.splice(i, 1);
-      for (let i = this.pendingKitRequests.length - 1; i >= 0; i--)
-        if (this.pendingKitRequests[i]!.sourceId === bot.id)
-          this.pendingKitRequests.splice(i, 1);
+      for(let i=this.pendingShots.length-1;i>=0;i--)
+        if(this.pendingShots[i]!.sourceId===bot.id){
+          const req=this.pendingShots.splice(i,1)[0]!;
+          // A paid SOURCE request that never left the muzzle must not
+          // appear as a fired shot. Do NOT refund the dead actor's ink.
+          if(this.phase14qF2RecoverableSteps&&req.sourceInkTransaction)
+            this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
+        }
+      for(let i=this.pendingKitRequests.length-1;i>=0;i--)
+        if(this.pendingKitRequests[i]!.sourceId===bot.id){
+          const req=this.pendingKitRequests.splice(i,1)[0]!;
+          // Same-tick lethal HP zero cancels only undelivered effects.
+          // Preserve the original splat's special retention/ink penalty.
+          if(this.phase14qF2RecoverableSteps){
+            if(req.kind==='SUB')
+              this.stats.cpuSubUses=Math.max(0,this.stats.cpuSubUses-1);
+            else
+              this.stats.cpuSpecialActivations=Math.max(
+                0,this.stats.cpuSpecialActivations-1);
+          }
+        }
     }
     this.phase14eFirstDrop?.cancel(bot.id);
 

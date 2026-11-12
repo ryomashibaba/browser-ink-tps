@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
+import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
@@ -54,6 +55,68 @@ function fixture(originalF3: boolean) {
 }
 
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
+  it('refunds a live SOURCE CPU main shot if physical rejoin is lost before dispatch',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.ink=72;bot.inkRecoveryLockSeconds=.3;
+    system.stats.cpuShots=0;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    expect(bot.ink).toBeLessThan(72);
+    const delivered=vi.fn();
+    system.drainFireRequests(delivered);
+    expect(delivered).not.toHaveBeenCalled();
+    expect(system.pendingShots).toHaveLength(0);
+    expect(bot.ink).toBeCloseTo(72);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.3);
+    expect(system.stats.cpuShots).toBe(0);
+    // Only a subsequent genuine rejoin may release a paid new shot.
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    system.drainFireRequests(delivered);
+    expect(delivered).toHaveBeenCalledOnce();
+    expect(system.stats.cpuShots).toBe(1);
+  });
+
+  it('refunds a live SOURCE rejected SUB only, keeping original splat resource penalties',()=>{
+    const {system,bot,shot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.ink=75;
+    const subId=weaponKit(bot.weaponId).sub;
+    const cost=subWeaponProfile(subId).inkCost;
+    system.stats.cpuSubUses=1;
+    bot.ink-=cost;
+    bot.subCooldownSeconds=8;
+    const req={kind:'SUB',sourceId:'B1',team:Team.B,
+      position:new Vec3(),target:new Vec3(4,0,0),
+      direction:new Vec3(1,0,0),subId} as const;
+    system.pendingKitRequests.push(req);
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+    const delivered=vi.fn(()=>true);
+    system.drainKitRequests(delivered);
+    expect(delivered).not.toHaveBeenCalled();
+    expect(bot.ink).toBeCloseTo(75);
+    expect(bot.subCooldownSeconds).toBe(0);
+    expect(system.stats.cpuSubUses).toBe(0);
+    expect(system.stats.cpuKitLast).toContain('REJOIN_HOLD');
+    // A real HP-zero splat removes queued effects without granting
+    // the dead CPU a refunded shot, free ink or fake physical rejoin.
+    system.stats.cpuShots=0;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    const charged=bot.ink;
+    system.stats.cpuSubUses=1;
+    system.pendingKitRequests.push(req);
+    system.applyProjectileHit(shot,80,'HUMAN');
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.pendingShots).toHaveLength(0);
+    expect(system.pendingKitRequests).toHaveLength(0);
+    expect(system.stats.cpuShots).toBe(0);
+    expect(system.stats.cpuSubUses).toBe(0);
+    expect(bot.ink).toBeCloseTo(charged);
+  });
   it('keeps a live CPU at the enemy-ink HP floor until it leaves enemy paint', () => {
     const { system, bot } = fixture(true);
     const minimum = GAME_CONFIG.combat.enemyInkMinimumHp;
