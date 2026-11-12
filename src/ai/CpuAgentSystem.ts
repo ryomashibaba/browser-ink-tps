@@ -152,6 +152,14 @@ export interface CpuFireRequest {
   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
   /** An already audited SOURCE floor aim, not enemy or path authority. */
   sourceFloorPaint?: true;
+  /** SOURCE-only paid main shot awaiting an actual physical projectile
+   * slot. Failure to dispatch must restore the same bot's real ink.
+   * Not provided by T20 or synthetic requests. */
+  sourceInkTransaction?:{
+    chargedInkCost:number;
+    expectedInkAfterCharge:number;
+    originalRecoveryLockSeconds:number;
+  };
 }
 
 type CpuMobilityState =
@@ -1297,6 +1305,31 @@ export class CpuAgentSystem {
       bot.mobilityState==='GROUND'&&
       (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
        this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
+  }
+
+  /** Only the physical SOURCE projectile engine may roll back a paid
+   * native CPU shot that produced NO actual bullet. All T20, manual QA,
+   * and CPU kit effects retain their existing resource authority.
+   * A genuine later subweapon spend keeps its recovery lock. */
+  public rollbackUndeliveredSourceCpuMainShot(request:CpuFireRequest):void{
+    if(!this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+      return;
+    const tx=request.sourceInkTransaction;
+    const bot=this.bots.find(b=>b.id===request.sourceId);
+    if(!tx||!bot||bot.lifeState!=='ACTIVE'||bot.hp<=0||
+       bot.weaponId!==request.weaponId||bot.team!==request.team||
+       !Number.isFinite(tx.chargedInkCost)||tx.chargedInkCost<=0||
+       Math.abs(tx.chargedInkCost-cpuWeaponInkCost(
+        weaponProfile(bot.weaponId),request.action,request.charge))>1e-6)
+      return;
+    const noLaterSpend=Math.abs(bot.ink-tx.expectedInkAfterCharge)<=1e-6;
+    bot.ink=Math.min(GAME_CONFIG.inkEconomy.capacity,
+      bot.ink+tx.chargedInkCost);
+    if(noLaterSpend)
+      bot.inkRecoveryLockSeconds=Math.min(bot.inkRecoveryLockSeconds,
+        tx.originalRecoveryLockSeconds);
+    this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
   }
 
   public drainFireRequests(consumer: (request: CpuFireRequest) => void): void {
@@ -2671,6 +2704,7 @@ export class CpuAgentSystem {
     const inkCost = cpuWeaponInkCost(profile, action, charge);
     if (bot.ink + 1e-6 < inkCost) return false;
 
+    const oldRecoveryLock=bot.inkRecoveryLockSeconds;
     bot.ink = Math.max(0, bot.ink - inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
 
@@ -2691,7 +2725,12 @@ export class CpuAgentSystem {
       action,
       qaSourceAim,
       sourceFloorPaint:sourceFloorPaint&&this.f3dSourceGoals&&
-        this.phase14qF2RecoverableSteps?true:undefined
+        this.phase14qF2RecoverableSteps?true:undefined,
+      sourceInkTransaction:this.f3dSourceGoals&&
+        this.phase14qF2RecoverableSteps?{
+          chargedInkCost:inkCost,expectedInkAfterCharge:bot.ink,
+          originalRecoveryLockSeconds:oldRecoveryLock
+        }:undefined
     });
     this.stats.cpuShots += 1;
     return true;

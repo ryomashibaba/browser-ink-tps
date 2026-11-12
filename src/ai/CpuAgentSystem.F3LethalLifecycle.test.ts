@@ -3,6 +3,7 @@ import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import { SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit } from './CpuAgentSystem';
+import {ProjectileSystem} from '../projectile/ProjectileSystem';
 
 /** No simulated gameplay actors are spawned: exercise the real production
  * methods with a controlled, isolated real-CpuBot-shaped unit fixture. */
@@ -116,6 +117,53 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     )).toBeNull();
     expect(system.applyProjectileHit(shot, 40, 'HUMAN')).toBeNull();
     expect(system.stats.cpuSplats).toBe(1);
+  });
+
+  it('actual SOURCE CPU pool exhaustion conserves ink and prevents partial dualies volleys',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    bot.weaponId='twin-comets';
+    bot.ink=83;
+    bot.inkRecoveryLockSeconds=.25;
+    system.stats.cpuShots=0;
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    const paid=system.pendingShots[0]!;
+    expect(bot.ink).toBeLessThan(83);
+    expect(system.stats.cpuShots).toBe(1);
+    expect(paid.sourceInkTransaction).toMatchObject({
+      expectedInkAfterCharge:bot.ink,originalRecoveryLockSeconds:.25
+    });
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}]; // One real slot, dualies requires two
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.spawnProjectile=vi.fn();
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.feedback={shot:vi.fn()};
+    launcher.queueCpuShot(paid);
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).not.toHaveBeenCalled();
+    expect(launcher.queuedCpuShots).toHaveLength(0);
+    expect(launcher.stats.projectilePoolDrops).toBe(1);
+    expect(bot.ink).toBeCloseTo(83);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.25);
+    expect(system.stats.cpuShots).toBe(0);
+    // A new physical capacity (not a fabricated weapon/ink refill)
+    // is needed before the real CPU can expend the next accepted shot.
+    expect(system.queueCpuWeaponRequest(bot,new Vec3(4,0,0),0))
+      .toBe(true);
+    const second=system.pendingShots.at(-1)!;
+    launcher.slots=[{active:false},{active:false}];
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.queueCpuShot(second);
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.spawnProjectile).toHaveBeenCalledTimes(2);
+    expect(bot.ink).toBeLessThan(83);
+    expect(system.stats.cpuShots).toBe(1);
   });
 
   it('genuine SOURCE newborn upper-spawn CPU cannot spend weapons or dispatch attacks before its new lower rejoin',()=>{

@@ -432,7 +432,8 @@ export class ProjectileSystem {
       charge: request.charge,
       action: request.action,
       qaSourceAim:request.qaSourceAim,
-      sourceFloorPaint:request.sourceFloorPaint
+      sourceFloorPaint:request.sourceFloorPaint,
+      sourceInkTransaction:request.sourceInkTransaction
     });
   }
 
@@ -1471,7 +1472,11 @@ export class ProjectileSystem {
         this.cpuAimDirection,
         profile
       );
-      if (this.cpuAimDirection.lengthSq() <= 1e-8) continue;
+      if (this.cpuAimDirection.lengthSq() <= 1e-8){
+        if(request.sourceInkTransaction)
+          this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+        continue;
+      }
 
       let direction = this.cpuAimDirection.clone();
       let count = 1;
@@ -1502,6 +1507,16 @@ export class ProjectileSystem {
         speedMultiplier = 1.0;
       }
 
+      // Native SOURCE 7-CPU volley is paid before human-first physics
+      // execution. Reject the ENTIRE volley when fewer physical slots
+      // remain: never charge a paid dualies/brella attack for 0 or
+      // partially spawned projectiles. Real HUMAN gets first access.
+      if(request.sourceInkTransaction&&
+         this.slots.filter(slot=>!slot.active).length<count){
+        this.stats.projectilePoolDrops+=1;
+        this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+        continue;
+      }
       let spawned = 0;
       for (let i = 0; i < count; i += 1) {
         const slot = this.slots.find((candidate) => !candidate.active);
