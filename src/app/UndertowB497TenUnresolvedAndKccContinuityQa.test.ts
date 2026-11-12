@@ -12,6 +12,7 @@ import {RapierStagePhysics,initializeRapier}
 import {RecastStageNavigation,initializeRecastNavigation}
  from '../navigation/RecastStageNavigation';
 import {PerformanceStats} from '../core/PerformanceStats';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import {b450FirstSourceDenial} from './B450OriginalRouteWitness';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -63,7 +64,9 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
   const selectedFailures:Array<unknown>=[];
   const allSixtyRoutes:Array<unknown>=[],tenUnresolved:Array<unknown>=[];
   let staticKccChecked=0,staticKccZeroClip=0,staticKccHeld=0,
-   routesWithProjectedVerticalJumps=0;
+   routesWithProjectedVerticalJumps=0,
+   speedLimitedKccChecked=0,speedLimitedKccWithin=0,
+   speedLimitedKccHeld=0;
   for(const id of ids){
    const witness=data.perCpu[id];
    const start=foot(witness.actualPhysicalFoot);
@@ -198,6 +201,8 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
      const current={x:first.x,y:first.y,z:first.z};
      let stepClips=0,maxClip=0,maxAccumulated=0,unsupportedFeet=0,
       contactSteps=0,maxRequestedStep=0;
+     let firstDirectClip:null|{segment:number;from:P;to:P;
+      originalStaticColliders:(string|null)[];clipMeters:number}=null;
      for(let m=1;m<projectedPoints.length;m++){
       const prev=projectedPoints[m-1]!,target=projectedPoints[m]!;
       const wanted={x:target.x-prev.x,y:target.y-prev.y,z:target.z-prev.z};
@@ -209,7 +214,18 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
         physics.shouldCharacterCollide(other,'HUMAN'));
       const moved=controller.computedMovement();
       const clip=Math.hypot(wanted.x-moved.x,wanted.y-moved.y,wanted.z-moved.z);
-      if(clip>.03)stepClips++;
+      if(clip>.03){
+       stepClips++;
+       if(!firstDirectClip){
+        const solids:Array<string|null>=[];
+        for(let collision=0;collision<controller.numComputedCollisions();collision++){
+         const col=controller.computedCollision(collision)?.collider;
+         if(col)solids.push(physics.sourceSolidIdForCollider(col));
+        }
+        firstDirectClip={segment:m,from:prev,to:target,
+         originalStaticColliders:solids,clipMeters:r6(clip)};
+       }
+      }
       maxClip=Math.max(maxClip,clip);
       if(controller.numComputedCollisions()>0)contactSteps++;
       current.x+=moved.x;current.y+=moved.y;current.z+=moved.z;
@@ -231,9 +247,94 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
       largestKccClipMeters:r6(maxClip),
       maxCumulativePositionDeviationMeters:r6(maxAccumulated),
       projectedAdjacentYJumpOver034m:maxProjectedAdjacentY>.34,
-      isolatedStaticKccWithinDiagnosticThreshold:within};
+      isolatedStaticKccWithinDiagnosticThreshold:within,
+      firstDirectOver3cmClip:firstDirectClip,
+      intendedOneStepEquivalentCpuSpeedMps:r6(maxRequestedStep*60)};
      physics.world.removeCharacterController(controller);
      physics.world.removeRigidBody(body);
+     physics.step();
+     // B497-speed-control: re-run the SAME projected route in a new
+     // isolated CPU capsule, now subdividing each spatial 0.30m sample
+     // by the real CPU maximum speed at 60Hz. No real input / AI / actor.
+     const microBody=physics.world.createRigidBody(
+      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+       first.x,first.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,first.z));
+     const microCollider=physics.world.createCollider(RAPIER.ColliderDesc.capsule(
+      PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+      PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),microBody);
+     physics.step();
+     const microKcc=createConfiguredPlayerCharacterController(physics.world);
+     const place={x:first.x,y:first.y,z:first.z};
+     const max60HzDisplacement=GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60;
+     let simulated60HzSteps=0,microClipsOver1cm=0,microClipsOver3cm=0,
+      microStageContactSteps=0,microUnsupportedSteps=0,
+      maxMicroAccumulated=0,maxMicroClip=0,maxMicroRequested=0;
+     let firstMicroClip:null|{segment:number;substep:number;
+      originalStaticColliders:(string|null)[];clipMeters:number}=null;
+     for(let segment=1;segment<projectedPoints.length;segment++){
+      const prev=projectedPoints[segment-1]!,next=projectedPoints[segment]!;
+      const vx=next.x-prev.x,vy=next.y-prev.y,vz=next.z-prev.z;
+      const steps=Math.max(1,Math.ceil(
+       Math.hypot(vx,vy,vz)/max60HzDisplacement));
+      const desired={x:vx/steps,y:vy/steps,z:vz/steps};
+      for(let sub=1;sub<=steps;sub++){
+       const magnitude=Math.hypot(desired.x,desired.y,desired.z);
+       maxMicroRequested=Math.max(maxMicroRequested,magnitude);
+       microKcc.computeColliderMovement(microCollider,desired,
+        undefined,undefined,(other:RAPIER.Collider)=>
+         other.handle!==microCollider.handle&&
+         physics.shouldCharacterCollide(other,'HUMAN'));
+       const moved=microKcc.computedMovement();
+       const clip=Math.hypot(moved.x-desired.x,
+        moved.y-desired.y,moved.z-desired.z);
+       maxMicroClip=Math.max(maxMicroClip,clip);
+       if(clip>.01)microClipsOver1cm++;
+       if(clip>.03)microClipsOver3cm++;
+       if(microKcc.numComputedCollisions()>0)microStageContactSteps++;
+       if(clip>.01&&!firstMicroClip){
+        const solids:Array<string|null>=[];
+        for(let j=0;j<microKcc.numComputedCollisions();j++){
+         const col=microKcc.computedCollision(j)?.collider;
+         if(col)solids.push(physics.sourceSolidIdForCollider(col));
+        }
+        firstMicroClip={segment,substep:sub,
+         originalStaticColliders:solids,clipMeters:r6(clip)};
+       }
+       place.x+=moved.x;place.y+=moved.y;place.z+=moved.z;
+       const ideal={x:prev.x+vx*sub/steps,
+        y:prev.y+vy*sub/steps,z:prev.z+vz*sub/steps};
+       maxMicroAccumulated=Math.max(maxMicroAccumulated,Math.hypot(
+        place.x-ideal.x,place.y-ideal.y,place.z-ideal.z));
+       if(!origHit(place).supported)microUnsupportedSteps++;
+       microBody.setTranslation({x:place.x,
+        y:place.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+        z:place.z},true);
+       physics.step();
+       simulated60HzSteps++;
+      }
+     }
+     const speedLimitedWithin=microClipsOver1cm===0&&
+      microUnsupportedSteps===0&&maxMicroAccumulated<=.03;
+     speedLimitedKccChecked++;
+     if(speedLimitedWithin)speedLimitedKccWithin++;
+     else speedLimitedKccHeld++;
+     staticKcc.speedBounded60HzProbe={
+      source:'same_genuine_projected_original_route',
+      sourceCpuMaxSpeedMetersPerSecond:GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+      maxAllowedDeltaMetersPer60HzTick:r6(max60HzDisplacement),
+      generatedQa60HzSubsteps:simulated60HzSteps,
+      maxRequestedMicroStepMeters:r6(maxMicroRequested),
+      microStepsWithKccClipOver1cm:microClipsOver1cm,
+      microStepsWithKccClipOver3cm:microClipsOver3cm,
+      microStepsWithStaticKccContact:microStageContactSteps,
+      microStepsWithoutStrictOriginalFloorSupport:microUnsupportedSteps,
+      maxIndividualMicroClipMeters:r6(maxMicroClip),
+      maxAccumulatedMicroPathDeviationMeters:r6(maxMicroAccumulated),
+      firstClip: firstMicroClip,
+      withinQaOnlySpeedBoundedTolerance:speedLimitedWithin,
+      thisIsNotCpuAiSteeringOrDynamic7CpuSimulation:true};
+     physics.world.removeCharacterController(microKcc);
+     physics.world.removeRigidBody(microBody);
      physics.step();
     }
     const missed=firstDeniedAfterReprojection;
@@ -294,6 +395,12 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
    totalIsolatedStaticKccPathsTested:staticKccChecked,
    staticKccWithinDiagnosticThreshold:staticKccZeroClip,
    staticKccHeld:staticKccHeld,
+   speedLimitedKccPathsDiagnosed:speedLimitedKccChecked,
+   speedLimitedKccWithinQaOnlyThreshold:speedLimitedKccWithin,
+   speedLimitedKccHeld:speedLimitedKccHeld,
+   sourceCpuSpeedMetersPerSecond:GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+   maxSpatialDisplacementFor60HzDiagnosticMeters:r6(
+    GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60),
    pathsWithAdjacentProjectedYChangeOver034m:routesWithProjectedVerticalJumps,
    staticKccWorldContainsOtherRealCpuAndHuman:false,
    anyOriginalRouteAuthorityPromoted:false,
@@ -316,6 +423,8 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
   expect(tenUnresolved).toHaveLength(10);
   expect(staticKccChecked).toBe(50);
   expect(staticKccZeroClip+staticKccHeld).toBe(50);
+  expect(speedLimitedKccChecked).toBe(50);
+  expect(speedLimitedKccWithin+speedLimitedKccHeld).toBe(50);
   expect(reprojectedPotential+stillUnsupported).toBe(60);
   if(process.env.T21_B497_REPORT_PATH)
    writeFileSync(process.env.T21_B497_REPORT_PATH,
@@ -327,6 +436,7 @@ describe('B497 ten unresolved source paths and 50 genuine-size isolated static K
      firstFailure:(x as {firstUnsupportedProjection:unknown}).firstUnsupportedProjection
     })),
     staticKccChecked,staticKccZeroClip,staticKccHeld,
+    speedLimitedKccChecked,speedLimitedKccWithin,speedLimitedKccHeld,
     routesWithProjectedVerticalJumps,
     firstPointStillUnsupported:pathWithoutOriginalSubstitute,
     wouldPassRayOnly:reprojectedPotential,
