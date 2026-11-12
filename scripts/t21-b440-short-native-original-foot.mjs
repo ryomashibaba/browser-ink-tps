@@ -163,7 +163,8 @@ async function waitForRealSourceReady(entry,requireWebgl2=true){
    })()`);
   }catch(readError){page={pageReadError:String(readError).slice(0,240)}}
   proof.realSourceReadyFailure={entry,reason:String(error).slice(0,300),
-   page,source:'25/17/26/0',nativeWrites:0,
+   page,b441BrowserErrors:proof.b441BrowserErrors??[],
+   source:'25/17/26/0',nativeWrites:0,
    stagePromotions:0,officialScoreWrites:0,verdict:'READY_NOT_CERTIFIED'};
   save();
   console.error('B440_REAL_SOURCE_READY_HOLD',
@@ -1061,10 +1062,14 @@ async function main(){
  });
  ws.addEventListener('message',e=>{
   const x=JSON.parse(String(e.data)),p=pending.get(x.id);
-  if(p0NormalHuman&&(x.method==='Runtime.consoleAPICalled'&&
-     x.params?.type==='error'||x.method==='Runtime.exceptionThrown')){
-   proof.p0BrowserErrors??=[];
-   if(proof.p0BrowserErrors.length<12)proof.p0BrowserErrors.push({
+  // One approved B441 browser run captures the actual runtime error.
+  // Observational CDP event only: no input, actor or world mutation.
+  if((p0NormalHuman||b441Experiment)&&
+     (x.method==='Runtime.consoleAPICalled'&&
+      x.params?.type==='error'||x.method==='Runtime.exceptionThrown')){
+   const errorBucket=p0NormalHuman?'p0BrowserErrors':'b441BrowserErrors';
+   proof[errorBucket]??=[];
+   if(proof[errorBucket].length<12)proof[errorBucket].push({
     method:x.method,
     arguments:x.params?.args?.map(a=>String(a.description??a.value??a.type).slice(0,450))??[],
     exception:x.params?.exceptionDetails?.exception?.description?.slice(0,700)??null,
