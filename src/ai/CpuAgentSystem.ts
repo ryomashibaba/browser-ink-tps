@@ -39,6 +39,8 @@ import type { RecastStageNavigation } from '../navigation/RecastStageNavigation'
 import type {UndertowPhase14ECpuAdapter} from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import type { StageDefinition } from '../stage/StageDefinition';
 import {auditPhase14CrowdFrame} from '../stage/undertow/UndertowPhase14CrowdMotionAudit';
+import {ORIGINAL_SOURCE_CPU_CAPSULE}
+ from '../stage/undertow/UndertowPhase14QSharedActorCollision';
 
 export interface CpuCombatHit {
   botId: string;
@@ -1798,13 +1800,19 @@ export class CpuAgentSystem {
     const length = segment.length();
     if (length <= 1e-8) return null;
     const direction = segment.mulScalar(1 / length);
+    // Only actual F3 physical SOURCE sessions have the shared Rapier
+    // CPU .39/.29 capsule. Frozen T20/legacy hit spheres remain identical.
+    const sourcePhysicalCapsule=this.f3dSourceGoals!==null&&
+      this.phase14qF2RecoverableSteps&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa';
 
     let best: CpuCombatHit | null = null;
     for (const bot of this.bots) {
       if (
         bot.team === sourceTeam ||
         bot.lifeState !== 'ACTIVE' ||
-        (this.f3dSourceGoals !== null && bot.hp <= 0) ||
+        (this.f3dSourceGoals !== null &&
+         (!this.liveSourceCombatOpponent(bot)||bot.hp<=0)) ||
         isCpuJumpAirborne(bot)
       ) continue;
 
@@ -1837,23 +1845,35 @@ export class CpuAgentSystem {
         }
       }
 
-      for (const yOffset of GAME_CONFIG.cpu.hitSphereOffsetsMeters) {
-        const center = bot.position.clone();
-        center.y += yOffset;
-        const distance = raySphereDistance(
-          from,
-          direction,
-          length,
-          center,
-          GAME_CONFIG.cpu.hitRadiusMeters
-        );
-        if (distance === null || (best && distance >= best.distance)) continue;
-        best = {
-          botId: bot.id,
-          distance,
-          point: from.clone().add(direction.clone().mulScalar(distance)),
-          guarded: false
-        };
+      if(sourcePhysicalCapsule){
+        const distance=raySourceCpuCapsuleDistance(
+          from,direction,length,bot.position);
+        if(distance!==null&&(!best||distance<best.distance)){
+          best={
+            botId:bot.id,distance,
+            point:from.clone().add(direction.clone().mulScalar(distance)),
+            guarded:false
+          };
+        }
+      }else{
+        for (const yOffset of GAME_CONFIG.cpu.hitSphereOffsetsMeters) {
+          const center = bot.position.clone();
+          center.y += yOffset;
+          const distance = raySphereDistance(
+            from,
+            direction,
+            length,
+            center,
+            GAME_CONFIG.cpu.hitRadiusMeters
+          );
+          if (distance === null || (best && distance >= best.distance)) continue;
+          best = {
+            botId: bot.id,
+            distance,
+            point: from.clone().add(direction.clone().mulScalar(distance)),
+            guarded: false
+          };
+        }
       }
     }
     return best;
@@ -3946,6 +3966,43 @@ function raySphereDistance(
   if (discriminant < 0) return null;
   const distance = Math.max(0, -b - Math.sqrt(discriminant));
   return distance <= maxDistance ? distance : null;
+}
+
+/** Ray against the SAME vertically aligned Rapier capsule physically
+ * synchronized at SOURCE CPU foot +.68m. Cylinder sides + hemispherical
+ * ends; all distances are along the already-normalized real shot ray.
+ * Does not create a projectile, actor, damage or terrain authority. */
+function raySourceCpuCapsuleDistance(
+  from:Vec3,direction:Vec3,length:number,foot:Vec3
+):number|null{
+  const radius=ORIGINAL_SOURCE_CPU_CAPSULE.radiusMeters;
+  const half=ORIGINAL_SOURCE_CPU_CAPSULE.halfHeightMeters;
+  const middleY=foot.y+ORIGINAL_SOURCE_CPU_CAPSULE.centerOffsetMeters;
+  const lowY=middleY-half,highY=middleY+half;
+  const x=from.x-foot.x,z=from.z-foot.z;
+  const nearY=Math.max(lowY,Math.min(highY,from.y));
+  const vertical=from.y-nearY;
+  // A real projectile may already be inside a live capsule on this tick.
+  if(x*x+z*z+vertical*vertical<=radius*radius)return 0;
+  let closest:number|null=null;
+  const a=direction.x*direction.x+direction.z*direction.z;
+  if(a>1e-12){
+    const b=x*direction.x+z*direction.z;
+    const c=x*x+z*z-radius*radius;
+    const discriminant=b*b-a*c;
+    if(discriminant>=0){
+      const t=(-b-Math.sqrt(discriminant))/a;
+      const hitY=from.y+direction.y*t;
+      if(t>=0&&t<=length&&hitY>=lowY&&hitY<=highY)
+        closest=t;
+    }
+  }
+  for(const capY of [lowY,highY]){
+    const t=raySphereDistance(
+      from,direction,length,new Vec3(foot.x,capY,foot.z),radius);
+    if(t!==null&&(closest===null||t<closest))closest=t;
+  }
+  return closest;
 }
 
 function isCpuJumpAirborne(bot: CpuBot): boolean {

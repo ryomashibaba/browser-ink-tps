@@ -1410,6 +1410,60 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.humanCpuDirectSplats).toBe(0);
   });
 
+  it('genuine SOURCE CPU MAIN/CHARGER/SUB hit rays use original .29m Rapier body, not inflated old spheres',()=>{
+    const {system,bot}=fixture(true);
+    bot.hp=100;bot.position.set(0,0,0);
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    // At torso height the old three .34m balls count a .32m offset as
+    // a hit, although the actual shared Rapier cylinder radius is .29m.
+    const edgeFrom=new Vec3(.32,.68,-3);
+    const edgeTo=new Vec3(.32,.68,3);
+    expect(system.findNearestCombatHit(edgeFrom,edgeTo,Team.A)).toBeNull();
+    system.f3dSourceGoals=null; // Frozen T20 must retain legacy estimate
+    expect(system.findNearestCombatHit(edgeFrom,edgeTo,Team.A)?.botId).toBe('B1');
+    system.f3dSourceGoals={
+      chooseSourceGoal:()=>false,isLiveRejoinedSourceCpu:()=>true
+    };
+    const inside=system.findNearestCombatHit(
+      new Vec3(.28,.68,-3),new Vec3(.28,.68,3),Team.A);
+    expect(inside?.botId).toBe('B1');
+    expect(inside?.guarded).toBe(false);
+    expect(inside?.distance).toBeGreaterThan(2.9);
+    expect(inside?.distance).toBeLessThan(3);
+    // Real upper hemisphere is a rounded cap, not an extra full ball
+    // high above the original .68m CPU middle.
+    const crown=system.findNearestCombatHit(
+      new Vec3(0,1.30,-3),new Vec3(0,1.30,3),Team.A);
+    expect(crown?.botId).toBe('B1');
+    expect(crown?.distance).toBeGreaterThan(2.7);
+    expect(crown?.distance).toBeLessThan(3);
+    const above=system.findNearestCombatHit(
+      new Vec3(0,1.38,-3),new Vec3(0,1.38,3),Team.A);
+    expect(above).toBeNull();
+  });
+
+  it('SOURCE shots cannot hit a pre-rejoin/drop CPU ghost, but resumed live body is hittable',()=>{
+    const {system,bot}=fixture(true);
+    bot.hp=100;bot.position.set(0,0,0);
+    system.phase14qF2RecoverableSteps=true;
+    let live=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>live;
+    const shoot=()=>system.findNearestCombatHit(
+      new Vec3(0,.68,-2),new Vec3(0,.68,2),Team.A);
+    bot.mobilityState='FIRST_DROP_REJOIN';
+    expect(shoot()).toBeNull();
+    bot.mobilityState='GROUND';
+    expect(shoot()).toBeNull(); // active before physical rejoin is not enough
+    live=true;
+    const returned=shoot();
+    expect(returned?.botId).toBe('B1');
+    expect(returned?.distance).toBeCloseTo(2-.29,5);
+    bot.hp=0;expect(shoot()).toBeNull();
+    bot.hp=100;bot.mobilityState='JUMP_TRAVEL';
+    expect(shoot()).toBeNull();
+  });
+
   it('native area damage independently removes a lethally struck CPU once', () => {
     const { system, bot } = fixture(true);
     const hits = system.applyAreaDamage(new Vec3(0, .68, 0), 3, 90, Team.A);

@@ -8,6 +8,14 @@ import type {StageDefinition} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as freeze}
  from './UndertowSpillwayBlockoutGeometry';
 
+/** Exact existing SOURCE CPU kinematic Rapier body dimensions; combat
+ * rays must use this SAME body, not the legacy three-sphere estimate.
+ * Read-only dimensions: no new collider, geometry, navigation or actor. */
+export const ORIGINAL_SOURCE_CPU_CAPSULE=Object.freeze({
+  radiusMeters:.29,
+  halfHeightMeters:.39,
+  centerOffsetMeters:.68
+});
 export type T21QFoot=Readonly<{x:number;y:number;z:number}>;
 export type T21QContactResult=Readonly<{
   source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD';
@@ -62,9 +70,9 @@ export class UndertowPhase14QSharedActorCollision{
   private readonly ownerByHandle=new Map<number,string>();
   private humanSourceFoot:T21QFoot|null=null;
   private readonly kcc;
-  private readonly cpuRadius=.29; // Actual CpuAgentSystem capsule render radius
-  private readonly cpuHalfHeight=.39;
-  private readonly cpuCenterOffset=this.cpuRadius+this.cpuHalfHeight;
+  private readonly cpuRadius=ORIGINAL_SOURCE_CPU_CAPSULE.radiusMeters;
+  private readonly cpuHalfHeight=ORIGINAL_SOURCE_CPU_CAPSULE.halfHeightMeters;
+  private readonly cpuCenterOffset=ORIGINAL_SOURCE_CPU_CAPSULE.centerOffsetMeters;
 
   public constructor(
     private readonly physics:RapierStagePhysics,
