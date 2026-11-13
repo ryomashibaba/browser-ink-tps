@@ -96,6 +96,195 @@ function original(s,stage){
    cpuCount:s?.cpu?.cpu?.length,sourceCircuit:s?.b384OpenLoadoutCircuit});
  return s;
 }
+
+async function runApprovedCombatTwinReplay(){
+ if(process.env.GITHUB_ACTIONS!=='true'||
+    process.platform!=='linux'||
+    process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE!=='1')
+  fail('P2_ONE_PUBLIC_NATIVE_APPROVAL_REQUIRED');
+ report.schema='T21_P2_ONE_REAL_CANONICAL_COMBAT_TWIN_180_REPLAY';
+ report.outcome='HOLD_P2_TRUE_NATIVE_PENDING';
+ persist();
+ const capture=()=>evalPage(`(()=>{
+  const s=window.__t21F3?.snapshot?.();
+  if(!s)return null;
+  const c=document.querySelector('#app-canvas');
+  const f=document.querySelector('#t21-f3-b59-session-finished');
+  const r=document.querySelector('#t21-f3-b59-restart');
+  const w=document.querySelector('#t21-f3-b378-weapon');
+  const rr=r?.getBoundingClientRect();
+  return {origin:performance.timeOrigin,search:location.search,
+   ready:c?.dataset.t21F3Ready,renderer:c?.dataset.t21F3Renderer,
+   phase:s.matchState,paused:s.paused,stop:s.stopReason,
+   tick:s.tick,remaining:s.timeRemainingSeconds,
+   stage:[s.originalSourceSolids,s.originalPaintSurfaces,
+    s.originalSourceNavigationLinks,s.sourceScoreablePromotions],
+   cpuBodies:s.cpu?.cpu?.length,cpuRejoined:s.cpu?.physicalRejoins?.length,
+   cpuRelocations:s.cpu?.physicalFootRelocations,
+   production:s.productionAuthorized,fourvfour:s.unrestricted4v4Certified,
+   winner:s.b186RealOriginalHumanCircuit?.officialWinner,
+   weapon:s.b361NativePlayerWeapon?.id,
+   selected:w?.value,bootKit:w?.dataset.b389NativeReplayKit,
+   lock:document.pointerLockElement===c,
+   shots:s.shotsFired,ink:s.player?.ink,hp:s.player?.hp,
+   humanPaint:s.b23HumanInkFeedback?.humanChangedCells,
+   cpuShots:s.cpuSourceTurfShots,
+   finishVisible:!!f&&!f.hidden&&f.style.display!=='none',
+   finishState:f?.dataset.t21B59State,
+   replayReady:!!r&&!r.hidden&&!r.disabled&&
+    !!rr&&rr.width>0&&rr.height>0};
+ })()`);
+ const originalCombat=(s,tag)=>{
+  if(!s||s.stage?.join('/')!=='25/17/26/0'||s.cpuBodies!==7||
+     s.cpuRelocations!==0||s.production!==false||
+     s.fourvfour!==false||s.winner!=='NONE'||s.stop||
+     !Number.isSafeInteger(s.tick)||s.tick<0)
+   fail('P2_ORIGINAL_SOURCE_GATE_'+tag,s);
+  return s;
+ };
+ const record=(tag,s)=>{
+  report.phases.push({phase:tag,provenance:'SAME_REAL_CDP_NATIVE_SOURCE',
+   source:'25/17/26/0',artificialTickWrites:0,
+   actorTeleports:0,scoreWrites:0,observed:s});
+  persist();
+ };
+ await cmd('Page.navigate',{url:ROOT+'play-source.html'});
+ const portal=await until(async()=>{
+  const p=await evalPage(`(()=>{
+   const status=document.querySelector('#portal-status');
+   const select=document.querySelector('#source-weapon-preselect');
+   const combat=document.querySelector('#play-combat');
+   return {ready:status?.dataset.t21PortalReady,
+    selected:select?.value,count:select?.options?.length,
+    combatHref:combat?.href};
+  })()`);
+  return p?.ready==='SOURCE_ONLY'&&p.count===12&&
+   p.selected==='pulse-sprayer'&&
+   p.combatHref?.includes('t21W10B192=humanCombat')?p:false;
+ },90000);
+ record('P2_TRUE_PORTAL_READY',portal);
+ await clickButton('#source-weapon-preselect');
+ for(let i=0;i<2;i++){
+  await key('rawKeyDown','ArrowDown','ArrowDown',40);
+  await key('keyUp','ArrowDown','ArrowDown',40);
+ }
+ await key('rawKeyDown','Enter','Enter',13);
+ await key('keyUp','Enter','Enter',13);
+ await key('rawKeyDown','Tab','Tab',9);
+ await key('keyUp','Tab','Tab',9);
+ const choice=await until(async()=>{
+  const p=await evalPage(`(()=>{
+   const w=document.querySelector('#source-weapon-preselect');
+   const a=document.querySelector('#play-combat');
+   return {weapon:w?.value,href:a?.href};
+  })()`);
+  return p?.weapon==='twin-comets'&&p.href&&
+   new URL(p.href).searchParams.get('t21W10B389')==='twin-comets'?p:false;
+ },25000);
+ report.realKeyboardSelect=true;
+ record('P2_ACTUAL_TWIN_COMETS_PORTAL_SELECTION',choice);
+ await clickButton('#play-combat');
+ const boot=await until(async()=>{
+  const n=await capture();
+  return n?.ready==='READY'&&n.renderer==='webgl2'&&
+   n.phase==='STAGING'&&n.paused&&n.tick===0&&n.remaining===180&&
+   n.cpuRejoined===0&&n.weapon==='twin-comets'&&
+   n.selected==='twin-comets'&&
+   n.bootKit==='VERIFIED_PREGAME_SELECTION'&&
+   n.shots===0&&n.ink===100&&n.hp===100?n:false;
+ },120000);
+ originalCombat(boot,'FIRST_READY');
+ const params=new URLSearchParams(boot.search);
+ if(params.get('t21W10B192')!=='humanCombat'||
+    params.get('t21QaDrive')!=='source'||
+    params.get('t21W10B203')!=='fullRound'||
+    params.get('t21W10B389')!=='twin-comets'||
+    ['t21W10B193','t21W10B384','t21W10B441',
+     't21W10B448','t21QaInput','scoreable','production']
+       .some(k=>params.has(k)))
+   fail('P2_NOT_PURE_CANONICAL_COMBAT',boot);
+ record('P2_FIRST_CANONICAL_COMBAT_NEW_WORLD',boot);
+ await picture('p2-combat-ready');
+ await clickButton('#t21-f3-b202-resume');
+ await until(()=>evalPage('document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+ const started=await until(async()=>{
+  const n=await capture();
+  return n?.phase==='PLAYING'&&n.cpuRejoined===7&&n.lock&&
+   !n.paused&&n.remaining>0?n:false;
+ },300000);
+ originalCombat(started,'FIRST_PLAYING');
+ report.realPointerLock=true;
+ record('P2_FIRST_REAL_SEVEN_CPU_JOIN',started);
+ const mid=await until(async()=>{
+  const n=await capture();
+  return n?.phase==='PLAYING'&&n.remaining<=90&&
+   n.remaining>0&&n.tick>started.tick&&!n.stop?n:false;
+ },3900000);
+ originalCombat(mid,'REAL_90_SECONDS');
+ record('P2_TRUE_NATIVE_CLOCK_90_SECONDS',mid);
+ const end=await until(async()=>{
+  const n=await capture();
+  return n?.phase==='TIME_UP'&&n.remaining===0&&n.paused&&
+   !n.lock&&n.finishVisible&&n.finishState==='FINISHED'&&
+   n.replayReady&&!n.stop?n:false;
+ },3900000);
+ originalCombat(end,'FIRST_TRUE_TIME_UP');
+ const elapsed=(180-started.remaining)*60+end.tick-started.tick;
+ if(elapsed<10800-0.02||elapsed>10805)
+  fail('P2_NOT_TRUE_10800_NATIVE_COUNTDOWN',{elapsed,started,end});
+ record('P2_REAL_180_SECOND_TIME_UP_AND_VISIBLE_RESULT',end);
+ await picture('p2-combat-timeup');
+ await clickButton('#t21-f3-b59-restart');
+ const replay=await until(async()=>{
+  const n=await capture();
+  return n?.origin>boot.origin&&n.phase==='STAGING'&&n.paused&&
+   n.tick===0&&n.remaining===180&&n.cpuRejoined===0&&
+   n.shots===0&&n.ink===100&&n.hp===100&&
+   n.weapon==='twin-comets'&&n.selected==='twin-comets'&&
+   n.bootKit==='VERIFIED_PREGAME_SELECTION'&&n.search===boot.search?n:false;
+ },120000);
+ originalCombat(replay,'REPLAY_TRUE_NEW_WORLD');
+ record('P2_CDP_CLICK_NEW_RAPIER_RECAST_SAME_KIT',replay);
+ await picture('p2-combat-replay-ready');
+ await clickButton('#t21-f3-b202-resume');
+ await until(()=>evalPage('document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
+ const second=await until(async()=>{
+  const n=await capture();
+  return n?.phase==='PLAYING'&&n.cpuRejoined===7&&
+   !n.paused&&n.lock&&n.weapon==='twin-comets'?n:false;
+ },300000);
+ originalCombat(second,'SECOND_7CPU');
+ record('P2_SECOND_NEW_WORLD_SEVEN_CPU_REJOIN',second);
+ await cmd('Input.dispatchMouseEvent',{
+  type:'mouseMoved',x:800,y:620,button:'none'});
+ await cmd('Input.dispatchMouseEvent',{
+  type:'mousePressed',x:800,y:620,button:'left',buttons:1,clickCount:1});
+ let fired;
+ try{
+  fired=await until(async()=>{
+   const n=await capture();
+   return n?.phase==='PLAYING'&&n.cpuRejoined===7&&
+    n.lock&&n.shots>=second.shots+3&&n.ink<second.ink&&!n.stop?n:false;
+  },90000);
+ }finally{
+  await cmd('Input.dispatchMouseEvent',{
+   type:'mouseReleased',x:800,y:620,button:'left',buttons:0,clickCount:1});
+ }
+ originalCombat(fired,'REAL_REPLAY_SHOT');
+ record('P2_SECOND_REAL_TWIN_COMETS_PAID_SHOTS',fired);
+ await picture('p2-combat-reshoot');
+ report.outcome='PASS_ONE_REAL_CANONICAL_COMBAT_180_TIMEUP_TWIN_REPLAY_RESHOT';
+ report.oneRunEvidence={oldOrigin:boot.origin,newOrigin:replay.origin,
+  timeUpTick:end.tick,elapsedNativeCountdownTicks:elapsed,
+  firstCpu7:true,secondCpu7:true,newWorldTick:replay.tick,
+  replayWeapon:'twin-comets',realSecondShots:fired.shots-second.shots,
+  realSecondInkSpend:second.ink-fired.ink,
+  source:'25/17/26/0',scoreable:0,winner:'NONE',
+  fourvfour:false,actorWrites:0,clockWrites:0,scoreWrites:0};
+ persist();
+ console.log('P2_REAL_CANONICAL_COMBAT_REPLAY_PASS',JSON.stringify(report.oneRunEvidence));
+}
+
 async function run(){
  mkdirSync(OUT,{recursive:true});persist();
  const chrome=process.env.T21_CHROME_PATH||
@@ -136,6 +325,10 @@ async function run(){
  });
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
+ if(process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE==='1'){
+  await runApprovedCombatTwinReplay();
+  return;
+ }
  // User starts from actual QA preview, NOT directly invented B384 flags.
  // B386 player launch begins at normal preview with no QA flag.
  await cmd('Page.navigate',{url:ROOT+'?t21Play=preview'});

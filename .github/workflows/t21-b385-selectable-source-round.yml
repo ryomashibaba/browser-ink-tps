@@ -48,9 +48,37 @@ jobs:
           T21_B390_TRUE_180S: ${{ contains(github.event.head_commit.message, '[b415-short]') && '0' || '1' }}
           T21_B415_SHORT_CANONICAL: ${{ contains(github.event.head_commit.message, '[b415-short]') && '1' || '0' }}
           T21_P1_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[p1-own-once]') && '1' || '0' }}
+          T21_P2_COMBAT_TWIN_180_REPLAY_ONCE: ${{ contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && '1' || '0' }}
         run: node scripts/t21-b385-native-selectable-circuit.mjs
+      # One user-approved public ubuntu-latest run: no billed artifact
+      # storage. Retain the genuine JSON and framebuffer bytes in logs.
+      - name: Preserve P2 real RAW in free job logs, no artifact upload
+        if: ${{ always() && contains(github.event.head_commit.message, '[p2-canonical-combat-once]') }}
+        run: |
+          node --input-type=module <<'P2RAW'
+          import {readFileSync,existsSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const dir='/tmp/t21-b385/';
+          const raw=dir+'b385-native-source.json';
+          if(existsSync(raw)){
+           console.log('T21_P2_GENUINE_NATIVE_JSON_BEGIN');
+           console.log(readFileSync(raw,'utf8'));
+           console.log('T21_P2_GENUINE_NATIVE_JSON_END');
+          }else console.log('T21_P2_NO_NATIVE_JSON_HOLD');
+          for(const file of ['p2-combat-timeup.png',
+           'p2-combat-replay-ready.png','p2-combat-reshoot.png']){
+           if(!existsSync(dir+file))continue;
+           const bytes=readFileSync(dir+file);
+           const sha=createHash('sha256').update(bytes).digest('hex');
+           console.log('T21_P2_REAL_PNG_BEGIN '+file+' '+sha+' '+bytes.length);
+           const b64=bytes.toString('base64');
+           for(let i=0;i<b64.length;i+=30000)
+            console.log('T21_P2_REAL_PNG_CHUNK '+file+' '+i+' '+b64.slice(i,i+30000));
+           console.log('T21_P2_REAL_PNG_END '+file);
+          }
+          P2RAW
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
-        if: always()
+        if: ${{ always() && !contains(github.event.head_commit.message, '[p2-canonical-combat-once]') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ contains(github.event.head_commit.message, '[b415-short]') && 'b415-genuine-short-canonical-circuit' || 'b390-genuine-selected-180s-source-round' }}
