@@ -1784,7 +1784,8 @@ export class CpuAgentSystem {
     center: Vec3,
     radius: number,
     damage: number,
-    sourceTeam: Team.A | Team.B
+    sourceTeam: Team.A | Team.B,
+    sourceMeleeTargetClear?: (bodyCenter: Vec3) => boolean
   ): number {
     if (radius <= 0 || damage <= 0) return 0;
     const radiusSq = radius * radius;
@@ -1801,6 +1802,11 @@ export class CpuAgentSystem {
       const dy = bot.position.y + 0.68 - center.y;
       const dz = bot.position.z - center.z;
       if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+      // SOURCE original Rapier wall protection, melee only. All other
+      // blast/SUB or legacy callers pass no predicate.
+      if(sourceMeleeTargetClear&&!sourceMeleeTargetClear(
+        new Vec3(bot.position.x,bot.position.y+0.68,bot.position.z)
+      ))continue;
 
       if (
         bot.weaponGuarding &&

@@ -1098,7 +1098,7 @@ export class ProjectileSystem {
         );
         if (this.meleeCooldown <= 0) {
           const contact = playerPosition.clone().add(flattened(direction).mulScalar(0.72));
-          this.applyMeleeDamage(contact, 0.88, 38, team);
+          this.applyMeleeDamage(contact,0.88,38,team,playerPosition);
           this.meleeCooldown = 0.18;
         }
         this.rollPaintCooldown = 0.075;
@@ -1124,7 +1124,7 @@ export class ProjectileSystem {
 
     const forward = flattened(direction);
     const center = playerPosition.clone().add(forward.clone().mulScalar(1.05));
-    this.applyMeleeDamage(center, 1.22, 24, team);
+    this.applyMeleeDamage(center,1.22,24,team,playerPosition);
     if(paintOrigin)this.paintFan(team, paintOrigin, forward, 1.95, 1.35, 5, 0.42, PaintEventType.Impact);
     this.feedback.melee(team, center, profile, 0.82);
     this.fireCooldown = profile.fireIntervalSeconds;
@@ -1324,7 +1324,7 @@ export class ProjectileSystem {
         const center = playerPosition.clone().add(forward.clone().mulScalar(charge >= 0.62 ? 1.15 : 0.92));
         const meleeDamage = charge >= 0.62 ? 95 : 42;
         const meleeRadius = charge >= 0.62 ? 1.05 : 0.82;
-        this.applyMeleeDamage(center, meleeRadius, meleeDamage, team);
+        this.applyMeleeDamage(center,meleeRadius,meleeDamage,team,playerPosition);
         if(paintOrigin)this.paintSlash(team, paintOrigin, forward, charge);
 
         const slot = this.slots.find((candidate) => !candidate.active);
@@ -1371,7 +1371,8 @@ export class ProjectileSystem {
   ): void {
     const forward = flattened(direction);
     const center = playerPosition.clone().add(forward.clone().mulScalar(airborne ? 1.65 : 1.25));
-    this.applyMeleeDamage(center, airborne ? 1.05 : 1.55, airborne ? 72 : 58, team);
+    this.applyMeleeDamage(center,airborne ? 1.05 : 1.55,
+      airborne ? 72 : 58,team,playerPosition);
 
     if(paintOrigin&&airborne){
       for (let i = 1; i <= 5; i += 1) {
@@ -1776,7 +1777,7 @@ export class ProjectileSystem {
     const center = request.bodyPosition.clone()
       .add(forward.clone().mulScalar(1.25));
 
-    this.applyMeleeDamage(center, 1.55, 58, request.team);
+    this.applyMeleeDamage(center,1.55,58,request.team,request.origin);
     const originalFoot=request.sourceInkTransaction?
       this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
     if(!request.sourceInkTransaction||originalFoot)this.paintFan(
@@ -1818,7 +1819,7 @@ export class ProjectileSystem {
     );
     const contact = request.bodyPosition.clone()
       .add(forward.clone().mulScalar(0.72));
-    this.applyMeleeDamage(contact, 0.88, 38, request.team);
+    this.applyMeleeDamage(contact,0.88,38,request.team,request.origin);
   }
 
   private executeCpuBrushSwipe(
@@ -1831,7 +1832,7 @@ export class ProjectileSystem {
     const center = request.bodyPosition.clone()
       .add(forward.clone().mulScalar(1.05));
 
-    this.applyMeleeDamage(center, 1.22, 24, request.team);
+    this.applyMeleeDamage(center,1.22,24,request.team,request.origin);
     const originalFoot=request.sourceInkTransaction?
       this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
     if(!request.sourceInkTransaction||originalFoot)this.paintFan(
@@ -1949,7 +1950,8 @@ export class ProjectileSystem {
       center,
       meleeRadius,
       meleeDamage,
-      request.team
+      request.team,
+      request.origin
     );
     const originalFoot=request.sourceInkTransaction?
       this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
@@ -2325,13 +2327,29 @@ export class ProjectileSystem {
     }
   }
 
+  /** Use ONLY existing original Rapier solid queries to reject melee
+   * targets behind registered cover in genuine SOURCE human/CPU play. */
+  private sourceMeleeLineClear(from:Vec3,to:Vec3):boolean{
+    if(![from.x,from.y,from.z,to.x,to.y,to.z]
+      .every(Number.isFinite))return false;
+    const distance=from.distance(to);
+    if(distance<=1e-8)return true;
+    const block=this.physics.castStageSegment(from,to,'ink-projectile');
+    return !block||Number.isFinite(block.distance)&&
+      block.distance>=Math.max(0,distance-.025);
+  }
+
   private applyAreaDamage(
     point: Vec3,
     radius: number,
     damage: number,
-    team: Team.A | Team.B
+    team: Team.A | Team.B,
+    sourceMeleeOrigin?:Vec3
   ): void {
-    this.cpuAgents.applyAreaDamage(point, radius, damage, team);
+    const meleeClear=this.nativeSourceHumanPhysicalMode&&sourceMeleeOrigin?
+      (body:Vec3)=>this.sourceMeleeLineClear(sourceMeleeOrigin,body):
+      undefined;
+    this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear);
     this.combatTargets.applyAreaDamage(point, radius, damage, team);
 
     if (
@@ -2350,7 +2368,8 @@ export class ProjectileSystem {
       // Dead players are never damaged again in the same physical tick.
       if(this.resources.currentHp<=0||!nativeSourceHumanInBlast(
         point,radius,this.currentHumanPosition,
-        this.nativeSourceHumanPhysicalMode()))return;
+        this.nativeSourceHumanPhysicalMode())||
+        meleeClear&&!meleeClear(this.currentHumanPosition))return;
     }else{
       // Frozen T20 and historical QA remain byte-for-byte compatible.
       const dx = this.currentHumanPosition.x - point.x;
@@ -2386,9 +2405,10 @@ export class ProjectileSystem {
     point: Vec3,
     radius: number,
     damage: number,
-    team: Team.A | Team.B
+    team: Team.A | Team.B,
+    sourceMeleeOrigin?:Vec3
   ): void {
-    this.applyAreaDamage(point, radius, damage, team);
+    this.applyAreaDamage(point,radius,damage,team,sourceMeleeOrigin);
   }
 
   private paintFan(
