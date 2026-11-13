@@ -4907,6 +4907,10 @@ export class UndertowF3PlayablePreviewApp{
      !(this.b203FullRound&&this.b203EverLockedRealPointer||
        this.b25Run.snapshot().status==='RUNNING'&&this.matchState==='PLAYING'))return;
   this.paused=true;this.resumeAfterRealPointerLock=true;
+  // Pointer lock loss must not become an implicit charged-weapon mouseup.
+  // No real SOURCE projectiles, actors, ink or clock are reset.
+  if(this.nativeLiveSourcePrestart)
+   this.projectiles.cancelUnreleasedNativeSourceHumanFire();
   if(document.pointerLockElement===this.canvas)document.exitPointerLock();
   this.refreshB25PaintRun();this.refresh();
  }
@@ -4920,9 +4924,8 @@ export class UndertowF3PlayablePreviewApp{
     this.b25RunProgress.textContent='PAUSED · CLICK STAGE TO RESUME ACTUAL SOURCE PLAY';
     return;
    }
-   this.paused=true;this.resumeAfterRealPointerLock=true;
-   if(document.pointerLockElement===this.canvas)document.exitPointerLock();
-   this.refreshB25PaintRun();this.refresh();
+   // Explicit pause shares real-focus-loss cancellation and freeze.
+   this.pauseSourceRoundOnFocusLoss();
    return;
   }
   this.paused=!this.paused;

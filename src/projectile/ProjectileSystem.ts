@@ -391,6 +391,23 @@ export class ProjectileSystem {
     this.dualiesFocusSeconds = 0.62;
   }
 
+  /** Real SOURCE pause is not an actual trigger release. Clear an
+   * unreleased HUMAN charge before the next native 60Hz step, preventing
+   * ghost CHARGER/STRINGER/SPLATANA discharge or SPLATLING burst.
+   * Preserve committed bursts, physical projectiles, cooldowns, all
+   * original CPU actions and the real round clock. T20 never calls this. */
+  public cancelUnreleasedNativeSourceHumanFire(): void {
+    if (!this.nativeSourceHumanPhysicalMode) return;
+    this.wasFireHeld = false;
+    this.chargeSeconds = 0;
+    this.stats.playerWeaponChargePercent = 0;
+    if (this.burstShotsRemaining <= 0) {
+      this.splatlingStoredChargeSeconds = 0;
+      this.stats.playerWeaponChargeRing = 0;
+      this.stats.playerWeaponFirstRingPercent = 0;
+    }
+  }
+
   public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
     const weaponClass = this.currentPlayerWeapon.weaponClass;
     if (weaponClass === 'BRUSH' && fireHeld) return 1.15;
