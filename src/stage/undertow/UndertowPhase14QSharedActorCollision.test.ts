@@ -367,7 +367,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   };
   expect(supported(spawn[0],spawn[2])).toBe(true);
   let verifiedEdge=false;
-  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]] as const){
    let prior={x:spawn[0],y,z:spawn[2]};
    for(let i=1;i<=600;i++){
     const to={x:spawn[0]+dx*i*.05,y,z:spawn[2]+dz*i*.05};
