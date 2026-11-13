@@ -297,6 +297,9 @@ describe('native ORIGINAL SOURCE 7-CPU true-capsule area damage',()=>{
   )=>{flags.push(capsule===true);return 0;}};
   native.combatTargets={applyAreaDamage:()=>{}};
   native.currentHumanDamageable=false;
+  // Object.create bypasses the real constructor's explicit null default.
+  // Reproduce the genuine frozen T20 field initialization before testing.
+  native.nativeSourceHumanPhysicalMode=null;
   game.applyExternalAreaDamage(new Vec3(0,0,0),1,10,Team.A);
   native.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
   game.applyExternalAreaDamage(new Vec3(0,0,0),1,10,Team.A);
