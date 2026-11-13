@@ -7952,6 +7952,7 @@ export class UndertowF3PlayablePreviewApp{
     autonomousEncounterVerified:false,
     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
+   blockedSourceActionEvidence:this.cpu.blockedSourceActionSnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
    humanCpuDirectHits:this.stats.humanCpuDirectHits,

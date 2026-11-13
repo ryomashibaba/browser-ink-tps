@@ -70,7 +70,12 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>
       supported?{point:new Vec3(0,0,0),
         solidId:registered?'UndertowT21D:right-low-team-b':'UNREGISTERED'}:null);
-    system.updateCpuWeapon=vi.fn();
+    system.blockedSourceActionRows=new Map();
+    system.pendingShots=[];
+    system.pendingKitRequests=[];
+    system.updateCpuWeapon=vi.fn(()=>{
+      system.pendingShots.push({sourceId:bot.id});
+    });
     system.updateCpuKit=vi.fn();
     const humanFoot=new Vec3(5,0,0);
     const act=(clockOpen=true)=>
@@ -96,6 +101,14 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     system.stage.metadata.id='inkworks-junction';act();
     expect(system.updateCpuWeapon).toHaveBeenCalledTimes(1);
     expect(system.updateCpuKit).toHaveBeenCalledTimes(1);
+    const witness=system.blockedSourceActionSnapshot();
+    expect(witness.supportedWindows).toBe(1);
+    expect(witness.mainRequests).toBe(1);
+    expect(witness.kitRequests).toBe(0);
+    expect(witness.byActor.B1).toEqual({
+      supportedWindows:1,mainRequests:1,kitRequests:0});
+    expect(witness.trueProjectileLaunchesCertified).toBe(false);
+    expect(witness.trueImpactCellsCertified).toBe(false);
   });
 });
 

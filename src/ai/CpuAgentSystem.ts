@@ -265,6 +265,11 @@ export class CpuAgentSystem {
   private readonly sourceCommittedPaintAims = new Map<string,{
     weaponId:WeaponId;target:Vec3
   }>();
+  // Read-only: actions that BEGIN at a real supported CPU foot while
+  // the native Crowd candidate is rejected. Requests are NOT bullets.
+  private readonly blockedSourceActionRows = new Map<string,{
+    supportedWindows:number;mainRequests:number;kitRequests:number
+  }>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
   private b152AcceptedSourceAimShots=0;
   // B64 experimental source-local alternate AIM only. Original FIXED
@@ -654,6 +659,28 @@ export class CpuAgentSystem {
     return this.qaContinuity.snapshot();
   }
 
+  /** Read only. A paid request still needs real ProjectileSystem dispatch,
+   * registered Rapier collision and PaintCoordinator owner-grid evidence. */
+  public blockedSourceActionSnapshot(){
+    const byActor:Record<string,{
+      supportedWindows:number;mainRequests:number;kitRequests:number
+    }>=Object.fromEntries([...this.blockedSourceActionRows]
+      .sort(([a],[b])=>a.localeCompare(b))
+      .map(([id,row])=>[id,{...row}]));
+    return {source:'REGISTERED_RAPIER_FOOT_AFTER_CROWD_VETO' as const,
+      byActor,
+      supportedWindows:Object.values(byActor).reduce(
+        (sum,row)=>sum+row.supportedWindows,0),
+      mainRequests:Object.values(byActor).reduce(
+        (sum,row)=>sum+row.mainRequests,0),
+      kitRequests:Object.values(byActor).reduce(
+        (sum,row)=>sum+row.kitRequests,0),
+      trueProjectileLaunchesCertified:false as const,
+      trueImpactCellsCertified:false as const,
+      sourceScoreablePromotions:0 as const,
+      newPhysicsOrNavLinks:0 as const};
+  }
+
   /** CPU weapon requests accepted for genuine paintable turf, per real actor. */
   public qaTurfShotSnapshot(): Readonly<Record<string, number>> {
     return Object.fromEntries(
@@ -673,6 +700,7 @@ export class CpuAgentSystem {
     this.b35RealNativeRequests=0;
     this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
+    this.blockedSourceActionRows.clear();
     this.sourceCommittedPaintAims.clear();
     this.qaTurfShotsByActor.clear();
     this.b152AcceptedSourceAimShots=0;
@@ -1270,8 +1298,18 @@ export class CpuAgentSystem {
       bot.id,bot.position);
     if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
        Math.abs(support.point.y-bot.position.y)>.25)return;
+    const shotBefore=this.pendingShots.length;
+    const kitBefore=this.pendingKitRequests.length;
     this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive);
     this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
+    const previous=this.blockedSourceActionRows.get(bot.id)??{
+      supportedWindows:0,mainRequests:0,kitRequests:0};
+    previous.supportedWindows++;
+    previous.mainRequests+=this.pendingShots.slice(shotBefore)
+      .filter(req=>req.sourceId===bot.id).length;
+    previous.kitRequests+=this.pendingKitRequests.slice(kitBefore)
+      .filter(req=>req.sourceId===bot.id).length;
+    this.blockedSourceActionRows.set(bot.id,previous);
   }
 
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
