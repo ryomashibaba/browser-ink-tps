@@ -110,6 +110,7 @@ on:
       - 'src/ai/B178OriginalSourceInkResources.ts'
       - 'src/ai/B178OriginalSourceInkResources.test.ts'
       - 'src/stage/undertow/UndertowPhase14QSharedActorCollision.ts'
+      - 'src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts'
       - 'src/ink/GameplayInkSystem.ts'
       - 'src/ink/PaintSurface.test.ts'
       - 'src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts'
