@@ -224,7 +224,7 @@ describe('SOURCE registered Rapier cover governs genuine melee HP contact',()=>{
 describe('CPU real melee line of sight checked before actual HP loss',()=>{
  it('rejects blocked bot, permits clear bot and unchanged nonmelee blast',async()=>{
   const {CpuAgentSystem}=await import('../ai/CpuAgentSystem');
-  const sys=Object.create(CpuAgentSystem.prototype) as CpuAgentSystem;
+  const sys=Object.create(CpuAgentSystem.prototype) as InstanceType<typeof CpuAgentSystem>;
   const inner=sys as unknown as {bots:unknown;stats:unknown;f3dSourceGoals:unknown};
   const bot={id:'B1',team:Team.B,lifeState:'ACTIVE',hp:100,
    position:new Vec3(1,0,0),mobilityState:'GROUND',
