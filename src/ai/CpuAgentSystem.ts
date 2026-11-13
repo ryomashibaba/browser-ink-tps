@@ -1262,9 +1262,14 @@ export class CpuAgentSystem {
     if(!canStartNewCombatActions||!this.phase14qF2RecoverableSteps||
        !this.f3dSourceGoals||
        this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
-       !this.sourceCpuMayStartActions(bot)||
-       !this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position))
-      return;
+       !this.sourceCpuMayStartActions(bot))return;
+    // The shared-world authority checks current ORIGINAL Rapier support.
+    // Independently confirm its registered solid and unchanged <=.25m
+    // source-foot band before granting a stationary weapon decision.
+    const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+      bot.id,bot.position);
+    if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
+       Math.abs(support.point.y-bot.position.y)>.25)return;
     this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive);
     this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
   }

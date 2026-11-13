@@ -65,10 +65,11 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
-    let supported=true;
+    system.stage.solids=[{id:'UndertowT21D:right-low-team-b'}];
+    let supported=true,registered=true;
     system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>
       supported?{point:new Vec3(0,0,0),
-        solidId:'UndertowT21D:right-low-team-b'}:null);
+        solidId:registered?'UndertowT21D:right-low-team-b':'UNREGISTERED'}:null);
     system.updateCpuWeapon=vi.fn();
     system.updateCpuKit=vi.fn();
     const humanFoot=new Vec3(5,0,0);
@@ -82,8 +83,10 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     expect(system.phase14qGroundCollision.sourceFootSupport)
       .toHaveBeenCalledWith(bot.id,bot.position);
 
-    // Rejected edge on an unsupported ORIGINAL face must stay silent.
+    // Rejected edge on an unsupported or unregistered ORIGINAL face
+    // must remain silent, even if an adapter returns a counterfeit ID.
     supported=false;act();
+    supported=true;registered=false;act();registered=true;
     // A CPU rejoining after drop or splatted cannot use this stationary path.
     supported=true;bot.mobilityState='FIRST_DROP_REJOIN';act();
     bot.mobilityState='GROUND';bot.hp=0;act();
