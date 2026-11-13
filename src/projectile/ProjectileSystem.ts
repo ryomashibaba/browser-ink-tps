@@ -855,16 +855,23 @@ export class ProjectileSystem {
     return sourceNativeMeleePaintFoot(body,this.stats.playerGrounded,hit);
   }
 
-  private sourceHumanMeleeStampAllowed(foot:Vec3,target:Vec3,
-    surfaceId:string):boolean{
+  /** Choose only the original Rapier-backed paint surface BEFORE
+   * planar ranking. A closer, different layer cannot suppress supported
+   * ROLLER / BRUSH / SPLATANA ink. No new collision or scoring grants. */
+  private sourceHumanMeleeApprovedSurfaceId(foot:Vec3,target:Vec3):
+    string|null{
+    if(![foot.x,foot.y,foot.z,target.x,target.y,target.z]
+      .every(Number.isFinite))return null;
     const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
     const hit=this.physics.castCharacterFootSupport(
       new Vec3(target.x,target.y+offset,target.z),offset,'HUMAN');
+    if(!hit?.solidId)return null;
     const from=new Vec3(foot.x,foot.y+.08,foot.z);
-    const to=hit?new Vec3(hit.point.x,hit.point.y+.08,hit.point.z):null;
-    const block=to?this.physics.castStageSegment(from,to,'ink-projectile'):null;
-    return sourceNativeMeleeStampAllowed(foot,target,surfaceId,hit,
-      block?.distance??null);
+    const to=new Vec3(hit.point.x,hit.point.y+.08,hit.point.z);
+    const block=this.physics.castStageSegment(from,to,'ink-projectile');
+    const id=hit.solidId+':paint';
+    return sourceNativeMeleeStampAllowed(foot,target,id,hit,
+      block?.distance??null)?id:null;
   }
 
   private sourceHumanMeleeStampOrigin(origin:Vec3,source:PaintSource):
@@ -2441,7 +2448,14 @@ export class ProjectileSystem {
         }
       | null = null;
 
+    // Only grounded SOURCE human melee uses the original foot and
+    // physically backed paint ID. All other game modes use the old ranking.
+    const sourceSupportedId=originalMeleeSourceFoot
+      ?this.sourceHumanMeleeApprovedSurfaceId(originalMeleeSourceFoot,worldPoint)
+      :null;
+    if(originalMeleeSourceFoot&&!sourceSupportedId)return false;
     for (const surface of this.surfaces) {
+      if(sourceSupportedId&&surface.id!==sourceSupportedId)continue;
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
       if (!projected.inside || projected.planeDistance > maxPlaneDistance) continue;
@@ -2456,9 +2470,6 @@ export class ProjectileSystem {
     }
 
     if (!best) return false;
-    if(originalMeleeSourceFoot&&
-       !this.sourceHumanMeleeStampAllowed(originalMeleeSourceFoot,
-         worldPoint,best.surface.id))return false;
 
     const dir = worldDirection.lengthSq() > 1e-8
       ? worldDirection.clone().normalize()
