@@ -6,6 +6,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import type {PlayerMode} from '../player/PlayerController';
 import {b343CanLaunchSourceVolley} from './B343OriginalSourceVolleyBudget';
+import {sourceNativeMeleePaintFoot,sourceNativeMeleeStampAllowed} from './NativeSourceMeleePaintSupport';
 import {b345BoundOpeningCooldown} from './B345SourceShooterOpeningCadence';
 import {B346NativeShooterWitness, type B346ShooterExitKind} from './B346NativeShooterWitness';
 import {b348CandidateShooterAngles} from './B348SourceShooterAccuracyCandidate';
@@ -826,6 +827,34 @@ export class ProjectileSystem {
     }
   }
 
+  /** SOURCE human grounded melee paints from actual ORIGINAL Rapier foot,
+   * not the elevated capsule center. Damage, actors, nav and clock unchanged. */
+  private sourceHumanGroundMeleePaintFoot(body:Vec3):Vec3|null{
+    if(!this.nativeSourceHumanPhysicalMode||
+       this.nativeSourceHumanPhysicalMode()!=='HUMAN')return null;
+    const hit=this.physics.castCharacterFootSupport(body,
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+    return sourceNativeMeleePaintFoot(body,this.stats.playerGrounded,hit);
+  }
+
+  private sourceHumanMeleeStampAllowed(foot:Vec3,target:Vec3,
+    surfaceId:string):boolean{
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const hit=this.physics.castCharacterFootSupport(
+      new Vec3(target.x,target.y+offset,target.z),offset,'HUMAN');
+    const from=new Vec3(foot.x,foot.y+.08,foot.z);
+    const to=hit?new Vec3(hit.point.x,hit.point.y+.08,hit.point.z):null;
+    const block=to?this.physics.castStageSegment(from,to,'ink-projectile'):null;
+    return sourceNativeMeleeStampAllowed(foot,target,surfaceId,hit,
+      block?.distance??null);
+  }
+
+  private sourceHumanMeleeStampOrigin(origin:Vec3,source:PaintSource):
+    Vec3|undefined{
+    return this.nativeSourceHumanPhysicalMode&&this.stats.playerGrounded&&
+      source===PaintSource.Human?origin:undefined;
+  }
+
   private updatePlayerWeapon(
     dt: number,
     profile: WeaponProfile,
@@ -839,6 +868,12 @@ export class ProjectileSystem {
     playerPosition: Vec3
   ): void {
     this.stats.playerWeaponAction = guarding ? 'GUARD' : 'READY';
+    const groundedSourceMelee=this.nativeSourceHumanPhysicalMode!==null&&
+      this.stats.playerGrounded&&
+      (profile.weaponClass==='ROLLER'||profile.weaponClass==='BRUSH'||
+       profile.weaponClass==='SPLATANA')&&(fireHeld||fallingFire);
+    const paintOrigin=groundedSourceMelee?
+      this.sourceHumanGroundMeleePaintFoot(playerPosition):playerPosition;
 
     switch (profile.weaponClass) {
       case 'SHOOTER':
@@ -854,10 +889,10 @@ export class ProjectileSystem {
         this.updateBlaster(profile, fireHeld, muzzlePosition, aimDirection, team);
         break;
       case 'ROLLER':
-        this.updateRoller(profile, fireHeld, risingFire, playerPosition, aimDirection, team);
+        this.updateRoller(profile, fireHeld, risingFire, playerPosition, paintOrigin, aimDirection, team);
         break;
       case 'BRUSH':
-        this.updateBrush(profile, fireHeld, playerPosition, aimDirection, team);
+        this.updateBrush(profile, fireHeld, playerPosition, paintOrigin, aimDirection, team);
         break;
       case 'SLOSHER':
         this.updateSlosher(profile, fireHeld, muzzlePosition, aimDirection, team);
@@ -872,7 +907,7 @@ export class ProjectileSystem {
         this.updateStringer(dt, profile, fireHeld, fallingFire, muzzlePosition, aimDirection, team);
         break;
       case 'SPLATANA':
-        this.updateSplatana(dt, profile, fireHeld, fallingFire, playerPosition, muzzlePosition, aimDirection, team);
+        this.updateSplatana(dt, profile, fireHeld, fallingFire, playerPosition, paintOrigin, muzzlePosition, aimDirection, team);
         break;
     }
   }
@@ -991,6 +1026,7 @@ export class ProjectileSystem {
     fireHeld: boolean,
     risingFire: boolean,
     playerPosition: Vec3,
+    paintOrigin: Vec3 | null,
     direction: Vec3,
     team: Team.A | Team.B
   ): void {
@@ -999,7 +1035,7 @@ export class ProjectileSystem {
     if (risingFire && this.fireCooldown <= 0) {
       if (this.resources.tryConsumeShotInk(profile.inkCost)) {
         const airborne = !this.stats.playerGrounded;
-        this.rollerFlick(profile, playerPosition, direction, team, airborne);
+        this.rollerFlick(profile, playerPosition, paintOrigin, direction, team, airborne);
         this.fireCooldown = profile.fireIntervalSeconds;
         this.stats.playerWeaponAction = airborne ? 'VERTICAL_FLICK' : 'HORIZONTAL_FLICK';
       }
@@ -1011,14 +1047,16 @@ export class ProjectileSystem {
       this.rollPaintCooldown <= 0
     ) {
       if (this.resources.tryConsumeShotInk(profile.rollPaintInkCost)) {
-        this.paintWorldStamp(
+        if(paintOrigin)this.paintWorldStamp(
           team,
-          playerPosition,
+          paintOrigin,
           profile.rollPaintRadiusMeters * 1.28,
           profile.rollPaintRadiusMeters * 0.72,
           direction,
           0.8,
-          PaintEventType.Foot
+          PaintEventType.Foot,PaintSource.Human,undefined,
+          paintOrigin?this.sourceHumanMeleeStampOrigin(
+            paintOrigin,PaintSource.Human):undefined
         );
         if (this.meleeCooldown <= 0) {
           const contact = playerPosition.clone().add(flattened(direction).mulScalar(0.72));
@@ -1035,6 +1073,7 @@ export class ProjectileSystem {
     profile: WeaponProfile,
     fireHeld: boolean,
     playerPosition: Vec3,
+    paintOrigin: Vec3 | null,
     direction: Vec3,
     team: Team.A | Team.B
   ): void {
@@ -1048,7 +1087,7 @@ export class ProjectileSystem {
     const forward = flattened(direction);
     const center = playerPosition.clone().add(forward.clone().mulScalar(1.05));
     this.applyMeleeDamage(center, 1.22, 24, team);
-    this.paintFan(team, playerPosition, forward, 1.95, 1.35, 5, 0.42, PaintEventType.Impact);
+    if(paintOrigin)this.paintFan(team, paintOrigin, forward, 1.95, 1.35, 5, 0.42, PaintEventType.Impact);
     this.feedback.melee(team, center, profile, 0.82);
     this.fireCooldown = profile.fireIntervalSeconds;
     this.stats.playerWeaponAction = 'BRUSH_SWIPE';
@@ -1228,6 +1267,7 @@ export class ProjectileSystem {
     fireHeld: boolean,
     fallingFire: boolean,
     playerPosition: Vec3,
+    paintOrigin: Vec3 | null,
     origin: Vec3,
     direction: Vec3,
     team: Team.A | Team.B
@@ -1247,7 +1287,7 @@ export class ProjectileSystem {
         const meleeDamage = charge >= 0.62 ? 95 : 42;
         const meleeRadius = charge >= 0.62 ? 1.05 : 0.82;
         this.applyMeleeDamage(center, meleeRadius, meleeDamage, team);
-        this.paintSlash(team, playerPosition, forward, charge);
+        if(paintOrigin)this.paintSlash(team, paintOrigin, forward, charge);
 
         const slot = this.slots.find((candidate) => !candidate.active);
         if (slot) {
@@ -1286,6 +1326,7 @@ export class ProjectileSystem {
   private rollerFlick(
     profile: WeaponProfile,
     playerPosition: Vec3,
+    paintOrigin: Vec3 | null,
     direction: Vec3,
     team: Team.A | Team.B,
     airborne: boolean
@@ -1294,13 +1335,13 @@ export class ProjectileSystem {
     const center = playerPosition.clone().add(forward.clone().mulScalar(airborne ? 1.65 : 1.25));
     this.applyMeleeDamage(center, airborne ? 1.05 : 1.55, airborne ? 72 : 58, team);
 
-    if (airborne) {
+    if(paintOrigin&&airborne){
       for (let i = 1; i <= 5; i += 1) {
-        const point = playerPosition.clone().add(forward.clone().mulScalar(i * 0.85));
+        const point = paintOrigin.clone().add(forward.clone().mulScalar(i * 0.85));
         this.paintWorldStamp(team, point, 0.48, 0.26, forward, 1.2, PaintEventType.Impact);
       }
-    } else {
-      this.paintFan(team, playerPosition, forward, 2.9, 2.4, 7, 0.58, PaintEventType.Impact);
+    }else if(paintOrigin){
+      this.paintFan(team, paintOrigin, forward, 2.9, 2.4, 7, 0.58, PaintEventType.Impact);
     }
 
     this.feedback.melee(team, center, profile, airborne ? 1.15 : 1.45);
@@ -2328,7 +2369,8 @@ export class ProjectileSystem {
         0.85,
         type,
         source,
-        actorId
+        actorId,
+        this.sourceHumanMeleeStampOrigin(origin,source)
       );
     }
   }
@@ -2354,7 +2396,8 @@ export class ProjectileSystem {
         0.9,
         PaintEventType.Impact,
         source,
-        actorId
+        actorId,
+        this.sourceHumanMeleeStampOrigin(origin,source)
       );
     }
   }
@@ -2368,7 +2411,8 @@ export class ProjectileSystem {
     maxPlaneDistance: number,
     type: PaintEventType,
     source: PaintSource = PaintSource.Human,
-    actorId?: string
+    actorId?: string,
+    originalMeleeSourceFoot?: Vec3
   ): boolean {
     let best:
       | {
@@ -2394,6 +2438,9 @@ export class ProjectileSystem {
     }
 
     if (!best) return false;
+    if(originalMeleeSourceFoot&&
+       !this.sourceHumanMeleeStampAllowed(originalMeleeSourceFoot,
+         worldPoint,best.surface.id))return false;
 
     const dir = worldDirection.lengthSq() > 1e-8
       ? worldDirection.clone().normalize()
