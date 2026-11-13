@@ -260,7 +260,12 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   const dead=w.actors.auditGroundStep('A1',foot,foot,DT);
   expect(dead.realHumanCapsulePresent).toBe(false);
   expect(dead.proposedActorCapsuleOverlap).toBe(false);
-  expect(dead.approved).toBe(true);
+  // Real stage contact may still reject a stationary KCC probe. It must
+  // never be reclassified as an absent HUMAN collider or bypassed.
+  expect(dead.colliderOwnerIds)
+   .not.toContain('REAL_PLAYER_OR_UNREGISTERED_DYNAMIC_ACTOR');
+  if(!dead.approved)
+   expect(dead.cause).toBe('DYNAMIC_ACTOR_OR_STAGE_BLOCKER');
   expect(w.actors.auditAirborneSourceFoot('A1',foot,foot,DT,true)
    .actorCollisionCandidate).toBeNull();
   // A DIFFERENT living real CPU can still queue this first-drop corridor.
