@@ -306,3 +306,69 @@ describe('native ORIGINAL SOURCE 7-CPU true-capsule area damage',()=>{
   expect(flags).toEqual([false,true]);
  });
 });
+
+describe('canonical human SOURCE melee damage carries real human splat attribution',()=>{
+ async function fixture(hp:number){
+  const {CpuAgentSystem}=await import('../ai/CpuAgentSystem');
+  const sys=Object.create(CpuAgentSystem.prototype) as InstanceType<typeof CpuAgentSystem>;
+  const x=sys as unknown as {bots:unknown;stats:unknown;f3dSourceGoals:unknown};
+  const bot={id:'B1',team:Team.B,lifeState:'ACTIVE',hp,
+   position:new Vec3(0,0,0),mobilityState:'GROUND',
+   weaponGuarding:false,hpRecoveryDelaySeconds:0,
+   lethalHumanDirect:false};
+  const stats={cpuCombatHits:0,humanCpuDirectHits:0};
+  x.bots=[bot];x.stats=stats;
+  // Attribution before real splatBot, without mock/fabricated respawn.
+  x.f3dSourceGoals=null;
+  return {sys,bot,stats};
+ }
+ it('records real human near-body melee as a direct hit and lethal splat',async()=>{
+  const x=await fixture(24);
+  expect(x.sys.applyAreaDamage(new Vec3(0,.68,0),1.1,24,
+    Team.A,()=>true,true,true)).toBe(1);
+  expect(x.bot.hp).toBe(0);
+  expect(x.bot.lethalHumanDirect).toBe(true);
+  expect(x.stats).toEqual({cpuCombatHits:1,humanCpuDirectHits:1});
+ });
+ it('never attributes an ally CPU or human SUB blast to a human swipe',async()=>{
+  const ally=await fixture(40);
+  expect(ally.sys.applyAreaDamage(new Vec3(0,.68,0),1.1,24,
+    Team.A,()=>true,true,false)).toBe(1);
+  expect(ally.stats.humanCpuDirectHits).toBe(0);
+  const sub=await fixture(40);
+  expect(sub.sys.applyAreaDamage(new Vec3(0,.68,0),1.1,24,
+    Team.A,undefined,true,false)).toBe(1);
+  expect(sub.stats.humanCpuDirectHits).toBe(0);
+  const behind=await fixture(40);
+  expect(behind.sys.applyAreaDamage(new Vec3(0,.68,0),1.1,24,
+    Team.A,()=>false,true,true)).toBe(0);
+  expect(behind.bot.hp).toBe(40);
+ });
+ it('preserves T20 direct-damage attribution without native SOURCE authority',async()=>{
+  const x=await fixture(24);
+  expect(x.sys.applyAreaDamage(new Vec3(0,.68,0),1,24,
+    Team.A,()=>true,false,true)).toBe(1);
+  expect(x.stats.humanCpuDirectHits).toBe(0);
+  expect(x.bot.lethalHumanDirect).toBe(false);
+ });
+ it('ProjectileSystem routes actual human and CPU melee origin separately',()=>{
+  const game=Object.create(ProjectileSystem.prototype) as ProjectileSystem;
+  const x=game as unknown as {
+   nativeSourceHumanPhysicalMode:unknown;physics:unknown;cpuAgents:unknown;
+   combatTargets:unknown;currentHumanDamageable:boolean;
+   currentHumanTeam:Team;applyMeleeDamage:(...args:unknown[])=>void;
+  };
+  const flags:boolean[]=[];
+  x.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+  x.physics={castStageSegment:()=>null};
+  x.cpuAgents={applyAreaDamage:(
+    _p:Vec3,_r:number,_d:number,_t:Team,
+    _cover:unknown,_capsule:boolean,human:boolean
+  )=>{flags.push(human);return 1;}};
+  x.combatTargets={applyAreaDamage:()=>{}};
+  x.currentHumanDamageable=false;x.currentHumanTeam=Team.A;
+  x.applyMeleeDamage(new Vec3(1,1,0),1,20,Team.A,new Vec3(0,1,0),true);
+  x.applyMeleeDamage(new Vec3(1,1,0),1,20,Team.B,new Vec3(0,1,0),false);
+  expect(flags).toEqual([true,false]);
+ });
+});

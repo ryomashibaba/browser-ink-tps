@@ -3,6 +3,8 @@ import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLif
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {sourcePlayFrontlineResearchUrl} from './SourcePlayPortal';
+import {nativeSourceHumanRespawnElapsedTicks}
+ from './NativeSourceRoundActionWindow';
 
 const portal='https://example.org/browser-ink-tps/play-source.html';
 const genuine=()=>new URL(b207CombatRoundUrl(portal));
@@ -51,5 +53,23 @@ describe('B473 read-only real CPU lifecycle on player-selected B207 SOURCE comba
    const x=new URLSearchParams(p);x.delete(k);
    expect(b473RealSourceCombatLifeReadoutSelected(x)).toBe(false);
   }
+ });
+});
+
+describe('physical SOURCE human death and 150 true native tick recovery',()=>{
+ it('counts zero on damage tick, 149 before recovery and 150 at recovery',()=>{
+  const fatal=720;
+  expect(nativeSourceHumanRespawnElapsedTicks(fatal,fatal)).toBe(0);
+  expect(nativeSourceHumanRespawnElapsedTicks(fatal,869)).toBe(149);
+  expect(nativeSourceHumanRespawnElapsedTicks(fatal,870)).toBe(150);
+ });
+ it('no fixed-step advance during pause leaves HP-zero timer unchanged',()=>{
+  expect(nativeSourceHumanRespawnElapsedTicks(900,900)).toBe(0);
+  expect(nativeSourceHumanRespawnElapsedTicks(900,900)).toBe(0);
+ });
+ it('rejects impossible or fabricated native tick identifiers',()=>{
+  for(const [a,b] of [[-1,0],[3,2],[5,NaN],[1,1.5]])
+   expect(()=>nativeSourceHumanRespawnElapsedTicks(a,b))
+     .toThrow('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
  });
 });

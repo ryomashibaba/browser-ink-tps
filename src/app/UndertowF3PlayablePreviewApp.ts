@@ -147,7 +147,8 @@ import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd,
- nativeSourceCpuKitRuntimeAuthorized} from './NativeSourceRoundActionWindow';
+ nativeSourceCpuKitRuntimeAuthorized,
+ nativeSourceHumanRespawnElapsedTicks} from './NativeSourceRoundActionWindow';
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
@@ -524,6 +525,7 @@ export class UndertowF3PlayablePreviewApp{
  /** FIRST true native PLAYER STOP only; local manual export, never upload. */
  private firstNativeStopReceipt:Record<string,unknown>|null=null;
  private respawnFrames=0;
+ private nativeHumanSplatTick:number|null=null;
  // B201: full native-world mission pause, resumed only on real pointer relock.
  private resumeAfterRealPointerLock=false;
  /** Opt-in REAL 180s source session, without any turf scoring. */
@@ -5242,6 +5244,7 @@ export class UndertowF3PlayablePreviewApp{
    if(url){window.location.assign(url);return}
   }
   this.stopReason=null;this.paused=false;this.respawnFrames=0;
+  this.nativeHumanSplatTick=null;
   this.resources.reset();
   this.projectiles.reset();
   this.humanSub.reset();
@@ -5608,14 +5611,21 @@ export class UndertowF3PlayablePreviewApp{
      b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
     this.b20ProfileStop('inkOwnershipTick',paintStart);
     if(this.resources.currentHp<=0){
-     if(this.respawnFrames===0){
+     if(this.respawnFrames===0&&
+        (!this.nativeLiveSourcePrestart||
+         this.nativeHumanSplatTick===null)){
       // B374: never replay an attack held through real native HP zero.
       this.input.setCombatInputActive(false);
       this.humanSplats++;
       this.player.setLifecycleActive(false);
       this.feedback.splat(Team.A,this.player.getPosition(this.p));
+      // The lethal physics frame itself must not count as tick 1.
+      if(this.nativeLiveSourcePrestart)this.nativeHumanSplatTick=frame;
      }
-     this.respawnFrames++;
+     this.respawnFrames=this.nativeLiveSourcePrestart&&
+       this.nativeHumanSplatTick!==null?
+       nativeSourceHumanRespawnElapsedTicks(this.nativeHumanSplatTick,frame):
+       this.respawnFrames+1;
      if(this.respawnFrames>=150){
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
@@ -5631,8 +5641,12 @@ export class UndertowF3PlayablePreviewApp{
       this.input.setCombatInputActive(true);
       this.humanRespawns++;
       this.respawnFrames=0;
+      this.nativeHumanSplatTick=null;
      }
-    }else this.respawnFrames=0;
+    }else{
+     this.respawnFrames=0;
+     this.nativeHumanSplatTick=null;
+    }
     const actualHumanInk=this.b23InkFeedback.snapshot(frame);
     const realFoot=this.player.getPosition(this.p);
     // B183: real native Rapier player KCC, unscored first-drop activity.

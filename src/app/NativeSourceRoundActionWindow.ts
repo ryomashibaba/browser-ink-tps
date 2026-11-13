@@ -57,3 +57,15 @@ export function nativeSourceCpuKitRuntimeAuthorized(input:{
   input.solids===25&&input.paint===17&&
   input.links===26&&input.scoreable===0;
 }
+
+/** Genuine SOURCE: fatal contact is native tick zero of the 150-tick
+ * respawn interval, exactly as native CPU respawn (2.5s at 60Hz).
+ * Pauses have no new physics frames and do not advance this count. */
+export function nativeSourceHumanRespawnElapsedTicks(
+ lethalNativeTick:number,nowNativeTick:number
+):number{
+ if(!Number.isSafeInteger(lethalNativeTick)||lethalNativeTick<0||
+    !Number.isSafeInteger(nowNativeTick)||nowNativeTick<lethalNativeTick)
+  throw Error('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
+ return nowNativeTick-lethalNativeTick;
+}

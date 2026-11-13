@@ -1789,10 +1789,14 @@ export class CpuAgentSystem {
     /** Canonical SOURCE only: same actual 0.29m-radius, 0.39m-half-height
      * CPU Rapier capsule as the live shared-actor collision system.
      * Optional to preserve the old T20/QA explosion hit contract. */
-    nativeSourceCpuCapsuleContact = false
+    nativeSourceCpuCapsuleContact = false,
+    sourceHumanDirectMelee = false
   ): number {
     if (radius <= 0 || damage <= 0) return 0;
     const radiusSq = radius * radius;
+    // A real human swipe, not a SUB/CPU area effect, owns its own hit.
+    const humanMelee=nativeSourceCpuCapsuleContact&&
+      sourceHumanDirectMelee&&sourceMeleeTargetClear!==undefined;
     let hits = 0;
 
     for (const bot of this.bots) {
@@ -1838,8 +1842,9 @@ export class CpuAgentSystem {
       bot.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
       if (bot.hp < previous) {
         this.stats.cpuCombatHits += 1;
+        if(humanMelee)this.stats.humanCpuDirectHits += 1;
         if (bot.hp === 0) {
-          bot.lethalHumanDirect = false;
+          bot.lethalHumanDirect = humanMelee;
           // Same real F3 source HP lifecycle for native sub/special AoE.
           // One actual dead body must never absorb a second projectile.
           if (this.f3dSourceGoals) this.splatBot(bot);

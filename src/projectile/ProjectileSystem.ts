@@ -1098,7 +1098,7 @@ export class ProjectileSystem {
         );
         if (this.meleeCooldown <= 0) {
           const contact = playerPosition.clone().add(flattened(direction).mulScalar(0.72));
-          this.applyMeleeDamage(contact,0.88,38,team,playerPosition);
+          this.applyMeleeDamage(contact,0.88,38,team,playerPosition,true);
           this.meleeCooldown = 0.18;
         }
         this.rollPaintCooldown = 0.075;
@@ -1124,7 +1124,7 @@ export class ProjectileSystem {
 
     const forward = flattened(direction);
     const center = playerPosition.clone().add(forward.clone().mulScalar(1.05));
-    this.applyMeleeDamage(center,1.22,24,team,playerPosition);
+    this.applyMeleeDamage(center,1.22,24,team,playerPosition,true);
     if(paintOrigin)this.paintFan(team, paintOrigin, forward, 1.95, 1.35, 5, 0.42, PaintEventType.Impact);
     this.feedback.melee(team, center, profile, 0.82);
     this.fireCooldown = profile.fireIntervalSeconds;
@@ -1324,7 +1324,7 @@ export class ProjectileSystem {
         const center = playerPosition.clone().add(forward.clone().mulScalar(charge >= 0.62 ? 1.15 : 0.92));
         const meleeDamage = charge >= 0.62 ? 95 : 42;
         const meleeRadius = charge >= 0.62 ? 1.05 : 0.82;
-        this.applyMeleeDamage(center,meleeRadius,meleeDamage,team,playerPosition);
+        this.applyMeleeDamage(center,meleeRadius,meleeDamage,team,playerPosition,true);
         if(paintOrigin)this.paintSlash(team, paintOrigin, forward, charge);
 
         const slot = this.slots.find((candidate) => !candidate.active);
@@ -1372,7 +1372,7 @@ export class ProjectileSystem {
     const forward = flattened(direction);
     const center = playerPosition.clone().add(forward.clone().mulScalar(airborne ? 1.65 : 1.25));
     this.applyMeleeDamage(center,airborne ? 1.05 : 1.55,
-      airborne ? 72 : 58,team,playerPosition);
+      airborne ? 72 : 58,team,playerPosition,true);
 
     if(paintOrigin&&airborne){
       for (let i = 1; i <= 5; i += 1) {
@@ -2344,7 +2344,8 @@ export class ProjectileSystem {
     radius: number,
     damage: number,
     team: Team.A | Team.B,
-    sourceMeleeOrigin?:Vec3
+    sourceMeleeOrigin?:Vec3,
+    sourceHumanMelee=false
   ): void {
     const meleeClear=this.nativeSourceHumanPhysicalMode&&sourceMeleeOrigin?
       (body:Vec3)=>this.sourceMeleeLineClear(sourceMeleeOrigin,body):
@@ -2353,7 +2354,8 @@ export class ProjectileSystem {
     // the real shared CPU Rapier-capsule hit shape. All other hit modes
     // retain the historical center approximation.
     this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear,
-      this.nativeSourceHumanPhysicalMode!==null);
+      this.nativeSourceHumanPhysicalMode!==null,
+      sourceHumanMelee&&!!meleeClear&&team===this.currentHumanTeam);
     this.combatTargets.applyAreaDamage(point, radius, damage, team);
 
     if (
@@ -2410,9 +2412,11 @@ export class ProjectileSystem {
     radius: number,
     damage: number,
     team: Team.A | Team.B,
-    sourceMeleeOrigin?:Vec3
+    sourceMeleeOrigin?:Vec3,
+    sourceHumanMelee=false
   ): void {
-    this.applyAreaDamage(point,radius,damage,team,sourceMeleeOrigin);
+    this.applyAreaDamage(point,radius,damage,team,sourceMeleeOrigin,
+      sourceHumanMelee);
   }
 
   private paintFan(
