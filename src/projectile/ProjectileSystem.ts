@@ -2537,6 +2537,14 @@ export class ProjectileSystem {
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
       if (!projected.inside || projected.planeDistance > maxPlaneDistance) continue;
+      // SOURCE-only in-flight ink cannot authorize a paintable face with
+      // invalid projection coordinates: NaN compares false to distance
+      // thresholds and previously could win the nearest-face ranking.
+      if(verifyPhysicalSourceTrail&&
+         (!Number.isFinite(projected.u)||
+          !Number.isFinite(projected.v)||
+          !Number.isFinite(projected.planeDistance)||
+          projected.planeDistance<0))continue;
       if(verifyPhysicalSourceTrail){
         const face=surface.localToWorld(projected.u,projected.v);
         const meters=worldPoint.distance(face);

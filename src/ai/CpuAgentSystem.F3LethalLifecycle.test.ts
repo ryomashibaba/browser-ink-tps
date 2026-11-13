@@ -1650,6 +1650,13 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       PaintEventType.Impact,PaintSource.Cpu,'A3')).toBe(true);
     expect(projectile.physics.castStageSegment).toHaveBeenCalledOnce();
     expect(projectile.coordinator.enqueue).toHaveBeenCalledOnce();
+    projectile.coordinator.enqueue.mockClear();
+    projectile.surfaces[0].projectWorldPoint.mockReturnValue({
+      inside:true,planeDistance:NaN,u:0,v:0
+    });
+    expect(stamp()).toBe(false);
+    expect(projectile.coordinator.enqueue).not.toHaveBeenCalled();
+    expect(projectile.physics.castStageSegment).toHaveBeenCalledOnce();
   });
 
 describe('SOURCE real CPU respawn executes on native tick 150',()=>{
