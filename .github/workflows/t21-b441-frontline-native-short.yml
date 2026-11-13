@@ -153,6 +153,7 @@ jobs:
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           node --check scripts/t21-w10b139-original-native-descent-rally.mjs
+          node --check scripts/t21-b440-short-native-original-foot.mjs
           node --test scripts/t21-b492-source-height-isolation.test.mjs
           npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts src/app/B245SourcePresentation.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions

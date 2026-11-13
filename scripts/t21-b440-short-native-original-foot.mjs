@@ -2,7 +2,7 @@
 // P1_USER_APPROVED_NATIVE_INK_LOOP_ONCE_20261113: run the existing same-world real fire -> registered OWN squid refill -> reshoot gate once; no runtime changes.
 // B448_APPROVED_NATIVE_A3_ONCE_20261113: execute the pre-existing 720-tick A3 original-frontline gate once; no runtime changes.
 // B441_APPROVED_SINGLE_NATIVE_RUN_20261113: one authorized 720-tick, 15-minute max native SOURCE trial; no runtime or stage changes.
-// P1_360_POSTJOIN_CANDIDATE_NOT_RELEASED: no gameplay logic change; this exact unpushed commit requires new approval for 360 post-7CPU-join observation and startup ticks beyond 360.
+// P1_360_POSTJOIN_CONTRACT: prior single-run authorization was consumed; static 360 read-only outcome is isolated from the original >=600-tick K2. No automatic browser rerun.
 /**
  * B440: SHORT TRUE Chromium source-floor human-input gate.
  * B475 B441 variant exercises the actual user-selected SOURCE human combat;
@@ -3189,6 +3189,85 @@ async function main(){
    }
    return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
   },600000,500);
+  // 360 is a distinct read-only POST-REJOIN witness, not a shorter K2.
+  // The existing >=600-tick K2/B491 evidence standard below stays intact.
+  // Never certify a real projectile, impact, natural encounter or 4v4 here.
+  if(nativeFrontObservationTicks===360){
+   const ids=['A1','A2','A3','B1','B2','B3','B4'];
+   const readBlocked=(n)=>{
+    const e=n?.blockedSourceActionEvidence;
+    if(!e||e.source!=='REGISTERED_RAPIER_FOOT_AFTER_CROWD_VETO'||
+       !e.byActor||typeof e.byActor!=='object'||
+       Array.isArray(e.byActor)||
+       Object.keys(e.byActor).some(id=>!ids.includes(id))||
+       e.trueProjectileLaunchesCertified!==false||
+       e.trueImpactCellsCertified!==false||
+       e.sourceScoreablePromotions!==0||e.newPhysicsOrNavLinks!==0)
+     fail('P1_360_BLOCKED_FOOT_PROVENANCE_INVALID');
+    const byActor=Object.fromEntries(ids.map(id=>{
+     const v=e.byActor[id]??{
+      supportedWindows:0,mainRequests:0,kitRequests:0};
+     if(![v.supportedWindows,v.mainRequests,v.kitRequests]
+        .every(x=>Number.isSafeInteger(x)&&x>=0))
+      fail('P1_360_BLOCKED_FOOT_ACTOR_COUNTER_INVALID_'+id);
+     return [id,{supportedWindows:v.supportedWindows,
+      mainRequests:v.mainRequests,kitRequests:v.kitRequests}];
+    }));
+    const totals=Object.fromEntries(
+     ['supportedWindows','mainRequests','kitRequests'].map(key=>
+      [key,ids.reduce((sum,id)=>sum+byActor[id][key],0)]));
+    if(Object.keys(totals).some(key=>totals[key]!==e[key]))
+     fail('P1_360_BLOCKED_FOOT_TOTALS_NOT_RECONCILED');
+    return {tick:n.tick,byActor,totals};
+   };
+   const beforeBlocked=readBlocked(after);
+   const afterBlocked=readBlocked(actual);
+   const byActor=Object.fromEntries(ids.map(id=>[id,
+    Object.fromEntries(['supportedWindows','mainRequests','kitRequests']
+     .map(key=>[key,
+      afterBlocked.byActor[id][key]-beforeBlocked.byActor[id][key]]))
+   ]));
+   const delta=Object.fromEntries(
+    ['supportedWindows','mainRequests','kitRequests']
+     .map(key=>[key,afterBlocked.totals[key]-beforeBlocked.totals[key]]));
+   if(actual.tick-after.tick<360||
+      await origin()!==proof.browserOrigin||
+      Object.values(delta).some(x=>!Number.isSafeInteger(x)||x<0)||
+      Object.values(byActor).some(row=>
+       Object.values(row).some(x=>!Number.isSafeInteger(x)||x<0)))
+    fail('P1_360_POSTJOIN_NATIVE_WINDOW_OR_COUNTER_INVALID');
+   const verdict=delta.supportedWindows===0?
+    'HOLD_NO_SUPPORTED_BLOCKED_FOOT_EVENT_IN_360_WINDOW':
+    delta.mainRequests+delta.kitRequests===0?
+    'HOLD_NO_PAID_REQUEST_IN_SUPPORTED_BLOCKED_FOOT_WINDOW':
+    'PASS_LIMITED_SUPPORTED_BLOCKED_FOOT_REQUEST_NOT_PROJECTILE';
+   proof.b441NativeEvidence={
+    ...proof.b441NativeEvidence,
+    phase:'POST_REJOIN_360_READ_ONLY_BLOCKED_FOOT',
+    realNativeTicks:actual.tick-after.tick,
+    lastTick:actual.tick,
+    blockedSourceActionEvidenceAtFinish:actual.blockedSourceActionEvidence,
+    blockedFootStart:beforeBlocked,
+    blockedFootFinish:afterBlocked,
+    blockedFootPostJoinDelta:{...delta,byActor},
+    actualProjectileLaunchesCertified:false,
+    actualImpactCellsCertified:false,
+    full180sCertified:false,
+    naturalOpposingTeamRouteCertified:false,
+    verdict
+   };
+   proof.testKind='POST_REJOIN_360_BLOCKED_FOOT_REQUEST_ONLY';
+   proof.stage='POST_REJOIN_360_BLOCKED_FOOT_EVALUATED';
+   proof.verdict=verdict;
+   save();
+   console.log('P1_360_TRUE_POSTJOIN_BLOCKED_FOOT_ONLY',JSON.stringify({
+    verdict,start:after.tick,end:actual.tick,observed:actual.tick-after.tick,
+    delta,byActor,originalSource:'25/17/26/0',
+    projectilesOrImpactsCertified:false,officialWinner:'NONE'}));
+   if(verdict.startsWith('HOLD'))
+    fail('P1_360_NO_CERTIFIED_BLOCKED_FOOT_PAID_REQUEST');
+   return;
+  }
   // K2: per-actor outcome from the EXISTING genuine PaintCoordinator and
   // actual CPU shot requests, observed in this SAME untouched 7-CPU world.
   // A proposed aim, accepted request, foot ink and projectile-impact ink
