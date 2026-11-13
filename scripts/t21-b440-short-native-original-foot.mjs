@@ -3174,7 +3174,10 @@ async function main(){
     frontZ:n.cpu.sourcePatrol?.b441ClosestApprovedFrontAbsZ,
     physicalFeet:n.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
      rejoined:c.rejoined})),
-    b442RealApprovedOriginalGoals:approvedGoals};
+    b442RealApprovedOriginalGoals:approvedGoals,
+    // Read-only native 60Hz SOURCE CPU blocked-foot action evidence.
+    // Requests are NOT physical bullets, hits or official scoring.
+    blockedSourceActionEvidence:n.blockedSourceActionEvidence};
    if(proof.b441NativeEvidence.realFrames.length<40&&
      (!proof.b441NativeEvidence.realFrames.length||
       n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=24)){
@@ -3738,6 +3741,7 @@ async function main(){
   proof.b441NativeEvidence={
    ...proof.b441NativeEvidence,phase:'NATIVE_CPU_REAL_WALK_MEASURED',
    b442ActualApprovedNativeTargetsAtFinish:actualTargets,
+   blockedSourceActionEvidenceAtFinish:actual.blockedSourceActionEvidence,
    b445LastOriginalGateByCpu:validateB445(afterPatrol),
    b446LiveActualCpuFootDryRouteProbes:
     afterPatrol?.b446LivePhysicalFootDryRouteProbes,
