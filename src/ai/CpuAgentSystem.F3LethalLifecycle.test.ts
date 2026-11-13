@@ -1005,6 +1005,84 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(launcher.stats.projectilePoolDrops).toBe(1);
   });
 
+  it('genuine SOURCE B1 floor ink waits only for a physically launched paid projectile',()=>{
+    const {system,bot}=fixture(true);
+    bot.weaponId='pulse-sprayer';bot.hp=100;bot.ink=70;
+    bot.inkRecoveryLockSeconds=.14;bot.fireRemaining=0;
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.qaTurfShotCooldown=new Map([['B1',0]]);
+    system.qaTurfShotsByActor=new Map();
+    system.stats.cpuShots=0;system.stats.cpuSourceTurfShots=0;
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[]; // true pool refusal; no synthetic physical slot
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.feedback={shot:vi.fn()};
+    const target=new Vec3(4,0,0);
+    const queueRealPaidTurf=()=>{
+      expect(system.queueCpuWeaponRequest(
+        bot,target,0,'PROJECTILE',undefined,true)).toBe(true);
+      system.recordQaSourceTurfShot(bot);
+      const request=system.pendingShots.pop()!;
+      expect(request.sourceFloorPaint).toBe(true);
+      launcher.queueCpuShot(request);
+    };
+    queueRealPaidTurf();
+    expect(bot.ink).toBeLessThan(70);
+    expect(system.qaTurfShotCooldown.get('B1')).toBe(.85);
+    expect(system.qaTurfShotsByActor.get('B1')).toBe(1);
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),false,false,new Vec3());
+    expect(launcher.spawnProjectile).not.toHaveBeenCalled();
+    expect(launcher.stats.projectilePoolDrops).toBe(1);
+    expect(bot.ink).toBeCloseTo(70);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.14);
+    expect(bot.fireRemaining).toBe(0);
+    expect(system.qaTurfShotCooldown.get('B1')).toBe(0);
+    expect(system.qaTurfShotsByActor.get('B1')).toBe(0);
+    expect(system.stats.cpuSourceTurfShots).toBe(0);
+    expect(system.stats.cpuShots).toBe(0);
+    // A physical slot now genuinely exists; only the second paid
+    // request may reserve a real paint aim and consume its ink.
+    launcher.slots=[{active:false}];
+    queueRealPaidTurf();
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),false,false,new Vec3());
+    expect(launcher.spawnProjectile).toHaveBeenCalledOnce();
+    expect(bot.ink).toBeLessThan(70);
+    expect(system.qaTurfShotCooldown.get('B1')).toBe(.85);
+    expect(system.qaTurfShotsByActor.get('B1')).toBe(1);
+    expect(system.stats.cpuSourceTurfShots).toBe(1);
+    expect(system.stats.cpuShots).toBe(1);
+  });
+
+  it('does not cancel a newer SOURCE paid paint reservation after an older shot is rejected',()=>{
+    const {system,bot}=fixture(true);
+    bot.weaponId='pulse-sprayer';bot.hp=100;bot.ink=90;
+    bot.inkRecoveryLockSeconds=0;bot.fireRemaining=0;
+    system.phase14qF2RecoverableSteps=true;
+    system.qaTurfShotCooldown=new Map([['B1',0]]);
+    system.qaTurfShotsByActor=new Map();
+    system.stats.cpuShots=0;system.stats.cpuSourceTurfShots=0;
+    const target=new Vec3(4,0,0);
+    expect(system.queueCpuWeaponRequest(
+      bot,target,0,'PROJECTILE',undefined,true)).toBe(true);
+    system.recordQaSourceTurfShot(bot);
+    const rejected=system.pendingShots.pop()!;
+    // Another genuine weapon charge is paid before the earlier
+    // reject arrives. Do not erase that actor's newer timing.
+    bot.ink-=weaponProfile(bot.weaponId).inkCost;
+    system.qaTurfShotCooldown.set('B1',.63);
+    system.rollbackUndeliveredSourceCpuMainShot(rejected);
+    expect(system.qaTurfShotCooldown.get('B1')).toBe(.63);
+    expect(system.qaTurfShotsByActor.get('B1')).toBe(1);
+    expect(system.stats.cpuSourceTurfShots).toBe(1);
+  });
+
   it('actual SOURCE CPU pool exhaustion conserves ink and prevents partial dualies volleys',()=>{
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;

@@ -174,6 +174,9 @@ export interface CpuFireRequest {
     originalWeaponChargeSeconds?:number;
     originalBurstShotsRemaining?:number;
     originalBurstCooldownSeconds?:number;
+    /** The 0.85s SOURCE turf target selection throttle is provisional
+     * until its paid projectile actually leaves the native muzzle. */
+    originalTurfShotCooldownSeconds?:number;
   };
 }
 
@@ -1455,6 +1458,23 @@ export class CpuAgentSystem {
           profile.burstIntervalSeconds)<=1e-6){
         bot.weaponBurstShotsRemaining=tx.originalBurstShotsRemaining!;
         bot.weaponBurstCooldown=tx.originalBurstCooldownSeconds!;
+      }
+      // Actual SOURCE turf aims currently reserve a new-search cooldown
+      // and increment accepted-shot counters BEFORE the physical pool
+      // allocates a bullet. An unlaunched, refunded request must not
+      // suppress the next genuine paint opportunity for 0.85 seconds.
+      // Only undo THIS request if its provisional 0.85s reservation
+      // is still present and no later ink spend has intervened.
+      if(request.sourceFloorPaint===true&&
+         Number.isFinite(tx.originalTurfShotCooldownSeconds)&&
+         this.qaTurfShotCooldown.get(bot.id)===0.85&&
+         (this.qaTurfShotsByActor.get(bot.id)??0)>0){
+        this.qaTurfShotCooldown.set(bot.id,
+          tx.originalTurfShotCooldownSeconds!);
+        this.qaTurfShotsByActor.set(bot.id,
+          (this.qaTurfShotsByActor.get(bot.id)??0)-1);
+        this.stats.cpuSourceTurfShots=Math.max(0,
+          this.stats.cpuSourceTurfShots-1);
       }
     }
     this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
@@ -3003,7 +3023,9 @@ export class CpuAgentSystem {
           originalFireRemainingSeconds:oldFireRemaining,
           originalWeaponChargeSeconds:oldCharge,
           originalBurstShotsRemaining:oldBurstShots,
-          originalBurstCooldownSeconds:oldBurstCooldown
+          originalBurstCooldownSeconds:oldBurstCooldown,
+          originalTurfShotCooldownSeconds:sourceFloorPaint?
+            this.qaTurfShotCooldown.get(bot.id)??0:undefined
         }:undefined
     });
     this.stats.cpuShots += 1;

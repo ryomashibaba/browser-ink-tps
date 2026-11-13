@@ -107,6 +107,18 @@ describe('W9: source turf ink and real projectile effects after seven physical C
   };
   const projectile=new ProjectileSystem(app,sourceSurfaces,physics,
    coordinator,resources,combatTargets,cpu,feedback as never,stats);
+  // Integrate the same canonical SOURCE physical-slot budget and
+  // actor-based fair dispatch with ALL SEVEN real Rapier/Recast CPUs.
+  // This headless run retains actual fired bullets and ink-grid impacts;
+  // only PlayCanvas GPU upload is mocked, never original collision.
+  projectile.enableB343OriginalSourceVolleyBudget({
+   id:stage.metadata.id,solids:stage.solids.length,
+   paint:stage.paintSurfaces.length,nav:stage.navigationLinks?.length??0,
+   scoreable:stage.paintSurfaces.filter(s=>
+    (s.flags&SurfaceFlags.Scoreable)!==0).length
+  });
+  projectile.enableSourceCpuFairVolleyDispatch();
+  expect(projectile.b343OriginalSourceVolleyBudgetSnapshot().enabled).toBe(true);
   const trueShotRequests:Array<{sourceId:string;team:Team.A|Team.B;weaponId:string;action:string;frame:number}>=[];
   let currentFrame=0;
   const bots=(cpu as unknown as {bots:RealBot[]}).bots;
