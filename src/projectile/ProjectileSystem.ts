@@ -2517,6 +2517,15 @@ export class ProjectileSystem {
         }
       | null = null;
 
+    // SOURCE flight ink is projected from a genuine in-air physical
+    // droplet onto nearby paintable faces. A clear projectile SEGMENT
+    // alone cannot prove this perpendicular stamp ray is unobstructed:
+    // the nearest visible original floor may lie behind a real wall.
+    // Keep frozen T20 and ordinary non-flight stamp ranking unchanged.
+    const verifyPhysicalSourceTrail=
+      typeof this.nativeSourceHumanPhysicalMode==='function'&&
+      type===PaintEventType.MidDroplet&&
+      (source===PaintSource.Human||source===PaintSource.Cpu);
     // Only grounded SOURCE human melee uses the original foot and
     // physically backed paint ID. All other game modes use the old ranking.
     const sourceSupportedId=originalMeleeSourceFoot
@@ -2528,6 +2537,20 @@ export class ProjectileSystem {
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
       if (!projected.inside || projected.planeDistance > maxPlaneDistance) continue;
+      if(verifyPhysicalSourceTrail){
+        const face=surface.localToWorld(projected.u,projected.v);
+        const meters=worldPoint.distance(face);
+        if(![meters,face.x,face.y,face.z].every(Number.isFinite))continue;
+        // The destination face itself may be the final Rapier contact;
+        // only an EARLIER registered blocker can veto this real stamp.
+        // Same 2.5cm edge-contact allowance as SOURCE melee ray checks.
+        if(meters>1e-8){
+          const blocker=this.physics.castStageSegment(
+            worldPoint,face,'ink-projectile');
+          if(blocker&&(!Number.isFinite(blocker.distance)||
+             blocker.distance<Math.max(0,meters-.025)))continue;
+        }
+      }
       if (!best || projected.planeDistance < best.planeDistance) {
         best = {
           surface,

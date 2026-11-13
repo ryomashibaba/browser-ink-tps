@@ -1579,6 +1579,79 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
 
 });
 
+
+  it('real SOURCE A3 SLOSHER in-flight ink cannot project through registered Rapier cover',()=>{
+    const projectile:any=Object.create(ProjectileSystem.prototype);
+    projectile.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+    const midair=new Vec3(0,1,0);
+    const makeSurface=(id:string,height:number)=>({
+      id,baseFlags:SurfaceFlags.Paintable,
+      projectWorldPoint:vi.fn(()=>({
+        inside:true,planeDistance:1-height,u:0,v:0
+      })),
+      localToWorld:vi.fn(()=>new Vec3(0,height,0)),
+      uAxis:new Vec3(1,0,0),vAxis:new Vec3(0,0,1)
+    });
+    const hidden=makeSurface('HIDDEN_FLOOR',.8);
+    const visible=makeSurface('VISIBLE_FLOOR',.5);
+    projectile.surfaces=[hidden,visible];
+    projectile.physics={castStageSegment:vi.fn((_a:Vec3,b:Vec3)=>{
+      // The nearest projected face is behind a real solid at 5cm,
+      // whereas the next ORIGINAL paintable face is unobstructed.
+      return b.y===.8?{distance:.05,solidId:'SOURCE_WALL'}:null;
+    })};
+    projectile.coordinator={enqueue:vi.fn()};
+    const stamp=(mode:PaintEventType)=>
+      projectile.paintWorldStamp(Team.A,midair,.4,.3,
+        new Vec3(0,-1,0),1.7,mode,PaintSource.Cpu,'A3');
+    expect(stamp(PaintEventType.MidDroplet)).toBe(true);
+    expect(projectile.coordinator.enqueue).toHaveBeenCalledOnce();
+    expect(projectile.coordinator.enqueue.mock.calls[0]![0])
+      .toMatchObject({
+        surfaceId:'VISIBLE_FLOOR',source:PaintSource.Cpu,
+        actorId:'A3',type:PaintEventType.MidDroplet
+      });
+    expect(projectile.physics.castStageSegment).toHaveBeenCalledTimes(2);
+    // The old projected-ranking path stays frozen for non-SOURCE:
+    // a legacy stamp does not acquire this new collision veto.
+    projectile.nativeSourceHumanPhysicalMode=null;
+    projectile.coordinator.enqueue.mockClear();
+    projectile.physics.castStageSegment.mockClear();
+    expect(stamp(PaintEventType.MidDroplet)).toBe(true);
+    expect(projectile.coordinator.enqueue.mock.calls[0]![0].surfaceId)
+      .toBe('HIDDEN_FLOOR');
+    expect(projectile.physics.castStageSegment).not.toHaveBeenCalled();
+  });
+
+  it('real SOURCE in-flight paint fails closed if all nearby faces are physically covered',()=>{
+    const projectile:any=Object.create(ProjectileSystem.prototype);
+    projectile.nativeSourceHumanPhysicalMode=()=> 'SQUID';
+    projectile.surfaces=[{
+      id:'BEHIND_ORIGINAL_WALL',baseFlags:SurfaceFlags.Paintable,
+      projectWorldPoint:vi.fn(()=>({
+        inside:true,planeDistance:.4,u:0,v:0
+      })),
+      localToWorld:vi.fn(()=>new Vec3(0,.6,0)),
+      uAxis:new Vec3(1,0,0),vAxis:new Vec3(0,0,1)
+    }];
+    projectile.physics={castStageSegment:vi.fn(()=>({
+      distance:.1,solidId:'REGISTERED_SOURCE_WALL'
+    }))};
+    projectile.coordinator={enqueue:vi.fn()};
+    const stamp=()=>projectile.paintWorldStamp(
+      Team.B,new Vec3(0,1,0),.3,.3,new Vec3(0,-1,0),1.7,
+      PaintEventType.MidDroplet,PaintSource.Cpu,'A3');
+    expect(stamp()).toBe(false);
+    expect(projectile.coordinator.enqueue).not.toHaveBeenCalled();
+    // This is flight-specific: an ordinary, already-collision-resolved
+    // impact retains its existing PaintCoordinator/ownerGrid behavior.
+    expect(projectile.paintWorldStamp(
+      Team.B,new Vec3(0,1,0),.3,.3,new Vec3(0,-1,0),1.7,
+      PaintEventType.Impact,PaintSource.Cpu,'A3')).toBe(true);
+    expect(projectile.physics.castStageSegment).toHaveBeenCalledOnce();
+    expect(projectile.coordinator.enqueue).toHaveBeenCalledOnce();
+  });
+
 describe('SOURCE real CPU respawn executes on native tick 150',()=>{
  function fullCpuTickFixture(nativeSource:boolean){
   const cpu:any=Object.create(CpuAgentSystem.prototype);
