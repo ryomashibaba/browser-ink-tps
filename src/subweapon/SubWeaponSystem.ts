@@ -314,11 +314,18 @@ export class SubWeaponSystem {
     slot:BombSlot,profile:SubWeaponProfile,
     trigger:SubWeaponNativeExplosionWitness['trigger']
   ): void {
+    // Canonical SOURCE HUMAN bombs already collide with the genuine
+    // living CPU physical body. Resolve their blast against the SAME
+    // Rapier CPU capsule as SOURCE CPU bombs, not the historical single
+    // center point (which misses legitimate edge/crown blast contact).
+    // No floor, weapon radius, damage, navigation or stage grant.
     this.cpuAgents.applyAreaDamage(
       slot.position,
       profile.outerDamageRadiusMeters,
       profile.outerDamage,
-      slot.team
+      slot.team,
+      undefined,
+      this.nativeSourceHumanSubBodyContactEnabled
     );
     this.combatTargets.applyAreaDamage(
       slot.position,
@@ -331,7 +338,9 @@ export class SubWeaponSystem {
         slot.position,
         profile.innerDamageRadiusMeters,
         profile.innerExtraDamage,
-        slot.team
+        slot.team,
+        undefined,
+        this.nativeSourceHumanSubBodyContactEnabled
       );
       this.combatTargets.applyAreaDamage(
         slot.position,

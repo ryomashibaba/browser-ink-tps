@@ -1439,6 +1439,71 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuWeaponGuardBlocks).toBe(1);
   });
 
+  it('genuine SOURCE HUMAN bomb uses the real CPU capsule at blast boundary',()=>{
+    const profile=subWeaponProfile('pulse-bomb');
+    expect(profile.outerDamage).toBeGreaterThan(0);
+    const fireRealExplosion=(sourceEnabled:boolean)=>{
+      const {system,bot}=fixture(true);
+      bot.hp=100;
+      const bomb:any={
+        active:true,team:Team.A,
+        // The physical CPU capsule reaches .29m beyond its central
+        // axis: this real blast overlaps by .17m, but an old point
+        // sample at the CPU center lies OUTSIDE the true blast radius.
+        position:new Vec3(profile.outerDamageRadiusMeters+.12,.68,0)
+      };
+      const sub:any=Object.create(SubWeaponSystem.prototype);
+      sub.nativeSourceHumanSubBodyContactEnabled=false;
+      if(sourceEnabled)sub.enableNativeSourceHumanSubBodyContact();
+      sub.cpuAgents=system;
+      sub.combatTargets={applyAreaDamage:vi.fn()};
+      sub.paintExplosion=vi.fn();
+      sub.feedback={subBurst:vi.fn()};
+      sub.stats={playerSubExplosions:0};
+      sub.deactivate=vi.fn();
+      sub.explode(bomb,profile,'CONTACT_IMPACT');
+      return {sub,system,bot,bomb};
+    };
+    const legacy=fireRealExplosion(false);
+    expect(legacy.bot.hp).toBe(100);
+    expect(legacy.system.stats.cpuCombatHits).toBe(0);
+    const real=fireRealExplosion(true);
+    expect(real.bot.hp).toBe(100-profile.outerDamage);
+    expect(real.system.stats.cpuCombatHits).toBe(1);
+    expect(real.bot.lifeState).toBe('ACTIVE');
+    expect(real.sub.stats.playerSubExplosions).toBe(1);
+    expect(real.sub.deactivate).toHaveBeenCalledWith(real.bomb);
+    expect(real.sub.paintExplosion).toHaveBeenCalledOnce();
+    expect(real.sub.combatTargets.applyAreaDamage).toHaveBeenCalled();
+  });
+
+  it('genuine SOURCE HUMAN inner bomb blast also uses existing physical CPU capsule',()=>{
+    const profile=subWeaponProfile('pulse-bomb');
+    expect(profile.innerExtraDamage).toBeGreaterThan(0);
+    const {system,bot}=fixture(true);
+    bot.hp=100;
+    const real:any=Object.create(SubWeaponSystem.prototype);
+    real.nativeSourceHumanSubBodyContactEnabled=false;
+    real.enableNativeSourceHumanSubBodyContact();
+    real.cpuAgents=system;
+    real.combatTargets={applyAreaDamage:vi.fn()};
+    real.paintExplosion=vi.fn();
+    real.feedback={subBurst:vi.fn()};
+    real.stats={playerSubExplosions:0};
+    real.deactivate=vi.fn();
+    // A capsule-side contact just inside INNER blast radius, while
+    // the CPU center lies outside that smaller radius.
+    const point=new Vec3(profile.innerDamageRadiusMeters+.12,.68,0);
+    const bomb:any={team:Team.A,position:point,active:true};
+    real.explode(bomb,profile,'CONTACT_IMPACT');
+    expect(bot.hp).toBe(0);
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.stats.cpuSplats).toBe(1);
+    expect(system.stats.humanCpuDirectSplats).toBe(0);
+    expect(real.stats.playerSubExplosions).toBe(1);
+    expect(real.deactivate).toHaveBeenCalledOnce();
+  });
+
   it('true SOURCE human SUB hits a living real CPU before original cover, but not through it or in T20',()=>{
     // Exercise the existing production 60Hz bomb flight method without
     // manufacturing stage surfaces, enemy actors or fake damage events.
