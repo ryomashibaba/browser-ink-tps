@@ -828,6 +828,7 @@ export class ProjectileSystem {
   }
 
   /** SOURCE human grounded melee paints from actual ORIGINAL Rapier foot,
+   * This research-branch change is static-build-only: no native Chromium.
    * not the elevated capsule center. Damage, actors, nav and clock unchanged. */
   private sourceHumanGroundMeleePaintFoot(body:Vec3):Vec3|null{
     if(!this.nativeSourceHumanPhysicalMode||
