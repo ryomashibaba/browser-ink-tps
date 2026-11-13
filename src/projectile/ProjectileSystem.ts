@@ -98,11 +98,13 @@ export class ProjectileSystem {
   private readonly queuedCpuShots: CpuFireRequest[] = [];
   private b343SourceVolleyAtomic=false;
   private b343RejectedVolleys=0;
-  // Strictly human-selected ORIGINAL SOURCE rounds only. Seven real CPUs
-  // must share scarce physical projectile slots; fixed array order would
-  // otherwise prioritize the same actors on every contention tick.
+  // Strictly human-selected ORIGINAL SOURCE rounds only. Rank competing
+  // paid CPU shots by their LAST ACTUALLY ALLOCATED physical volley.
+  // Rotating a request-array offset used to starve an actor when the
+  // competing pair changed between native ticks (A/B, then B/C).
   private sourceCpuFairVolleyDispatch=false;
-  private sourceCpuVolleyRotation=0;
+  private sourceCpuPhysicalGrantSerial=0;
+  private readonly sourceCpuLastPhysicalGrant=new Map<string,number>();
   private b345SourceShooterOpeningEnabled=false;
   private b345RealOpeningClamps=0;
   private readonly b346ShooterWitness=new B346NativeShooterWitness();
@@ -435,7 +437,8 @@ export class ProjectileSystem {
     this.b152OriginalAllyAimProjectilesSpawned=0;
     this.b152OriginalAllyAimSurfaceCollisions=0;
     this.b343RejectedVolleys=0;
-    this.sourceCpuVolleyRotation=0;
+    this.sourceCpuPhysicalGrantSerial=0;
+    this.sourceCpuLastPhysicalGrant.clear();
     this.b345RealOpeningClamps=0;
     this.b346ShooterWitness.reset();
     this.b348AcceptedHumanShots=0;
@@ -1607,22 +1610,20 @@ export class ProjectileSystem {
   ): void {
     if (this.queuedCpuShots.length === 0) return;
 
-    // CPU fixedUpdate emits paid requests in permanent roster order.
-    // Under a real 7-CPU pool bottleneck this gives early A/B actors
-    // all available slots, while later actors are repeatedly refunded.
-    // In human-selected SOURCE play only, rotate dispatch priority
-    // between simultaneous paid original-physics volleys. No extra
-    // shots, positions, targets, navigation, scores or capacity.
+    // SOURCE-only: roster order alone starves later actors when just one
+    // physical slot is free. Rotating by THIS TICK's request-array index
+    // also starves B1 for alternating [A1,B1] / [B1,B2] contenders.
+    // A real successful physical launch advances that actor to the back.
+    // An unlaunched (pool-full, invalid or stale-life) shot keeps priority.
+    // A single real shot also counts, so a subsequent multi-CPU volley
+    // cannot be monopolized by the actor that just fired alone.
     const fairSource=this.sourceCpuFairVolleyDispatch&&
-      this.queuedCpuShots.length>1&&
       this.queuedCpuShots.every(req=>req.sourceInkTransaction!==undefined);
-    const first=fairSource?
-      this.sourceCpuVolleyRotation%this.queuedCpuShots.length:0;
-    const ordered=fairSource?[
-      ...this.queuedCpuShots.slice(first),
-      ...this.queuedCpuShots.slice(0,first)
-    ]:this.queuedCpuShots;
-    if(fairSource)this.sourceCpuVolleyRotation++;
+    const ordered=fairSource&&this.queuedCpuShots.length>1?
+      [...this.queuedCpuShots].sort((a,b)=>
+        (this.sourceCpuLastPhysicalGrant.get(a.sourceId)??0)-
+        (this.sourceCpuLastPhysicalGrant.get(b.sourceId)??0))
+      :this.queuedCpuShots;
 
     for (const request of ordered) {
       // CPU requests were paid in CpuAgentSystem.fixedUpdate. Human CHARGER
@@ -1760,11 +1761,23 @@ export class ProjectileSystem {
       }
 
       if (spawned > 0) {
+        this.noteActualSourceCpuPhysicalGrant(request,spawned);
         this.feedback.shot(request.team, request.origin, profile, false);
       }
     }
 
     this.queuedCpuShots.length = 0;
+  }
+
+  /** Only completed physical projectile allocation changes SOURCE priority.
+   * Never grant a turn to a rejected volley or a hitscan/paint-only effect. */
+  private noteActualSourceCpuPhysicalGrant(
+    request:CpuFireRequest,spawned:number
+  ):void{
+    if(!this.sourceCpuFairVolleyDispatch||
+       !request.sourceInkTransaction||spawned<=0)return;
+    this.sourceCpuLastPhysicalGrant.set(
+      request.sourceId,++this.sourceCpuPhysicalGrantSerial);
   }
 
   private executeCpuRollerFlick(
@@ -1928,6 +1941,7 @@ export class ProjectileSystem {
     }
 
     if (spawned > 0) {
+      this.noteActualSourceCpuPhysicalGrant(request,spawned);
       this.feedback.shot(request.team, request.origin, profile, false);
     }
   }

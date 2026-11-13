@@ -864,7 +864,8 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     launcher.slots=[{active:false}];
     launcher.surfaces=new Array(17);
     launcher.b343SourceVolleyAtomic=true;
-    launcher.sourceCpuVolleyRotation=0;
+    launcher.sourceCpuPhysicalGrantSerial=0;
+    launcher.sourceCpuLastPhysicalGrant=new Map();
     launcher.sourceCpuFairVolleyDispatch=false;
     launcher.cpuAimDirection=new Vec3();
     launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
@@ -906,6 +907,102 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(launcher.stats.projectilePoolDrops).toBe(4);
     expect(launcher.queuedCpuShots).toHaveLength(0);
     expect(launcher.slots).toHaveLength(1); // no forged capacity
+  });
+
+  it('genuine SOURCE physical-shot priority cannot starve B1 when real contenders alternate',()=>{
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}]; // one real slot, no virtual capacity
+    launcher.surfaces=new Array(17);
+    launcher.b343SourceVolleyAtomic=true;
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.sourceCpuPhysicalGrantSerial=0;
+    launcher.sourceCpuLastPhysicalGrant=new Map();
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.cpuAgents={rollbackUndeliveredSourceCpuMainShot:vi.fn(),
+      approveQueuedSourceCpuMainShotAtLaunch:vi.fn(()=>true)};
+    launcher.stats={projectilePoolDrops:0};
+    launcher.feedback={shot:vi.fn()};
+    launcher.enableSourceCpuFairVolleyDispatch();
+    const req=(id:string):any=>({
+      sourceId:id,team:id.startsWith('A')?Team.A:Team.B,
+      origin:new Vec3(),bodyPosition:new Vec3(),
+      target:new Vec3(3,0,0),weaponId:'pulse-sprayer',
+      charge:0,action:'PROJECTILE',
+      sourceInkTransaction:{chargedInkCost:.95,
+        expectedInkAfterCharge:79,originalRecoveryLockSeconds:0}
+    });
+    const actualWinners:string[]=[];
+    const fire=(ids:string[],available=true)=>{
+      launcher.slots[0].active=!available;
+      const old=launcher.spawnProjectile.mock.calls.length;
+      for(const id of ids)launcher.queueCpuShot(req(id));
+      launcher.spawnQueuedCpuShots(Team.A,new Vec3(),true,false,new Vec3());
+      const launched=launcher.spawnProjectile.mock.calls.slice(old);
+      expect(launched).toHaveLength(available?1:0);
+      for(const call of launched)
+        actualWinners.push(call.find((x:any)=>typeof x==='string'&&
+          (x==='A1'||x==='B1'||x==='B2')));
+    };
+    // The old index rotation gave A1,B2,A1,B2: B1 never fired.
+    fire(['A1','B1']);
+    fire(['B1','B2']);
+    fire(['A1','B1']);
+    fire(['B1','B2']);
+    expect(actualWinners).toEqual(['A1','B1','A1','B2']);
+    expect(launcher.stats.projectilePoolDrops).toBe(4);
+    expect(launcher.cpuAgents.rollbackUndeliveredSourceCpuMainShot)
+      .toHaveBeenCalledTimes(4);
+    expect(launcher.slots).toHaveLength(1);
+    // Pool exhaustion never records fictitious grants.
+    const before=launcher.sourceCpuPhysicalGrantSerial;
+    fire(['A1','B1'],false);
+    expect(launcher.sourceCpuPhysicalGrantSerial).toBe(before);
+    expect(launcher.cpuAgents.rollbackUndeliveredSourceCpuMainShot)
+      .toHaveBeenCalledTimes(6);
+  });
+
+  it('one genuine solo SOURCE shot affects priority at the next contested tick',()=>{
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.slots=[{active:false}];
+    launcher.surfaces=new Array(17);
+    launcher.b343SourceVolleyAtomic=true;
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.sourceCpuPhysicalGrantSerial=0;
+    launcher.sourceCpuLastPhysicalGrant=new Map();
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.cpuAgents={rollbackUndeliveredSourceCpuMainShot:vi.fn(),
+      approveQueuedSourceCpuMainShotAtLaunch:vi.fn(()=>true)};
+    launcher.stats={projectilePoolDrops:0};
+    launcher.feedback={shot:vi.fn()};
+    launcher.enableSourceCpuFairVolleyDispatch();
+    const req=(id:string):any=>({
+      sourceId:id,team:id.startsWith('A')?Team.A:Team.B,
+      origin:new Vec3(),bodyPosition:new Vec3(),
+      target:new Vec3(3,0,0),weaponId:'pulse-sprayer',
+      charge:0,action:'PROJECTILE',
+      sourceInkTransaction:{chargedInkCost:.95,
+        expectedInkAfterCharge:79,originalRecoveryLockSeconds:0}
+    });
+    launcher.queueCpuShot(req('A1'));
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),true,false,new Vec3());
+    expect(launcher.sourceCpuLastPhysicalGrant.get('A1')).toBe(1);
+    launcher.slots[0].active=false;
+    launcher.queueCpuShot(req('A1'));
+    launcher.queueCpuShot(req('B1'));
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),true,false,new Vec3());
+    const ids=launcher.spawnProjectile.mock.calls.map(
+      (args:any[])=>args.find(x=>x==='A1'||x==='B1'));
+    expect(ids).toEqual(['A1','B1']);
+    expect(launcher.sourceCpuLastPhysicalGrant.get('B1')).toBe(2);
+    expect(launcher.stats.projectilePoolDrops).toBe(1);
   });
 
   it('actual SOURCE CPU pool exhaustion conserves ink and prevents partial dualies volleys',()=>{
