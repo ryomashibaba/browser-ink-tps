@@ -245,6 +245,40 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(1);
   w.actors.dispose();
  });
+ it('splatted human is not a ghost blocker for real SOURCE CPU landing, while living CPU separation stays enforced',()=>{
+  const w=world();
+  const foot={x:w.humanFoot.x+.30,y:w.humanFoot.y,z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('A1',foot);
+  expect(w.actors.shouldDeferF2FirstDrop('A1',foot)).toBe(true);
+  const live=w.actors.auditGroundStep('A1',foot,foot,DT);
+  expect(live.approved).toBe(false);
+  expect(live.proposedActorCapsuleOverlap).toBe(true);
+  // Exactly the in-game lethal transition: no live HUMAN collider remains.
+  w.player.setLifecycleActive(false);
+  w.actors.syncActualHumanFoot(w.humanFoot,false);
+  expect(w.actors.shouldDeferF2FirstDrop('A1',foot)).toBe(false);
+  const dead=w.actors.auditGroundStep('A1',foot,foot,DT);
+  expect(dead.realHumanCapsulePresent).toBe(false);
+  expect(dead.proposedActorCapsuleOverlap).toBe(false);
+  expect(dead.approved).toBe(true);
+  expect(w.actors.auditAirborneSourceFoot('A1',foot,foot,DT,true)
+   .actorCollisionCandidate).toBeNull();
+  // A DIFFERENT living real CPU can still queue this first-drop corridor.
+  const other={x:foot.x+.65,y:foot.y,z:foot.z};
+  w.actors.syncRealCpuFoot('B1',other);
+  expect(w.actors.shouldDeferF2FirstDrop('A1',foot)).toBe(true);
+  w.actors.removeRealCpuFoot('B1');
+  expect(w.actors.shouldDeferF2FirstDrop('A1',foot)).toBe(false);
+  // The same real human blocks again only AFTER its genuine respawn.
+  w.player.setLifecycleActive(true);
+  w.actors.syncActualHumanFoot(w.humanFoot,true);
+  expect(w.actors.shouldDeferF2FirstDrop('A1',foot)).toBe(true);
+  expect(w.actors.auditGroundStep('A1',foot,foot,DT).approved)
+   .toBe(false);
+  expect(w.actors.cpuColliderCount).toBe(1);
+  expect(freeze.activationReady).toBe(false);
+  w.actors.dispose();
+ });
  it('match reset removes every CPU proxy but retains the actual PlayerController and static original collision geometry',()=>{
   const w=world();
   const a={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};

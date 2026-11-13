@@ -103,7 +103,8 @@ export interface CpuSharedGroundStepAuthority {
   /** Read-only registered static support at the current synchronized CPU foot. */
   sourceFootSupport?(id:string,foot:Readonly<{x:number;y:number;z:number}>):
     {point:Vec3;solidId:string}|null;
-  syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>):void;
+  syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>,
+    colliderActive?:boolean):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
   /** A splatted CPU has no physical capsule; only source-QA shared world. */
   removeRealCpuFoot?(id:string):void;
@@ -796,7 +797,10 @@ export class CpuAgentSystem {
     humanNativeGrounded = true,
     // B377: explicit F3-only last native tick guard. Default true keeps
     // frozen T20 and every existing CPU source caller byte-for-byte active.
-    canStartNewCombatActions = true
+    canStartNewCombatActions = true,
+    // Physical HUMAN collider existence is independent from targeting:
+    // SOURCE diagnostic modes may keep the player alive but not targetable.
+    humanPhysicalColliderActive = humanActive
   ): void {
     if (!matchActive) {
       this.b212PriorHuman=null;
@@ -856,7 +860,8 @@ export class CpuAgentSystem {
       // agents and original shared Rapier collision regardless.
       this.phase14qHumanCrowd?.syncActualPlayerFoot(
         liveHumanFoot,humanActive&&humanNativeGrounded);
-      this.phase14qGroundCollision?.syncActualHumanFoot(liveHumanFoot);
+      this.phase14qGroundCollision?.syncActualHumanFoot(
+        liveHumanFoot,humanPhysicalColliderActive);
     }
 
     // T21 QA-only: register actual source-authoritative CPU feet in the

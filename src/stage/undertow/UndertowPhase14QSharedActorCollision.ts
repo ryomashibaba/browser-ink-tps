@@ -69,6 +69,9 @@ export class UndertowPhase14QSharedActorCollision{
   private readonly actors=new Map<string,ActorBody>();
   private readonly ownerByHandle=new Map<number,string>();
   private humanSourceFoot:T21QFoot|null=null;
+  // A splatted HUMAN retains a known SOURCE foot, but no live Rapier
+  // collider: stale coordinates must not block a real CPU move/drop.
+  private humanCollisionActive=false;
   private readonly kcc;
   private readonly cpuRadius=ORIGINAL_SOURCE_CPU_CAPSULE.radiusMeters;
   private readonly cpuHalfHeight=ORIGINAL_SOURCE_CPU_CAPSULE.halfHeightMeters;
@@ -99,6 +102,7 @@ export class UndertowPhase14QSharedActorCollision{
     this.actors.clear();
     this.ownerByHandle.clear();
     this.humanSourceFoot=null;
+    this.humanCollisionActive=false;
   }
 
   /** Splatted CPU no longer has an active collision capsule. */
@@ -156,10 +160,11 @@ export class UndertowPhase14QSharedActorCollision{
   }
 
   /** Exact current PlayerController KCC foot, NOT an invented CPU repellor. */
-  public syncActualHumanFoot(foot:T21QFoot):void{
+  public syncActualHumanFoot(foot:T21QFoot,colliderActive=true):void{
     if(![foot.x,foot.y,foot.z].every(Number.isFinite))
       throw Error('T21_PHASE14Q_UNTRUSTED_REAL_HUMAN_SOURCE');
     this.humanSourceFoot={...foot};
+    this.humanCollisionActive=colliderActive;
   }
 
   /**
@@ -269,7 +274,8 @@ export class UndertowPhase14QSharedActorCollision{
       horizontalDisagreementMeters:errXZ,
       verticalDisagreementMeters:errY,
       colliderOwnerIds:collisionOwners,
-      realHumanCapsulePresent:this.humanSourceFoot!==null&&
+      realHumanCapsulePresent:this.humanCollisionActive&&
+        this.humanSourceFoot!==null&&
         this.physics.world.bodies.len()>this.actors.size,
       proposedActorCapsuleOverlap:destinationOverlaps,
 
@@ -302,7 +308,7 @@ export class UndertowPhase14QSharedActorCollision{
     for(const [otherId,other] of this.actors){
       if(otherId!==id&&atRisk(other.sourceFoot))return true;
     }
-    return atRisk(this.humanSourceFoot);
+    return this.humanCollisionActive&&atRisk(this.humanSourceFoot);
   }
 
   /** Used for diagnostics; not a correction, and not source NavMesh authority. */
@@ -356,7 +362,7 @@ export class UndertowPhase14QSharedActorCollision{
         Math.abs(other.sourceFoot.y-from.y)<1)
         return otherId;
     }
-    if(this.humanSourceFoot &&
+    if(this.humanCollisionActive&&this.humanSourceFoot &&
       Math.hypot(this.humanSourceFoot.x-from.x,
         this.humanSourceFoot.z-from.z)<
           this.cpuRadius+PLAYER_CHARACTER_PHYSICS.humanRadiusMeters-.01&&
