@@ -168,6 +168,12 @@ export interface CpuFireRequest {
     originalRecoveryLockSeconds:number;
     /** SOURCE launch was not completed; preserve the real pre-shot cadence. */
     originalFireRemainingSeconds:number;
+    /** Restore a paid-but-unlaunched CHARGER/STRINGER charge, or a
+     * SPLATLING burst shot, ONLY while the at-queue weapon state still
+     * matches its immediately rejected native action. */
+    originalWeaponChargeSeconds?:number;
+    originalBurstShotsRemaining?:number;
+    originalBurstCooldownSeconds?:number;
   };
 }
 
@@ -1423,6 +1429,33 @@ export class CpuAgentSystem {
          Number.isFinite(bot.fireRemaining))
         bot.fireRemaining=Math.max(0,Math.min(
           bot.fireRemaining,tx.originalFireRemainingSeconds));
+      // The SOURCE projectile pool may reject a charged real volley
+      // AFTER the CPU spent its charge or decremented its burst counter.
+      // Returning ink alone silently loses a genuine CHARGER/STRINGER
+      // charge or one SPLATLING bullet even though nothing was launched.
+      // Never overwrite another action or a fresh life: restore only the
+      // same living shooter, with no later ink spend and the unchanged
+      // post-queue weapon state.
+      const profile=weaponProfile(bot.weaponId);
+      if(((profile.weaponClass==='CHARGER'&&
+           request.action==='PROJECTILE')||
+          (profile.weaponClass==='STRINGER'&&
+           request.action==='STRINGER_RELEASE'))&&
+         Number.isFinite(tx.originalWeaponChargeSeconds)&&
+         tx.originalWeaponChargeSeconds!>0&&
+         bot.weaponChargeSeconds===0)
+        bot.weaponChargeSeconds=tx.originalWeaponChargeSeconds!;
+      if(profile.weaponClass==='SPLATLING'&&
+         request.action==='PROJECTILE'&&
+         Number.isSafeInteger(tx.originalBurstShotsRemaining)&&
+         tx.originalBurstShotsRemaining!>0&&
+         bot.weaponBurstShotsRemaining===tx.originalBurstShotsRemaining!-1&&
+         Number.isFinite(tx.originalBurstCooldownSeconds)&&
+         Math.abs(bot.weaponBurstCooldown-
+          profile.burstIntervalSeconds)<=1e-6){
+        bot.weaponBurstShotsRemaining=tx.originalBurstShotsRemaining!;
+        bot.weaponBurstCooldown=tx.originalBurstCooldownSeconds!;
+      }
     }
     this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
   }
@@ -2939,6 +2972,9 @@ export class CpuAgentSystem {
 
     const oldRecoveryLock=bot.inkRecoveryLockSeconds;
     const oldFireRemaining=bot.fireRemaining;
+    const oldCharge=bot.weaponChargeSeconds;
+    const oldBurstShots=bot.weaponBurstShotsRemaining;
+    const oldBurstCooldown=bot.weaponBurstCooldown;
     bot.ink = Math.max(0, bot.ink - inkCost);
     bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
 
@@ -2964,7 +3000,10 @@ export class CpuAgentSystem {
         this.phase14qF2RecoverableSteps?{
           chargedInkCost:inkCost,expectedInkAfterCharge:bot.ink,
           originalRecoveryLockSeconds:oldRecoveryLock,
-          originalFireRemainingSeconds:oldFireRemaining
+          originalFireRemainingSeconds:oldFireRemaining,
+          originalWeaponChargeSeconds:oldCharge,
+          originalBurstShotsRemaining:oldBurstShots,
+          originalBurstCooldownSeconds:oldBurstCooldown
         }:undefined
     });
     this.stats.cpuShots += 1;

@@ -708,6 +708,87 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSplats).toBe(1);
   });
 
+  it('real SOURCE B4 SPLATLING preserves a paid burst shot when the native projectile pool is full',()=>{
+    const {system,bot}=fixture(true);
+    bot.id='B4';bot.weaponId='rotor-splatling';
+    bot.position.set(0,3,0);bot.hp=100;bot.ink=82;
+    bot.inkRecoveryLockSeconds=.18;bot.fireRemaining=0;
+    bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=2;
+    bot.weaponBurstCooldown=0;
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.stats.cpuShots=0;
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];launcher.slots=[];
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.cpuAimDirection=new Vec3();
+    launcher.solveLaunchDirection=vi.fn((_:any,__:any,out:Vec3)=>
+      out.set(1,0,0));
+    launcher.cpuAgents=system;
+    launcher.stats={projectilePoolDrops:0};
+    launcher.spawnProjectile=vi.fn((slot:any)=>{slot.active=true});
+    launcher.feedback={shot:vi.fn()};
+    const profile=weaponProfile(bot.weaponId);
+    const target=new Vec3(4,3,0),inkBefore=bot.ink;
+    system.updateCpuSplatling(bot,profile,target,1/60,false);
+    expect(system.pendingShots).toHaveLength(1);
+    expect(bot.weaponBurstShotsRemaining).toBe(1);
+    launcher.queueCpuShot(system.pendingShots.pop()!);
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),false,false,new Vec3());
+    expect(launcher.spawnProjectile).not.toHaveBeenCalled();
+    expect(launcher.stats.projectilePoolDrops).toBe(1);
+    expect(bot.ink).toBeCloseTo(inkBefore);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.18);
+    expect(bot.weaponBurstShotsRemaining).toBe(2);
+    expect(bot.weaponBurstCooldown).toBe(0);
+    expect(bot.fireRemaining).toBe(0);
+    expect(system.stats.cpuShots).toBe(0);
+    // A genuinely available physical slot now launches exactly ONE shot,
+    // not an invented refund bullet or a truncated paid burst.
+    launcher.slots.push({active:false});
+    system.updateCpuSplatling(bot,profile,target,1/60,false);
+    launcher.queueCpuShot(system.pendingShots.pop()!);
+    launcher.spawnQueuedCpuShots(Team.A,new Vec3(),false,false,new Vec3());
+    expect(launcher.spawnProjectile).toHaveBeenCalledOnce();
+    expect(bot.weaponBurstShotsRemaining).toBe(1);
+    expect(bot.ink).toBeLessThan(inkBefore);
+    expect(system.stats.cpuShots).toBe(1);
+  });
+
+  it('real SOURCE A4 CHARGER retains its full charge if its paid physical ray cannot launch',()=>{
+    const {system,bot}=fixture(true);
+    bot.id='A4';bot.team=Team.A;bot.weaponId='rail-charger';
+    bot.position.set(0,3,0);bot.hp=100;bot.ink=74;
+    bot.inkRecoveryLockSeconds=.2;bot.fireRemaining=0;
+    const profile=weaponProfile(bot.weaponId);
+    bot.weaponChargeSeconds=profile.chargeSeconds-1/120;
+    bot.weaponBurstShotsRemaining=0;bot.weaponBurstCooldown=0;
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.stats.cpuShots=0;
+    const noRayTarget=new Vec3(0,
+      bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,0);
+    system.updateCpuCharger(bot,profile,noRayTarget,1/60,false);
+    expect(system.pendingShots).toHaveLength(1);
+    expect(bot.weaponChargeSeconds).toBe(0);
+    const launcher:any=Object.create(ProjectileSystem.prototype);
+    launcher.queuedCpuShots=[];
+    launcher.sourceCpuFairVolleyDispatch=false;
+    launcher.cpuAgents=system;
+    launcher.queueCpuShot(system.pendingShots.pop()!);
+    launcher.spawnQueuedCpuShots(Team.B,new Vec3(),false,false,new Vec3());
+    expect(bot.ink).toBeCloseTo(74);
+    expect(bot.inkRecoveryLockSeconds).toBeCloseTo(.2);
+    expect(bot.fireRemaining).toBe(0);
+    expect(bot.weaponChargeSeconds).toBeCloseTo(profile.chargeSeconds);
+    expect(system.stats.cpuShots).toBe(0);
+    // A later valid aim still pays for its own real shot.
+    system.updateCpuCharger(bot,profile,new Vec3(4,3,0),1/60,false);
+    expect(system.pendingShots).toHaveLength(1);
+    expect(bot.ink).toBeLessThan(74);
+    expect(bot.weaponChargeSeconds).toBe(0);
+  });
+
   it('paid SOURCE STRINGER fires all three real arrows or refunds everything',()=>{
     const {system,bot}=fixture(true);
     system.phase14qF2RecoverableSteps=true;
