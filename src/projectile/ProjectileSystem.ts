@@ -855,10 +855,23 @@ export class ProjectileSystem {
     return sourceNativeMeleePaintFoot(body,this.stats.playerGrounded,hit);
   }
 
+  /** Only SOURCE CPU melee: bot.position is the actual Crowd/Rapier
+   * FOOT, not the HUMAN capsule center. Check the registered physical
+   * support at that exact foot before selecting original ink backing.
+   * Missing or displaced support cannot mint paint on another layer. */
+  private sourceOriginalCpuMeleePaintFoot(foot:Vec3):Vec3|null{
+    if(![foot.x,foot.y,foot.z].every(Number.isFinite))return null;
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const sampleBody=new Vec3(foot.x,foot.y+offset,foot.z);
+    const hit=this.physics.castCharacterFootSupport(
+      sampleBody,offset,'HUMAN');
+    return sourceNativeMeleePaintFoot(sampleBody,true,hit);
+  }
+
   /** Choose only the original Rapier-backed paint surface BEFORE
    * planar ranking. A closer, different layer cannot suppress supported
    * ROLLER / BRUSH / SPLATANA ink. No new collision or scoring grants. */
-  private sourceHumanMeleeApprovedSurfaceId(foot:Vec3,target:Vec3):
+  private sourceNativeMeleeApprovedSurfaceId(foot:Vec3,target:Vec3):
     string|null{
     if(![foot.x,foot.y,foot.z,target.x,target.y,target.z]
       .every(Number.isFinite))return null;
@@ -1764,7 +1777,9 @@ export class ProjectileSystem {
       .add(forward.clone().mulScalar(1.25));
 
     this.applyMeleeDamage(center, 1.55, 58, request.team);
-    this.paintFan(
+    const originalFoot=request.sourceInkTransaction?
+      this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
+    if(!request.sourceInkTransaction||originalFoot)this.paintFan(
       request.team,
       request.bodyPosition,
       forward,
@@ -1774,7 +1789,8 @@ export class ProjectileSystem {
       0.58,
       PaintEventType.Impact,
       PaintSource.Cpu,
-      request.sourceId
+      request.sourceId,
+      originalFoot??undefined
     );
     this.feedback.melee(request.team, center, profile, 1.45);
   }
@@ -1786,7 +1802,9 @@ export class ProjectileSystem {
     const forward = flattened(
       request.target.clone().sub(request.bodyPosition)
     );
-    this.paintWorldStamp(
+    const originalFoot=request.sourceInkTransaction?
+      this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
+    if(!request.sourceInkTransaction||originalFoot)this.paintWorldStamp(
       request.team,
       request.bodyPosition,
       profile.rollPaintRadiusMeters * 1.28,
@@ -1795,7 +1813,8 @@ export class ProjectileSystem {
       0.8,
       PaintEventType.Foot,
       PaintSource.Cpu,
-      request.sourceId
+      request.sourceId,
+      originalFoot??undefined
     );
     const contact = request.bodyPosition.clone()
       .add(forward.clone().mulScalar(0.72));
@@ -1813,7 +1832,9 @@ export class ProjectileSystem {
       .add(forward.clone().mulScalar(1.05));
 
     this.applyMeleeDamage(center, 1.22, 24, request.team);
-    this.paintFan(
+    const originalFoot=request.sourceInkTransaction?
+      this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
+    if(!request.sourceInkTransaction||originalFoot)this.paintFan(
       request.team,
       request.bodyPosition,
       forward,
@@ -1823,7 +1844,8 @@ export class ProjectileSystem {
       0.42,
       PaintEventType.Impact,
       PaintSource.Cpu,
-      request.sourceId
+      request.sourceId,
+      originalFoot??undefined
     );
     this.feedback.melee(request.team, center, profile, 0.82);
   }
@@ -1929,13 +1951,16 @@ export class ProjectileSystem {
       meleeDamage,
       request.team
     );
-    this.paintSlash(
+    const originalFoot=request.sourceInkTransaction?
+      this.sourceOriginalCpuMeleePaintFoot(request.bodyPosition):null;
+    if(!request.sourceInkTransaction||originalFoot)this.paintSlash(
       request.team,
       request.bodyPosition,
       forward,
       charge,
       PaintSource.Cpu,
-      request.sourceId
+      request.sourceId,
+      originalFoot??undefined
     );
 
     this.solveLaunchDirection(
@@ -2376,7 +2401,8 @@ export class ProjectileSystem {
     radius: number,
     type: PaintEventType,
     source: PaintSource = PaintSource.Human,
-    actorId?: string
+    actorId?: string,
+    verifiedSourceCpuFoot?: Vec3
   ): void {
     const right = new Vec3(-forward.z, 0, forward.x);
     for (let i = 0; i < count; i += 1) {
@@ -2395,7 +2421,7 @@ export class ProjectileSystem {
         type,
         source,
         actorId,
-        this.sourceHumanMeleeStampOrigin(origin,source)
+        verifiedSourceCpuFoot??this.sourceHumanMeleeStampOrigin(origin,source)
       );
     }
   }
@@ -2406,7 +2432,8 @@ export class ProjectileSystem {
     forward: Vec3,
     charge: number,
     source: PaintSource = PaintSource.Human,
-    actorId?: string
+    actorId?: string,
+    verifiedSourceCpuFoot?: Vec3
   ): void {
     const length = lerp(1.8, 3.6, charge);
     const width = lerp(0.55, 0.9, charge);
@@ -2422,7 +2449,7 @@ export class ProjectileSystem {
         PaintEventType.Impact,
         source,
         actorId,
-        this.sourceHumanMeleeStampOrigin(origin,source)
+        verifiedSourceCpuFoot??this.sourceHumanMeleeStampOrigin(origin,source)
       );
     }
   }
@@ -2451,7 +2478,7 @@ export class ProjectileSystem {
     // Only grounded SOURCE human melee uses the original foot and
     // physically backed paint ID. All other game modes use the old ranking.
     const sourceSupportedId=originalMeleeSourceFoot
-      ?this.sourceHumanMeleeApprovedSurfaceId(originalMeleeSourceFoot,worldPoint)
+      ?this.sourceNativeMeleeApprovedSurfaceId(originalMeleeSourceFoot,worldPoint)
       :null;
     if(originalMeleeSourceFoot&&!sourceSupportedId)return false;
     for (const surface of this.surfaces) {
