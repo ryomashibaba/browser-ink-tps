@@ -1074,8 +1074,43 @@ jobs:
              yaw:t.input?.yawDegrees,locked:t.input?.realPointerLockAtSampling,
              desired:t.input?.projectedWorldIntent}))}));
           P1_INPUT
+      # Keep the only user-authorized 360-window RAW witness inspectable in
+      # free job logs. Do not allocate NEW billed artifact storage for it.
+      - name: Save one post-rejoin CPU blocked-foot witness in job logs
+        if: ${{ always() && contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') }}
+        run: |
+          node --input-type=module <<'P1_360_LOGS'
+          import {existsSync,readFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const filename='/tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json';
+          if(!existsSync(filename)){
+            console.log('P1_360_REAL_NATIVE_HOLD_NO_RAW');
+          }else{
+            const raw=readFileSync(filename);
+            const p=JSON.parse(raw.toString('utf8'));
+            const w=p.b441NativeEvidence??null;
+            console.log('P1_360_REAL_NATIVE_SOURCE_OBSERVATION',JSON.stringify({
+              source:p.source,sha256:createHash('sha256').update(raw).digest('hex'),
+              bytes:raw.byteLength,gitHead:process.env.GITHUB_SHA,
+              verdict:p.verdict,phase:p.stage,browserOrigin:p.browserOrigin,
+              sevenCpuAfterJoinTick:w?.firstRead?.tick??null,
+              observedNativeWindow:w?.realNativeTicks??null,
+              selectedObservationTickLimit:w?.intendedRealNativeTicks??null,
+              blockedFootEvidence:w?.blockedSourceActionEvidenceAtFinish??null,
+              sampledBlockedFootWindows:w?.realFrames?.map(r=>({
+                nativeTick:r.tick,blockedFoot:r.blockedSourceActionEvidence}))??[],
+              sourceActorWrites:p.actorWrites,
+              sourceClockWrites:p.nativeClockWrites,
+              sourceScoreWrites:p.scoreWrites,
+              officialWinner:p.officialWinner,
+              naturalCrossTeamRouteCertified:false,
+              playerWindowsPlayCertified:false,
+              fullRoundCertified:false
+            }));
+          }
+          P1_360_LOGS
       - name: Preserve real SOURCE evidence even if HOLD
-        if: ${{ always() && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
+        if: ${{ always() && !contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') && !contains(github.event.head_commit.message, '[sweep-audit-only]') && !contains(github.event.head_commit.message, '[p1-evidence-audit-only]') && !contains(github.event.head_commit.message, '[p1-local-cue-audit-only]') }}
         uses: actions/upload-artifact@v4
         with:
           name: b441-true-native-source-frontline-short
