@@ -1,5 +1,30 @@
 # Browser Ink TPS / T21 — V28 全体批判と実ゲーム完成優先・新チャット統合正本
 
+## 【2026-11-13 B448真正後・本人明示の最終全体批判／V28継続・新チャット唯一の最新版】
+
+**位置づけ**：ユーザーが再度明示した総合再評価・移行のための今回1回のみの追補。新V29・新企画・上位仕様の変更ではない。最上位は原作『スプラトゥーン3』Ver.7.2.0マテガイ放水路**通常ナワバリ**、本当の人間1+CPU7の自然な4v4・180秒・再戦・原作地形/HP/インク/得点/勝敗/ART・Windows実機。固定F1〜F5、Fast Track、DECISIONS、既存V28全文・V27以前の本人指示、失敗と保護条件をすべて継承。**この追補自体はdocs-only、実ゲーム進捗0**。古い文書内の「最新HEAD」「次の工程」「研究QAブランチ」「0/12」は記述時点の履歴。新チャットは必ずGitHubを再照合する。
+
+### 直近の実測によって更新された事実と確実性
+
+- **保存直前の研究HEAD**：`4a256b2e02f1e5203ded11a0528ae1352b3dcda0`。これは承認済みの真正B448を**既存ワークフローで1回だけ起動したコメント**のコミット。本体ソース最終修正は親の`a20b08078c29c75d4d9841c1508fbcc2498caf5f`（B384の本物の物理弾数管理と「専用ベンチマーク選択」の誤混同を分離）。本追補保存でHEADはまた別SHAになる。main=`fbd922cea900df8e1a139f21b3c61ed927b3fdd9`、Draft PR #5 Open/Draft、PR head=`8cfc95756ef0b56e2c33dc9f89a9041126daa272`、いずれも保護。
+- **軽量CI** [#43331490352](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43331490352)（B384修正ソースHEAD）はSUCCESS：20ファイル211 PASS/2 SKIP、別7ファイル75 PASS、TypeScript/Vite PASS。重いChromium SKIPPEDで、`CODE_PASS_ONLY`。旧B441真正 [#43328802850](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43328802850) ではB384誤衝突コンソールエラーを実測し、修正した。新CI成功を全モードの実ブラウザ認証と呼ばない。
+- **今回答えた真正B448** [#43335171546](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43335171546)：HEAD `4a256b2e...`、既存の研究opt-in `T21_B448_A3_REAL_ORIGINAL_FRONT=1`、`ubuntu-latest`、720tick指定、証拠区間722tick、ジョブSUCCESS、実CPU7/7参加。A3は旧Landing起点で厳格許可0だったが、**後続の実Rapier足元から原作登録床の前線目標を1件新規許可**し、実Crowd目標要求43回、実水平変位 **15.818m**、認可目標との最短約**0.098m**。A3本物のCPU射撃要求14・原作塗装変化1,881セル（実弾着による変化1,559セル）。7CPU合計射撃要求154、登録塗装変化9,222セル。確定できるのは研究モードでの**実CPU前線移動・射撃・塗装のTRUE_RUN_LIMITED_PASS**であり、F4中央開通/自然敵HP/180秒/正式4v4ではない。前回B448無効A3約3.53mとの単純比較は異なるSHA・モードなので厳密な因果証明ではない。
+- B448の正規証拠：Run #43335171546、Artifact **13996973133**、ZIP SHA-256 `06ded5fe1d7fc726d1769727ab3245a5762646a586b632ad2b5a64ec1c68e388`。中の`b440-short-real-original-human-foot.json`、`b487-real-original-16-cross-team-route-audit.json`、`b488-real-original-f4-gap-authority-hold.json`などで個別照合できる。保存先が消える前に既存証拠を再利用し、同条件の無意味な再試行をしない。
+- **絶対に未完了**：既登録25 Rapier solids /17 PaintSurfaces /26 source NavLinks /0 Scoreable。B499候補10部品42原作面の現登録0/10、原作8隣接の現Recast到達0/8、今回も自然な敵味方16経路0/16、原作局所8ギャップは未解決。現同一世界の敵への自然接近/HP/撃破/150 native tick復活、正式ナワバリ得点/勝敗・Winner、本人Windows全域床・ART・FPS、正式F5と公開はHOLD。対象16経路の結果は全世界の経路不存在を数学的に証明せず、全マップの完成率は**わからない**。B2/B4初期Recast経路とRapier支持Y約0.28m差で0.25m安全閾値HOLD、一方後半の本物の同側床前進は成立。4tickのfoot Ray未検出は床穴や安全な全身カプセル通過の証明でない。閾値を緩めない。
+- **旧実績の扱い**：旧SHAの180秒試合、OWN回復→再射撃、再戦、CPU7回復などは各々限定PASSだが**最新HEADの同一試合で全項目の統合認証なし**。前のREADY/CDPタイムアウトをCPU物理経路バグと誤分類しない。これまで本人Windowsで見えた床抜け・光学床と物理床の不一致・CPU少数・SAFE STOPが最新HEADで完全改善した証拠なし。
+
+### 今回の最終自己批判と修正した実行順
+
+1. **退ける進め方**：小B番号・HUD/デザイン・文書・QA増殖を次工程と称する、旧成功SHAを機械的に再実行する、CPU opt-inの局所PASSを正式4v4完成に拡大する、原作OBJを衝突床へ無根拠に一括昇格/見えない橋やNavLinkを追加する、原作Phiveがないため全開発を停止する、多チャットが同一branchを並列pushする。文書だけの進捗は0と記録。
+2. **レーンA（F4最大阻害・局所HOLD可能）**：旧B490同一視点の原作光学床と実Rapier差、B499原作Face・原作局所8接続、B2/B4原作経路高さ不一致、本人が普通に歩けない**最初の1地点**を一つの具体的な原作Face/Actorとして同定。正規Ver.7.2.0 Turf Banc/BYML Actor transform、Phive material/`col_disable_flags`と当該Faceの衝突可否が独立確認できたときだけPRIVATE隔離→真正HUMAN全身Rapier KCC→元CPU半径0.30m Recast/Crowd→同一native世界の実CPU/人間歩行を検証。証拠がなければそのFaceだけ`HOLD_REFERENCE_REQUIRED`、同じ再生成やタイムアウト増量はしない。Pass18の8 gapとB499の8隣接を同一点と仮定しない。
+3. **レーンB（F1/F2/F3を止めずに先行実装）**：登録済み25/17/26の**普通のSOURCE試合**で、起動READY→実Pointer Lock→7CPU真正rejoin→人間の本物のWASD＋KCC→選択武器で実射撃と着弾/17面塗装→実インク消費→同じ登録面のOWN SQUID回復→再射撃→合法なCPU7参加/ライフ→180秒TIME_UP→同武器新世界再戦、という1本の垂直スライスを既存本体で完成させる。**次チャット最初はこの本体コードと既存RAWを監査し、再現した現実の欠陥だけ関連ファイルを一バッチ修正する**。不要なコードや新文書を追加しない。B448は研究opt-inのまま、普通の試合へ無審査に自動昇格させない。中央未開通の間は偽の敵接触/HP/得点を作らない。
+4. **合格順**：まず関連コードを一括確認→1つの本体機能バッチ→原則1回の既存軽量TypeScript/Vitest/Vite検査（成功でも`CODE_PASS_ONLY`）→本当に必要な場合にだけ1系統の真正Chromium/実機検査を**明示再承認後**実施。過去のB448 1回承認は消費済み。自然敵遭遇→本物の着弾HP0/150tick復活→原作Scoreable権限→公式Winner→本人一括実機F5→明示公開の順。二工程連続で実ゲームの新体験0なら微QAを停止し最大阻害を再査読する。
+5. **並列の最適化**：初期はこの一つのチャットからGitHub・ソース・旧RAWをまとめて読み、ユーザーに補助チャットの運搬を要求しない。分業で実際に時間短縮する独立仕事が生じたときだけ最大2〜3チャット（F4原作Face根拠、CPU移動・物理、F3ライフ・180秒）を**読み取り専用レビュー担当**にする。唯一の統合担当だけが最新HEADから単親expected_sha CASで研究branchへ書込む。補助の無断push・CI・PRIVATE転送禁止。
+6. **本人負担・保護**：本人操作0回・追加課金原則0円。既存clone `Downloads/browser-ink-tps-current`、B490比較 `Documents/BrowserInkTPS_F3L_15864_5030` を再利用し、ZIP/43MB原本/スクショ/PowerShellの再提出を求めない。main/T19C/T20/PR5/Pages/正式QA/PRIVATE/Windowsは保護。Work/Computer Use・高負荷Chromium・Windows操作・PRIVATE転送・公開はそれぞれ個別事前承認。今後の返答は実際のゲームの新機能/改善（なければ0）・SHA・正しい証拠・残HOLD・最短次工程・本人作業有無を短く報告。
+
+**このV28追補は本人明示の一度限りの移行作業。** 次チャットで新しい計画作りに戻らず、最新HEADをライブ確認したうえで**レーンBの実ゲーム本体の破綻を調べ、根拠があれば修正**へ直行する。正式完成率はUNKNOWNのまま。V28下段の内容は継承するが古い現状数値/次手順は履歴であり本節を優先する。
+
+
 ## 【2026-11-13 本人明示の最終批判・次チャット統合入口：V28継続追補】
 
 **位置づけ：今回のみの新チャット移行保存。新V29、新プロジェクト、新B番号、新ゲーム仕様ではない。** 下記V28全文・V27以前・永続DECISIONS/Fast Track/固定F1〜F5を継承する。古い「現行HEAD」「次の工程」は書いた時点の履歴とし、最新のGitHub証拠を優先する。**本追補はdocs-only、実ゲーム進捗0。**
