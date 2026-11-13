@@ -1117,6 +1117,8 @@ export class CpuAgentSystem {
            bot.id,bot.position
          )){
         this.reconcileBlockedT21F2CrowdProxy(bot);
+        this.continueBlockedOriginalSourceCpuActions(bot,dt,
+          humanTeam,humanPosition,humanActive,canStartNewCombatActions);
         continue;
       }
       // A real Recast offmesh jump is no longer copied into the CPU render
@@ -1164,6 +1166,8 @@ export class CpuAgentSystem {
           if(this.phase14qF2RecoverableSteps&&
              String(error).includes('T21_PHASE14Q_CPU_CROWD_OVERSPEED_UNAPPROVED')){
             this.reconcileBlockedT21F2CrowdProxy(bot);
+            this.continueBlockedOriginalSourceCpuActions(bot,dt,
+              humanTeam,humanPosition,humanActive,canStartNewCombatActions);
             continue;
           }
           throw error;
@@ -1171,6 +1175,8 @@ export class CpuAgentSystem {
         if(!shared.approved){
           if(this.phase14qF2RecoverableSteps){
             this.reconcileBlockedT21F2CrowdProxy(bot);
+            this.continueBlockedOriginalSourceCpuActions(bot,dt,
+              humanTeam,humanPosition,humanActive,canStartNewCombatActions);
             continue;
           }
           // The original strict QA path is intentionally unchanged.
@@ -1240,6 +1246,29 @@ export class CpuAgentSystem {
    * does not move the CPU body, image, or original geometry. A new
    * navigation goal must be requested after the collision clears.
    */
+  /**
+   * A rejected ORIGINAL-SOURCE Crowd move must keep the real CPU at its
+   * last approved Rapier foot. If that unchanged foot STILL has registered
+   * static support and the CPU is genuinely rejoined/alive, its ordinary
+   * paid weapon/kit decisions may proceed from that physical position.
+   * Never let a blocked route create movement, ground, free ink or combat.
+   * No effect on T20, unrejoined first-drop CPUs or the last 180s tick.
+   */
+  private continueBlockedOriginalSourceCpuActions(
+    bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,
+    humanPosition:Vec3,humanActive:boolean,
+    canStartNewCombatActions:boolean
+  ):void{
+    if(!canStartNewCombatActions||!this.phase14qF2RecoverableSteps||
+       !this.f3dSourceGoals||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       !this.sourceCpuMayStartActions(bot)||
+       !this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position))
+      return;
+    this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive);
+    this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
+  }
+
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
     if(!this.phase14qF2RecoverableSteps||!bot.agent)
       throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');

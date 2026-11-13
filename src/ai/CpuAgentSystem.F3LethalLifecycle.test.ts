@@ -59,6 +59,43 @@ function fixture(originalF3: boolean) {
   return { system, bot, shot };
 }
 
+
+describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement',()=>{
+  it('continues only real supported and rejoined SOURCE actions, never invents movement',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    let supported=true;
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>
+      supported?{point:new Vec3(0,0,0),
+        solidId:'UndertowT21D:right-low-team-b'}:null);
+    system.updateCpuWeapon=vi.fn();
+    system.updateCpuKit=vi.fn();
+    const humanFoot=new Vec3(5,0,0);
+    const act=(clockOpen=true)=>
+      system.continueBlockedOriginalSourceCpuActions(
+        bot,1/60,Team.A,humanFoot,true,clockOpen);
+    act();
+    expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
+    expect(system.updateCpuKit).toHaveBeenCalledOnce();
+    expect(bot.position.toArray()).toEqual([0,0,0]);
+    expect(system.phase14qGroundCollision.sourceFootSupport)
+      .toHaveBeenCalledWith(bot.id,bot.position);
+
+    // Rejected edge on an unsupported ORIGINAL face must stay silent.
+    supported=false;act();
+    // A CPU rejoining after drop or splatted cannot use this stationary path.
+    supported=true;bot.mobilityState='FIRST_DROP_REJOIN';act();
+    bot.mobilityState='GROUND';bot.hp=0;act();
+    bot.hp=50;act(false); // Actual native last tick / TIME_UP
+    system.f3dSourceGoals=null;act(); // Frozen non-SOURCE path
+    system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+    system.stage.metadata.id='inkworks-junction';act();
+    expect(system.updateCpuWeapon).toHaveBeenCalledTimes(1);
+    expect(system.updateCpuKit).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
   it('activates genuine CPU SUB physics only for the selected 180s immutable original source',()=>{
     const original={
