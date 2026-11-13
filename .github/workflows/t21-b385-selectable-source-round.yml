@@ -1,4 +1,5 @@
 name: T21 B385-B390 selected-kit original 180s SOURCE circuit
+# Approved one genuine native P1 same-world own-ink/re-shot witness; no game-source edits.
 on:
   push:
     branches: [dev/t21-f4e103w-qa-infra, research/t21-integrated-a1-c-patrol-four-mode-20261105]
