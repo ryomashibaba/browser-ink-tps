@@ -5438,7 +5438,8 @@ export class UndertowF3PlayablePreviewApp{
     });
     this.cpu.fixedUpdate(seconds,true,Team.A,
      this.player.getPosition(this.p),alive&&!this.w10b14,
-     this.stats.playerGrounded,cpuCanStartActions,alive);
+     this.stats.playerGrounded,cpuCanStartActions,alive,
+     this.player.currentMode);
     this.b20ProfileStop('sevenCpuFixed',cpuStart);
     // Only after real native 60Hz CPU physics; use ACTUAL shared Rapier
     // A1 collider identity and ACTUAL PlayerController KCC contacts.

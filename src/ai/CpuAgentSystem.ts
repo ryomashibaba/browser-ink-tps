@@ -104,7 +104,7 @@ export interface CpuSharedGroundStepAuthority {
   sourceFootSupport?(id:string,foot:Readonly<{x:number;y:number;z:number}>):
     {point:Vec3;solidId:string}|null;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>,
-    colliderActive?:boolean):void;
+    colliderActive?:boolean,mode?:'HUMAN'|'SQUID'):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
   /** A splatted CPU has no physical capsule; only source-QA shared world. */
   removeRealCpuFoot?(id:string):void;
@@ -800,7 +800,8 @@ export class CpuAgentSystem {
     canStartNewCombatActions = true,
     // Physical HUMAN collider existence is independent from targeting:
     // SOURCE diagnostic modes may keep the player alive but not targetable.
-    humanPhysicalColliderActive = humanActive
+    humanPhysicalColliderActive = humanActive,
+    humanPhysicalColliderMode:'HUMAN'|'SQUID'='HUMAN'
   ): void {
     if (!matchActive) {
       this.b212PriorHuman=null;
@@ -861,7 +862,7 @@ export class CpuAgentSystem {
       this.phase14qHumanCrowd?.syncActualPlayerFoot(
         liveHumanFoot,humanActive&&humanNativeGrounded);
       this.phase14qGroundCollision?.syncActualHumanFoot(
-        liveHumanFoot,humanPhysicalColliderActive);
+        liveHumanFoot,humanPhysicalColliderActive,humanPhysicalColliderMode);
     }
 
     // T21 QA-only: register actual source-authoritative CPU feet in the

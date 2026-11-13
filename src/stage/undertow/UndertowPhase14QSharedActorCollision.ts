@@ -72,6 +72,10 @@ export class UndertowPhase14QSharedActorCollision{
   // A splatted HUMAN retains a known SOURCE foot, but no live Rapier
   // collider: stale coordinates must not block a real CPU move/drop.
   private humanCollisionActive=false;
+  // The genuine PlayerController swaps its Rapier shape: SQUID is a
+  // radius-0.34m ball, not a radius-0.32m HUMAN capsule. Never approve
+  // CPU overlap based on the smaller inactive collider profile.
+  private humanColliderMode:'HUMAN'|'SQUID'='HUMAN';
   private readonly kcc;
   private readonly cpuRadius=ORIGINAL_SOURCE_CPU_CAPSULE.radiusMeters;
   private readonly cpuHalfHeight=ORIGINAL_SOURCE_CPU_CAPSULE.halfHeightMeters;
@@ -103,6 +107,7 @@ export class UndertowPhase14QSharedActorCollision{
     this.ownerByHandle.clear();
     this.humanSourceFoot=null;
     this.humanCollisionActive=false;
+    this.humanColliderMode='HUMAN';
   }
 
   /** Splatted CPU no longer has an active collision capsule. */
@@ -160,11 +165,16 @@ export class UndertowPhase14QSharedActorCollision{
   }
 
   /** Exact current PlayerController KCC foot, NOT an invented CPU repellor. */
-  public syncActualHumanFoot(foot:T21QFoot,colliderActive=true):void{
+  public syncActualHumanFoot(
+    foot:T21QFoot,colliderActive=true,mode:'HUMAN'|'SQUID'='HUMAN'
+  ):void{
     if(![foot.x,foot.y,foot.z].every(Number.isFinite))
       throw Error('T21_PHASE14Q_UNTRUSTED_REAL_HUMAN_SOURCE');
+    if(mode!=='HUMAN'&&mode!=='SQUID')
+      throw Error('T21_PHASE14Q_UNTRUSTED_HUMAN_COLLIDER_MODE');
     this.humanSourceFoot={...foot};
     this.humanCollisionActive=colliderActive;
+    this.humanColliderMode=mode;
   }
 
   /**
@@ -334,7 +344,7 @@ export class UndertowPhase14QSharedActorCollision{
     return {
       id,foot:{...foot},actualRapierColliderHandle:actor.collider.handle,
       cpuRadiusMeters:this.cpuRadius,
-      actualHumanRadiusMeters:PLAYER_CHARACTER_PHYSICS.humanRadiusMeters,
+      actualHumanRadiusMeters:this.actualHumanColliderRadius(),
       actualSharedRapierBodyAndFootAgree:
        Math.hypot(actual.x-foot.x,
         actual.y-this.cpuCenterOffset-foot.y,actual.z-foot.z)<.025,
@@ -348,6 +358,12 @@ export class UndertowPhase14QSharedActorCollision{
   public dispose():void{
     this.resetActors();
     this.physics.world.removeCharacterController(this.kcc);
+  }
+
+  private actualHumanColliderRadius():number{
+    return this.humanColliderMode==='SQUID'?
+      PLAYER_CHARACTER_PHYSICS.squidRadiusMeters:
+      PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
   }
 
   private hasApproximateSameLayerOverlap(id:string,from:T21QFoot):boolean{
@@ -365,7 +381,7 @@ export class UndertowPhase14QSharedActorCollision{
     if(this.humanCollisionActive&&this.humanSourceFoot &&
       Math.hypot(this.humanSourceFoot.x-from.x,
         this.humanSourceFoot.z-from.z)<
-          this.cpuRadius+PLAYER_CHARACTER_PHYSICS.humanRadiusMeters-.01&&
+          this.cpuRadius+this.actualHumanColliderRadius()-.01&&
       Math.abs(this.humanSourceFoot.y-from.y)<1)
       return 'HUMAN_PLAYER_CONTROLLER';
     return null;

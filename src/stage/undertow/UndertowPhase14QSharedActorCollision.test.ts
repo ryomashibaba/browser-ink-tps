@@ -284,6 +284,44 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(freeze.activationReady).toBe(false);
   w.actors.dispose();
  });
+ it('uses the live HUMAN or SQUID Rapier radius for CPU separation, never a stale human-sized proxy',()=>{
+  const w=world();
+  expect(PLAYER_CHARACTER_PHYSICS.humanRadiusMeters).toBe(.32);
+  expect(PLAYER_CHARACTER_PHYSICS.squidRadiusMeters).toBe(.34);
+  const candidate={x:w.humanFoot.x+.61,y:w.humanFoot.y,z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('B1',candidate);
+  // .61m is beyond the old .29+.32-.01m overlap threshold, but
+  // INSIDE the real .29+.34-.01m SQUID/CPU footprint.
+  expect(w.actors.auditGroundStep('B1',candidate,candidate,DT)
+   .proposedActorCapsuleOverlap).toBe(false);
+  expect(w.actors.qaRegisteredRealCpuCapsule('B1')!.actualHumanRadiusMeters)
+   .toBe(.32);
+  // Real in-game squid input swaps the actual PlayerController Rapier
+  // capsule for its radius-0.34m ball; no game actor/terrain is teleported.
+  const input=(w.player as unknown as {input:PlayerInput}).input as unknown as {
+    squidHeld:boolean;
+  };
+  input.squidHeld=true;
+  w.player.computeFixed(DT);w.physics.step();w.player.syncAfterPhysics(DT);
+  expect(w.player.currentMode).toBe('SQUID');
+  const human=w.player.getPosition();
+  const foot={x:human.x,
+   y:human.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,z:human.z};
+  w.actors.syncActualHumanFoot(foot,true,w.player.currentMode);
+  expect(w.actors.qaRegisteredRealCpuCapsule('B1')!.actualHumanRadiusMeters)
+   .toBe(.34);
+  // The squid sphere is active. A same-floor endpoint which the HUMAN
+  // approximation missed must NOT become an approved CPU step.
+  const squid={x:foot.x+.61,y:foot.y,z:foot.z};
+  w.actors.syncRealCpuFoot('B1',squid);
+  const blocked=w.actors.auditGroundStep('B1',squid,squid,DT);
+  expect(blocked.proposedActorCapsuleOverlap).toBe(true);
+  expect(blocked.approved).toBe(false);
+  expect(blocked.cpuVisualTeleportPerformed).toBe(false);
+  w.actors.resetActors();
+  expect(w.actors.cpuColliderCount).toBe(0);
+  w.actors.dispose();
+ });
  it('match reset removes every CPU proxy but retains the actual PlayerController and static original collision geometry',()=>{
   const w=world();
   const a={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};
