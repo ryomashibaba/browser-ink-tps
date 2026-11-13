@@ -68,7 +68,7 @@ describe('physical SOURCE human death and 150 true native tick recovery',()=>{
   expect(nativeSourceHumanRespawnElapsedTicks(900,900)).toBe(0);
  });
  it('rejects impossible or fabricated native tick identifiers',()=>{
-  for(const [a,b] of [[-1,0],[3,2],[5,NaN],[1,1.5]])
+  for(const [a,b] of [[-1,0],[3,2],[5,NaN],[1,1.5]] as const)
    expect(()=>nativeSourceHumanRespawnElapsedTicks(a,b))
      .toThrow('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
  });
