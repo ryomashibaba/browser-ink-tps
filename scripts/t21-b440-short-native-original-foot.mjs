@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// P1_USER_APPROVED_NATIVE_INK_LOOP_ONCE_20261113: run the existing same-world real fire -> registered OWN squid refill -> reshoot gate once; no runtime changes.
 // B448_APPROVED_NATIVE_A3_ONCE_20261113: execute the pre-existing 720-tick A3 original-frontline gate once; no runtime changes.
 // B441_APPROVED_SINGLE_NATIVE_RUN_20261113: one authorized 720-tick, 15-minute max native SOURCE trial; no runtime or stage changes.
 /**
