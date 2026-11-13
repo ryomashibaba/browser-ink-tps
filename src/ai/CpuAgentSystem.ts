@@ -1956,7 +1956,15 @@ export class CpuAgentSystem {
         bot.team === sourceTeam ||
         bot.lifeState !== 'ACTIVE' ||
         bot.hp <= 0 ||
-        isCpuJumpAirborne(bot)
+        isCpuJumpAirborne(bot) ||
+        // The SAME current-life physical-rejoin gate as SOURCE MAIN,
+        // CHARGER and thrown-SUB direct hits. Blast radius alone is not
+        // proof that a high-spawn or FIRST_DROP_REJOIN ghost was a
+        // physically present opponent. Every genuine area attack (human
+        // bomb, CPU bomb, special and melee) must respect this boundary.
+        // Frozen T20/other legacy modes never acquire this extra gate.
+        (this.f3dSourceGoals !== null &&
+         !this.liveSourceCombatOpponent(bot))
       ) continue;
       const dx = bot.position.x - center.x;
       const dy = bot.position.y + 0.68 - center.y;

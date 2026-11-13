@@ -1464,6 +1464,71 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(shoot()).toBeNull();
   });
 
+  it('canonical SOURCE area combat does not damage a first-drop or pre-rejoin CPU ghost',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    let actuallyRejoined=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>actuallyRejoined;
+    bot.hp=65;
+    const blast=()=>system.applyAreaDamage(
+      new Vec3(0,.68,0),1.2,35,Team.A,undefined,true);
+    for(const state of ['FIRST_DROP_FALL','FIRST_DROP_REJOIN','GROUND']){
+      bot.mobilityState=state;
+      expect(blast()).toBe(0);
+      expect(bot.hp).toBe(65);
+      expect(bot.lifeState).toBe('ACTIVE');
+      expect(system.stats.cpuCombatHits).toBe(0);
+    }
+    // The same unchanged in-range blast becomes a real HP hit only
+    // after this exact CPU life truly rejoins existing SOURCE Rapier.
+    actuallyRejoined=true;
+    expect(blast()).toBe(1);
+    expect(bot.hp).toBe(30);
+    expect(blast()).toBe(1);
+    expect(bot.hp).toBe(0);
+    expect(bot.lifeState).toBe('SPLATTED');
+    expect(system.stats.cpuSplats).toBe(1);
+    expect(blast()).toBe(0); // already-splatted body never absorbs an AoE
+    expect(system.stats.cpuSplats).toBe(1);
+  });
+
+  it('SOURCE HUMAN SUB explosion gates both blast rings on real CPU rejoin, without altering legacy T20',()=>{
+    const profile=subWeaponProfile('pulse-bomb');
+    const {system,bot}=fixture(true);
+    bot.hp=100;
+    let actuallyRejoined=false;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>actuallyRejoined;
+    const sub:any=Object.create(SubWeaponSystem.prototype);
+    sub.enableNativeSourceHumanSubBodyContact();
+    sub.cpuAgents=system;
+    sub.combatTargets={applyAreaDamage:vi.fn()};
+    sub.paintExplosion=vi.fn();
+    sub.feedback={subBurst:vi.fn()};
+    sub.stats={playerSubExplosions:0};
+    sub.deactivate=vi.fn();
+    const bomb:any={active:true,team:Team.A,
+      position:new Vec3(0,.68,0)};
+    bot.mobilityState='FIRST_DROP_REJOIN';
+    sub.explode(bomb,profile,'CONTACT_IMPACT');
+    expect(bot.hp).toBe(100);
+    expect(system.stats.cpuCombatHits).toBe(0);
+    expect(system.stats.cpuSplats).toBe(0);
+    expect(sub.paintExplosion).toHaveBeenCalledOnce();
+    // Existing genuine landing and rejoin permits the unchanged bomb.
+    bot.mobilityState='GROUND';actuallyRejoined=true;
+    sub.explode(bomb,profile,'CONTACT_IMPACT');
+    expect(bot.hp).toBeLessThan(100);
+    expect(system.stats.cpuCombatHits).toBeGreaterThan(0);
+    expect(sub.paintExplosion).toHaveBeenCalledTimes(2);
+    // Frozen T20 has no SOURCE rejoin authority to check; preserve its
+    // historical radius and pending first-drop damage semantics.
+    const old=fixture(false);
+    old.bot.mobilityState='FIRST_DROP_REJOIN';
+    expect(old.system.applyAreaDamage(
+      new Vec3(0,.68,0),1.2,15,Team.A)).toBe(1);
+    expect(old.bot.hp).toBe(35);
+  });
+
   it('native area damage independently removes a lethally struck CPU once', () => {
     const { system, bot } = fixture(true);
     const hits = system.applyAreaDamage(new Vec3(0, .68, 0), 3, 90, Team.A);
