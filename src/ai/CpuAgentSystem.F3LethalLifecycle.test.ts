@@ -1317,6 +1317,9 @@ describe('SOURCE real CPU respawn executes on native tick 150',()=>{
   cpu.f3dSourceGoals=nativeSource?{}:null;
   cpu.phase14qHumanCrowd=null;
   cpu.phase14qGroundCollision=null;
+  // This fixture runs the real fixedUpdate countdown without an actual
+  // Recast world. Navigation still advances once each native SOURCE tick.
+  cpu.navigation={fixedUpdate:vi.fn()};
   cpu.b212NativeLeadEnabled=false;
   cpu.b181OriginalCombatStageRay=false;
   cpu.syncStats=vi.fn();
