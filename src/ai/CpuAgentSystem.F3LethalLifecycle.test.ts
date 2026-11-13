@@ -1269,3 +1269,43 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
   });
 
 });
+
+describe('SOURCE real CPU respawn executes on native tick 150',()=>{
+ function fullCpuTickFixture(nativeSource:boolean){
+  const cpu:any=Object.create(CpuAgentSystem.prototype);
+  const bot:any={id:'B1',lifeState:'SPLATTED',
+   respawnRemainingSeconds:GAME_CONFIG.match.respawnSeconds,
+   position:new Vec3(0,0,0)};
+  cpu.bots=[bot];
+  cpu.f3dSourceGoals=nativeSource?{}:null;
+  cpu.phase14qHumanCrowd=null;
+  cpu.phase14qGroundCollision=null;
+  cpu.b212NativeLeadEnabled=false;
+  cpu.b181OriginalCombatStageRay=false;
+  cpu.syncStats=vi.fn();
+  cpu.b234ObserveRealCpu=vi.fn();
+  cpu.respawnBot=vi.fn(()=>{bot.lifeState='ACTIVE'});
+  const tick=()=>cpu.fixedUpdate(1/60,true,Team.A,new Vec3(),false);
+  return {cpu,bot,tick};
+ }
+ it('actual CPU fixedUpdate keeps CPU splatted through 149 and restores exactly at 150',()=>{
+  const x=fullCpuTickFixture(true);
+  for(let tick=1;tick<150;tick++){
+   x.tick();
+   expect(x.bot.lifeState).toBe('SPLATTED');
+   expect(x.cpu.respawnBot).not.toHaveBeenCalled();
+  }
+  x.tick();
+  expect(x.cpu.respawnBot).toHaveBeenCalledOnce();
+  expect(x.bot.lifeState).toBe('ACTIVE');
+  expect(x.bot.respawnRemainingSeconds).toBeLessThan(1e-9);
+ });
+ it('historical non-SOURCE countdown is not implicitly retimed',()=>{
+  const x=fullCpuTickFixture(false);
+  for(let tick=0;tick<150;tick++)x.tick();
+  expect(x.cpu.respawnBot).not.toHaveBeenCalled();
+  expect(x.bot.respawnRemainingSeconds).toBeGreaterThan(0);
+  x.tick();
+  expect(x.cpu.respawnBot).toHaveBeenCalledOnce();
+ });
+});

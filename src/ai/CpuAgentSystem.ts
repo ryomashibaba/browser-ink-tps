@@ -833,7 +833,14 @@ export class CpuAgentSystem {
     for (const bot of this.bots) {
       if (bot.lifeState === 'SPLATTED') {
         bot.respawnRemainingSeconds = Math.max(0, bot.respawnRemainingSeconds - dt);
-        if (bot.respawnRemainingSeconds <= 0) this.respawnBot(bot);
+        // SOURCE runs at exactly 60 Hz with a 2.5s/150-tick respawn.
+        // Repeated binary floating subtraction leaves ~4e-15s at tick
+        // 150 and used to delay the real CPU for an extra native frame.
+        // The tolerance is far below any physical tick; keep frozen T20
+        // and non-SOURCE QA's historical timer boundary unchanged.
+        if (bot.respawnRemainingSeconds <=
+            (this.f3dSourceGoals !== null ? 1e-9 : 0))
+          this.respawnBot(bot);
         continue;
       }
 
