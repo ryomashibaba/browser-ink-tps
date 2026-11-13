@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
-import { SurfaceFlags, Team } from '../ink/types';
+import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
