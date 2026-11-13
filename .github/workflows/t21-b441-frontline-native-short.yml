@@ -566,7 +566,7 @@ jobs:
             sourceGeometryChanges:0,fullRouteCertified:false,
             WindowsHumanPlayCertified:false}));
           P1_PINNED_RAMP_CUE
-      # 360 applies ONLY after true seven-CPU rejoin. The initial native
+      # 360 applies ONLY after genuine seven-CPU rejoin, not app startup. The initial native
       # startup/join ticks are not covered by this optional observation cap.
       - name: Confirm one explicit SOURCE 360 post-join contract
         if: ${{ contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') }}
