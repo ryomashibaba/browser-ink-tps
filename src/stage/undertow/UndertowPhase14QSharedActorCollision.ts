@@ -20,7 +20,8 @@ export type T21QFoot=Readonly<{x:number;y:number;z:number}>;
 export type T21QContactResult=Readonly<{
   source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD';
   approved:boolean;
-  cause:'CLEAR'|'DYNAMIC_ACTOR_OR_STAGE_BLOCKER'|'UNSUPPORTED_INITIAL_OVERLAP';
+  cause:'CLEAR'|'DYNAMIC_ACTOR_OR_STAGE_BLOCKER'|'UNSUPPORTED_INITIAL_OVERLAP'|
+   'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION';
   requestedMeters:number;
   actualMeters:number;
   horizontalDisagreementMeters:number;
@@ -154,9 +155,15 @@ export class UndertowPhase14QSharedActorCollision{
     if(!actual||![foot.x,foot.y,foot.z].every(Number.isFinite)||
        Math.hypot(actual.x-foot.x,actual.y-foot.y,actual.z-foot.z)>1e-5)
       return null;
+    return this.registeredOriginalSourceFootSupport(foot);
+  }
+
+  /** Static SOURCE physical support for an observed OR candidate foot.
+   * A real Rapier character ray, never a manufactured floor/NavMesh. */
+  private registeredOriginalSourceFootSupport(foot:T21QFoot){
     // A true HUMAN/CPU capsule stands on registered GRATE even when
-    // ordinary ink bullets pass through it. Never treat a projectile ray
-    // to a different slab below as the actor's resource-supporting foot.
+    // ordinary ink bullets pass through it. Never accept a lower slab
+    // across the original level gap as current CPU foot support.
     const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
     const hit=this.physics.castCharacterFootSupport(
       new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
@@ -219,7 +226,10 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
-  public auditGroundStep(id:string,from:T21QFoot,to:T21QFoot,dt:number):T21QContactResult{
+  public auditGroundStep(
+    id:string,from:T21QFoot,to:T21QFoot,dt:number,
+    physicallyRejoinedOriginalGround=false
+  ):T21QContactResult{
     this.assertFoot(id,from);
     this.assertFoot(id,to);
     if(!Number.isFinite(dt)||Math.abs(dt-1/60)>1e-8)
@@ -274,11 +284,22 @@ export class UndertowPhase14QSharedActorCollision{
     // than the old source-collider tolerance. Validate the FINAL physical
     // footprint as well as the origin and swept KCC contact.
     const destinationOverlaps=this.hasApproximateSameLayerOverlap(id,to);
+    // The native Crowd/KCC clearance does not by itself establish a
+    // registered ORIGINAL floor under the next visible CPU foot. Once a
+    // CPU has genuinely rejoined, forbid walking from proven Rapier floor
+    // straight into unsupported air. Never obstruct the separate
+    // high-pad FIRST_DROP admission/rejoin, or an already unsupported
+    // actor trying to recover toward an existing registered floor.
+    const leavesOriginalFloor=physicallyRejoinedOriginalGround&&
+      clear&&!actorOverlaps&&!destinationOverlaps&&wanted>1e-5&&
+      !this.registeredOriginalSourceFootSupport(to)&&
+      !!this.registeredOriginalSourceFootSupport(from);
     const cause=actorOverlaps?'UNSUPPORTED_INITIAL_OVERLAP':
-      clear&&!destinationOverlaps?'CLEAR':'DYNAMIC_ACTOR_OR_STAGE_BLOCKER';
+      !clear||destinationOverlaps?'DYNAMIC_ACTOR_OR_STAGE_BLOCKER':
+      leavesOriginalFloor?'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION':'CLEAR';
     return {
       source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD',
-      approved:clear&&!actorOverlaps&&!destinationOverlaps,cause,
+      approved:clear&&!actorOverlaps&&!destinationOverlaps&&!leavesOriginalFloor,cause,
       requestedMeters:wanted,
       actualMeters:Math.hypot(movement.x,movement.y,movement.z),
       horizontalDisagreementMeters:errXZ,

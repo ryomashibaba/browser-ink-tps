@@ -352,6 +352,55 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   w.actors.dispose();
   expect(w.actors.cpuColliderCount).toBe(0);
  });
+ it('a genuinely rejoined CPU cannot walk off registered original Rapier floor just because Recast proposed a step',()=>{
+  const w=world();
+  // Use the registered original upper source as a precise static floor
+  // boundary fixture; the opt-in true flag represents a post-rejoin CPU.
+  // No stage mesh, invisible bridge, actor foot or nav link is fabricated.
+  const spawn=w.stage.metadata.teamBSpawn;
+  const y=spawn[1],offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const supported=(x:number,z:number)=>{
+   const hit=w.physics.castCharacterFootSupport(
+    new Vec3(x,y+offset,z),offset,'HUMAN');
+   return !!hit&&Math.abs(hit.point.y-y)<=.25&&
+    w.stage.solids.some(s=>s.id===hit.solidId);
+  };
+  expect(supported(spawn[0],spawn[2])).toBe(true);
+  let verifiedEdge=false;
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+   let prior={x:spawn[0],y,z:spawn[2]};
+   for(let i=1;i<=600;i++){
+    const to={x:spawn[0]+dx*i*.05,y,z:spawn[2]+dz*i*.05};
+    if(supported(prior.x,prior.z)&&!supported(to.x,to.z)){
+     // This CPU remains distant from the real human KCC.
+     if(Math.hypot(prior.x-w.humanFoot.x,prior.z-w.humanFoot.z)>2){
+      w.actors.syncRealCpuFoot('B1',prior);
+      const result=w.actors.auditGroundStep('B1',prior,to,DT,true);
+      if(result.cause==='UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION'){
+       expect(result.approved).toBe(false);
+       expect(result.requestedMeters).toBeCloseTo(.05,5);
+       expect(result.colliderOwnerIds).not.toContain('HUMAN_PLAYER_CONTROLLER');
+       expect(result.cpuVisualTeleportPerformed).toBe(false);
+       expect(result.originalNavAuthorityOverridden).toBe(false);
+       verifiedEdge=true;break;
+      }
+     }
+     break;
+    }
+    prior=to;
+   }
+   if(verifiedEdge)break;
+  }
+  expect(verifiedEdge,'at least one genuine original floor edge must fail closed')
+   .toBe(true);
+  // Staging and first-drop continue through their existing separate
+  // physics authority; no new floor check is imposed before rejoin.
+  const nonrejoined={x:spawn[0],y,z:spawn[2]};
+  w.actors.syncRealCpuFoot('B1',nonrejoined);
+  const noStep=w.actors.auditGroundStep('B1',nonrejoined,nonrejoined,DT,false);
+  expect(noStep.cause).not.toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+  w.actors.dispose();
+ });
  it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stages',()=>{
   const w=world();
   const at={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};

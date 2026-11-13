@@ -121,7 +121,8 @@ export interface CpuSharedGroundStepAuthority {
     id:string,
     from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,
-    dt:number
+    dt:number,
+    physicallyRejoinedOriginalGround?:boolean
   ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
 }
 
@@ -1205,7 +1206,8 @@ export class CpuAgentSystem {
         let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
         try{
           shared=this.phase14qGroundCollision.auditGroundStep(
-            bot.id,bot.position,accepted,dt
+            bot.id,bot.position,accepted,dt,
+            this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true
           );
         }catch(error){
           if(this.phase14qF2RecoverableSteps&&
