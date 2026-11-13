@@ -4,6 +4,8 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
+import {shouldReissueOriginalSourceNativeTarget}
+ from './OriginalSourceNativeTargetRefresh';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
 import {weaponProfile} from '../weapons/WeaponCatalog';
@@ -109,6 +111,41 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
       supportedWindows:1,mainRequests:1,kitRequests:0});
     expect(witness.trueProjectileLaunchesCertified).toBe(false);
     expect(witness.trueImpactCellsCertified).toBe(false);
+  });
+  it('restores the same authorized SOURCE Crowd goal after a genuine blocked-step proxy reset',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.b35OptInNativeRefresh=true;
+    const lastGoal=new Vec3(0,0,4);
+    const agent={
+      teleport:vi.fn(),resetMoveTarget:vi.fn(),
+      position:vi.fn(()=>bot.position.clone())
+    };
+    bot.agent=agent;
+    bot.thinkRemaining=3;
+    system.navigation.closestPoint=vi.fn((foot:Vec3)=>foot.clone());
+    const unrelatedAgent={
+      teleport:vi.fn(),resetMoveTarget:vi.fn(),
+      position:vi.fn(()=>new Vec3(1,0,3))
+    };
+    system.b35LastNativeTarget=new Map([
+      ['B1',{agent,goal:lastGoal.clone(),repeat:0}],
+      ['A1',{agent:unrelatedAgent,goal:new Vec3(1,0,3),repeat:2}]
+    ]);
+    const previous=system.b35LastNativeTarget.get('B1');
+    expect(shouldReissueOriginalSourceNativeTarget({
+      x:previous.goal.x,y:previous.goal.y,z:previous.goal.z,
+      repeatedThinkCycles:previous.repeat,sameAgent:previous.agent===bot.agent
+    },lastGoal)).toBe(false); // The old cache would suppress the reset target.
+    const originalFoot=bot.position.clone();
+    system.reconcileBlockedT21F2CrowdProxy(bot);
+    expect(agent.teleport).toHaveBeenCalledOnce();
+    expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
+    expect(bot.position.equals(originalFoot)).toBe(true); // No CPU pose write.
+    expect(system.b35LastNativeTarget.has('B1')).toBe(false);
+    expect(system.b35LastNativeTarget.has('A1')).toBe(true);
+    expect(shouldReissueOriginalSourceNativeTarget(null,lastGoal)).toBe(true);
+    expect(bot.thinkRemaining).toBeCloseTo(.20);
   });
 });
 

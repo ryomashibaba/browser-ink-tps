@@ -1332,6 +1332,11 @@ export class CpuAgentSystem {
       throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
     bot.agent.teleport(nav);
     bot.agent.resetMoveTarget();
+    // B35's dedup cache is not the live Crowd target: resetMoveTarget
+    // discarded the target, so the SAME already-authorized original goal
+    // must be submitted at the next real tactical think, not suppressed
+    // as an allegedly still-active request. Only this CPU is invalidated.
+    this.b35LastNativeTarget.delete(bot.id);
     const p=bot.agent.position();
     if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
       p.z-bot.position.z)>.20)
