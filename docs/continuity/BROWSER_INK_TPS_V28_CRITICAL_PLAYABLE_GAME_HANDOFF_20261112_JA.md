@@ -1,5 +1,36 @@
 # Browser Ink TPS / T21 — V28 全体批判と実ゲーム完成優先・新チャット統合正本
 
+## 【2026-11-14 V28継続・真正180秒進行中の全体再批判／次チャット最新正本】
+
+**位置づけと変更範囲**：2026-11-14の本人明示依頼による**既存V28正本の一度限りの更新**。新V29・新企画・新規B番号・追加ゲーム機能ではない。これまでの全V28、V27以前、固定F1〜F5、Fast Track、DECISIONS、本人の採否・反省・保護方針を不変として継承する。**この更新はDOCS ONLY／ゲーム進捗0件**。以下の「最新」は保存時点の記録であり、新チャットはライブ状態を常に優先する。
+
+### 1. 最初にライブ確認するもの（真正試験の最優先ゲート）
+
+- 公開GitHub `ryomashibaba/browser-ink-tps`。唯一の書込先 `research/t21-integrated-a1-c-patrol-four-mode-20261105`、**文書保存前の研究HEAD**=`d261f1fbb054b3462d1e030df26756b91f836cd5`。ゲーム本体最終コードHEAD=`79e0b6441c4e0053b476b49c89fd2c88d9273405`。研究HEADはこのdocs-onlyコミット後に変わる。main=`fbd922cea900df8e1a139f21b3c61ed927b3fdd9`、Draft PR #5 Open/Draft head=`8cfc95756ef0b56e2c33dc9f89a9041126daa272`（いずれも保護）。START_HERE/V28への今回の書込と元の実ゲームコードの変更を混同しない。
+- **承認済み真正180秒試験** [Actions #43528988040](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43528988040)、job `132241694209`、HEAD=`d261f1fbb054b3462d1e030df26756b91f836cd5`、既存 `t21-b385-selectable-source-round.yml`。承認は**この1回のみ、すでに消費済み**。コミット `d261f1fb` の変更はワークフローのコメントのみ。既存 `[p1-180s-once] [p1-own-once]` により真SOURCE世界で人間WASD・選択Twin Comets/物理弾・7CPU実Rejoin・本物のSOURCE射撃/インク→OWN SQUID回復→再射撃・真180秒TIME_UP→同武器新世界再戦の一体検証を目指す。**本記録の確認時点は `in_progress`（run_attempt 1）**、事前9ステップSUCCESS、`Drive actual source Chrome` ステップ実行中、最終結論と新たなゲームPASSは未確認。実行中はジョブログ取得404だった。次チャットの**最初の唯一の行動**はこのrun/jobs/artifactsを再取得し、完了していればジョブログ／RAWを同じSHAで照合して結果を分類すること。時間経過だけで成功・失敗・タイムアウトの原因を推測しない。完了を待つための新CI・再試行・別Chromium起動は禁止（再実験には新しい個別本人承認が必要）。
+- 旧真正 [#43520746850](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43520746850) は7/7物理合流 native tick1068、合流後362 native tick（〜1430）を**真正観測**したが、支持足上での「移動拒否→有償攻撃」成立機会0、要求0で `HOLD_NO_SUPPORTED_BLOCKED_FOOT_EVENT_IN_360_WINDOW`。攻撃機能自体が壊れた証拠ではない。未成立イベントを合格したことにしない・同じ条件を無意味に再実行しない。
+- 本体修正 `3e0d247e` と型だけの修正 `79e0b644`：物理再合流済みのCPUが登録済みの床から無支持の次足位置へ、Recast地上ステップとして進まないRapier支持判定を追加。初期first-drop・まだ無支持の足からの復帰は保護。新たな原作床/リンクなし。軽量CI [#43524004297](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43524004297) SUCCESS：20 files 211 PASS/2 SKIP、8 files 104 PASS、TypeScript+Vite PASS、真正Chromium SKIPPED、Artifact0。これは**CODE_PASS_ONLY**で、最新本体のWindows床抜け・SAFE STOP・CPU自然行動を解決したと認定しない。
+- それ以前のB448真正 [#43335171546](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43335171546) は原作登録床上の研究opt-in A3前進15.818m／有償射撃14／塗装1,881セルの限定成功。B441、B448、B390などの異なるSHA／ゲームモードを合算して「同一世界の全機能PASS」にしない。
+
+### 2. 永久固定の最上位目標と厳格な未完成認定
+
+- 対象は『スプラトゥーン3』Ver.7.2.0**マテガイ放水路・通常ナワバリ**。ブラウザ3D（Rapier/Recast）で、本人が自然に操作できる**人間1＋CPU7（自然4v4）**、見た目・物理・カメラ、移動/イカ/実射撃/塗装/インク補給、自然敵との本物のHP/撃破/150 native tick復活、180秒、原作根拠に基づく公式得点/勝敗、同武器再戦、Windows実機FPS/ARTと正式QAが目標。Big Run、別ステージ・別モードへ退避しない。
+- **現時点の登録権限は25 Rapier solids /17 PaintSurfaces /26 source NavLinks /0 Scoreable、Winner NONE、正式4v4/ART/公開はHOLD**。B499原作候補10部品42三角Faceは現本体0/10登録、8隣接の現Recast接続0/8、検査した自然敵味方16経路0/16。これは検査集合における観測であり、原作全域の完成率も全経路の不存在も**わからない**。視覚OBJを丸ごと衝突床へ昇格、仮橋・床・NavLink・ワープ・敵接触・HP/得点の捏造、閾値/CPU半径の無根拠緩和は禁止。
+- **旧Windows本人通常試遊FAIL**：見える床と物理の不一致・床抜け・CPU少数・SAFE STOP。既存の比較証拠 `Documents/BrowserInkTPS_F3L_15864_5030`、クローン `Downloads/browser-ink-tps-current` を再利用し、43MB原作、スクリーンショット、ZIP、PowerShellを再提出させない。旧本人実歩行tick1270→1271で高台支持喪失（X -4.770→-4.924、Z 52.723→52.413）、tick1355→1356で低地支持喪失（X -0.910→-0.675、Z 46.989→46.629）。**正常な縁/落下、他の高さの床との区別は未解決**なので、見た目だけで「原作の床穴」と断定しない。現在の本体を本人Windowsで一体試遊した新証拠はなし。
+
+### 3. 今回の批判を踏まえた実行法の修正
+
+1. **最初は #43528988040 の最終状態を読むことだけ**。途中で失敗したなら `BOOT/READY`、`7/7合流`、`人間WASD+実弾/インク`、`OWN SQUID`、`180秒TIME_UP`、`同武器再戦` の**最初の失敗地点**に切り分ける。UI/厳格スクリプト前提のFAILか本体ゲームFAILかも分離。失敗点がない限り修正コミットなし。1回の実験に許可された範囲と結果を超えて合格宣言しない。
+2. **レーンB（F1/F2/F3の既存SOURCEゲーム）を第一の実制作**：実障害があれば本体の関連ファイルを一バッチで修復し、既存軽量Vitest/TS/Viteを原則一回。軽量テストがPASSでも `CODE_PASS_ONLY`。真正試験/Windows実機は**対象を限定した本人の別途明示承認**があるときのみ。特殊な「拒否移動時に攻撃」だけを人工的に発生させる実験を優先しない。
+3. **レーンA（F4地形・最大阻害）を止めない**：本人の最初の通常歩行障害1箇所について旧B490、B499、原作Face/Actorの同一座標を突き合わせ、Ver.7.2.0 Turf Banc/BYML・Actor placement・Phive材質と`col_disable_flags`の**個別正規根拠**が確認できる場合だけ隔離して真HUMAN Rapier KCC→元半径0.30m CPU Recast→真世界へ段階昇格。根拠不足Faceだけ`HOLD_REFERENCE_REQUIRED`、PRIVATE原本・派生Faceを外部CI/GitHubへ無承認送信しない。Pass18の8 gapとB499の8 adjacent seamを同じ場所と断定しない。
+4. **マクロ受入順は不変**：自然4v4の足場と接続→本当の対人CPU遭遇→実HP0/150tick復活→原作Scoreable権限成立後にのみ公式得点/勝者→本人Windows普通の試遊・実FPS/ART→正式QA・明示公開。未完了なら未完了。2工程続けて実プレイ進捗0なら小修正/小QA/HUD/文書を止め、最大阻害要因と実行方法を見直す。
+5. **単独統合担当で効率化**：原則この新チャットだけでGitHub本体/旧RAWを読み、必要な独立レビューのみ読み取り専用並列化。書込みは唯一の統合担当が研究branchへ `expected_sha` CAS・single parent・`force:false`。勝手な並列push・無限再試行をしない。main・T19C・T20・PR #5・Pages・正式QA・PRIVATE・本人Windowsの変更は不許可。Work/Computer Use/Windows変更/高負荷GitHub Actions/PRIVATEの転送/本番公開はそれぞれ個別事前承認。
+6. **コストと伝達の最小化**：本人操作原則0、追加課金原則0円。高負荷完了を待つための会話の連投/無意味なポーリング/重複実行なし。返答は `FACT/CODE_PASS_ONLY/TRUE_RUN_LIMITED_PASS/HOLD_REFERENCE_REQUIRED/FAIL/UNKNOWN` で、「実ゲームが何を新たにできるようになったか・同SHA証拠・残HOLD・次の1手・本人作業」のみを報告する。必要なファイルや情報が既存にあればユーザーへ再提出させない。
+
+**新チャット最初の具体命令**：本セクション→同V28下位章→必要なV27/Fast Track/DECISIONSを継承し、`#43528988040` の最終状態・jobログ/Artifact（取得できる場合）を確認する。①真正の試験範囲だけ結果判定、②実ゲームの再現済み欠陥があれば最小一括修正、③原作権限がないF4個別FaceはHOLD。新たな真正試験を自動で起動しない。ユーザー作業0を基本とする。
+
+---
+
 ## 【2026-11-13 B448真正後・本人明示の最終全体批判／V28継続・新チャット唯一の最新版】
 
 **位置づけ**：ユーザーが再度明示した総合再評価・移行のための今回1回のみの追補。新V29・新企画・上位仕様の変更ではない。最上位は原作『スプラトゥーン3』Ver.7.2.0マテガイ放水路**通常ナワバリ**、本当の人間1+CPU7の自然な4v4・180秒・再戦・原作地形/HP/インク/得点/勝敗/ART・Windows実機。固定F1〜F5、Fast Track、DECISIONS、既存V28全文・V27以前の本人指示、失敗と保護条件をすべて継承。**この追補自体はdocs-only、実ゲーム進捗0**。古い文書内の「最新HEAD」「次の工程」「研究QAブランチ」「0/12」は記述時点の履歴。新チャットは必ずGitHubを再照合する。
