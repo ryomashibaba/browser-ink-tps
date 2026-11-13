@@ -1785,7 +1785,11 @@ export class CpuAgentSystem {
     radius: number,
     damage: number,
     sourceTeam: Team.A | Team.B,
-    sourceMeleeTargetClear?: (bodyCenter: Vec3) => boolean
+    sourceMeleeTargetClear?: (bodyCenter: Vec3) => boolean,
+    /** Canonical SOURCE only: same actual 0.29m-radius, 0.39m-half-height
+     * CPU Rapier capsule as the live shared-actor collision system.
+     * Optional to preserve the old T20/QA explosion hit contract. */
+    nativeSourceCpuCapsuleContact = false
   ): number {
     if (radius <= 0 || damage <= 0) return 0;
     const radiusSq = radius * radius;
@@ -1801,7 +1805,19 @@ export class CpuAgentSystem {
       const dx = bot.position.x - center.x;
       const dy = bot.position.y + 0.68 - center.y;
       const dz = bot.position.z - center.z;
-      if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+      if(nativeSourceCpuCapsuleContact){
+        // The real 60Hz SOURCE CPU collider is Rapier.capsule(.39,.29),
+        // centered at the original Crowd foot +.68m. An explosion is a
+        // sphere: contact occurs within (blast radius + capsule radius)
+        // of the capsule's vertical central segment. The old one-point
+        // test incorrectly missed live FOOT and HEAD contacts.
+        const axisDeltaY=Math.max(0,Math.abs(dy)-.39);
+        const reach=radius+.29;
+        if(dx*dx+dz*dz+axisDeltaY*axisDeltaY>reach*reach)continue;
+      }else{
+        // Frozen T20 and deterministic QA keep the exact old center test.
+        if(dx*dx+dy*dy+dz*dz>radiusSq)continue;
+      }
       // SOURCE original Rapier wall protection, melee only. All other
       // blast/SUB or legacy callers pass no predicate.
       if(sourceMeleeTargetClear&&!sourceMeleeTargetClear(

@@ -2349,7 +2349,11 @@ export class ProjectileSystem {
     const meleeClear=this.nativeSourceHumanPhysicalMode&&sourceMeleeOrigin?
       (body:Vec3)=>this.sourceMeleeLineClear(sourceMeleeOrigin,body):
       undefined;
-    this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear);
+    // Only the four canonical 25/17/26/0 physical SOURCE rounds enable
+    // the real shared CPU Rapier-capsule hit shape. All other hit modes
+    // retain the historical center approximation.
+    this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear,
+      this.nativeSourceHumanPhysicalMode!==null);
     this.combatTargets.applyAreaDamage(point, radius, damage, team);
 
     if (

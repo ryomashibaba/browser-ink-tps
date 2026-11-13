@@ -241,3 +241,65 @@ describe('CPU real melee line of sight checked before actual HP loss',()=>{
   expect(bot.hp).toBe(52);
  });
 });
+
+describe('native ORIGINAL SOURCE 7-CPU true-capsule area damage',()=>{
+ async function fixture(){
+  const {CpuAgentSystem}=await import('../ai/CpuAgentSystem');
+  const sys=Object.create(CpuAgentSystem.prototype) as InstanceType<typeof CpuAgentSystem>;
+  const internal=sys as unknown as {bots:unknown;stats:unknown;f3dSourceGoals:unknown};
+  const bot={id:'B1',team:Team.B,lifeState:'ACTIVE',hp:100,
+   position:new Vec3(0,0,0),mobilityState:'GROUND',
+   weaponGuarding:false,hpRecoveryDelaySeconds:0};
+  internal.bots=[bot];internal.stats={cpuCombatHits:0};
+  internal.f3dSourceGoals={}; // existing authorized SOURCE stage fixture
+  return {sys,bot};
+ }
+ it('counts genuine near-foot CPU capsule blast contact that center sphere missed',async()=>{
+  const x=await fixture();
+  const center=new Vec3(0,.07,0);
+  expect(x.sys.applyAreaDamage(center,.13,18,Team.A,undefined,true)).toBe(1);
+  expect(x.bot.hp).toBe(82);
+  const legacy=await fixture();
+  expect(legacy.sys.applyAreaDamage(center,.13,18,Team.A)).toBe(0);
+  expect(legacy.bot.hp).toBe(100);
+ });
+ it('genuine capsule hit near upper body and lateral rim; misses outside',async()=>{
+  const head=await fixture();
+  expect(head.sys.applyAreaDamage(new Vec3(0,1.31,0),.12,25,
+    Team.A,undefined,true)).toBe(1);
+  expect(head.bot.hp).toBe(75);
+  const lateral=await fixture();
+  expect(lateral.sys.applyAreaDamage(new Vec3(.38,.68,0),.12,25,
+    Team.A,undefined,true)).toBe(1);
+  const outside=await fixture();
+  expect(outside.sys.applyAreaDamage(new Vec3(.6,.68,0),.12,25,
+    Team.A,undefined,true)).toBe(0);
+  expect(outside.bot.hp).toBe(100);
+ });
+ it('keeps own-team immunity and source melee cover veto before real HP',async()=>{
+  const x=await fixture();
+  expect(x.sys.applyAreaDamage(new Vec3(0,.1,0),.2,30,
+    Team.B,undefined,true)).toBe(0);
+  expect(x.sys.applyAreaDamage(new Vec3(0,.1,0),.2,30,
+    Team.A,()=>false,true)).toBe(0);
+  expect(x.bot.hp).toBe(100);
+ });
+ it('ProjectileSystem forwards real SOURCE physical-mode gate only',()=>{
+  const game=Object.create(ProjectileSystem.prototype) as ProjectileSystem;
+  const native=game as unknown as {
+   nativeSourceHumanPhysicalMode:unknown;cpuAgents:unknown;
+   combatTargets:unknown;currentHumanDamageable:boolean;
+  };
+  const flags:boolean[]=[];
+  native.cpuAgents={applyAreaDamage:(
+    _point:Vec3,_radius:number,_damage:number,_team:Team,
+    _clear?:unknown,capsule?:boolean
+  )=>{flags.push(capsule===true);return 0;}};
+  native.combatTargets={applyAreaDamage:()=>{}};
+  native.currentHumanDamageable=false;
+  game.applyExternalAreaDamage(new Vec3(0,0,0),1,10,Team.A);
+  native.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+  game.applyExternalAreaDamage(new Vec3(0,0,0),1,10,Team.A);
+  expect(flags).toEqual([false,true]);
+ });
+});
