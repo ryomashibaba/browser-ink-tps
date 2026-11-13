@@ -562,6 +562,8 @@ jobs:
             sourceGeometryChanges:0,fullRouteCertified:false,
             WindowsHumanPlayCertified:false}));
           P1_PINNED_RAMP_CUE
+      # 360 applies ONLY after true seven-CPU rejoin. The initial native
+      # startup/join ticks are not covered by this optional observation cap.
       - name: Confirm one explicit SOURCE 360 post-join contract
         if: ${{ contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') }}
         run: |
@@ -589,8 +591,6 @@ jobs:
           contains(github.event.head_commit.message, '[p1-lower-edge-once]') ||
           contains(github.event.head_commit.message, '[p1-native-b443-once]') ||
           contains(github.event.head_commit.message, '[p1-native-goal3d-once]') ||
-          # Single user-authorized SOURCE trial: 360 native observation ticks
-          # AFTER genuine 7/7 join, NOT an all-game 360-tick budget.
           contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') ||
           contains(github.event.head_commit.message, '[p1-ramp-walk-once]') ||
           contains(github.event.head_commit.message, '[real-charger-once]') ||
