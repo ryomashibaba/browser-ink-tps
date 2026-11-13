@@ -562,6 +562,13 @@ jobs:
             sourceGeometryChanges:0,fullRouteCertified:false,
             WindowsHumanPlayCertified:false}));
           P1_PINNED_RAMP_CUE
+      - name: Confirm one explicit SOURCE 360 post-join contract
+        if: ${{ contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = 'push'
+          test "$GITHUB_REF" = 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105'
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          echo 'Only 360 post-join observation ticks are selected; whole-game native ticks may exceed 360.'
       - name: One real native browser with 7 original CPU and B441 opt-in
         id: native_browser
         # A normal research push must only run the existing cheap compile/unit.
@@ -582,6 +589,9 @@ jobs:
           contains(github.event.head_commit.message, '[p1-lower-edge-once]') ||
           contains(github.event.head_commit.message, '[p1-native-b443-once]') ||
           contains(github.event.head_commit.message, '[p1-native-goal3d-once]') ||
+          # Single user-authorized SOURCE trial: 360 native observation ticks
+          # AFTER genuine 7/7 join, NOT an all-game 360-tick budget.
+          contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') ||
           contains(github.event.head_commit.message, '[p1-ramp-walk-once]') ||
           contains(github.event.head_commit.message, '[real-charger-once]') ||
           contains(github.event.head_commit.message, '[real-q-once]') ||
@@ -604,7 +614,10 @@ jobs:
           T21_B441_REAL_SWEEP_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
           T21_B441_REAL_CHARGER_ONCE: ${{ contains(github.event.head_commit.message, '[real-charger-once]') && '1' || '0' }}
           T21_B491_CPU_PAID_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[b491-paid-cpu-once]') && '1' || '0' }}
-          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          # Existing B440 validates bounds 240..900 and records start/end
+          # true native ticks. The 360 variant is post-rejoin observation;
+          # start-up, drop and 7-CPU joining consume additional native ticks.
+          T21_B441_NATIVE_OBSERVE_TICKS: ${{ contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') && '360' || '720' }}
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
