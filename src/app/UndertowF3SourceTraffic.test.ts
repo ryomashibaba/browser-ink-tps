@@ -586,7 +586,11 @@ describe('F3B playable 8-actor original source runtime',()=>{
      sourceFoot:t.sourceNativeCharacterFootHit(goal)?.solidId??null,
      reached:a.reachedTarget,startSnap:a.startSnapDistanceMeters,
      endSnap:a.endSnapDistanceMeters,waypoints:a.pointCount,
-     registeredFullPath:supported,firstDenied:supported?null:firstDenied(a)};
+     registeredFullPath:supported,firstDenied:supported?null:firstDenied(a),
+     // Diagnostic only: true RAW Rapier physical foot as the START, not a
+     // new route link, altered runtime snap threshold or fake CPU move.
+     firstDeniedUsingActualFoot:firstDenied({...a,
+      nativePathPoints:[realFoot,...a.nativePathPoints.slice(1)]})};
    });
    const realSupport=t.sourceNativeCharacterFootHit(realFoot);
    expect([stage.solids.length,stage.paintSurfaces.length,
