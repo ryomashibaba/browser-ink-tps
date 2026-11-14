@@ -323,14 +323,16 @@ export class CpuAgentSystem {
   private readonly b215NativeInkDecisionsByActor=new Map<string,{
     weaponReadyPaintChecks:number;approvedPaintAimChecks:number;
     noApprovedPaintAimChecks:number;checksWithoutNativeGoal:number;
-    originalStageSightVetoes:number
+    originalStageSightVetoes:number;backfillStageSightVetoes:number;
+    insufficientInkMainShotAttempts:number
   }>();
   private b215ReadOnlyInkRow(id:string){
     let row=this.b215NativeInkDecisionsByActor.get(id);
     if(!row){
       row={weaponReadyPaintChecks:0,approvedPaintAimChecks:0,
         noApprovedPaintAimChecks:0,checksWithoutNativeGoal:0,
-        originalStageSightVetoes:0};
+        originalStageSightVetoes:0,backfillStageSightVetoes:0,
+        insufficientInkMainShotAttempts:0};
       this.b215NativeInkDecisionsByActor.set(id,row);
     }
     return row;
@@ -634,7 +636,8 @@ export class CpuAgentSystem {
         ...(this.b215NativeInkDecisionsByActor.get(bot.id)??{
           weaponReadyPaintChecks:0,approvedPaintAimChecks:0,
           noApprovedPaintAimChecks:0,checksWithoutNativeGoal:0,
-          originalStageSightVetoes:0
+          originalStageSightVetoes:0,backfillStageSightVetoes:0,
+          insufficientInkMainShotAttempts:0
         }),
         weaponId:bot.weaponId,actualInk:bot.ink,
         weaponFireCooldownSeconds:bot.fireRemaining,
@@ -3131,7 +3134,14 @@ export class CpuAgentSystem {
       if(value<=opportunity)continue;
       this.b216RealOriginalFloorSightChecks++;
       if(!this.b216SourceStageAimValidated(muzzle,candidate,
-        bot.position))continue;
+        bot.position)){
+        // The frontal sight-veto counter cannot see this independent
+        // ORIGINAL physical-foot backfill check. Attribute its rejection
+        // to this actual CPU without altering the ray or target decision.
+        if(this.b215SelectedBattlePaintPacing)
+          this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
+        continue;
+      }
       best=candidate;opportunity=value;
       bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
       bestCenterAlreadyOwned=sample.owner===bot.team;
@@ -3202,7 +3212,13 @@ export class CpuAgentSystem {
   ): boolean {
     const profile = weaponProfile(bot.weaponId);
     const inkCost = cpuWeaponInkCost(profile, action, charge);
-    if (bot.ink + 1e-6 < inkCost) return false;
+    if (bot.ink + 1e-6 < inkCost) {
+      // A validated aim is NOT a paid projectile. Count an actual main
+      // weapon resource denial in the selected SOURCE battle only.
+      if(this.b215SelectedBattlePaintPacing&&sourceFloorPaint)
+        this.b215ReadOnlyInkRow(bot.id).insufficientInkMainShotAttempts++;
+      return false;
+    }
 
     const oldRecoveryLock=bot.inkRecoveryLockSeconds;
     const oldFireRemaining=bot.fireRemaining;

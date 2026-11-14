@@ -1993,6 +1993,32 @@ describe('SOURCE real CPU respawn executes on native tick 150',()=>{
 });
 
 
+describe('selected SOURCE B1 per-actor main-shot evidence',()=>{
+ it('distinguishes an actual insufficient-ink rejection from a real projectile request',()=>{
+  const {system,bot}=fixture(true);
+  bot.weaponId='pulse-sprayer';bot.ink=0;
+  bot.fireRemaining=0;bot.position.set(0,3,0);
+  system.phase14qF2RecoverableSteps=true;
+  system.b215SelectedBattlePaintPacing=true;
+  system.b215RealWeaponCooldownPaintScansDeferred=0;
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  const before=bot.position.clone();
+  const accepted=system.queueCpuWeaponRequest(bot,new Vec3(2,3,0),
+   0,'PROJECTILE',undefined,true);
+  expect(accepted).toBe(false);
+  expect(system.pendingShots).toHaveLength(0);
+  expect(bot.position.equals(before)).toBe(true);
+  expect(bot.ink).toBe(0);
+  expect(system.b215RealSourceBattlePaintPacingSnapshot().byActor.B1)
+   .toMatchObject({
+    weaponId:'pulse-sprayer',
+    insufficientInkMainShotAttempts:1,backfillStageSightVetoes:0,
+    weaponReadyPaintChecks:0,approvedPaintAimChecks:0,
+    noApprovedPaintAimChecks:0
+   });
+ });
+});
+
 describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
  it('prefers independently certified physical-foot paint after eight actual unchanged ORIGINAL impacts only',()=>{
   const {system,bot}=fixture(true);

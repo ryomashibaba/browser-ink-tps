@@ -138,6 +138,10 @@ async function runApprovedCombatTwinReplay(){
    cpuActualByActor:s.b154NativeSevenCpuInk?.byActor??null,
    // B215 per-CPU weapon-ready aim counts; observational only.
    cpuPaintDecisionByActor:s.b215RealBattleAimPacing?.byActor??null,
+   // Accepted per-CPU aim/paid requests are NOT proof of launch or impact.
+   // The independent real PaintCoordinator raster above is the ink proof.
+   cpuSourceTurfRequestsByActor:
+    s.b154NativeSevenCpuInk?.actualAcceptedSourceTurfShotRequests??null,
    cpuRealPatrolTravel:s.cpu?.sourcePatrol?.travelMeters??null,
    cpuLives:s.cpu?.cpu?.map(c=>({
     id:c.id,lifeState:c.lifeState,hp:c.hp,rejoined:c.rejoined
