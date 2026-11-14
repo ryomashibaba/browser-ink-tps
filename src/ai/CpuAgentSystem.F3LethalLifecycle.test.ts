@@ -35,6 +35,7 @@ function fixture(originalF3: boolean) {
   system.pendingShots = [];
   system.pendingKitRequests = [];
   system.sourceCommittedPaintAims = new Map();
+  system.selectedSourcePaintSaturation = new Map();
   system.f3dSourceGoals = originalF3
     ? { chooseSourceGoal: () => false } : null;
   system.stage = {
@@ -1959,6 +1960,9 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
   system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
   system.chooseCombatTarget=vi.fn(()=>null);
   system.updateCpuWeaponFacing=vi.fn();
+  // This isolated test exercises POST-RASTER AIM ordering. Weapon-range
+  // correctness is covered by the existing real B216/W9 integration.
+  system.cpuTargetInRange=vi.fn(()=>true);
   system.queueCpuWeaponRequest=vi.fn(()=>true);
   system.recordQaSourceTurfShot=vi.fn();
   const fire=()=>{
