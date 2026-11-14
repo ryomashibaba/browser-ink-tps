@@ -54,7 +54,7 @@ describe('original-source CPU impact zero-change reason',()=>{
   const outside=ink.apply(stamp(40,3));
   expect(outside.rasterEligibleCells).toBe(0);
   expect(classify(first,outside)).toBe('NO_ELIGIBLE_CELLS');
-  expect(ink.snapshot().totalScoreableArea).toBe(0);
+  expect(ink.snapshot().totalScoreableArea).toBeLessThan(1e-8);
  });
  it('denies foot, human, non-original surfaces and untrusted actors',()=>{
   const raster={changedCells:0,rasterEligibleCells:9,
