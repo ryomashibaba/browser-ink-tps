@@ -144,6 +144,30 @@ async function runApprovedCombatTwinReplay(){
    cpuSourceTurfRequestsByActor:
     s.b154NativeSevenCpuInk?.actualAcceptedSourceTurfShotRequests??null,
    cpuRealPatrolTravel:s.cpu?.sourcePatrol?.travelMeters??null,
+   // The prior P2 true 180s B1 held at 17 genuine ink requests after
+   // 80s, but recorded NO actual foot XYZ / existing source destination.
+   // Capture ONLY real post-KCC feet and PRE-EXISTING source-verified
+   // patrol/approved goals. These are observations, never actor writes
+   // or claims of authorized opposing routes/physical movement.
+   cpuActualPhysicalFootByActor:Object.fromEntries(
+    (s.cpu?.cpu??[]).map(c=>[c.id,c.physicalFoot??null])),
+   cpuExistingPatrolGoalByActor:Object.fromEntries(
+    (s.cpu?.sourcePatrol?.activeTargets??[])
+     .map(g=>[g.id,g.position])),
+   cpuLastApprovedFrontByActor:Object.fromEntries(
+    (s.cpu?.sourcePatrol?.b442LastApprovedRealFrontTargets??[])
+     .map(g=>[g.id,{
+      target:g.target,physicalFoot:g.physicalFoot,
+      distanceXZ:g.distanceXZ,lastApprovedNativeTick:g.lastApprovedNativeTick
+     }])),
+   // These counts are candidate searches, NOT hits, raster ink or
+   // proof B1 has escaped the stagnant genuine 180s baseline.
+   p2RealFootDenseAimReadout:{
+    enabled:s.b216RealNativePaintBackfill?.p2OriginalOuterSelected??false,
+    searches:s.b216RealNativePaintBackfill?.p2DenseRealFootSearches??0,
+    approvedAimCandidates:
+     s.b216RealNativePaintBackfill?.p2DenseRealFootApprovedAims??0
+   },
    cpuLives:s.cpu?.cpu?.map(c=>({
     id:c.id,lifeState:c.lifeState,hp:c.hp,rejoined:c.rejoined
    }))??null,

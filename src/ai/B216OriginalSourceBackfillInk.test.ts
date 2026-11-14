@@ -214,6 +214,32 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
     stage.navigationLinks?.length]).toEqual([25,17,26]);
   expect(stage.paintSurfaces.every(s=>
    (s.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  // Actual original ownerGrid is the only authority for whether a floor
+  // offers ink opportunity. Simulate a fully painted SOURCE floor in this
+  // isolated test: even 96 extra proposals must not create a fake shot.
+  const sourceSample=ink.sampleWorld(aim!, .28,SurfaceFlags.Paintable,
+   SurfaceFlags.Wall);
+  expect(sourceSample).not.toBeNull();
+  for(const original of ink.getSurfaces())
+   original.ownerGrid.fill(Team.B);
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot,true,true))
+   .toBeNull();
+  // Re-expose ONE registered original ink-grid cell at the real-approved
+  // target. The same genuine Rapier foot and first blocking ray must
+  // reapprove it. This is an isolated fixture, not Chromium shot evidence.
+  const src=sourceSample!.surface;
+  const u=Math.min(src.widthCells-1,Math.max(0,
+   Math.floor(sourceSample!.u/src.cellSize)));
+  const v=Math.min(src.heightCells-1,Math.max(0,
+   Math.floor(sourceSample!.v/src.cellSize)));
+  src.ownerGrid[src.index(u,v)]=Team.Neutral;
+  const resumed=system.chooseB216ActualOriginalPaintBackfill(
+   bot,true,true);
+  expect(resumed).not.toBeNull();
+  expect(ink.sampleWorld(resumed!, .28,SurfaceFlags.Paintable)?.owner)
+   .toBe(Team.Neutral);
+  expect(bot.position).toEqual(originalPose);
+  expect(system.qaMotionGoals.size).toBe(0);
   // A missing registered source support must never allow an aim.
   system.phase14qGroundCollision.sourceFootSupport=()=>null;
   expect(system.chooseB216ActualOriginalPaintBackfill(bot,true,true))
