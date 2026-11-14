@@ -347,10 +347,25 @@ async function runApprovedCombatTwinReplay(){
     nativeCrowdKccEvidence:s.cpuGroundStepEvidenceByActor})),
    byActor,onlyObservedNotMovementRepair:true,
    noNewStageOrNavOrScoreAuthority:true};
-  report.outcome='F2_90S_REAL_RECAST_KCC_OBSERVED_NOT_GAMEPLAY_PASS';
+  // Real physical CPU displacement must improve over the pinned
+  // 40-90s all-four-stationary baseline. Crowd requests, paint request
+  // counts and KCC acceptance counters alone are NOT movement proof.
+  const bTeam=['B1','B2','B3','B4'];
+  const recovered=bTeam.filter(id=>
+   byActor[id]?.realFootDisplacement40to90>.25);
+  report.oneRunEvidence.nativeBTeamRecovery={
+   thresholdMeters:.25,intervalSeconds:[40,90],recovered,
+   unrecovered:bTeam.filter(id=>!recovered.includes(id)),
+   physicalMotionOnly:true,
+   full180sOrTrue4v4Certified:false};
+  report.outcome=recovered.length===4?
+   'F2_REAL_90S_FOUR_B_FEET_MOVED_SOURCE_ONLY':
+   'HOLD_F2_REAL_B_TEAM_PHYSICAL_RECOVERY_INCOMPLETE';
   persist();
   console.log('T21_F2_90S_REAL_GROUND_ROOT_CAUSE_EVIDENCE',
    JSON.stringify(report.oneRunEvidence));
+  if(recovered.length!==4)fail('F2_REAL_ALL_FOUR_B_FEET_NOT_MOVING',
+   report.oneRunEvidence.nativeBTeamRecovery);
   return;
  }
  const ink120=await actualInkAt(120);
