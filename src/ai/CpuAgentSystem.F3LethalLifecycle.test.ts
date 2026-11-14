@@ -1966,6 +1966,9 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
   system.queueCpuWeaponRequest=vi.fn(()=>true);
   system.recordQaSourceTurfShot=vi.fn();
   const fire=()=>{
+   // Each comparison represents the next *weapon-ready* native decision;
+   // the preceding real main shot correctly set its own cooldown.
+   bot.fireRemaining=0;
    system.queueCpuWeaponRequest.mockClear();
    system.chooseB216ActualOriginalPaintBackfill.mockClear();
    system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
