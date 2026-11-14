@@ -742,6 +742,11 @@ export class UndertowF3PlayablePreviewApp{
       // from a projectile impact reaching no eligible original ink cell.
       const outcome=b154OriginalCpuImpactRasterOutcome(event,raster);
       if(outcome){
+       // The selected real 180s source battle may react to repeated
+       // ACTUAL unchanged impacts, never requested/virtual CPU shots.
+       // No normal/other SOURCE game changes its aim policy.
+       this.cpu?.observeSelectedSourceOriginalCpuImpact(
+        event.actorId,outcome);
        ink.originalImpactEligibleCells+=raster.rasterEligibleCells;
        ink.originalImpactAlreadyOwnedCells+=raster.rasterAlreadyTeamOwnedCells;
        if(outcome==='CHANGED')ink.originalImpactChangedEvents++;

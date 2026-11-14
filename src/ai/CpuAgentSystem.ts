@@ -319,6 +319,12 @@ export class CpuAgentSystem {
   private b213VisibleRetaliationSelections=0;
   private b215SelectedBattlePaintPacing=false;
   private b215RealWeaponCooldownPaintScansDeferred=0;
+  /** Selected ORIGINAL battle only: consecutive real post-raster CPU
+   * impacts that did not change any actual source ink cell. This is NEVER
+   * deduced from shots, goals, elapsed time or fake owner-grid states. */
+  private readonly selectedSourcePaintSaturation=new Map<string,{
+    unchangedImpacts:number;actualFootAtStart:Vec3
+  }>();
   private b216SourceStageAimValidated:
     ((muzzle:B181SightPoint,target:B181SightPoint,
       actualFoot:B181SightPoint)=>boolean)|null=null;
@@ -567,6 +573,42 @@ export class CpuAgentSystem {
       throw Error('B215_UNAUTHORIZED_NATIVE_SOURCE_PAINT_PACING');
     this.b215SelectedBattlePaintPacing=true;
   }
+  /** Feedback from PaintCoordinator AFTER a genuine original CPU
+   * projectile raster. A streak can change only the order of existing
+   * safe PAINT candidate checks; it grants NO physical/score/shot access.
+   * Default FIXED patrol, T20 and nonselected SOURCE modes are untouched. */
+  public observeSelectedSourceOriginalCpuImpact(
+    actorId:string,
+    outcome:'CHANGED'|'ALREADY_TEAM_OWNED'|
+      'NO_ELIGIBLE_CELLS'|'OTHER_ZERO_CHANGE'
+  ):void{
+    if(!this.b215SelectedBattlePaintPacing||
+       !this.b216SourceStageAimValidated||!this.f3dSourceGoals||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+      return;
+    const bot=this.bots.find(b=>b.id===actorId);
+    if(!bot||!this.sourceCpuMayStartActions(bot))return;
+    if(outcome==='CHANGED'){
+      this.selectedSourcePaintSaturation.delete(actorId);return;
+    }
+    // A mixed zero-change raster is ambiguous, not evidence of repeated
+    // painting into already-owned or nonpaintable source cells.
+    if(outcome!=='ALREADY_TEAM_OWNED'&&
+       outcome!=='NO_ELIGIBLE_CELLS')return;
+    const old=this.selectedSourcePaintSaturation.get(actorId);
+    const footDistance=old?Math.hypot(
+      bot.position.x-old.actualFootAtStart.x,
+      bot.position.y-old.actualFootAtStart.y,
+      bot.position.z-old.actualFootAtStart.z):Infinity;
+    const unchangedImpacts=Number.isFinite(footDistance)&&
+      footDistance<1.5?old!.unchangedImpacts+1:1;
+    this.selectedSourcePaintSaturation.set(actorId,{
+      unchangedImpacts:Math.min(16,unchangedImpacts),
+      actualFootAtStart:footDistance<1.5?
+        old!.actualFootAtStart:bot.position.clone()
+    });
+  }
+
   public b215RealSourceBattlePaintPacingSnapshot(){
     return {
       enabled:this.b215SelectedBattlePaintPacing,
@@ -744,6 +786,7 @@ export class CpuAgentSystem {
     this.b213RealAttackerDamageEvents=0;
     this.b213VisibleRetaliationSelections=0;
     this.b215RealWeaponCooldownPaintScansDeferred=0;
+    this.selectedSourcePaintSaturation.clear();
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
     this.b216ApprovedReachedGoalShortRadiusAims=0;
@@ -2507,9 +2550,19 @@ export class CpuAgentSystem {
     if(this.b215SelectedBattlePaintPacing&&canTurfPaint&&
        !hasCombatInRange&&cooldown<=0&&!b215QueryPaint)
       this.b215RealWeaponCooldownPaintScansDeferred++;
+    // The previous genuine 180s RAW showed CPU shots continuing long
+    // after source cells stopped changing. ONLY after eight REAL, same-
+    // location zero-change CPU impact rasters, try the existing 360-degree
+    // original-foot B216 search FIRST. Otherwise retain the proven fixed
+    // patrol/aim order, and always fall back if no safe fresh aim exists.
+    const realImpactSaturation=this.b215SelectedBattlePaintPacing&&
+      (this.selectedSourcePaintSaturation.get(bot.id)?.unchangedImpacts??0)>=8&&
+      this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
     let turfTarget = canTurfPaint && !hasCombatInRange &&
       b215QueryPaint&&(cooldown <= 0 || finishTurfBurst)
       ? allyInk ?? (this.b64InkAngleSweepEnabled?
+         (realImpactSaturation?
+           this.chooseB216ActualOriginalPaintBackfill(bot,true):null) ??
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
@@ -3764,6 +3817,7 @@ export class CpuAgentSystem {
 
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
+    this.selectedSourcePaintSaturation.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
@@ -3819,6 +3873,7 @@ export class CpuAgentSystem {
   }
 
   private respawnBot(bot: CpuBot): void {
+    this.selectedSourcePaintSaturation.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);

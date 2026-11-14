@@ -1932,3 +1932,91 @@ describe('SOURCE real CPU respawn executes on native tick 150',()=>{
   expect(x.cpu.respawnBot).toHaveBeenCalledOnce();
  });
 });
+
+
+describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
+ it('prefers independently certified physical-foot paint after eight actual unchanged ORIGINAL impacts only',()=>{
+  const {system,bot}=fixture(true);
+  bot.position.set(0,3,0);bot.hp=100;bot.ink=100;
+  bot.weaponId='pulse-sprayer';
+  bot.weaponFacing=new Vec3(1,0,0);
+  bot.fireRemaining=0;bot.weaponBurstCooldown=0;
+  bot.weaponRollPaintCooldown=0;bot.weaponGuardBreakSeconds=0;
+  bot.weaponGuardHp=100;bot.weaponGuarding=false;
+  bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=0;
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.b215SelectedBattlePaintPacing=true;
+  system.phase14qF2RecoverableSteps=true;
+  system.phase14qGroundCollision={sourceFootSupport:()=>null};
+  system.b64InkAngleSweepEnabled=true;
+  system.b216SourceStageAimValidated=vi.fn(()=>true);
+  system.selectedSourcePaintSaturation=new Map();
+  system.qaTurfShotCooldown=new Map([['B1',0]]);
+  system.qaTurfShotsByActor=new Map();
+  const oldPatrolAim=new Vec3(3,3,0),newFootAim=new Vec3(0,3,1.7);
+  system.chooseB64SourceLateralInkTarget=vi.fn(()=>oldPatrolAim);
+  system.chooseB216ActualOriginalPaintBackfill=vi.fn(()=>newFootAim);
+  system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
+  system.chooseCombatTarget=vi.fn(()=>null);
+  system.updateCpuWeaponFacing=vi.fn();
+  system.queueCpuWeaponRequest=vi.fn(()=>true);
+  system.recordQaSourceTurfShot=vi.fn();
+  const fire=()=>{
+   system.queueCpuWeaponRequest.mockClear();
+   system.chooseB216ActualOriginalPaintBackfill.mockClear();
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+  };
+  fire();
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(oldPatrolAim);
+  expect(system.chooseB216ActualOriginalPaintBackfill)
+   .not.toHaveBeenCalled();
+  for(let n=0;n<7;n++)
+   system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
+  fire();
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(oldPatrolAim);
+  system.observeSelectedSourceOriginalCpuImpact('B1','NO_ELIGIBLE_CELLS');
+  fire();
+  expect(system.chooseB216ActualOriginalPaintBackfill)
+   .toHaveBeenCalledWith(bot,true);
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(newFootAim);
+  // Changed ink or actual 1.5m+ CPU travel clears only this actor's
+  // plateau bias, without changing movement or inserting an ink event.
+  system.observeSelectedSourceOriginalCpuImpact('B1','CHANGED');
+  fire();
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(oldPatrolAim);
+  for(let n=0;n<8;n++)
+   system.observeSelectedSourceOriginalCpuImpact('B1','NO_ELIGIBLE_CELLS');
+  bot.position.set(1.6,3,0);
+  system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
+  fire();
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(oldPatrolAim);
+  system.b215SelectedBattlePaintPacing=false;
+  for(let n=0;n<12;n++)
+   system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
+  expect(system.selectedSourcePaintSaturation.get('B1')?.unchangedImpacts)
+   .toBe(1);
+ });
+ it('does not infer saturation from unknown, nonliving, or unrejoined CPU',()=>{
+  const {system,bot}=fixture(true);
+  bot.position.set(0,3,0);
+  system.selectedSourcePaintSaturation=new Map();
+  system.b215SelectedBattlePaintPacing=true;
+  system.b216SourceStageAimValidated=vi.fn(()=>true);
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.observeSelectedSourceOriginalCpuImpact('UNKNOWN','NO_ELIGIBLE_CELLS');
+  system.observeSelectedSourceOriginalCpuImpact('B1','OTHER_ZERO_CHANGE');
+  expect(system.selectedSourcePaintSaturation.size).toBe(0);
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+  system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
+  expect(system.selectedSourcePaintSaturation.size).toBe(0);
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  bot.lifeState='SPLATTED';
+  system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
+  expect(system.selectedSourcePaintSaturation.size).toBe(0);
+ });
+});
