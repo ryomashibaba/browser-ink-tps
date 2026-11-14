@@ -549,6 +549,36 @@ describe('F3B playable 8-actor original source runtime',()=>{
    const observedGoal=new Vec3(-17.2657470703125,
     4.599999904632568,-48.05963134765625);
    const candidates=t.patrolGoals.get('B1')??[];
+   // Identify the FIRST unregistered route sample using the IDENTICAL
+   // 0.30m geometry step and real Rapier foot hit as runtime. Do not
+   // pretend a Recast polyline is a successful physical capsule walk.
+   const firstDenied=(a:ReturnType<typeof nav.auditPath>)=>{
+    const points=a.nativePathPoints;
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    for(let leg=0;leg+1<points.length;leg++){
+     const from=points[leg]!,to=points[leg+1]!;
+     const meters=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z);
+     const steps=Math.max(1,Math.ceil(meters/.30));
+     for(let i=leg===0?0:1;i<=steps;i++){
+      const f=i/steps;
+      const p=new Vec3(from.x+(to.x-from.x)*f,
+       from.y+(to.y-from.y)*f,from.z+(to.z-from.z)*f);
+      const hit=physics.castCharacterFootSupport(
+       new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+      const verticalGap=hit?hit.point.y-p.y:null;
+      const valid=hit&&Math.abs(verticalGap!)<=.25&&
+       stage.solids.some(s=>s.id===hit.solidId)&&
+       p.z<=-33&&p.y>=2.5&&p.y<=5.5;
+      if(!valid)return {leg,step:i,samples:steps,
+       point:[p.x,p.y,p.z],reason:!hit?'NO_REGISTERED_SUPPORT':
+        Math.abs(verticalGap!)>.25?'SOURCE_RAPIER_HEIGHT_MISMATCH':
+        'UNSUPPORTED_SIDE_OR_SOURCE_SOLID',
+       actualSolid:hit?.solidId??null,actualY:hit?.point.y??null,
+       verticalGap};
+     }
+    }
+    return null;
+   };
    const rows=[...candidates,observedGoal].map((goal,index)=>{
     const a=nav.auditPath(realFoot,goal);
     const supported=t.hasSourceSupportedRoute(a,-1);
@@ -556,7 +586,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
      sourceFoot:t.sourceNativeCharacterFootHit(goal)?.solidId??null,
      reached:a.reachedTarget,startSnap:a.startSnapDistanceMeters,
      endSnap:a.endSnapDistanceMeters,waypoints:a.pointCount,
-     registeredFullPath:supported};
+     registeredFullPath:supported,firstDenied:supported?null:firstDenied(a)};
    });
    const realSupport=t.sourceNativeCharacterFootHit(realFoot);
    expect([stage.solids.length,stage.paintSurfaces.length,
