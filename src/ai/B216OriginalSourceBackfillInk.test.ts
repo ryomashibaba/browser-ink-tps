@@ -181,6 +181,7 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   system.phase14qGroundCollision={sourceFootSupport:footSupport};
   system.samplePoint=new Vec3();system.gameplayInk=ink;
   system.p2OuterOriginalBackfill=false;
+  system.selectedSourceDenseApprovedAims=0; // Object.create skips class fields.
   system.b216RealOriginalFloorSightChecks=0;
   system.b216ApprovedPhysicalSourceAimTargets=0;
   system.b216ApprovedReachedGoalShortRadiusAims=0;
