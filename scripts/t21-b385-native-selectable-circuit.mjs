@@ -352,6 +352,8 @@ async function runApprovedCombatTwinReplay(){
   // counts and KCC acceptance counters alone are NOT movement proof.
   // One independently authorized post-fix 90s REAL source CPU foot check.
   // No synthetic KCC, extra round, new stage link or automatic retry.
+  // V28 single REAL 90s confirmation after B1 original-ramp retarget:
+  // check ALL FOUR physical B feet, not a virtual goal or 4v4 claim.
   const bTeam=['B1','B2','B3','B4'];
   const recovered=bTeam.filter(id=>
    byActor[id]?.realFootDisplacement40to90>.25);
