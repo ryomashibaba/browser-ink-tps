@@ -2138,7 +2138,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Require BOTH a genuine 120+ tick stationary weapon-ready drought
   // and no approved frontline move, then audit a different EXISTING
   // patrol destination with strict same-side Rapier/Recast authority.
-  const b1Drought=this.p2B1DroughtFoot.get(id);
+  const b1Drought=this.enableB441SourceFrontline&&id==='B1'?
+   this.p2B1DroughtFoot?.get(id):undefined;
   const b1StalledResearchPatrol=this.enableB441SourceFrontline&&
    id==='B1'&&active>=0&&candidates.length>1&&
    !this.b443OriginalGoalLocks.has(id)&&
