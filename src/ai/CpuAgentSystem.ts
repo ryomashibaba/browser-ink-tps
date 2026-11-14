@@ -823,7 +823,8 @@ export class CpuAgentSystem {
   ):void{
    if(!this.phase14qF2RecoverableSteps||
       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
-      this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)!==true)return;
+      this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)!==true||
+      !this.sourceGroundStepEvidence)return;
    let row=this.sourceGroundStepEvidence.get(bot.id);
    if(!row){
     row={crowdNoStep:0,crowdProposals:0,rapierRejected:0,
