@@ -349,3 +349,44 @@ describe('native physically vetoed original CPU goal escape',()=>{
   expect(bot.position.equals(foot)).toBe(true);
  });
 });
+
+it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(0,3.2,-40),old=new Vec3(0,3.2,-46),
+  alternative=new Vec3(2,3.2,-45),out=new Vec3(9,9,9);
+ const bot={id:'B1',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ let strict=true;
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
+  enableB441SourceFrontline:true,physics:{},
+  physicallyRejoined:new Set(['B1']),respawnOriginalDrops:new Set(),
+  b443OriginalGoalLocks:new Map(),b442LastApprovedFront:new Map(),
+  b441FrontGoals:new Map([['B1',[]]]),
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B1',{}]]),
+  b467LiveSourceGoals:new Map(),
+  patrolGoals:new Map([['B1',[old,alternative]]]),
+  patrolIndex:new Map([['B1',0]]),realKccRejectedSteps:new Map(),
+  hasSourceFootSupport:()=>true,hasSourceSupportedRoute:()=>strict,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   nativePathPoints:[from.clone(),to.clone()]
+  })},realGoalRequests:0,heldRequests:0
+ });
+ for(let n=0;n<89;n++)source.noteRealSourceKccRejectedStep('B1',foot);
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(true);
+ expect(out.equals(old)).toBe(true);
+ source.noteRealSourceKccRejectedStep('B1',foot);
+ strict=false;out.set(9,9,9);
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(9,9,9))).toBe(true);
+ expect(bot.position.equals(foot)).toBe(true);
+ expect(source.patrolIndex.get('B1')).toBe(0);
+ strict=true;
+ for(let n=0;n<90;n++)source.noteRealSourceKccRejectedStep('B1',foot);
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(true);
+ expect(out.equals(alternative)).toBe(true);
+ expect(source.patrolIndex.get('B1')).toBe(1);
+ expect(source.realKccRejectedSteps.has('B1')).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+});

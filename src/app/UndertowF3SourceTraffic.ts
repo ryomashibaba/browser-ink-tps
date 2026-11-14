@@ -2149,12 +2149,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
   // first drops remain unchanged while physical movement is successful.
   // Compare B1's true Rapier foot with its projected Recast path start without relaxing any support gate.
-  // B1 P2 research may hold a legacy patrol target even when NO B441
-  // frontline goal was actually approved from its physical foot. Do not
-  // disable the fallback merely because the research URL was selected.
-  // Require BOTH a genuine 120+ tick stationary weapon-ready drought
-  // and no approved frontline move, then audit a different EXISTING
-  // patrol destination with strict same-side Rapier/Recast authority.
+  // Genuine original 90s Chromium recorded B1/B4 unsupported next
+  // source feet and B2/B3 actual real actor blockers. After 90 Rapier
+  // denials, B441 research may also attempt a DIFFERENT pre-existing,
+  // strictly SOURCE-audited patrol goal. The older B1 no-aim drought
+  // remains an additional trigger; no synthetic body/route is created.
   const b1Drought=this.enableB441SourceFrontline&&id==='B1'?
    this.p2B1DroughtFoot?.get(id):undefined;
   const b1StalledResearchPatrol=this.enableB441SourceFrontline&&
@@ -2168,12 +2167,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b137NativeTick-b1Drought.nativeTick<=40&&
    realFoot.distance(b1Drought.foot)<=.22&&
    this.hasSourceFootSupport(realFoot);
-  const kccBlockedAlternative=(!this.enableB441SourceFrontline||
-   b1StalledResearchPatrol)&&
+  const kccBlockedAlternative=
    active>=0&&candidates.length>1&&
    ((this.realKccRejectedSteps.get(id)??0)>=90||
     b1StalledResearchPatrol)&&
    bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+   this.physicallyRejoined.has(id)&&
    this.hasSourceFootSupport(realFoot);
   // Persist the same audited destination across the tactical think cadence,
   // instead of jittering between nodes every 0.28 seconds. Only move to
@@ -2225,12 +2224,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
-   // An alternative chosen after a PHYSICAL KCC veto must have complete
-   // original 0.30m-segment support. B1 research uses its ACTUAL post-KCC
-   // start foot only when stationary drought evidence already passed.
+   // An alternative after a REAL KCC veto must have complete ORIGINAL
+   // 0.30m-segment support from the registered physical CPU foot.
    // Original floor and 0.30m route samples still fail closed unchanged.
    const fullRegisteredSupport=this.hasSourceSupportedRoute(
-    audit,sign,b1StalledResearchPatrol?realFoot:undefined);
+    audit,sign,kccBlockedAlternative?realFoot:undefined);
    if(kccBlockedAlternative&&!fullRegisteredSupport)continue;
    // W10-B4 regression finding: rejecting every ray-unsupported Recast
    // polyline also vetoes previously physically traversed W8 source patrol
