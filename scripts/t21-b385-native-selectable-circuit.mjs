@@ -354,6 +354,8 @@ async function runApprovedCombatTwinReplay(){
   // No synthetic KCC, extra round, new stage link or automatic retry.
   // V28 single REAL 90s confirmation after B1 original-ramp retarget:
   // check ALL FOUR physical B feet, not a virtual goal or 4v4 claim.
+  // One true source Chrome 90s B1 physically approved downhill KCC test.
+  // All four actual CPU feet must move, no new actor/collider/goal authority.
   const bTeam=['B1','B2','B3','B4'];
   const recovered=bTeam.filter(id=>
    byActor[id]?.realFootDisplacement40to90>.25);
