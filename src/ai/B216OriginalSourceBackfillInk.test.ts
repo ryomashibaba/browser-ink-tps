@@ -161,6 +161,65 @@ describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
 
 describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
  beforeAll(async()=>{await initializeRapier();});
+ it('P2 opposite B-side original landing offers only source-physical shooter aim',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const ink=new GameplayInkSystem();defineTestSurfaces(ink,stage);
+  // Fixed source-geometry mirror of the independently checked A-side
+  // original landing. This is an offline B-side foot specimen, NOT an
+  // invented live B1 position or proof B1 resumes in Chromium.
+  const foot=new Vec3(.1,3,-51);
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const hit=(_:string,p:Vec3)=>physics.castCharacterFootSupport(
+   new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+  expect(hit('B1',foot)?.solidId)
+   .toBe('UndertowT21D:first-drop-landing-negative-z');
+  const system=Object.create(CpuAgentSystem.prototype) as any;
+  const bot={id:'B1',team:Team.B,position:foot.clone(),
+   weaponId:'pulse-sprayer',agent:{},lifeState:'ACTIVE',
+   mobilityState:'GROUND',weaponFacing:new Vec3(0,0,-1)};
+  system.stage=stage;system.qaMotionGoals=new Map();
+  system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+  system.phase14qGroundCollision={sourceFootSupport:hit};
+  system.samplePoint=new Vec3();system.gameplayInk=ink;
+  system.p2OuterOriginalBackfill=true;
+  system.b216RealOriginalFloorSightChecks=0;
+  system.b216ApprovedPhysicalSourceAimTargets=0;
+  system.b216ApprovedReachedGoalShortRadiusAims=0;
+  system.b216OwnedCenterSourceBackfillAims=0;
+  system.selectedSourceDenseApprovedAims=0;
+  system.b216SourceStageAimValidated=(muzzle:{x:number;y:number;z:number},
+   target:{x:number;y:number;z:number},actualFoot:Vec3)=>{
+    const f=hit('B1',actualFoot);
+    const t=hit('B1',new Vec3(target.x,target.y,target.z));
+    if(!f||!t)return false;
+    const first=physics.castStageSegment(
+     new Vec3(muzzle.x,muzzle.y,muzzle.z),
+     new Vec3(target.x,target.y+.07,target.z),'ink-projectile');
+    return safeShot({actualFoot,actualTarget:target,footSupport:f,
+     targetSupport:t,firstStageBlock:first});
+   };
+  const originalPose=bot.position.clone();
+  const aim=system.chooseB216ActualOriginalPaintBackfill(bot,true,true);
+  expect(aim).not.toBeNull();
+  expect(aim&&Math.hypot(aim.x-foot.x,aim.z-foot.z))
+   .toBeLessThanOrEqual(5.5);
+  expect(ink.sampleWorld(aim!, .28,SurfaceFlags.Paintable)?.owner)
+   .toBe(Team.Neutral);
+  expect(system.selectedSourceDenseApprovedAims).toBe(1);
+  expect(system.b216RealOriginalFloorSightChecks).toBeGreaterThan(0);
+  expect(bot.position).toEqual(originalPose);
+  expect(system.qaMotionGoals.size).toBe(0);
+  expect([stage.solids.length,stage.paintSurfaces.length,
+    stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(stage.paintSurfaces.every(s=>
+   (s.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  // A missing registered source support must never allow an aim.
+  system.phase14qGroundCollision.sourceFootSupport=()=>null;
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot,true,true))
+   .toBeNull();
+ });
+
  it('uses ONLY the verified live CPU foot and actual facing when Crowd has no goal',()=>{
   const stage=undertowT21dConnectivityQaStage();
   const physics=new RapierStagePhysics(1/60,stage);physics.step();

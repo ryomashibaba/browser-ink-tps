@@ -2628,6 +2628,14 @@ export class CpuAgentSystem {
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
+    // Charger and splatling already hold an independently source-verified
+    // committed floor aim while actually charging/finishing a burst.
+    // The P2 drought fallback must not replace that live trajectory.
+    // Ordinary SOURCE behavior and all earlier aim priorities stay intact.
+    const p2ChargeInProgress=
+      (profile.weaponClass==='CHARGER'&&bot.weaponChargeSeconds>0)||
+      (profile.weaponClass==='SPLATLING'&&
+       (bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0));
     // Genuine P2 180s RAW: B1 had 9,913 weapon-ready NO-AIM checks
     // despite full ink and no original sight veto. Sparse source-foot
     // samples can miss a different original unowned floor patch.
@@ -2637,6 +2645,7 @@ export class CpuAgentSystem {
     // Rapier foot/target support and unobstructed original shot line.
     // Nothing changes for normal SOURCE or any earlier valid aim.
     if(this.p2OuterOriginalBackfill&&canTurfPaint&&
+       !p2ChargeInProgress&&
        !hasCombatInRange&&b215QueryPaint&&
        (cooldown<=0||finishTurfBurst)){
       if(turfTarget)this.selectedSourceEmptyAimStreak.delete(bot.id);
