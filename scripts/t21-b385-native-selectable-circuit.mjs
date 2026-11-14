@@ -356,6 +356,8 @@ async function runApprovedCombatTwinReplay(){
   // check ALL FOUR physical B feet, not a virtual goal or 4v4 claim.
   // One true source Chrome 90s B1 physically approved downhill KCC test.
   // All four actual CPU feet must move, no new actor/collider/goal authority.
+  // V28 genuine B3 KCC-certified SOURCE ramp retarget 90s witness.
+  // The same strict physical displacement gate covers B1/B2/B3/B4.
   const bTeam=['B1','B2','B3','B4'];
   const recovered=bTeam.filter(id=>
    byActor[id]?.realFootDisplacement40to90>.25);
