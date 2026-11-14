@@ -2,6 +2,7 @@
 /** B385: real CDP input -> user-visible B384 switch -> new original SOURCE
  * WebGL2/7 CPU -> native READY 12-weapon selection -> actual KCC/fire ->
  * real 180 second terminal (or honest HOLD). No time, actor, aim, score,
+ * One user-approved 2026-11-14 diagnostic run; code and game state identical.
  * camera, projectiles, ink, HP or native step injection.
  */
 import {spawn,execFileSync} from 'node:child_process';
