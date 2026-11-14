@@ -2473,8 +2473,26 @@ export class CpuAgentSystem {
        !this.sampleRegisteredSourceFoot(bot))return null;
     const paint=this.gameplayInk.sampleWorld(
       aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-    if(!paint||paint.surface.isScoreable||
-       !this.cpuTargetInRange(bot,aim.target,profile)||
+    if(!paint||paint.surface.isScoreable)return null;
+    // A charged, actually paid SOURCE splatling/charger may keep its
+    // last authentic aim while the normal ownerGrid search has no answer.
+    // If its old impact center is NOW fully OWN, prefer a real unowned
+    // neighboring CELL of that same original registered PaintSurface.
+    // No additional shot, in-place paint, route, physics or score authority.
+    if(paint.owner===bot.team){
+      const neighbor=b180OriginalSourceUnownedNeighborAim(paint,bot.team);
+      if(neighbor&&this.cpuTargetInRange(bot,neighbor,profile)&&
+         this.b216OriginalSourceTurfSightClear(bot,neighbor)){
+        this.sourceCommittedPaintAims.set(bot.id,{
+          weaponId:bot.weaponId,target:neighbor.clone()
+        });
+        return neighbor;
+      }
+    }
+    // No independently valid unowned cell: preserve the previous paid
+    // burst/charge target exactly as before, still requiring actual
+    // weapon range and registered SOURCE Rapier projectile sight.
+    if(!this.cpuTargetInRange(bot,aim.target,profile)||
        !this.b216OriginalSourceTurfSightClear(bot,aim.target))
       return null;
     return aim.target;

@@ -7,6 +7,8 @@ import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAge
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {PaintSurface} from '../ink/PaintSurface';
+import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {CpuKitSystem} from './CpuKitSystem';
@@ -1292,6 +1294,59 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(bot.ink).toBe(inkAfterFirst);
     expect(bot.weaponBurstShotsRemaining).toBe(0);
     expect(system.sourceCommittedPaintAims.has('B1')).toBe(false);
+  });
+
+  it('real B4 burst redirects an OWN committed center only to a genuine unowned original cell with Rapier sight',()=>{
+    const {system,bot}=fixture(true);
+    bot.id='B4';bot.weaponId='rotor-splatling';
+    bot.position.set(0,3,0);bot.hp=100;
+    const surface=new PaintSurface('UndertowT21D:verified-original-ink',
+      new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+      4,4,.2,SurfaceFlags.Paintable|SurfaceFlags.Floor,4);
+    surface.ownerGrid.fill(Team.B);
+    const neutral=surface.index(12,12);
+    surface.ownerGrid[neutral]=Team.Neutral;
+    const ink=new GameplayInkSystem();
+    ink.registerSurface(surface);
+    const prior=surface.localToWorld(2.1,2.1);
+    const realNeutral=surface.localToWorld(2.5,2.5);
+    system.gameplayInk=ink;
+    system.sourceCommittedPaintAims=new Map([['B4',{
+      weaponId:bot.weaponId,target:prior.clone()
+    }]]);
+    system.sampleRegisteredSourceFoot=vi.fn(()=>({
+      surface,owner:Team.B
+    }));
+    system.b216SourceStageAimValidated=vi.fn(()=>true);
+    system.b216OriginalTurfSightChecks=0;
+    system.b216OriginalTurfCoverVetoes=0;
+    const before=Array.from(surface.ownerGrid);
+    const revalidate=()=>system.revalidateSourceCommittedPaintAim(
+      bot,weaponProfile(bot.weaponId));
+    const redirected=revalidate();
+    expect(redirected?.distance(realNeutral)).toBeLessThan(1e-5);
+    expect(system.sourceCommittedPaintAims.get('B4').target
+      .distance(realNeutral)).toBeLessThan(1e-5);
+    expect(Array.from(surface.ownerGrid)).toEqual(before);
+    expect(ink.snapshot().percentB).toBe(0);
+    // No invented path or projectile may replace a genuine blocked shot.
+    system.sourceCommittedPaintAims.set('B4',{
+      weaponId:bot.weaponId,target:prior.clone()
+    });
+    system.b216SourceStageAimValidated=vi.fn(
+      (_:unknown,target:{x:number})=>target.x<2.3);
+    expect(revalidate()?.distance(prior)).toBeLessThan(1e-5);
+    expect(system.sourceCommittedPaintAims.get('B4').target
+      .distance(prior)).toBeLessThan(1e-5);
+    // An inactive neutral source cell never becomes an ink target.
+    surface.flagsGrid[neutral]=0;
+    system.b216SourceStageAimValidated=vi.fn(()=>true);
+    expect(revalidate()?.distance(prior)).toBeLessThan(1e-5);
+    // A future actual raster that repaints the neutral cell must not
+    // revive stale OWN-center-neighbor targeting.
+    surface.flagsGrid[neutral]=surface.baseFlags;
+    surface.ownerGrid[neutral]=Team.B;
+    expect(revalidate()?.distance(prior)).toBeLessThan(1e-5);
   });
 
   it('keeps a real SOURCE charger charging at an independently reverified floor aim, then clears it on splat',()=>{
