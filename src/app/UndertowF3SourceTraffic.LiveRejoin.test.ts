@@ -361,6 +361,7 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
   stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
   enableB441SourceFrontline:true,physics:{},
   physicallyRejoined:new Set(['B1']),respawnOriginalDrops:new Set(),
+  originalSourceRecoveryIntent:new Set(),
   b443OriginalGoalLocks:new Map(),b442LastApprovedFront:new Map(),
   b441FrontGoals:new Map([['B1',[]]]),
   b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B1',{}]]),
