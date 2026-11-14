@@ -391,3 +391,37 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
 });
+
+it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL direction',()=>{
+ const foot=new Vec3(-6.27816915512085,4.607564449310303,-49.2904167175293);
+ const blocked=new Vec3(-5.718484878540039,4.2646484375,-49.52046585083008);
+ const b4={id:'B4',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const b3={id:'B3',team:Team.B,position:blocked,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ Object.assign(source,{stage:undertowT21dConnectivityQaStage(),
+  bots:[b4,b3],physicallyRejoined:new Set(['B3','B4']),
+  realKccRejectedSteps:new Map(),realKccLastActorBlocker:new Map(),
+  enableB441SourceFrontline:true,b137NativeTick:300,
+  hasSourceFootSupport:()=>true});
+ for(let i=0;i<90;i++){
+  source.b137NativeTick=300+i;
+  source.noteRealSourceKccRejectedStep('B4',foot,['B3']);
+ }
+ const path=(to:Vec3)=>({nativePathPoints:[foot,to],
+  reachedTarget:true,startSnapDistanceMeters:0,
+  endSnapDistanceMeters:0,pointCount:2});
+ expect(source.kccActorBlocksOriginalRoute('B4',foot,
+  path(new Vec3(-2.27,3.158,-50.71)))).toBe(true);
+ expect(source.kccActorBlocksOriginalRoute('B4',foot,
+  path(new Vec3(-17.2657,4.6,-48.0596)))).toBe(false);
+ expect(b3.position.equals(blocked)).toBe(true);
+ expect(b4.position.equals(foot)).toBe(true);
+ source.b137NativeTick+=121;
+ expect(source.kccActorBlocksOriginalRoute('B4',foot,
+  path(new Vec3(-2.27,3.158,-50.71)))).toBe(false);
+ source.noteRealSourceKccApprovedStep('B4',foot,
+  new Vec3(foot.x-.03,foot.y,foot.z));
+ expect(source.realKccLastActorBlocker.has('B4')).toBe(false);
+});

@@ -383,6 +383,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * every new candidate must independently pass strict source+Recast gates.
   * This ledger can NEVER approve a step, original face, or cross-team route. */
  private readonly realKccRejectedSteps=new Map<string,number>();
+ /** Real KCC contact owner, never mere distance-based collision inference. */
+ private readonly realKccLastActorBlocker=new Map<string,{
+  ownerId:string;nativeTick:number
+ }>();
  /** B1 P2 real weapon-ready drought: witness only, no route authority. */
  private readonly p2B1DroughtFoot=new Map<string,{
   firstStillNativeTick:number;nativeTick:number;foot:Vec3;misses:number
@@ -968,7 +972,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** Actual KCC rejected this original CPU's grounded 60Hz motion.
   * No guessed collision or teleported Crowd result can enter this count. */
  noteRealSourceKccRejectedStep(
-  id:string,actualFoot:Readonly<{x:number;y:number;z:number}>
+  id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
+  realKccOwners:readonly string[]=[]
  ):void{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)||
@@ -979,6 +984,45 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      !this.hasSourceFootSupport(actualFoot))return;
   this.realKccRejectedSteps.set(id,Math.min(180,
    (this.realKccRejectedSteps.get(id)??0)+1));
+  const owner=realKccOwners.find(otherId=>{
+   const other=this.bots.find(b=>b.id===otherId);
+   return !!other&&other.id!==id&&other.team===bot.team&&
+    sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined);
+  });
+  if(owner)this.realKccLastActorBlocker?.set(id,{
+   ownerId:owner,nativeTick:this.b137NativeTick});
+ }
+ /** Genuine KCC denial: do not keep issuing a SOURCE goal whose actual
+  * first Recast leg points into the REAL nearby teammate that blocked
+  * the physical CPU. No new waypoint or collider-override authority. */
+ private kccActorBlocksOriginalRoute(
+  id:string,foot:Readonly<{x:number;y:number;z:number}>,
+  audit:ReturnType<RecastStageNavigation['auditPath']>
+ ):boolean{
+  if(!this.enableB441SourceFrontline||
+     (id!=='B3'&&id!=='B4')||
+     (this.realKccRejectedSteps.get(id)??0)<90)return false;
+  const witness=this.realKccLastActorBlocker?.get(id);
+  if(!witness||!Number.isSafeInteger(this.b137NativeTick)||
+     this.b137NativeTick<witness.nativeTick||
+     this.b137NativeTick-witness.nativeTick>120)return false;
+  const other=this.bots.find(b=>b.id===witness.ownerId);
+  const bot=this.bots.find(b=>b.id===id);
+  if(!other||!bot||other.team!==bot.team||
+     !sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined)||
+     Math.abs(other.position.y-foot.y)>=1)return false;
+  const ox=other.position.x-foot.x,oz=other.position.z-foot.z;
+  const separation=Math.hypot(ox,oz);
+  if(separation<.57||separation>1.5)return false;
+  const next=audit.nativePathPoints.find(p=>
+   Math.hypot(p.x-foot.x,p.z-foot.z)>.25);
+  if(!next)return false;
+  const dx=next.x-foot.x,dz=next.z-foot.z;
+  const len=Math.hypot(dx,dz);
+  if(len<=.25)return false;
+  const ahead=(ox*dx+oz*dz)/len;
+  const cross=Math.abs(ox*dz-oz*dx)/len;
+  return ahead>0&&cross<.70;
  }
  /** Clear the block streak ONLY after actual Rapier-authorized movement;
   * a successful zero-speed check does not prove the CPU became unstuck. */
@@ -991,8 +1035,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    return;
   if(Math.hypot(previousFoot.x-acceptedFoot.x,
      previousFoot.y-acceptedFoot.y,
-     previousFoot.z-acceptedFoot.z)>=.025)
+     previousFoot.z-acceptedFoot.z)>=.025){
    this.realKccRejectedSteps.delete(id);
+   this.realKccLastActorBlocker?.delete(id);
+  }
  }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
@@ -2020,7 +2066,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         this.hasSourceFootSupport(lock.target)&&
         route.reachedTarget&&route.startSnapDistanceMeters<=.20&&
         route.endSnapDistanceMeters<=.20&&
-        this.hasSourceSupportedRoute(route,sign)){
+        this.hasSourceSupportedRoute(route,sign)&&
+        !this.kccActorBlocksOriginalRoute(id,realFoot,route)){
       if(decision.decision==='ROTATE_AFTER_DWELL'){
        completed=lock.target.clone();
        this.b443RotationsAfterDwell++;
@@ -2097,8 +2144,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
     const route=this.nav.auditPath(realFoot,goal);
     if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
-       route.endSnapDistanceMeters>.20||
-       !this.hasSourceSupportedRoute(route,sign)){
+        route.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(route,sign)||
+        this.kccActorBlocksOriginalRoute(id,realFoot,route)){
      if(gate)gate.runtimeUnsupportedNativePath++;
      this.b441UnsafeOrUnreachableHolds++;continue;
     }
@@ -2230,6 +2278,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const fullRegisteredSupport=this.hasSourceSupportedRoute(
     audit,sign,kccBlockedAlternative?realFoot:undefined);
    if(kccBlockedAlternative&&!fullRegisteredSupport)continue;
+   if(kccBlockedAlternative&&
+      this.kccActorBlocksOriginalRoute(id,realFoot,audit))continue;
    // W10-B4 regression finding: rejecting every ray-unsupported Recast
    // polyline also vetoes previously physically traversed W8 source patrol
    // paths (B4 then stopped shooting in the full W9 test). The existing
@@ -2803,7 +2853,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b442LastApprovedFront.delete(id);
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
-  this.p2B1DroughtFoot.delete(id);
+   this.realKccLastActorBlocker.delete(id);
+   this.p2B1DroughtFoot.delete(id);
   if(id==='A1'){
    this.b143ApprovedNativeAllyGoal=null;
    if(this.b471AllyOrder){
