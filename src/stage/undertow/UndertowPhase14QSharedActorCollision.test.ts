@@ -418,4 +418,60 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    w.physics,w.stage,false)).toThrow('T21_PHASE14Q_NOT_AUTHORIZED_FOR_PRODUCTION');
   w.actors.dispose();
  });
+
+ it('read-only genuine B1 90s ramp CPU KCC next-step support diagnosis',()=>{
+  const w=world();
+  const from={x:-5.89511775970459,y:4.619045257568359,z:-48.42698287963867};
+  const goals=[
+   [-4.364792823791504,3.8463597297668457,-49.683570861816406],
+   [-2.270068883895874,3.1579973697662354,-50.71049118041992],
+   [-6.460616111755371,4.640660762786865,-48.65611267089844],
+   [-17.2657470703125,4.599999904632568,-48.05963134765625]
+  ] as const;
+  const realHuman=w.player.getPosition().clone();
+  const support=(p:{x:number;y:number;z:number})=>{
+   const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   const hit=w.physics.castCharacterFootSupport(
+    new Vec3(p.x,p.y+off,p.z),off,'HUMAN');
+   return {solid:hit?.solidId??null,
+    floor:hit?.point.y??null,
+    gap:hit?hit.point.y-p.y:null,
+    certified:!!hit&&Math.abs(hit.point.y-p.y)<=.25&&
+     w.stage.solids.some(x=>x.id===hit.solidId)};
+  };
+  w.actors.syncRealCpuFoot('B1',from);
+  const rows=[] as Array<unknown>;
+  for(const goal of goals){
+   const span=Math.hypot(goal[0]-from.x,goal[2]-from.z);
+   for(const horizontalStep of [.008,.015,.03,.055]){
+    const at={x:from.x+(goal[0]-from.x)/span*horizontalStep,
+     y:from.y,z:from.z+(goal[2]-from.z)/span*horizontalStep};
+    for(const descending of [0,.015,.035,.055]){
+     const proposed={x:at.x,y:at.y-descending,z:at.z};
+     const verdict=w.actors.auditGroundStep('B1',from,proposed,DT,true);
+     rows.push({goal:[...goal],horizontalStep,descending,
+      source:support(from),candidate:support(proposed),
+      verdict:{approved:verdict.approved,cause:verdict.cause,
+       requestedMeters:verdict.requestedMeters,actualMeters:verdict.actualMeters,
+       horizontalDisagreement:verdict.horizontalDisagreementMeters,
+       verticalDisagreement:verdict.verticalDisagreementMeters,
+       owners:verdict.colliderOwnerIds}});
+    }
+   }
+  }
+  console.log('T21_V28_B1_REAL_90S_ORIGINAL_KCC_DIAGNOSIS',
+   JSON.stringify({run:43643359388,original:[25,17,26,0],
+    foot:[from.x,from.y,from.z],genuineSourceOnly:true,
+    sampleOnlyNoCpuMoves:true,allRows:rows,
+    humanBefore:[realHuman.x,realHuman.y,realHuman.z],
+    humanAfter:[w.player.getPosition().x,w.player.getPosition().y,
+     w.player.getPosition().z]}));
+  expect(rows.length).toBe(64);
+  expect(w.player.getPosition().distance(realHuman)).toBeLessThan(1e-7);
+  expect(w.stage.solids.length).toBe(25);
+  expect(w.stage.paintSurfaces.length).toBe(17);
+  expect(w.stage.navigationLinks?.length).toBe(26);
+  expect(freeze.activationReady).toBe(false);
+  w.actors.dispose();
+ });
 });
