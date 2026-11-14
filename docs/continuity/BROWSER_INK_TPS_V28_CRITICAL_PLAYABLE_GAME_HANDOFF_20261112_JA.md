@@ -1,5 +1,44 @@
 # Browser Ink TPS / T21 — V28 全体批判と実ゲーム完成優先・新チャット統合正本
 
+## 【2026-11-14 本人明示：批判的全体再評価と新チャット唯一の引き継ぎ／既存V28継続】
+
+**位置づけ：** 本人の今回の明示依頼に限り既存V28の最上段を一度更新する。新V29、新企画、新B番号、新機能ではない。既存V28全文、V27以前、固定F1～F5、T21_FAST_TRACK_ROADMAP.md、docs/continuity/FAST_TRACK_EXECUTION_JA.md、永続docs/continuity/DECISIONS_JA.md、CURRENT_CANONICAL.md、本人の全採否・過去の失敗教訓を保持する。**本追補はDOCS ONLY／ゲーム進捗0。** 古い節の「最新」は記録当時の事実であり、今後はGitHubのライブHEADと証拠を優先する。
+
+### 1. 今回の真正試験を最初に判定する（再実行禁止）
+
+- 正本GitHub公開リポジトリ：ryomashibaba/browser-ink-tps。唯一の書込先：research/t21-integrated-a1-c-patrol-four-mode-20261105。承認済み**ゲームコード基準SHA** 38782e98cc91c4a755287645cce7868b4f7ba5b9（B1診断を読み取り専用補強）。同SHAの軽量CI [#43553582657](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43553582657) SUCCESS＝344 PASS／2 SKIP、TS/Vite PASS、重いChrome SKIPPED、CODE_PASS_ONLY。
+- **本人が今回1回だけ承認し、既に使用した真正試験**は [Actions #43555311901](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43555311901) 。起動研究コミットSHAは 3715d7402c07517d2d62119d9d57489332bdc12b、親はゲームコードSHA 38782e98。変更は既存scripts/t21-b385-native-selectable-circuit.mjsのコメント1行のみでゲーム挙動不変更。既存B385/B390の[p1-180s-once] [p2-canonical-combat-once]、公開リポジトリの標準ubuntu-latest、Chrome1系統、run_attempt1。新規Artifactアップロードなし、RAW JSONと画像SHA-256のみログへ。**この試験承認は消費済み。失敗時再実行・別Chromeの自動起動は禁止。**
+- 本引き継ぎの記録時はRUNNING、前段9ステップSUCCESSで真正Chrome工程中。完了結果を憶測で「SUCCESS」にしない。**新チャット開始後の最初の唯一の作業は #43555311901 のRun/jobs/RAWジョブログをライブ取得し、どこまで実証できたか判定すること**。T21_P2_GENUINE_NATIVE_JSON_BEGIN/END の範囲からactor別cpuPaintDecisionByActor・cpuActualByActor・cpuShots・cpuActualChangedCellsを80/90/120/150/180秒で照合、TIME_UP・同武器再戦の同一SHA証拠を確認。FAILならBOOT/READY、CPU7合流、試合、TIME_UP、再戦の**最初の停止地点**を切り分け、スクリプト期待値の問題をゲーム物理のFAILと誤分類しない。再試験には必ず新たな本人個別承認が必要。
+- 保護対象を2026-11-14ライブ照合：main=fbd922cea900df8e1a139f21b3c61ed927b3fdd9、PR #5はOpen/Draftでhead=8cfc95756ef0b56e2c33dc9f89a9041126daa272。main/T19C/T20/PR5/Pages/正式QA/原本/PRIVATE/本人Windowsを無承認変更しない。研究branch書込は毎回ライブHEAD確認→単親コミット、expected_sha付きCAS、force:false。今回docs-only保存後のHEADは別になるためゲームSHA／試験SHA／文書SHAを混同しない。
+
+### 2. 確定実測と未確定事項を明確に分ける
+
+- 前回真正P2 [Actions #43544865098](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43544865098)、SHA 98d69de48aa6081c48bed882a46017e020b5053e は**TRUE_RUN_LIMITED_PASS**。同一の本物のSOURCE試合でCPU7実合流、実CPU射撃要求累計974、塗装変更セル80秒18,066→90秒18,725→120秒20,764→150秒21,791→180秒22,097（80秒以降＋4,031）、native 180秒TIME_UP、Twin Comets保持の新Rapier/Recast世界で再戦開始を確認した。変化セル数は**累計塗り替え回数**であり、重複しない占有面積や公式得点ではない。旧SHAの80秒以降0セルという停滞との差があっても、違うSHA・試験条件での単独因果は証明できない。
+- このRUNのB1は80～180秒に実着弾0、塗装変化0。累計着弾17／塗装変化588で停止、終了時生存／再合流済み。B4は同区間実着弾115のうち71が既に自チーム色の範囲。B1の直接原因は**UNKNOWN**（塗装候補不足、射線遮蔽、実インク不足、武器クールダウン、弾未着弾等を未分離）。推測で武器射程/連射頻度/インク容量を変えない。
+- B4の既塗装照準再利用はソース修正fd3f7476、軽量CI [#43548948747](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43548948747) SUCCESS＝343 PASS／2 SKIP（CODE_PASS_ONLY）。B1原因の計測不足は研究SHA 7a2a807a と 38782e98 で補い、実武器ready時の候補有無、原作照準・backfillの射線拒否、実インク不足による弾の拒否、CPU別着弾・塗装変化と現武器状態を分離。**新しいSOURCEゲームでの実B1改善はまだ証明していない**。今回実行の結果が確定してからだけ実装修正を判断する。
+- 原作登録は**Rapier 25 solids／17 PaintSurfaces／26 source NavLinks／0 Scoreable**、Winner NONE、activationReady=false、unrestricted4v4Certified=false。B499原作候補10部品42三角面の本体昇格0/10、試験対象の原作8隣接は現Recast0/8、敵味方自然経路の試験16件は0/16。これは**その検査集合のみの結果**で、全マップの正確な完成割合・あらゆる経路の不在はUNKNOWN。自然4v4／敵HP0と150native tick復活／公式勝者・正式得点／本人Windows全域試遊／ART／本番・公開はHOLD。
+- 以前の本人Windows通常試遊FAIL：視覚床と物理床の不一致、床抜け、CPU少数、SAFE STOP。最新HEADで解消した証拠はない。既存比較Documents/BrowserInkTPS_F3L_15864_5030と既存clone Downloads/browser-ink-tps-currentを再利用し、本人に同じ43MB原本・ZIP・スクショ・環境作業を再提出させない。足元の支持喪失は正常な段差・マップ縁落下と床内欠落を独立判定する。
+
+### 3. 批判的に修正した、今後の唯一の実行法
+
+1. **最大の失敗パターンをやめる：** CPUの小さい照準・ログ・閾値・小QA・HUD・B番号・文書を一回ごとの「進歩」と称するのは非効率。今後は**実際にプレイできる機能のまとまった一バッチ**を開発単位にする。診断・docs-only・CIだけならゲーム進捗0。2工程連続で実遊びの新成果0なら微修正を停止し、根本ブロッカーへ注力。新V29／新B番号／新workflow／QA/HUD増殖は禁止。
+2. **レーンF4：原作ステージの最大阻害を並行して解く。** 原作Ver.7.2.0ナワバリ用のBanc/BYML Actor transformとPhive material／col_disable_flagsの証拠が揃った**一つの具体的なFace/Actorだけ**を、旧B490の本人通常WASD最初の停止点、B499原作42面、原作8隣接、B2/B4のRecast高さ拒否と同一座標で照合する。PRIVATE隔離→実人間Rapier KCC→元CPU半径0.30m Recast→本当のSOURCE世界の順で認証。正規衝突属性不明なら当該FaceだけHOLD_REFERENCE_REQUIRED。見た目OBJの全床化、架空橋/床/坂/NavLink/Actorワープ/閾値緩和、未認証Scoreable追加は禁止。Private原本・抽出Face・画像/動画を公開GitHub/CIへ無承認転送しない。根拠がないからとF1/F2/F3全作業を止めない。
+3. **レーンF1/F2/F3：実際の通常SOURCE試合。** 今回RUNのactor別B1で、weaponReadyPaintChecks、approvedPaintAimChecks、noApprovedPaintAimChecks、originalStageSightVetoes、backfillStageSightVetoes、insufficientInkMainShotAttempts、インク残量、実ショット／実着弾を照合。候補不足・インク不足・stage射線拒否・実弾未着弾を**証拠で分類**する。フィールド欠測は「計測不足／UNKNOWN」であり、CPU故障と断定しない。そのうえで**再現した本体欠陥だけ関連ソースをまとめて修正**→既存軽量TypeScript/Vitest/Viteを原則1回。新しい本物の180秒試験は別の明示承認が必要。原作に存在しない対岸の敵を無理に遭遇させない。
+4. **F1～F5昇格順は不変：** 本物の7CPU＋人間入力＋KCC＋実弾/インク補給＋180秒＋同武器再戦、原作中央・対岸の連続床と自然経路、自然な敵への実射撃/HP0/150tick復活、正規Scoreable確定後だけ公式得点/勝敗、本人Windows一括FPS/ART/普通の移動試遊、最後に明示承認による正式QA・マージ・公開。SOURCE_ONLYの塗装変化は正式スコアではない。
+5. **ユーザー負担を最小化：** このチャットを唯一の全体統合・書込み担当とし、必要時だけ読み取り専用の独立F4/CPUレビューを少数並行。複数チャットの競合pushを禁止。最初に既存GitHub/真正RAW/旧比較資料を使い、ユーザーPCでの再提出・再clone・反復操作は要求しない。本人操作原則0、追加課金原則0円、API課金回避。Windows・Work/Computer Use・PRIVATEデータ転送・重いChromium/Actions・正式公開は**用途別の個別事前承認**。今回のChrome許可を将来へ流用しない。
+6. **報告形式を短縮：** 毎回「ゲームで新しくできるようになったこと（なければ0）／実装・実RUN SHA＋同SHA証拠／最重要HOLD／最短次の実装一件／本人作業の有無」。CODE_PASS_ONLYとTRUE_RUN_LIMITED_PASSを混同しない。準備・文章・軽量CIに費やした時間を遊べる機能の完成と誤報しない。
+
+### 4. 新チャットで計画を作り直さず進む手順
+
+1. START_HERE.mdの最上段→本V28最上段→必要なV27／F1～F5／Fast Track／DECISIONSを継承し、研究branch・main・Draft PR #5のライブHEADを確認。
+2. **最初に [#43555311901](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43555311901) の最終状態と同SHA RAWログを確認**。正式4v4/スコアではなく、CPU7、80～180秒の実塗装、B1原因、TIME_UP・同武器再戦の成否と原因を正しく分類。承認済み1回を再実行しない。
+3. 同RUNで再現した本体不具合があれば関連ファイル単位で一括修正→軽量CI原則1回。原作権限不足F4は局所HOLDのまま根拠が入るまで無理に変更しない。次の高負荷/Windows/PRIVATE/公開は別途本人個別承認。
+4. 以前の文書が長くても再計画をしない。新マスター文書をもう増やさない。この追補の存在をゲーム進捗に算入しない。
+
+**厳密な現状判定：** 前回P2の180秒・塗装増分・同武器再戦はTRUE_RUN_LIMITED_PASS／現コードSHAはCODE_PASS_ONLY（344 PASS／2 SKIP）。今回承認の真Chromeは本記録時RUNNINGで、最終結果未判定。自然4v4、中央連続床、原作公式得点、本人Windows全域試遊、ART、公開はHOLD。完成割合はUNKNOWN。
+
+---
+
 ## 【2026-11-14 V28継続・真正180秒進行中の全体再批判／次チャット最新正本】
 
 **位置づけと変更範囲**：2026-11-14の本人明示依頼による**既存V28正本の一度限りの更新**。新V29・新企画・新規B番号・追加ゲーム機能ではない。これまでの全V28、V27以前、固定F1〜F5、Fast Track、DECISIONS、本人の採否・反省・保護方針を不変として継承する。**この更新はDOCS ONLY／ゲーム進捗0件**。以下の「最新」は保存時点の記録であり、新チャットはライブ状態を常に優先する。
