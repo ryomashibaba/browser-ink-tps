@@ -425,3 +425,41 @@ it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL di
   new Vec3(foot.x-.03,foot.y,foot.z));
  expect(source.realKccLastActorBlocker.has('B4')).toBe(false);
 });
+
+it('B1 real KCC veto prefers a different original same-ramp goal, never a new foot',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-6.161229133605957,4.610357761383057,-49.02988815307617);
+ const far=new Vec3(-17.2657470703125,4.599999904632568,-48.05963134765625);
+ const near=new Vec3(-4.364792823791504,3.8463597297668457,-49.683570861816406);
+ const old=new Vec3(-2.270068883895874,3.1579973697662354,-50.71049118041992);
+ const bot={id:'B1',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
+  enableB441SourceFrontline:true,
+  physics:{castCharacterFootSupport:()=>({})},
+  physicallyRejoined:new Set(['B1']),respawnOriginalDrops:new Set(),
+  originalSourceRecoveryIntent:new Set(),b443OriginalGoalLocks:new Map(),
+  b442LastApprovedFront:new Map(),b441FrontGoals:new Map([['B1',[]]]),
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B1',{}]]),
+  b467LiveSourceGoals:new Map(),patrolGoals:new Map([['B1',[far,near,old]]]),
+  patrolIndex:new Map([['B1',2]]),
+  realKccRejectedSteps:new Map([['B1',90]]),
+  hasSourceFootSupport:()=>true,
+  sourceNativeCharacterFootHit:(p:Vec3)=>({solidId:
+   p.equals(foot)||p.equals(near)?
+    'UndertowT21D:right-low-route-ramp-negative-z':
+    'UndertowT21D:first-drop-landing-negative-z'}),
+  hasSourceSupportedRoute:()=>true,
+  nav:{auditPath:(a:Vec3,b:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,nativePathPoints:[a,b]
+  })},realGoalRequests:0,heldRequests:0
+ });
+ const out=new Vec3(7,7,7);
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(true);
+ expect(out.equals(near)).toBe(true);
+ expect(source.patrolIndex.get('B1')).toBe(1);
+ expect(source.realKccRejectedSteps.has('B1')).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+});

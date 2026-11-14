@@ -2247,6 +2247,32 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const ranked=initialRanks&&this.enableStableSourceGoal&&!recovering?
    prioritizeExistingInFlightSourceGoal(
     initialRanks,candidates,active,realFoot):initialRanks;
+  // Original 90s B1 KCC evidence: a registered negative-z ramp foot.
+  // On genuine 90+ grounded KCC vetoes only, prefer the NEAREST
+  // DIFFERENT original patrol point on the SAME registered solid.
+  // Each candidate still has to pass the unchanged full Recast/Rapier
+  // route, end-support and per-native-tick physical KCC gates.
+  const b1KccRampRecoveryOrder=(()=>{
+   if(id!=='B1'||!this.enableB441SourceFrontline||
+      !kccBlockedAlternative||
+      (this.realKccRejectedSteps.get(id)??0)<90||
+      !this.physics||
+      typeof this.physics.castCharacterFootSupport!=='function')
+    return null;
+   const current=this.sourceNativeCharacterFootHit(realFoot);
+   if(!current||!this.stage.solids.some(s=>s.id===current.solidId))
+    return null;
+   const nearby=candidates.map((goal,index)=>({
+    index,goal,distance:goal.distance(realFoot)
+   })).filter(row=>row.index!==active&&row.distance>=1.5&&
+    this.sourceNativeCharacterFootHit(row.goal)?.solidId===current.solidId
+   ).sort((a,b)=>a.distance-b.distance||a.index-b.index)
+    .map(row=>row.index);
+   if(nearby.length===0)return null;
+   const ordinary=Array.from({length:candidates.length},(_,i)=>
+    ranked?.[i]?.index??(first+i)%candidates.length);
+   return [...nearby,...ordinary.filter(i=>!nearby.includes(i))];
+  })();
   if(ranked){
    this.actualOriginalInkOwnershipLookups+=ranked.length;
    this.actualOriginalInkOwnershipSampled+=
@@ -2254,7 +2280,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
   for(let tries=0;tries<candidates.length;tries++){
    const rank=ranked?.[tries];
-   const index=rank?rank.index:(first+tries)%candidates.length;
+   const index=b1KccRampRecoveryOrder?.[tries]??
+    (rank?rank.index:(first+tries)%candidates.length);
    // B34 can only escape TO A DIFFERENT PRE-EXISTING SOURCE GOAL,
    // physically supported and native-path audited below. The old goal
    // remains the Crowd agent's last requested target if no safe alternate.
