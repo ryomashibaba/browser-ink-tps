@@ -316,6 +316,45 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
+  /** SOURCE B1 only: shorten a real Crowd downhill proposal to <=2cm
+   * and add a Rapier-measured descent, preserving unchanged 0.25m
+   * floor support, native KCC, actor collision and speed authority.
+   * Returns no actor mutation; caller must independently re-audit. */
+  public tryOriginalDownhillKccStep(
+    id:string,from:T21QFoot,to:T21QFoot,dt:number
+  ):T21QFoot|null{
+    if(id!=='B1'||!Number.isFinite(dt)||Math.abs(dt-1/60)>1e-8||
+       ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite)||
+       !this.actors.has(id))return null;
+    const limit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+    const requested=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z);
+    const horizontal=Math.hypot(to.x-from.x,to.z-from.z);
+    if(requested>limit+1e-5||horizontal<.001)return null;
+    const support=this.registeredOriginalSourceFootSupport(from);
+    if(!support)return null;
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const hit=(x:number,y:number,z:number)=>
+     this.physics.castCharacterFootSupport(
+      new Vec3(x,y+offset,z),offset,'HUMAN');
+    const raw=hit(to.x,to.y,to.z);
+    const gap=raw?to.y-raw.point.y:NaN;
+    if(!raw||raw.solidId!==support.solidId||
+       !this.stage.solids.some(q=>q.id===raw.solidId)||
+       !Number.isFinite(gap)||gap<=.25||gap>.30)return null;
+    const length=Math.min(.02,horizontal);
+    const x=from.x+(to.x-from.x)*length/horizontal;
+    const z=from.z+(to.z-from.z)*length/horizontal;
+    const local=hit(x,to.y,z);
+    if(!local||local.solidId!==support.solidId)return null;
+    const corrected={x,y:local.point.y+.23,z};
+    if(!Number.isFinite(corrected.y)||corrected.y>=from.y||
+       from.y-corrected.y>.05||corrected.y>to.y||
+       Math.hypot(x-from.x,corrected.y-from.y,z-from.z)>limit+1e-5)
+      return null;
+    const verified=this.auditGroundStep(id,from,corrected,dt,true);
+    return verified.approved?corrected:null;
+  }
+
   /**
    * F2 opt-in first-drop admission gate. Before detaching an authentic
    * upper Crowd agent into its independent original-source Rapier fall,

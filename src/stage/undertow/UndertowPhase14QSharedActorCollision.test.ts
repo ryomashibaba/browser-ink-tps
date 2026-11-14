@@ -401,7 +401,37 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(noStep.cause).not.toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
   w.actors.dispose();
  });
- it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stages',()=>{
+  it('permits B1 original downhill only through authentic unchanged Rapier KCC',()=>{
+  const w=world();
+  const foot={x:-5.89511775970459,y:4.619045257568359,z:-48.42698287963867};
+  const goal={x:-4.364792823791504,y:3.8463597297668457,z:-49.683570861816406};
+  const d=Math.hypot(goal.x-foot.x,goal.z-foot.z);
+  const raw={x:foot.x+(goal.x-foot.x)*.03/d,y:foot.y,
+   z:foot.z+(goal.z-foot.z)*.03/d};
+  w.actors.syncRealCpuFoot('B1',foot);
+  const original=w.actors.auditGroundStep('B1',foot,raw,DT,true);
+  expect(original.cause).toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+  const recovered=w.actors.tryOriginalDownhillKccStep('B1',foot,raw,DT);
+  expect(recovered).not.toBeNull();
+  expect(recovered!.y).toBeLessThan(foot.y);
+  const second=w.actors.auditGroundStep('B1',foot,recovered!,DT,true);
+  expect(second.approved).toBe(true);
+  expect(second.colliderOwnerIds).toEqual([]);
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const floor=w.physics.castCharacterFootSupport(
+   new Vec3(recovered!.x,recovered!.y+off,recovered!.z),off,'HUMAN');
+  expect(floor?.solidId).toBe('UndertowT21D:right-low-route-ramp-negative-z');
+  expect(Math.abs(floor!.point.y-recovered!.y)).toBeLessThanOrEqual(.25);
+  expect(w.actors.qaRegisteredRealCpuCapsule('B1')?.foot).toEqual(foot);
+  expect(w.actors.tryOriginalDownhillKccStep('B2',foot,raw,DT)).toBeNull();
+  expect(w.actors.tryOriginalDownhillKccStep('B1',foot,{
+   x:raw.x,y:foot.y-.2,z:raw.z},DT)).toBeNull();
+  expect([w.stage.solids.length,w.stage.paintSurfaces.length,
+   w.stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(freeze.activationReady).toBe(false);
+  w.actors.dispose();
+ });
+it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stages',()=>{
   const w=world();
   const at={x:w.humanFoot.x+2,y:w.humanFoot.y,z:w.humanFoot.z};
   w.actors.syncRealCpuFoot('A1',at);

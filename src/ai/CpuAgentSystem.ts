@@ -125,6 +125,10 @@ export interface CpuSharedGroundStepAuthority {
     dt:number,
     physicallyRejoinedOriginalGround?:boolean
   ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
+  tryOriginalDownhillKccStep?(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,dt:number
+  ):Readonly<{x:number;y:number;z:number}>|null;
 }
 
 /** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
@@ -1390,6 +1394,23 @@ export class CpuAgentSystem {
             continue;
           }
           throw error;
+        }
+        // B1 real SOURCE ramp: original Rapier floor + unchanged KCC
+        // must certify this short downhill motion twice before adoption.
+        if(!shared.approved&&this.phase14qF2RecoverableSteps&&
+           bot.id==='B1'&&
+           shared.cause==='UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION'&&
+           this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.('B1')===true){
+          const downhill=this.phase14qGroundCollision
+           .tryOriginalDownhillKccStep?.(bot.id,bot.position,accepted,dt);
+          if(downhill){
+            const physical=this.phase14qGroundCollision.auditGroundStep(
+             bot.id,bot.position,downhill,dt,true);
+            if(physical.approved){
+              accepted={x:downhill.x,y:downhill.y,z:downhill.z};
+              shared=physical;
+            }
+          }
         }
         if(!shared.approved){
           if(this.phase14qF2RecoverableSteps){
