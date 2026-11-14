@@ -236,6 +236,25 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   expect(bot.position).toEqual(originalFoot);
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);
+  // P2 dense drought recovery must exercise the REAL 25-solid Rapier
+  // ray, ORIGINAL active ownerGrid, weapon range, and currently supported
+  // CPU foot. A 96-proposal count alone is no evidence of an ink shot.
+  // The same true source world and real-foot test that approved the
+  // previous B216 target must also approve a local dense proposal.
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot,true,true))
+   .toBeNull(); // No implicit P2 mode in normal SOURCE.
+  system.p2OuterOriginalBackfill=true;
+  const dense=system.chooseB216ActualOriginalPaintBackfill(bot,true,true);
+  expect(dense).not.toBeNull();
+  expect(dense&&Math.hypot(dense.x-originalFoot.x,
+   dense.z-originalFoot.z)).toBeLessThan(2);
+  expect(ink.sampleWorld(dense!, .28,SurfaceFlags.Paintable)?.owner)
+   .toBe(Team.Neutral);
+  expect(system.b216ApprovedPhysicalSourceAimTargets).toBeGreaterThan(1);
+  expect(system.selectedSourceDenseApprovedAims).toBe(1);
+  expect(bot.position).toEqual(originalFoot);
+  expect(system.qaMotionGoals.get('A1')).toEqual(staleGoal);
+  system.p2OuterOriginalBackfill=false;
   system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
   expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
   system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
