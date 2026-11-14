@@ -1,4 +1,13 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
+import {Vec3} from 'playcanvas';
+import {CpuAgentSystem} from './CpuAgentSystem';
+import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
+import {GameplayInkSystem} from '../ink/GameplayInkSystem';
+import {defineTestSurfaces} from '../stage/TestStage';
+import {undertowT21dConnectivityQaStage}
+ from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {SurfaceFlags,Team} from '../ink/types';
 import {b216OriginalFootBackfillCandidates as candidates,
  b216RealSourcePaintShotLineClear as safeShot}
  from './B216OriginalSourceBackfillInk';
@@ -128,5 +137,66 @@ describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
    'DISTANT_ORIGINAL_ONLY')).toEqual([]);
   expect(candidates(foot,foot,{x:0,y:0,z:0},
    'DISTANT_ORIGINAL_ONLY')).toEqual([]);
+ });
+});
+
+
+describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
+ beforeAll(async()=>{await initializeRapier();});
+ it('uses ONLY the verified live CPU foot and actual facing when Crowd has no goal',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const ink=new GameplayInkSystem();defineTestSurfaces(ink,stage);
+  const originalFoot=new Vec3(-.1,3,51);
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const footSupport=(_:string,p:Vec3)=>physics.castCharacterFootSupport(
+   new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+  expect(footSupport('A1',originalFoot)?.solidId)
+   .toBe('UndertowT21D:first-drop-landing-positive-z');
+  const system=Object.create(CpuAgentSystem.prototype) as any;
+  const bot={id:'A1',team:Team.A,position:originalFoot,
+   weaponId:'pulse-sprayer',agent:{},lifeState:'ACTIVE',
+   mobilityState:'GROUND',weaponFacing:new Vec3(0,0,1)};
+  system.stage=stage;system.qaMotionGoals=new Map();
+  system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+  system.phase14qGroundCollision={sourceFootSupport:footSupport};
+  system.samplePoint=new Vec3();system.gameplayInk=ink;
+  system.p2OuterOriginalBackfill=false;
+  system.b216RealOriginalFloorSightChecks=0;
+  system.b216ApprovedPhysicalSourceAimTargets=0;
+  system.b216ApprovedReachedGoalShortRadiusAims=0;
+  system.b216OwnedCenterSourceBackfillAims=0;
+  system.b216SourceStageAimValidated=(muzzle:{x:number;y:number;z:number},
+   target:{x:number;y:number;z:number},realFoot:Vec3)=>{
+    const f=footSupport('A1',realFoot);
+    const t=footSupport('A1',new Vec3(target.x,target.y,target.z));
+    if(!f||!t)return false;
+    const first=physics.castStageSegment(
+     new Vec3(muzzle.x,muzzle.y,muzzle.z),
+     new Vec3(target.x,target.y+.07,target.z),'ink-projectile');
+    return safeShot({actualFoot:realFoot,actualTarget:target,
+     footSupport:f,targetSupport:t,firstStageBlock:first});
+   };
+  const approved=system.chooseB216ActualOriginalPaintBackfill(bot);
+  expect(approved).not.toBeNull();
+  expect(ink.sampleWorld(approved!, .28,SurfaceFlags.Paintable)?.owner)
+   .toBe(Team.Neutral);
+  expect(system.qaMotionGoals.size).toBe(0);
+  expect(bot.position).toEqual(originalFoot);
+  expect([stage.solids.length,stage.paintSurfaces.length,
+   stage.navigationLinks?.length]).toEqual([25,17,26]);
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.phase14qGroundCollision.sourceFootSupport=()=>null;
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
+  system.phase14qGroundCollision.sourceFootSupport=()=>({
+   solidId:'UndertowT21D:unregistered',point:originalFoot});
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
+  system.phase14qGroundCollision.sourceFootSupport=footSupport;
+  bot.weaponFacing.set(0,0,0);
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
+  bot.weaponFacing.set(0,0,1);bot.mobilityState='FIRST_DROP_FALL';
+  expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
  });
 });

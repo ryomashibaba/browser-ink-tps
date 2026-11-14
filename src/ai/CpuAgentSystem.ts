@@ -2941,8 +2941,22 @@ export class CpuAgentSystem {
   private chooseB216ActualOriginalPaintBackfill(bot:CpuBot):Vec3|null{
     if(!this.b216SourceStageAimValidated||!bot.agent||
        bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return null;
-    const goal=this.qaMotionGoals.get(bot.id);
-    if(!goal)return null;
+    // A real CPU whose last Crowd move-goal was rejected may still paint
+    // genuine nearby ORIGINAL turf while standing on an ACTUAL supported
+    // Rapier foot. Do not fabricate a navigation goal or resume movement.
+    // Unknown/rejoin-lost/static-unsupported feet fail closed. The native
+    // weapon facing (never a generated heading) orients these AIM proposals.
+    let goal=this.qaMotionGoals.get(bot.id);
+    if(!goal){
+      const rejoined=this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
+      const support=rejoined?
+        this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position):null;
+      if(!support||!support.solidId.startsWith('UndertowT21D:')||
+         !Number.isFinite(support.point.y)||
+         Math.abs(support.point.y-bot.position.y)>.22||
+         !this.stage.solids.some(s=>s.id===support.solidId))return null;
+      goal=bot.position; // ONLY ink direction; never a Crowd/nav request
+    }
     // A real reached native goal has no forward displacement; use the
     // existing live CPU weapon facing only for SOURCE-verified ink search.
     const proposals=b216OriginalFootBackfillCandidates(
