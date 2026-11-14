@@ -1,6 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
+import {undertowT21dConnectivityQaStage}
+ from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {nativeSourceCpuCanStartActionsBeforeTickEnd}
  from './NativeSourceRoundActionWindow';
 import {FixedStepClock} from '../core/FixedStepClock';
@@ -259,7 +261,7 @@ describe('native physically vetoed original CPU goal escape',()=>{
   const bot={id:'A2',team:Team.A,position:real,agent:{},
    mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
   Object.assign(source,{
-   stage:{metadata:{id:'undertow-t21d-partial-connectivity-qa'}},
+   stage:undertowT21dConnectivityQaStage(),
    bots:[bot],freeCombat:true,
    respawnOriginalDrops:new Set(),
    physicallyRejoined:new Set(['A2']),
@@ -301,7 +303,7 @@ describe('native physically vetoed original CPU goal escape',()=>{
    mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
   let supported=true,strict=false;
   Object.assign(source,{
-   stage:{metadata:{id:'undertow-t21d-partial-connectivity-qa'}},
+   stage:undertowT21dConnectivityQaStage(),
    bots:[bot],freeCombat:true,
    respawnOriginalDrops:new Set(),
    physicallyRejoined:new Set(['A3']),
