@@ -5,6 +5,8 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
+import {sourcePlayWeaponModeDestinations} from './SourcePlayPortal';
+import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
@@ -12,6 +14,21 @@ import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
+ it('P2 research selection uses the EXISTING frontline portal, not canonical combat',()=>{
+  const modes=sourcePlayWeaponModeDestinations(
+   'https://example.org/browser-ink-tps/play-source.html','twin-comets');
+  const normal=new URL(modes.combat),front=new URL(modes.frontline);
+  expect(normal.searchParams.has('t21W10B441')).toBe(false);
+  expect(normal.searchParams.has('t21W10B448')).toBe(false);
+  expect(b214EligibleSourceBattleInk(normal.searchParams)).toBe(true);
+  expect(front.searchParams.get('t21W10B441')).toBe('sourceFrontline');
+  expect(front.searchParams.get('t21W10B448')).toBe('realA3Front');
+  expect(front.searchParams.get('t21W10B389')).toBe('twin-comets');
+  expect(b214EligibleSourceBattleInk(front.searchParams)).toBe(true);
+  expect(front.searchParams.has('scoreable')).toBe(false);
+  expect(front.searchParams.has('production')).toBe(false);
+  expect(front.searchParams.has('t21QaInput')).toBe(false);
+ });
  it('samples both original registered low floors inside all actual holes',()=>{
   const stage=make();
   for(const side of ['A','B'] as const){

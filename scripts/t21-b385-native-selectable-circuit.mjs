@@ -2,7 +2,7 @@
 /** B385: real CDP input -> user-visible B384 switch -> new original SOURCE
  * WebGL2/7 CPU -> native READY 12-weapon selection -> actual KCC/fire ->
  * real 180 second terminal (or honest HOLD). No time, actor, aim, score,
- * One user-approved follow-up 2026-11-14 P2 genuine 180s; gameplay logic unchanged.
+ * P2 next-trial preflight: explicitly selected B441 SOURCE research, NOT default combat.
  * camera, projectiles, ink, HP or native step injection.
  */
 import {spawn,execFileSync} from 'node:child_process';
@@ -103,7 +103,7 @@ async function runApprovedCombatTwinReplay(){
     process.platform!=='linux'||
     process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE!=='1')
   fail('P2_ONE_PUBLIC_NATIVE_APPROVAL_REQUIRED');
- report.schema='T21_P2_ONE_REAL_CANONICAL_COMBAT_TWIN_180_REPLAY';
+ report.schema='T21_P2_ONE_REAL_SELECTED_FRONTLINE_COMBAT_TWIN_180_REPLAY';
  report.outcome='HOLD_P2_TRUE_NATIVE_PENDING';
  persist();
  const capture=()=>evalPage(`(()=>{
@@ -184,6 +184,11 @@ async function runApprovedCombatTwinReplay(){
      s.fourvfour!==false||s.winner!=='NONE'||s.stop||
      !Number.isSafeInteger(s.tick)||s.tick<0)
    fail('P2_ORIGINAL_SOURCE_GATE_'+tag,s);
+  if(s.p2RealFootDenseAimReadout?.enabled!==true)
+   fail('P2_ORIGINAL_AIM_RESEARCH_MODE_NOT_ACTIVE',{
+    phase:tag,tick:s.tick,actualP2Mode:s.p2RealFootDenseAimReadout,
+    noActorOrScoringWrites:true
+   });
   return s;
  };
  const record=(tag,s)=>{
@@ -197,14 +202,17 @@ async function runApprovedCombatTwinReplay(){
   const p=await evalPage(`(()=>{
    const status=document.querySelector('#portal-status');
    const select=document.querySelector('#source-weapon-preselect');
-   const combat=document.querySelector('#play-combat');
+   const front=document.querySelector('#play-combat-frontline');
    return {ready:status?.dataset.t21PortalReady,
     selected:select?.value,count:select?.options?.length,
-    combatHref:combat?.href};
+    researchHref:front?.href};
   })()`);
   return p?.ready==='SOURCE_ONLY'&&p.count===12&&
    p.selected==='pulse-sprayer'&&
-   p.combatHref?.includes('t21W10B192=humanCombat')?p:false;
+   p.researchHref&&
+   new URL(p.researchHref).searchParams.get('t21W10B441')==='sourceFrontline'&&
+   new URL(p.researchHref).searchParams.get('t21W10B448')==='realA3Front'?
+    p:false;
  },90000);
  record('P2_TRUE_PORTAL_READY',portal);
  await clickButton('#source-weapon-preselect');
@@ -219,15 +227,17 @@ async function runApprovedCombatTwinReplay(){
  const choice=await until(async()=>{
   const p=await evalPage(`(()=>{
    const w=document.querySelector('#source-weapon-preselect');
-   const a=document.querySelector('#play-combat');
+   const a=document.querySelector('#play-combat-frontline');
    return {weapon:w?.value,href:a?.href};
   })()`);
   return p?.weapon==='twin-comets'&&p.href&&
-   new URL(p.href).searchParams.get('t21W10B389')==='twin-comets'?p:false;
+   new URL(p.href).searchParams.get('t21W10B389')==='twin-comets'&&
+   new URL(p.href).searchParams.get('t21W10B441')==='sourceFrontline'&&
+   new URL(p.href).searchParams.get('t21W10B448')==='realA3Front'?p:false;
  },25000);
  report.realKeyboardSelect=true;
  record('P2_ACTUAL_TWIN_COMETS_PORTAL_SELECTION',choice);
- await clickButton('#play-combat');
+ await clickButton('#play-combat-frontline');
  const boot=await until(async()=>{
   const n=await capture();
   return n?.ready==='READY'&&n.renderer==='webgl2'&&
@@ -243,11 +253,12 @@ async function runApprovedCombatTwinReplay(){
     params.get('t21QaDrive')!=='source'||
     params.get('t21W10B203')!=='fullRound'||
     params.get('t21W10B389')!=='twin-comets'||
-    ['t21W10B193','t21W10B384','t21W10B441',
-     't21W10B448','t21QaInput','scoreable','production']
-       .some(k=>params.has(k)))
-   fail('P2_NOT_PURE_CANONICAL_COMBAT',boot);
- record('P2_FIRST_CANONICAL_COMBAT_NEW_WORLD',boot);
+    params.get('t21W10B441')!=='sourceFrontline'||
+    params.get('t21W10B448')!=='realA3Front'||
+    ['t21W10B193','t21W10B384','t21QaInput',
+     'scoreable','production'].some(k=>params.has(k)))
+   fail('P2_NOT_EXPLICIT_ORIGINAL_FRONTLINE_RESEARCH',boot);
+ record('P2_FIRST_SELECTED_FRONTLINE_COMBAT_NEW_WORLD',boot);
  await picture('p2-combat-ready');
  await clickButton('#t21-f3-b202-resume');
  await until(()=>evalPage('document.pointerLockElement===document.querySelector("#app-canvas")'),25000);
@@ -391,16 +402,31 @@ async function runApprovedCombatTwinReplay(){
  originalCombat(fired,'REAL_REPLAY_SHOT');
  record('P2_SECOND_REAL_TWIN_COMETS_PAID_SHOTS',fired);
  await picture('p2-combat-reshoot');
- report.outcome='PASS_ONE_REAL_CANONICAL_COMBAT_180_TIMEUP_TWIN_REPLAY_RESHOT';
+ // A complete 180s/replay is NOT proof B1 resumed genuine paid shots.
+ // The prior canonical trial successfully finished but B1 stayed at
+ // 17 requests / 588 actual painted cells; fail CLOSED on the target.
+ const b1RealShotGain=(end.cpuSourceTurfRequestsByActor?.B1??0)-
+  (ink80.cpuSourceTurfRequestsByActor?.B1??0);
+ const b1RealCellGain=(end.cpuActualByActor?.B1?.changedCells??0)-
+  (ink80.cpuActualByActor?.B1?.changedCells??0);
  report.oneRunEvidence={oldOrigin:boot.origin,newOrigin:replay.origin,
   timeUpTick:end.tick,elapsedNativeCountdownTicks:elapsed,
   firstCpu7:true,secondCpu7:true,newWorldTick:replay.tick,
   replayWeapon:'twin-comets',realSecondShots:fired.shots-second.shots,
   realSecondInkSpend:second.ink-fired.ink,
   source:'25/17/26/0',scoreable:0,winner:'NONE',
-  fourvfour:false,actorWrites:0,clockWrites:0,scoreWrites:0};
+  fourvfour:false,actorWrites:0,clockWrites:0,scoreWrites:0,
+  mode:'EXPLICIT_B441_B448_ORIGINAL_FRONTLINE_RESEARCH',
+  p2OriginalAimSelected:true,
+  b1ActualShotRequestsAfter80:b1RealShotGain,
+  b1ActualChangedCellsAfter80:b1RealCellGain};
+ if(b1RealShotGain<=0||b1RealCellGain<=0)
+  fail('P2_B1_TRUE_80_TO_180_SHOT_AND_INK_RECOVERY_NOT_PROVEN',
+   report.oneRunEvidence);
+ report.outcome='PASS_REAL_SELECTED_FRONTLINE_B1_RECOVERY_180_TIMEUP_TWIN_REPLAY';
  persist();
- console.log('P2_REAL_CANONICAL_COMBAT_REPLAY_PASS',JSON.stringify(report.oneRunEvidence));
+ console.log('P2_REAL_SOURCE_FRONTLINE_B1_RECOVERY_PASS',
+  JSON.stringify(report.oneRunEvidence));
 }
 
 async function run(){
