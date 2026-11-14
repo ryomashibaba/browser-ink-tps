@@ -1359,6 +1359,12 @@ export class CpuAgentSystem {
     // must be submitted at the next real tactical think, not suppressed
     // as an allegedly still-active request. Only this CPU is invalidated.
     this.b35LastNativeTarget.delete(bot.id);
+    // The previous SOURCE paint aim was cached for the Crowd target that
+    // was JUST reset. It is no longer a live navigation goal. Without
+    // invalidation the real-foot B216 no-goal ink continuation never runs
+    // and can keep aiming toward the physically denied route.
+    // Does not change the approved patrol index, actor foot, or nav path.
+    this.qaMotionGoals.delete(bot.id);
     const p=bot.agent.position();
     if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
       p.z-bot.position.z)>.20)

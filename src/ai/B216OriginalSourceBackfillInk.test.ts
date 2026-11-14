@@ -177,6 +177,28 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
     return safeShot({actualFoot:realFoot,actualTarget:target,
      footSupport:f,targetSupport:t,firstStageBlock:first});
    };
+  // Reproduce an actual KCC-rejected Crowd move: previously the stale
+  // patrol target remained in qaMotionGoals even after resetMoveTarget.
+  // The REAL SOURCE foot remains stationary, but nearby neutral ink may
+  // be reacquired without a fake physical/nav goal.
+  const staleGoal=new Vec3(0,3,55);
+  system.qaMotionGoals.set('A1',staleGoal);
+  system.phase14qF2RecoverableSteps=true;
+  let agentReset=0;
+  bot.agent={
+   teleport:()=>{},resetMoveTarget:()=>{agentReset++},
+   position:()=>originalFoot.clone()
+  };
+  system.b35LastNativeTarget=new Map([['A1',{
+   agent:bot.agent,goal:staleGoal.clone(),repeat:0
+  }]]);
+  system.navigation={closestPoint:(p:Vec3)=>p.clone()};
+  bot.thinkRemaining=1;
+  system.reconcileBlockedT21F2CrowdProxy(bot);
+  expect(agentReset).toBe(1);
+  expect(bot.thinkRemaining).toBeCloseTo(.20);
+  expect(system.b35LastNativeTarget.has('A1')).toBe(false);
+  expect(system.qaMotionGoals.has('A1')).toBe(false);
   const approved=system.chooseB216ActualOriginalPaintBackfill(bot);
   expect(approved).not.toBeNull();
   expect(ink.sampleWorld(approved!, .28,SurfaceFlags.Paintable)?.owner)

@@ -138,7 +138,15 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
       repeatedThinkCycles:previous.repeat,sameAgent:previous.agent===bot.agent
     },lastGoal)).toBe(false); // The old cache would suppress the reset target.
     const originalFoot=bot.position.clone();
+    system.qaMotionGoals=new Map([
+      ['B1',lastGoal.clone()],
+      ['A1',new Vec3(1,0,3)]
+    ]);
     system.reconcileBlockedT21F2CrowdProxy(bot);
+    // A reset Crowd target is not a real aim direction. The affected
+    // SOURCE CPU may safely examine ORIGINAL ink near its real foot now.
+    expect(system.qaMotionGoals.has('B1')).toBe(false);
+    expect(system.qaMotionGoals.get('A1')).toEqual(new Vec3(1,0,3));
     expect(agent.teleport).toHaveBeenCalledOnce();
     expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
     expect(bot.position.equals(originalFoot)).toBe(true); // No CPU pose write.
