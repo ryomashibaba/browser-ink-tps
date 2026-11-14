@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {PaintSurface} from '../ink/PaintSurface';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {SurfaceFlags,Team,PaintEventType,PaintSource} from '../ink/types';
+import {SurfaceFlags,Team,PaintEventType,PaintSource,type PaintEvent} from '../ink/types';
 import {b180OriginalSourcePatchOpportunity as p,
  b180OriginalSourceUnownedNeighborAim}
  from './B180OriginalSourcePaintOpportunity';
@@ -76,7 +76,7 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
   expect(projected.u).toBeCloseTo(2.5);
   expect(projected.v).toBeCloseTo(2.5);
   expect(Array.from(surface.ownerGrid)).toEqual(before); // read-only aim
-  const event=(u:number,v:number)=>({
+  const event=(u:number,v:number):PaintEvent=>({
    tick:1,source:PaintSource.Cpu,team:Team.A,surfaceId:surface.id,
    centerU:u,centerV:v,radiusU:.38,radiusV:.34,angle:0,
    type:PaintEventType.Impact,strength:1
