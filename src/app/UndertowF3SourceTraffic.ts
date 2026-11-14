@@ -2132,9 +2132,29 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Unlike the legacy B34 stationary inference, this is triggered only by
   // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
   // first drops remain unchanged while physical movement is successful.
-  const kccBlockedAlternative=!this.enableB441SourceFrontline&&
+  // B1 P2 research may hold a legacy patrol target even when NO B441
+  // frontline goal was actually approved from its physical foot. Do not
+  // disable the fallback merely because the research URL was selected.
+  // Require BOTH a genuine 120+ tick stationary weapon-ready drought
+  // and no approved frontline move, then audit a different EXISTING
+  // patrol destination with strict same-side Rapier/Recast authority.
+  const b1Drought=this.p2B1DroughtFoot.get(id);
+  const b1StalledResearchPatrol=this.enableB441SourceFrontline&&
+   id==='B1'&&active>=0&&candidates.length>1&&
+   !this.b443OriginalGoalLocks.has(id)&&
+   !this.b442LastApprovedFront.has(id)&&
+   bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+   !!b1Drought&&b1Drought.misses>=120&&
+   this.b137NativeTick-b1Drought.firstStillNativeTick>=120&&
+   this.b137NativeTick>=b1Drought.nativeTick&&
+   this.b137NativeTick-b1Drought.nativeTick<=40&&
+   realFoot.distance(b1Drought.foot)<=.22&&
+   this.hasSourceFootSupport(realFoot);
+  const kccBlockedAlternative=(!this.enableB441SourceFrontline||
+   b1StalledResearchPatrol)&&
    active>=0&&candidates.length>1&&
-   (this.realKccRejectedSteps.get(id)??0)>=90&&
+   ((this.realKccRejectedSteps.get(id)??0)>=90||
+    b1StalledResearchPatrol)&&
    bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
    this.hasSourceFootSupport(realFoot);
   // Persist the same audited destination across the tactical think cadence,
@@ -2242,6 +2262,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b34StationarySourceTicks.set(id,0);
    }
    this.patrolIndex.set(id,index);
+   if(b1StalledResearchPatrol)
+    this.p2B1DroughtFoot.delete(id);
    if(kccBlockedAlternative)this.realKccRejectedSteps.delete(id);
    out.copy(goal);this.realGoalRequests++;
    if(rank){

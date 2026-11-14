@@ -623,6 +623,32 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.noteRealSourcePaintAimDrought('B1',foot,360);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   expect(traffic.b443OriginalGoalLocks.has('B1')).toBe(false);
+  // B441 may have no ACTUALLY approved front from this current B1
+  // physical foot. A stalled old original patrol must not be frozen just
+  // because the research mode is on: recheck a DISTINCT existing patrol.
+  // A full Rapier+Recast supported route remains mandatory.
+  traffic.b443OriginalGoalLocks.delete('B1');
+  traffic.b442LastApprovedFront.delete('B1');
+  traffic.b441FrontGoals.set('B1',[]);
+  for(const surface of ink.getSurfaces())surface.ownerGrid.fill(Team.B);
+  const other=new Vec3(...proposals[1]!.point);
+  traffic.patrolGoals.set('B1',[foot.clone(),other]);
+  traffic.patrolIndex.set('B1',0);
+  traffic.b137NativeTick=2400;
+  traffic.p2B1DroughtFoot.set('B1',{
+   firstStillNativeTick:2200,nativeTick:2400,
+   foot:foot.clone(),misses:240
+  });
+  traffic.hasSourceSupportedRoute=vi.fn(()=>false);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
+  expect(traffic.patrolIndex.get('B1')).toBe(0);
+  expect(traffic.p2B1DroughtFoot.has('B1')).toBe(true);
+  traffic.hasSourceSupportedRoute=vi.fn(()=>true);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
+  expect(out).toEqual(other);
+  expect(traffic.patrolIndex.get('B1')).toBe(1);
+  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(bot.position).toEqual(originalFoot);
   // A genuine splat/respawn must erase the prior life's witness.
   traffic.p2B1DroughtFoot.set('B1',{
    firstStillNativeTick:1800,nativeTick:2100,foot,misses:360
