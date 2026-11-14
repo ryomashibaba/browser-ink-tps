@@ -3,6 +3,7 @@
  * WebGL2/7 CPU -> native READY 12-weapon selection -> actual KCC/fire ->
  * real 180 second terminal (or honest HOLD). No time, actor, aim, score,
  * Authorized B1 true Rapier foot vs Recast start correction: one scoped 180s real witness.
+ * V28 owner-requested single 180s SOURCE gameplay validation at previous game SHA 52c0218b; no gameplay or physics change.
  * camera, projectiles, ink, HP or native step injection.
  */
 import {spawn,execFileSync} from 'node:child_process';
