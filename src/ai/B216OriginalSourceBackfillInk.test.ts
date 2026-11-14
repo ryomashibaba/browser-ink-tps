@@ -156,7 +156,8 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   const system=Object.create(CpuAgentSystem.prototype) as any;
   const bot={id:'A1',team:Team.A,position:originalFoot,
    weaponId:'pulse-sprayer',agent:{},lifeState:'ACTIVE',
-   mobilityState:'GROUND',weaponFacing:new Vec3(0,0,1)};
+   mobilityState:'GROUND',thinkRemaining:1,
+   weaponFacing:new Vec3(0,0,1)};
   system.stage=stage;system.qaMotionGoals=new Map();
   system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
   system.phase14qGroundCollision={sourceFootSupport:footSupport};
