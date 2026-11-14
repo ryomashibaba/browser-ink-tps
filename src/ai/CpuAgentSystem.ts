@@ -1359,12 +1359,12 @@ export class CpuAgentSystem {
     // must be submitted at the next real tactical think, not suppressed
     // as an allegedly still-active request. Only this CPU is invalidated.
     this.b35LastNativeTarget.delete(bot.id);
-    // The previous SOURCE paint aim was cached for the Crowd target that
-    // was JUST reset. It is no longer a live navigation goal. Without
-    // invalidation the real-foot B216 no-goal ink continuation never runs
-    // and can keep aiming toward the physically denied route.
-    // Does not change the approved patrol index, actor foot, or nav path.
-    this.qaMotionGoals.delete(bot.id);
+    // Preserve the last original-source INK heading (not an active Crowd
+    // movement grant). Clearing this on a blocked Rapier step removed B4's
+    // genuine paid paint shots in the seven-CPU integrated regression.
+    // B216 separately tries the actual-foot fallback only AFTER the old
+    // aim cannot find a trusted unpainted cell. Live navigation is still
+    // reset and the stale B35 movement-dedup target stays invalidated.
     const p=bot.agent.position();
     if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
       p.z-bot.position.z)>.20)
@@ -2957,7 +2957,9 @@ export class CpuAgentSystem {
    * geometry, nav links, enemy targets or scoreable turf is introduced. */
   /** Only after B64 + source-goal frontal pixels are exhausted. Never
    * relocate any CPU; all paint pixels, ground and sight are REAL source. */
-  private chooseB216ActualOriginalPaintBackfill(bot:CpuBot):Vec3|null{
+  private chooseB216ActualOriginalPaintBackfill(
+    bot:CpuBot,onlyPhysicalFootFacing=false
+  ):Vec3|null{
     if(!this.b216SourceStageAimValidated||!bot.agent||
        bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return null;
     // A real CPU whose last Crowd move-goal was rejected may still paint
@@ -2965,7 +2967,8 @@ export class CpuAgentSystem {
     // Rapier foot. Do not fabricate a navigation goal or resume movement.
     // Unknown/rejoin-lost/static-unsupported feet fail closed. The native
     // weapon facing (never a generated heading) orients these AIM proposals.
-    let goal=this.qaMotionGoals.get(bot.id);
+    let goal=onlyPhysicalFootFacing?
+      undefined:this.qaMotionGoals.get(bot.id);
     if(!goal){
       const rejoined=this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
       const support=rejoined?
@@ -3029,6 +3032,16 @@ export class CpuAgentSystem {
         this.b216ApprovedReachedGoalShortRadiusAims++;
       if(bestCenterAlreadyOwned)this.b216OwnedCenterSourceBackfillAims++;
     }
+    // The prior original patrol heading may still produce a REAL paid
+    // paint shot even when Rapier has vetoed walking toward it (B4 W9).
+    // Preserve that successful aim FIRST. If no independently verified
+    // unowned target exists along it, search only the CPU's actual
+    // supported ORIGINAL foot using its real weapon-facing direction.
+    // This is a second ink-only attempt; it cannot authorize Crowd motion,
+    // change a physical position, fire without cost, or enable score.
+    if(!best&&!onlyPhysicalFootFacing&&
+       this.qaMotionGoals.has(bot.id))
+      return this.chooseB216ActualOriginalPaintBackfill(bot,true);
     return best;
   }
 

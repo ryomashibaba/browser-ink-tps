@@ -198,12 +198,22 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   expect(agentReset).toBe(1);
   expect(bot.thinkRemaining).toBeCloseTo(.20);
   expect(system.b35LastNativeTarget.has('A1')).toBe(false);
-  expect(system.qaMotionGoals.has('A1')).toBe(false);
+  expect(system.qaMotionGoals.get('A1')).toEqual(staleGoal);
+  // The old patrol heading is read-only paint context. With its own
+  // candidate rays exhausted, the independent real-foot 1.7m band is
+  // permitted. Never promote the old moving target into a physical path.
+  const realAimSight=system.b216SourceStageAimValidated;
+  system.b216SourceStageAimValidated=(muzzle:unknown,target:Vec3,
+   actualFoot:Vec3)=>
+    Math.hypot(target.x-actualFoot.x,target.z-actualFoot.z)<2&&
+    realAimSight(muzzle,target,actualFoot);
   const approved=system.chooseB216ActualOriginalPaintBackfill(bot);
+  expect(approved&&Math.hypot(approved.x-originalFoot.x,
+   approved.z-originalFoot.z)).toBeLessThan(2);
   expect(approved).not.toBeNull();
   expect(ink.sampleWorld(approved!, .28,SurfaceFlags.Paintable)?.owner)
    .toBe(Team.Neutral);
-  expect(system.qaMotionGoals.size).toBe(0);
+  expect(system.qaMotionGoals.get('A1')).toEqual(staleGoal);
   expect(bot.position).toEqual(originalFoot);
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);

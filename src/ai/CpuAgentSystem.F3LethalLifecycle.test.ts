@@ -143,9 +143,11 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
       ['A1',new Vec3(1,0,3)]
     ]);
     system.reconcileBlockedT21F2CrowdProxy(bot);
-    // A reset Crowd target is not a real aim direction. The affected
-    // SOURCE CPU may safely examine ORIGINAL ink near its real foot now.
-    expect(system.qaMotionGoals.has('B1')).toBe(false);
+    // The reset is for MOVEMENT; the old source-audited ink heading stays
+    // available until a fresh source route replaces it. This preserves
+    // B4's real paid shots while the separately verified foot fallback
+    // can look elsewhere only if the old ink aim has no valid target.
+    expect(system.qaMotionGoals.get('B1')).toEqual(lastGoal);
     expect(system.qaMotionGoals.get('A1')).toEqual(new Vec3(1,0,3));
     expect(agent.teleport).toHaveBeenCalledOnce();
     expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
