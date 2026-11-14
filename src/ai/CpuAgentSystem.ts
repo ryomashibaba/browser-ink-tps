@@ -319,6 +319,22 @@ export class CpuAgentSystem {
   private b213VisibleRetaliationSelections=0;
   private b215SelectedBattlePaintPacing=false;
   private b215RealWeaponCooldownPaintScansDeferred=0;
+  // Per-actor read-only SOURCE battle decisions; never shot/score authority.
+  private readonly b215NativeInkDecisionsByActor=new Map<string,{
+    weaponReadyPaintChecks:number;approvedPaintAimChecks:number;
+    noApprovedPaintAimChecks:number;checksWithoutNativeGoal:number;
+    originalStageSightVetoes:number
+  }>();
+  private b215ReadOnlyInkRow(id:string){
+    let row=this.b215NativeInkDecisionsByActor.get(id);
+    if(!row){
+      row={weaponReadyPaintChecks:0,approvedPaintAimChecks:0,
+        noApprovedPaintAimChecks:0,checksWithoutNativeGoal:0,
+        originalStageSightVetoes:0};
+      this.b215NativeInkDecisionsByActor.set(id,row);
+    }
+    return row;
+  }
   /** Selected ORIGINAL battle only: consecutive real post-raster CPU
    * impacts that did not change any actual source ink cell. This is NEVER
    * deduced from shots, goals, elapsed time or fake owner-grid states. */
@@ -614,6 +630,19 @@ export class CpuAgentSystem {
       enabled:this.b215SelectedBattlePaintPacing,
       realWeaponCooldownPaintScansDeferred:
        this.b215RealWeaponCooldownPaintScansDeferred,
+      byActor:Object.fromEntries(this.bots.map(bot=>[bot.id,{
+        ...(this.b215NativeInkDecisionsByActor.get(bot.id)??{
+          weaponReadyPaintChecks:0,approvedPaintAimChecks:0,
+          noApprovedPaintAimChecks:0,checksWithoutNativeGoal:0,
+          originalStageSightVetoes:0
+        }),
+        weaponId:bot.weaponId,actualInk:bot.ink,
+        weaponFireCooldownSeconds:bot.fireRemaining,
+        lifeState:bot.lifeState,mobilityState:bot.mobilityState,
+        hasRealCrowdAgent:bot.agent!==null,
+        hasNativeSourceGoal:this.qaMotionGoals.has(bot.id),
+        genuinelyRejoined:this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true
+      }])),
       playerAmmoOrCpuShotInjection:0 as const,
       originalNavLinkWrites:0 as const,
       originalScoreableWrites:0 as const,
@@ -786,6 +815,7 @@ export class CpuAgentSystem {
     this.b213RealAttackerDamageEvents=0;
     this.b213VisibleRetaliationSelections=0;
     this.b215RealWeaponCooldownPaintScansDeferred=0;
+    this.b215NativeInkDecisionsByActor.clear();
     this.selectedSourcePaintSaturation.clear();
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
@@ -2605,6 +2635,17 @@ export class CpuAgentSystem {
     }else{
       this.sourceCommittedPaintAims.delete(bot.id);
     }
+    // Observe only already-computed real SOURCE weapon-ready decisions.
+    // No additional ink, ray, Crowd, geometry or actor operation.
+    if(this.b215SelectedBattlePaintPacing&&canTurfPaint&&
+       !hasCombatInRange&&b215QueryPaint&&
+       (cooldown<=0||finishTurfBurst)){
+      const row=this.b215ReadOnlyInkRow(bot.id);
+      row.weaponReadyPaintChecks++;
+      if(turfTarget)row.approvedPaintAimChecks++;
+      else row.noApprovedPaintAimChecks++;
+      if(!this.qaMotionGoals.has(bot.id))row.checksWithoutNativeGoal++;
+    }
     const target = turfTarget ?? combatTarget;
 
     if (target) this.updateCpuWeaponFacing(bot, target);
@@ -2951,6 +2992,8 @@ export class CpuAgentSystem {
     if(this.b216SourceStageAimValidated(muzzle,target,bot.position))
       return true;
     this.b216OriginalTurfCoverVetoes++;
+    if(this.b215SelectedBattlePaintPacing)
+      this.b215ReadOnlyInkRow(bot.id).originalStageSightVetoes++;
     return false;
   }
 

@@ -38,6 +38,7 @@ function fixture(originalF3: boolean) {
   system.pendingKitRequests = [];
   system.sourceCommittedPaintAims = new Map();
   system.selectedSourcePaintSaturation = new Map();
+  system.b215NativeInkDecisionsByActor = new Map();
   system.f3dSourceGoals = originalF3
     ? { chooseSourceGoal: () => false } : null;
   system.stage = {
@@ -2035,6 +2036,11 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
    .toEqual(oldPatrolAim);
   expect(system.chooseB216ActualOriginalPaintBackfill)
    .not.toHaveBeenCalled();
+  expect(system.b215RealSourceBattlePaintPacingSnapshot().byActor.B1)
+   .toMatchObject({weaponReadyPaintChecks:1,
+    approvedPaintAimChecks:1,noApprovedPaintAimChecks:0,
+    checksWithoutNativeGoal:1,originalStageSightVetoes:0,
+    weaponId:'pulse-sprayer'});
   for(let n=0;n<7;n++)
    system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
   fire();

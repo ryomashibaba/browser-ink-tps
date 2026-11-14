@@ -136,6 +136,8 @@ async function runApprovedCombatTwinReplay(){
     s.b154NativeSevenCpuInk.teamAChangedCells+
     s.b154NativeSevenCpuInk.teamBChangedCells:null,
    cpuActualByActor:s.b154NativeSevenCpuInk?.byActor??null,
+   // B215 per-CPU weapon-ready aim counts; observational only.
+   cpuPaintDecisionByActor:s.b215RealBattleAimPacing?.byActor??null,
    cpuRealPatrolTravel:s.cpu?.sourcePatrol?.travelMeters??null,
    cpuLives:s.cpu?.cpu?.map(c=>({
     id:c.id,lifeState:c.lifeState,hp:c.hp,rejoined:c.rejoined
