@@ -27,7 +27,8 @@ function fixture(){
   bots,physicallyRejoined:historical,physicallyFalling:new Set(),
   respawnOriginalDrops:new Set(),cleared:new Set(),released:new Set(),
   lastMoved:new Map(),patrolIndex:new Map(),patrolGoals:new Map(),
-  realKccRejectedSteps:new Map(),
+  realKccRejectedSteps:new Map(),p2B1DroughtFoot:new Map(),
+  p2B1LastFullRouteAuditTick:-1000,
   b93UpperDetours:new Map(),routePlan:{distinctFirstDropLinks:[]},
   // The snapshot has accumulated additional observational ledgers since
   // this lightweight lifecycle fixture was introduced. Keep them empty,
