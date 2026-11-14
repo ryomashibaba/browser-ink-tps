@@ -293,7 +293,7 @@ async function runApprovedCombatTwinReplay(){
   record('P2_ACTUAL_ORIGINAL_INK_AFTER_'+elapsedAtLeast+'_SECONDS',n);
   return n;
  };
- // Observe first-side stoppage without replaying the full 180s.
+ // Observe 40/60/80/90-second genuine native samples; no 180s replay.
  const f2At40=boundedF2?await actualInkAt(40):null;
  const f2At60=boundedF2?await actualInkAt(60):null;
  const ink80=await actualInkAt(80);
