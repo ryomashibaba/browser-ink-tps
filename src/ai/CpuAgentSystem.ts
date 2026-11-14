@@ -156,6 +156,11 @@ export interface CpuQaSourceGoalAuthority {
   noteRealSourceKccApprovedStep?(
     id:string,previousFoot:Readonly<{x:number;y:number;z:number}>,
     acceptedFoot:Readonly<{x:number;y:number;z:number}>):void;
+  /** P2 SOURCE ONLY: actual weapon-ready decisions with no verified
+   * ink aim. This reports a real current foot, NOT movement permission. */
+  noteRealSourcePaintAimDrought?(
+    id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
+    consecutiveNoAimDecisions:number):void;
 }
 
 export interface CpuFireRequest {
@@ -2648,8 +2653,11 @@ export class CpuAgentSystem {
        !p2ChargeInProgress&&
        !hasCombatInRange&&b215QueryPaint&&
        (cooldown<=0||finishTurfBurst)){
-      if(turfTarget)this.selectedSourceEmptyAimStreak.delete(bot.id);
-      else{
+      if(turfTarget){
+        this.selectedSourceEmptyAimStreak.delete(bot.id);
+        this.f3dSourceGoals?.noteRealSourcePaintAimDrought?.(
+         bot.id,bot.position,0);
+      }else{
         const misses=Math.min(100000,
          (this.selectedSourceEmptyAimStreak.get(bot.id)??0)+1);
         this.selectedSourceEmptyAimStreak.set(bot.id,misses);
@@ -2657,7 +2665,12 @@ export class CpuAgentSystem {
           this.selectedSourceDenseSearches++;
           turfTarget=this.chooseB216ActualOriginalPaintBackfill(
            bot,true,true);
-          if(turfTarget)this.selectedSourceEmptyAimStreak.delete(bot.id);
+          if(turfTarget){
+            this.selectedSourceEmptyAimStreak.delete(bot.id);
+            this.f3dSourceGoals?.noteRealSourcePaintAimDrought?.(
+             bot.id,bot.position,0);
+          }else this.f3dSourceGoals?.noteRealSourcePaintAimDrought?.(
+           bot.id,bot.position,misses);
         }
       }
     }

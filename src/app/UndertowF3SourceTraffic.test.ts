@@ -17,6 +17,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {defineTestSurfaces} from '../stage/TestStage';
+import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
 import {UndertowPhase14ECpuHandoff}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
@@ -509,4 +511,96 @@ describe('F3B playable 8-actor original source runtime',()=>{
    shared.dispose();
   }finally{stub.mockRestore();}
  });
+
+ it('B1 P2 late-foot original ink rescue is route-audited and fails closed',()=>{
+  // Genuine immutable SOURCE shape and owner grid, but controlled
+  // auditPath result: NOT a claim of real Rapier/Crowd locomotion.
+  const stage=undertowT21dConnectivityQaStage();
+  const proposals=proposeB441OriginalFrontline(stage,'B');
+  expect(proposals.length).toBeGreaterThan(1);
+  const foot=new Vec3(...proposals[0]!.point);
+  const ink=new GameplayInkSystem();defineTestSurfaces(ink,stage);
+  const bot={id:'B1',team:Team.B,position:foot.clone(),
+   lifeState:'ACTIVE',mobilityState:'GROUND',hp:100,agent:{}};
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  traffic.stage=stage;traffic.physics={};traffic.nav={
+   auditPath:vi.fn((a:Vec3,b:Vec3)=>({
+    reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,pointCount:2,nativePathPoints:[a,b]
+   }))
+  };
+  traffic.bots=[bot];traffic.sourceInk=ink;traffic.freeCombat=true;
+  traffic.physicallyRejoined=new Set(['B1']);
+  traffic.physicallyFalling=new Set();
+  traffic.cleared=new Set();
+  traffic.respawnOriginalDrops=new Set();
+  traffic.originalSourceRecoveryIntent=new Set();
+  traffic.patrolGoals=new Map([['B1',[foot.clone()]]]);
+  traffic.patrolIndex=new Map();
+  traffic.b441FrontGoals=new Map([['B1',[]]]);
+  traffic.b445FrontlineGates=new Map();
+  // B446 read-only dry evidence is NOT a movement or path grant.
+  traffic.b446LiveFootProbes=new Map([['B1',{
+   probeOnlyNoActorOrGoalWrites:true
+  }]]);
+  traffic.b443OriginalGoalLocks=new Map();
+  traffic.b442LastApprovedFront=new Map();
+  traffic.b467LiveSourceGoals=new Map();
+  traffic.b470LastNativeRetry=new Map();
+  traffic.realKccRejectedSteps=new Map();
+  traffic.p2B1DroughtFoot=new Map();
+  traffic.p2B1LastFullRouteAuditTick=-1000;
+  traffic.enableB441SourceFrontline=true;
+  traffic.enableB192HumanCombat=false;
+  traffic.enableB137OriginalAllyRally=false;
+  traffic.b137NativeTick=1200;
+  traffic.realGoalRequests=0;traffic.b441ActualGoalRequests=0;
+  traffic.heldRequests=0;
+  traffic.sourceNativeCharacterFootHit=vi.fn((p:Vec3)=>({
+   solidId:'UndertowT21D:right-low-team-b',point:p.clone()
+  }));
+  traffic.hasSourceFootSupport=vi.fn(()=>true);
+  traffic.hasSourceSupportedRoute=vi.fn(()=>true);
+  const originalFoot=bot.position.clone(),out=new Vec3();
+  // Nothing can be promoted without the REAL no-aim witness.
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
+  traffic.noteRealSourcePaintAimDrought('B1',foot,119);
+  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  expect(traffic.p2B1DroughtFoot.size).toBe(1);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
+  expect(out.distance(foot)).toBeGreaterThanOrEqual(2);
+  expect(out.z).toBeLessThanOrEqual(-33);
+  expect(traffic.nav.auditPath).toHaveBeenCalled();
+  expect(traffic.hasSourceSupportedRoute).toHaveBeenCalled();
+  expect(traffic.b443OriginalGoalLocks.get('B1')?.target).toEqual(out);
+  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(bot.position).toEqual(originalFoot);
+  expect([stage.solids.length,stage.paintSurfaces.length,
+   stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(stage.paintSurfaces.every(s=>
+   (s.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  // A route that lacks actual source full-path Rapier support stays HOLD.
+  traffic.b441FrontGoals.set('B1',[]);
+  traffic.b443OriginalGoalLocks.delete('B1');
+  traffic.b442LastApprovedFront.delete('B1');
+  traffic.b137NativeTick=1500;
+  traffic.hasSourceSupportedRoute=vi.fn(()=>false);
+  traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
+  expect(traffic.b443OriginalGoalLocks.has('B1')).toBe(false);
+  // Fully OWN source does not give permission for fake paint goals.
+  traffic.hasSourceSupportedRoute=vi.fn(()=>true);
+  traffic.b137NativeTick=1800;
+  for(const surface of ink.getSurfaces())surface.ownerGrid.fill(Team.B);
+  traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
+  expect(traffic.b443OriginalGoalLocks.has('B1')).toBe(false);
+  // A genuine splat/respawn must erase the prior life's witness.
+  traffic.p2B1DroughtFoot.set('B1',{nativeTick:1800,foot,misses:120});
+  bot.lifeState='SPLATTED';
+  traffic.onNativeSourceCpuRespawn('B1');
+  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+ });
+
 });
