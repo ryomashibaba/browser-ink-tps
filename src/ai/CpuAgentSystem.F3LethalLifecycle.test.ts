@@ -2019,6 +2019,56 @@ describe('selected SOURCE B1 per-actor main-shot evidence',()=>{
  });
 });
 
+describe('selected SOURCE real weapon-ready no-aim drought',()=>{
+ it('keeps the bounded dense fallback disabled until P2 120 genuine missed aims',()=>{
+  const {system,bot}=fixture(true);
+  bot.position.set(0,3,0);bot.hp=100;bot.ink=100;
+  bot.weaponId='pulse-sprayer';bot.fireRemaining=0;
+  bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=0;
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.b215SelectedBattlePaintPacing=true;
+  system.phase14qF2RecoverableSteps=true;
+  system.phase14qGroundCollision={sourceFootSupport:()=>null};
+  system.b64InkAngleSweepEnabled=true;
+  system.qaTurfShotCooldown=new Map([['B1',0]]);
+  system.selectedSourcePaintSaturation=new Map();
+  system.selectedSourceEmptyAimStreak=new Map();
+  system.selectedSourceDenseSearches=0;
+  system.selectedSourceDenseApprovedAims=0;
+  system.chooseB64SourceLateralInkTarget=vi.fn(()=>null);
+  system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
+  system.chooseCombatTarget=vi.fn(()=>null);
+  system.updateCpuWeaponFacing=vi.fn();
+  system.cpuTargetInRange=vi.fn(()=>true);
+  system.queueCpuWeaponRequest=vi.fn(()=>true);
+  system.recordQaSourceTurfShot=vi.fn();
+  const approved=new Vec3(1,3,0);
+  const search=vi.fn((_:unknown,physical:boolean,dense:boolean)=>
+   physical&&dense?approved:null);
+  system.chooseB216ActualOriginalPaintBackfill=search;
+  for(let n=0;n<120;n++){
+   bot.fireRemaining=0;
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+  }
+  expect(search.mock.calls.some(args=>args[2]===true)).toBe(false);
+  expect(system.queueCpuWeaponRequest).not.toHaveBeenCalled();
+  system.p2OuterOriginalBackfill=true;
+  for(let n=0;n<119;n++){
+   bot.fireRemaining=0;
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+  }
+  expect(search.mock.calls.some(args=>args[2]===true)).toBe(false);
+  bot.fireRemaining=0;
+  system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+  expect(search.mock.calls.filter(args=>args[2]===true)).toHaveLength(1);
+  expect(system.queueCpuWeaponRequest).toHaveBeenCalledWith(
+   bot,approved,0,'PROJECTILE',undefined,true);
+  expect(system.b215RealSourceBattlePaintPacingSnapshot().byActor.B1)
+   .toMatchObject({insufficientInkMainShotAttempts:0,
+    approvedPaintAimChecks:1,noApprovedPaintAimChecks:239});
+  expect(system.selectedSourceEmptyAimStreak.has('B1')).toBe(false);
+ });
+});
 describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
  it('prefers independently certified physical-foot paint after eight actual unchanged ORIGINAL impacts only',()=>{
   const {system,bot}=fixture(true);

@@ -130,6 +130,24 @@ describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
   expect(candidates(foot,foot,undefined,
    'DISTANT_ORIGINAL_ONLY')).toEqual([]);
  });
+ it('proposes dense research-only original-foot directions without authorizing a shot',()=>{
+  const facing={x:0,y:0,z:-1};
+  const x=candidates(foot,foot,facing,'DENSE_ORIGINAL_ONLY');
+  expect(x).toHaveLength(96);
+  expect(new Set(x.map(p=>p.radiusMeters))).toEqual(
+   new Set([1.2,1.7,2.5,3.5,4.5,5.5]));
+  for(const radius of [1.2,1.7,2.5,3.5,4.5,5.5])
+   expect(x.filter(p=>p.radiusMeters===radius)).toHaveLength(16);
+  expect(x.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.z)&&
+   Math.hypot(p.x-foot.x,p.z-foot.z)<=5.501)).toBe(true);
+  expect(x[0]).not.toHaveProperty('navLink');
+  expect(x[0]).not.toHaveProperty('sourceScoreable');
+  expect(x[0]).not.toHaveProperty('shot');
+  expect(candidates(foot,goal,facing,'DENSE_ORIGINAL_ONLY')).toEqual([]);
+  expect(candidates(foot,foot,undefined,'DENSE_ORIGINAL_ONLY')).toEqual([]);
+  expect(candidates(foot,foot,{x:0,y:0,z:0},
+   'DENSE_ORIGINAL_ONLY')).toEqual([]);
+ });
  it('rejects invalid heading, position or untrusted band',()=>{
   expect(candidates(foot,goal,undefined,
    'WRONG' as 'LOCAL')).toEqual([]);

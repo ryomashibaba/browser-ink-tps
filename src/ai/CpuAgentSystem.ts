@@ -340,6 +340,11 @@ export class CpuAgentSystem {
   /** Selected ORIGINAL battle only: consecutive real post-raster CPU
    * impacts that did not change any actual source ink cell. This is NEVER
    * deduced from shots, goals, elapsed time or fake owner-grid states. */
+  // Only user-selected P2: track consecutive real weapon-ready NO-AIM
+  // decisions, not elapsed time or hypothetical paint/actor positions.
+  private readonly selectedSourceEmptyAimStreak=new Map<string,number>();
+  private selectedSourceDenseSearches=0;
+  private selectedSourceDenseApprovedAims=0;
   private readonly selectedSourcePaintSaturation=new Map<string,{
     unchangedImpacts:number;actualFootAtStart:Vec3
   }>();
@@ -690,6 +695,8 @@ export class CpuAgentSystem {
       enabled:this.b216SourceStageAimValidated!==null,
       p2OriginalOuterSelected:this.p2OuterOriginalBackfill,
       p2OriginalOuterSearches:this.p2OuterOriginalSearches,
+      p2DenseRealFootSearches:this.selectedSourceDenseSearches,
+      p2DenseRealFootApprovedAims:this.selectedSourceDenseApprovedAims,
       p2NativeSightApprovedOuterAims:this.p2OuterOriginalApprovedAims,
       p2ActualShotOrInkIncreaseCertified:false as const,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
@@ -820,6 +827,9 @@ export class CpuAgentSystem {
     this.b215RealWeaponCooldownPaintScansDeferred=0;
     this.b215NativeInkDecisionsByActor.clear();
     this.selectedSourcePaintSaturation.clear();
+    this.selectedSourceEmptyAimStreak.clear();
+    this.selectedSourceDenseSearches=0;
+    this.selectedSourceDenseApprovedAims=0;
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
     this.b216ApprovedReachedGoalShortRadiusAims=0;
@@ -2618,6 +2628,30 @@ export class CpuAgentSystem {
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
+    // Genuine P2 180s RAW: B1 had 9,913 weapon-ready NO-AIM checks
+    // despite full ink and no original sight veto. Sparse source-foot
+    // samples can miss a different original unowned floor patch.
+    // Once 120 consecutive real weapon-ready choices lack an aim, make
+    // only ONE extra bounded search per 30 misses. Every candidate
+    // still requires true ownerGrid, weapon range, registered ORIGINAL
+    // Rapier foot/target support and unobstructed original shot line.
+    // Nothing changes for normal SOURCE or any earlier valid aim.
+    if(this.p2OuterOriginalBackfill&&canTurfPaint&&
+       !hasCombatInRange&&b215QueryPaint&&
+       (cooldown<=0||finishTurfBurst)){
+      if(turfTarget)this.selectedSourceEmptyAimStreak.delete(bot.id);
+      else{
+        const misses=Math.min(100000,
+         (this.selectedSourceEmptyAimStreak.get(bot.id)??0)+1);
+        this.selectedSourceEmptyAimStreak.set(bot.id,misses);
+        if(misses>=120&&misses%30===0){
+          this.selectedSourceDenseSearches++;
+          turfTarget=this.chooseB216ActualOriginalPaintBackfill(
+           bot,true,true);
+          if(turfTarget)this.selectedSourceEmptyAimStreak.delete(bot.id);
+        }
+      }
+    }
     // An actual original-floor aim is held ONLY while a real charger is
     // charging or a splatling is charging/bursting. Never preserve combat
     // enemy coordinates, and drop stale aims on a fresh life or weapon.
@@ -3075,8 +3109,11 @@ export class CpuAgentSystem {
   /** Only after B64 + source-goal frontal pixels are exhausted. Never
    * relocate any CPU; all paint pixels, ground and sight are REAL source. */
   private chooseB216ActualOriginalPaintBackfill(
-    bot:CpuBot,onlyPhysicalFootFacing=false
+    bot:CpuBot,onlyPhysicalFootFacing=false,
+    onlyDenseOriginalFoot=false
   ):Vec3|null{
+    if(onlyDenseOriginalFoot&&
+       (!onlyPhysicalFootFacing||!this.p2OuterOriginalBackfill))return null;
     if(!this.b216SourceStageAimValidated||!bot.agent||
        bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return null;
     // A real CPU whose last Crowd move-goal was rejected may still paint
@@ -3110,11 +3147,12 @@ export class CpuAgentSystem {
     // search finds no target, inspect bounded 4.5–5.5m ORIGINAL floor
     // paint proposals. All the same native weapon range, ownerGrid,
     // physical foot, Rapier first-blocker and 0-Scoreable checks apply.
-    for(const pass of [0,1] as const){
+    for(const pass of (onlyDenseOriginalFoot?[2]:[0,1])){
      if(pass===1&&(!this.p2OuterOriginalBackfill||best))break;
      const current=pass===0?proposals:
       b216OriginalFootBackfillCandidates(
-       bot.position,goal,bot.weaponFacing,'DISTANT_ORIGINAL_ONLY');
+       bot.position,goal,bot.weaponFacing,
+       pass===2?'DENSE_ORIGINAL_ONLY':'DISTANT_ORIGINAL_ONLY');
      if(pass===1)this.p2OuterOriginalSearches++;
      for(const proposed of current){
       this.samplePoint.set(proposed.x,proposed.y,proposed.z);
@@ -3147,6 +3185,7 @@ export class CpuAgentSystem {
       bestCenterAlreadyOwned=sample.owner===bot.team;
      }
      if(pass===1&&best)this.p2OuterOriginalApprovedAims++;
+     if(pass===2&&best)this.selectedSourceDenseApprovedAims++;
      if(best)break;
     }
     if(best){
@@ -3753,6 +3792,7 @@ export class CpuAgentSystem {
 
   private resetCpuWeaponRuntime(bot: CpuBot, resetGuard = false): void {
     this.sourceCommittedPaintAims.delete(bot.id);
+    this.selectedSourceEmptyAimStreak.delete(bot.id);
     bot.weaponChargeSeconds = 0;
     bot.weaponBurstShotsRemaining = 0;
     bot.weaponBurstCooldown = 0;
@@ -3895,6 +3935,7 @@ export class CpuAgentSystem {
   private splatBot(bot: CpuBot): void {
     if (bot.lifeState === 'SPLATTED') return;
     this.selectedSourcePaintSaturation.delete(bot.id);
+    this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
@@ -3951,6 +3992,7 @@ export class CpuAgentSystem {
 
   private respawnBot(bot: CpuBot): void {
     this.selectedSourcePaintSaturation.delete(bot.id);
+    this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);

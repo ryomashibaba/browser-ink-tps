@@ -11,9 +11,10 @@ export interface B216OriginalCandidate extends B216SourcePoint{
 export function b216OriginalFootBackfillCandidates(
  foot:B216SourcePoint,realAuditedGoal:B216SourcePoint,
  nativeWeaponFacing?:B216SourcePoint,
- distanceBand:'LOCAL'|'DISTANT_ORIGINAL_ONLY'='LOCAL'
+ distanceBand:'LOCAL'|'DISTANT_ORIGINAL_ONLY'|'DENSE_ORIGINAL_ONLY'='LOCAL'
 ):readonly B216OriginalCandidate[]{
- if(distanceBand!=='LOCAL'&&distanceBand!=='DISTANT_ORIGINAL_ONLY')return [];
+ if(distanceBand!=='LOCAL'&&distanceBand!=='DISTANT_ORIGINAL_ONLY'&&
+    distanceBand!=='DENSE_ORIGINAL_ONLY')return [];
  if(![foot.x,foot.y,foot.z,realAuditedGoal.x,realAuditedGoal.y,
   realAuditedGoal.z].every(Number.isFinite))return [];
  const dx=realAuditedGoal.x-foot.x,dz=realAuditedGoal.z-foot.z;
@@ -26,6 +27,9 @@ export function b216OriginalFootBackfillCandidates(
  // Every proposal still requires the caller's actual original-grid
  // ownership sample and registered Rapier foot/shot-line approval.
  const atGoal=span<.40;
+ // Dense SOURCE research is always centered on the current real foot,
+ // never on a speculative patrol direction or navigation destination.
+ if(distanceBand==='DENSE_ORIGINAL_ONLY'&&!atGoal)return [];
  if(atGoal&&(!nativeWeaponFacing||
   ![nativeWeaponFacing.x,nativeWeaponFacing.y,nativeWeaponFacing.z]
    .every(Number.isFinite)||
@@ -43,7 +47,9 @@ export function b216OriginalFootBackfillCandidates(
  // Research-only OUTER proposals are not accepted aims, paths, ink or hits.
  // The caller must separately verify the real source grid, actual weapon
  // range and both original Rapier support and first blocking ray.
- const radii=distanceBand==='DISTANT_ORIGINAL_ONLY'?
+ const radii=distanceBand==='DENSE_ORIGINAL_ONLY'?
+  ([1.2,1.7,2.5,3.5,4.5,5.5] as const):
+  distanceBand==='DISTANT_ORIGINAL_ONLY'?
   ([4.5,5.5] as const):
   atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
  // Preserve the proven six offset proposals while en route. At a
@@ -51,7 +57,9 @@ export function b216OriginalFootBackfillCandidates(
  // vanishes, so complete all eight 45-degree directions around the
  // ACTUAL finite weapon-facing vector (including forward and its
  // previously omitted diagonal). These remain UNTRUSTED proposals.
- const offsets=atGoal?
+ const offsets=distanceBand==='DENSE_ORIGINAL_ONLY'?
+  Array.from({length:16},(_,i)=>i*Math.PI/8):
+  atGoal?
   ([0,Math.PI/4,Math.PI/2,3*Math.PI/4,Math.PI,
     -3*Math.PI/4,-Math.PI/2,-Math.PI/4] as const):
   ([Math.PI/2,-Math.PI/2,Math.PI,-3*Math.PI/4,
