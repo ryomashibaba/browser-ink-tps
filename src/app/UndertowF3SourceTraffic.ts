@@ -385,7 +385,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly realKccRejectedSteps=new Map<string,number>();
  /** B1 P2 real weapon-ready drought: witness only, no route authority. */
  private readonly p2B1DroughtFoot=new Map<string,{
-  nativeTick:number;foot:Vec3;misses:number
+  firstStillNativeTick:number;nativeTick:number;foot:Vec3;misses:number
  }>();
  private p2B1LastFullRouteAuditTick=-1000;
  /** Original-source CPU recovery intent; based only on its native HP. */
@@ -931,7 +931,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      ![actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)||
      Math.hypot(bot.position.x-actualFoot.x,
       bot.position.y-actualFoot.y,bot.position.z-actualFoot.z)>.01)return;
+  const old=this.p2B1DroughtFoot.get(id);
+  // A weapon drought alone cannot imply a blocked Crowd/KCC move:
+  // retain a 120+ tick stationary witness from genuine post-KCC feet.
+  // Any actual >=0.22m displacement or decreasing/out-of-order count
+  // starts a NEW physical observation window, not a fake stale stall.
+  const samePhysicalStay=!!old&&
+   this.b137NativeTick>old.nativeTick&&
+   consecutiveNoAimDecisions>old.misses&&
+   Math.hypot(old.foot.x-actualFoot.x,
+    old.foot.y-actualFoot.y,old.foot.z-actualFoot.z)<=.22;
   this.p2B1DroughtFoot.set(id,{
+   firstStillNativeTick:samePhysicalStay?
+    old!.firstStillNativeTick:this.b137NativeTick,
    nativeTick:this.b137NativeTick,
    foot:new Vec3(actualFoot.x,actualFoot.y,actualFoot.z),
    misses:consecutiveNoAimDecisions
@@ -1870,6 +1882,100 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      }
     }
    }
+   // P2 B1 can retain a still-valid Recast target while its true Rapier
+   // KCC foot has remained static for 120+ ticks with 120+ NO-AIM
+   // decisions. It must reconsider a DIFFERENT proven original goal
+   // BEFORE B443 reuses that stale in-flight target indefinitely.
+   // B1's genuine P2 180s SOURCE ink requests stopped at 17, and the
+   // later observed real source goal was missing. Other CPUs could still
+   // paint, so never invent B1 ammo, aim, face, actor or teleport.
+   // Unlike B2/B4, B1 with no FRONT goal from the landing had no late
+   // real-foot admission. Only an observed 120+ weapon-ready NO-AIM
+   // streak may trigger another strict ORIGINAL same-side route audit.
+   if(id==='B1'&&this.sourceInk&&this.freeCombat&&
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+      bot.agent&&this.physicallyRejoined.has(id)&&
+      fronts.length<4&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+      this.stage.solids.length===25&&
+      this.stage.paintSurfaces.length===17&&
+      this.stage.navigationLinks?.length===26&&
+      this.stage.paintSurfaces.every(s=>
+       (s.flags&SurfaceFlags.Scoreable)===0)){
+    const witness=this.p2B1DroughtFoot.get(id);
+    if(witness&&witness.misses>=120&&
+       this.b137NativeTick-witness.firstStillNativeTick>=120&&
+       this.b137NativeTick>=witness.nativeTick&&
+       this.b137NativeTick-witness.nativeTick<=40&&
+       this.b137NativeTick-this.p2B1LastFullRouteAuditTick>=120&&
+       realFoot.distance(witness.foot)<=.22){
+     // No more than one full native route re-audit per 120 real ticks.
+     this.p2B1LastFullRouteAuditTick=this.b137NativeTick;
+     const realHit=this.sourceNativeCharacterFootHit(realFoot);
+     const flat=realHit?inspectB130OriginalFlatSource({
+      nativeTick:this.b137NativeTick,
+      actualRapierBody:[realFoot.x,realFoot.y+
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,realFoot.z],
+      actualRapierSupportId:realHit.solidId
+     }):null;
+     if(realHit?.solidId==='UndertowT21D:right-low-team-b'&&
+        flat?.insideRegisteredOriginalXZFootprint&&
+        flat.originalFlatVerticalBandWithin22cm&&
+        flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
+        this.hasSourceFootSupport(realFoot)){
+      const proposals=proposeB441OriginalFrontline(this.stage,'B');
+      const candidateFeet=proposals.map(p=>new Vec3(...p.point));
+      const ranked=distributeOriginalSourceGoalCoverage(
+       rankOriginalSourcePatrolGoals(
+        candidateFeet,Team.B,this.sourceInk,0),
+       candidateFeet,this.actualTeamCoveragePositions(id,Team.B));
+      for(const row of ranked){
+       // OWN/sampled with real neutral neighbors is allowed, but never
+       // UNSAMPLED or entirely OWN original source paint.
+       if(!existingOriginalSourceInkOpportunity(row))continue;
+       const proposal=proposals[row.index]!;
+       const goal=candidateFeet[row.index]!;
+       if(proposal.sourceSolidId!==realHit.solidId||
+          goal.z>-33||goal.z< -63||
+          goal.distance(realFoot)<2||
+          fronts.some(p=>p.distance(goal)<2))continue;
+       const hit=this.sourceNativeCharacterFootHit(goal);
+       const proof=hit?inspectB130OriginalFlatSource({
+        nativeTick:this.b137NativeTick,
+        actualRapierBody:[goal.x,goal.y+
+         PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
+        actualRapierSupportId:hit.solidId
+       }):null;
+       if(hit?.solidId!==proposal.sourceSolidId||
+          !proof?.insideRegisteredOriginalXZFootprint||
+          !proof.originalFlatVerticalBandWithin22cm||
+          proof.distanceToOriginalPolygonBoundaryMeters<.75||
+          !this.hasSourceFootSupport(goal))continue;
+       const route=this.nav.auditPath(realFoot,goal);
+       if(!route.reachedTarget||
+          route.startSnapDistanceMeters>.20||
+          route.endSnapDistanceMeters>.20||
+          !this.hasSourceSupportedRoute(route,-1))continue;
+       fronts=[...fronts,goal];
+       this.b441FrontGoals.set(id,fronts);
+       // Revalidate the alternative first, THEN replace the former
+       // stalled in-flight goal; no lock is dropped for a failed route.
+       this.b443OriginalGoalLocks.set(id,{
+        target:goal.clone(),firstApprovedTick:this.b137NativeTick,
+        arrivedSinceTick:null
+       });
+       this.b442LastApprovedFront.set(id,{
+        target:goal.clone(),nativeTick:this.b137NativeTick
+       });
+       this.p2B1DroughtFoot.delete(id);
+       this.patrolIndex.set(id,-1);
+       out.copy(goal);
+       this.realGoalRequests++;this.b441ActualGoalRequests++;
+       return true;
+      }
+     }
+    }
+   }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
@@ -2020,93 +2126,6 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.realGoalRequests++;
     this.b441ActualGoalRequests++;
     return true;
-   }
-   // B1's genuine P2 180s SOURCE ink requests stopped at 17, and the
-   // later observed real source goal was missing. Other CPUs could still
-   // paint, so never invent B1 ammo, aim, face, actor or teleport.
-   // Unlike B2/B4, B1 with no FRONT goal from the landing had no late
-   // real-foot admission. Only an observed 120+ weapon-ready NO-AIM
-   // streak may trigger another strict ORIGINAL same-side route audit.
-   if(id==='B1'&&this.sourceInk&&this.freeCombat&&
-      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
-      bot.agent&&this.physicallyRejoined.has(id)&&
-      !this.b443OriginalGoalLocks.has(id)&&fronts.length<4&&
-      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
-      this.stage.solids.length===25&&
-      this.stage.paintSurfaces.length===17&&
-      this.stage.navigationLinks?.length===26&&
-      this.stage.paintSurfaces.every(s=>
-       (s.flags&SurfaceFlags.Scoreable)===0)){
-    const witness=this.p2B1DroughtFoot.get(id);
-    if(witness&&witness.misses>=120&&
-       this.b137NativeTick>=witness.nativeTick&&
-       this.b137NativeTick-witness.nativeTick<=40&&
-       this.b137NativeTick-this.p2B1LastFullRouteAuditTick>=120&&
-       realFoot.distance(witness.foot)<=.22){
-     // No more than one full native route re-audit per 120 real ticks.
-     this.p2B1LastFullRouteAuditTick=this.b137NativeTick;
-     const realHit=this.sourceNativeCharacterFootHit(realFoot);
-     const flat=realHit?inspectB130OriginalFlatSource({
-      nativeTick:this.b137NativeTick,
-      actualRapierBody:[realFoot.x,realFoot.y+
-       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,realFoot.z],
-      actualRapierSupportId:realHit.solidId
-     }):null;
-     if(realHit?.solidId==='UndertowT21D:right-low-team-b'&&
-        flat?.insideRegisteredOriginalXZFootprint&&
-        flat.originalFlatVerticalBandWithin22cm&&
-        flat.distanceToOriginalPolygonBoundaryMeters>=.75&&
-        this.hasSourceFootSupport(realFoot)){
-      const proposals=proposeB441OriginalFrontline(this.stage,'B');
-      const candidateFeet=proposals.map(p=>new Vec3(...p.point));
-      const ranked=distributeOriginalSourceGoalCoverage(
-       rankOriginalSourcePatrolGoals(
-        candidateFeet,Team.B,this.sourceInk,0),
-       candidateFeet,this.actualTeamCoveragePositions(id,Team.B));
-      for(const row of ranked){
-       // OWN/sampled with real neutral neighbors is allowed, but never
-       // UNSAMPLED or entirely OWN original source paint.
-       if(!existingOriginalSourceInkOpportunity(row))continue;
-       const proposal=proposals[row.index]!;
-       const goal=candidateFeet[row.index]!;
-       if(proposal.sourceSolidId!==realHit.solidId||
-          goal.z>-33||goal.z< -63||
-          goal.distance(realFoot)<2||
-          fronts.some(p=>p.distance(goal)<2))continue;
-       const hit=this.sourceNativeCharacterFootHit(goal);
-       const proof=hit?inspectB130OriginalFlatSource({
-        nativeTick:this.b137NativeTick,
-        actualRapierBody:[goal.x,goal.y+
-         PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,goal.z],
-        actualRapierSupportId:hit.solidId
-       }):null;
-       if(hit?.solidId!==proposal.sourceSolidId||
-          !proof?.insideRegisteredOriginalXZFootprint||
-          !proof.originalFlatVerticalBandWithin22cm||
-          proof.distanceToOriginalPolygonBoundaryMeters<.75||
-          !this.hasSourceFootSupport(goal))continue;
-       const route=this.nav.auditPath(realFoot,goal);
-       if(!route.reachedTarget||
-          route.startSnapDistanceMeters>.20||
-          route.endSnapDistanceMeters>.20||
-          !this.hasSourceSupportedRoute(route,-1))continue;
-       fronts=[...fronts,goal];
-       this.b441FrontGoals.set(id,fronts);
-       this.b443OriginalGoalLocks.set(id,{
-        target:goal.clone(),firstApprovedTick:this.b137NativeTick,
-        arrivedSinceTick:null
-       });
-       this.b442LastApprovedFront.set(id,{
-        target:goal.clone(),nativeTick:this.b137NativeTick
-       });
-       this.p2B1DroughtFoot.delete(id);
-       this.patrolIndex.set(id,-1);
-       out.copy(goal);
-       this.realGoalRequests++;this.b441ActualGoalRequests++;
-       return true;
-      }
-     }
-    }
    }
   }
   const active=this.patrolIndex.get(id)??-1;

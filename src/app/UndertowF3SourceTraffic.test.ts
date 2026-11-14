@@ -568,11 +568,36 @@ describe('F3B playable 8-actor original source runtime',()=>{
   expect(traffic.p2B1DroughtFoot.size).toBe(0);
   traffic.noteRealSourcePaintAimDrought('B1',foot,120);
   expect(traffic.p2B1DroughtFoot.size).toBe(1);
+  // One isolated no-aim timestamp does NOT demonstrate real physical
+  // stationarity. The original validated route remains unchanged.
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
+  traffic.b137NativeTick=1320;
+  traffic.noteRealSourcePaintAimDrought('B1',foot,240);
+  expect(traffic.p2B1DroughtFoot.get('B1')?.firstStillNativeTick)
+   .toBe(1200);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
   expect(out.distance(foot)).toBeGreaterThanOrEqual(2);
   expect(out.z).toBeLessThanOrEqual(-33);
   expect(traffic.nav.auditPath).toHaveBeenCalled();
   expect(traffic.hasSourceSupportedRoute).toHaveBeenCalled();
+  expect(traffic.b443OriginalGoalLocks.get('B1')?.target).toEqual(out);
+  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(bot.position).toEqual(originalFoot);
+  // The critical earlier gap: an existing safe in-flight goal should
+  // be preserved with one drought snapshot, but reconsidered after
+  // >=120 genuine-stationary ticks and >=120 current weapon NO-AIM.
+  // It may switch ONLY to a distinct candidate passing ALL same native
+  // Rapier/Recast gates. A static test foot is a controlled fixture, not
+  // evidence of native KCC success on a future Chromium run.
+  const formerlyApproved=out.clone();
+  traffic.b137NativeTick=1500;
+  traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
+  expect(out).toEqual(formerlyApproved);
+  traffic.b137NativeTick=1620;
+  traffic.noteRealSourcePaintAimDrought('B1',foot,240);
+  expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
+  expect(out.distance(formerlyApproved)).toBeGreaterThanOrEqual(2);
   expect(traffic.b443OriginalGoalLocks.get('B1')?.target).toEqual(out);
   expect(traffic.p2B1DroughtFoot.size).toBe(0);
   expect(bot.position).toEqual(originalFoot);
@@ -584,20 +609,24 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.b441FrontGoals.set('B1',[]);
   traffic.b443OriginalGoalLocks.delete('B1');
   traffic.b442LastApprovedFront.delete('B1');
-  traffic.b137NativeTick=1500;
+  traffic.b137NativeTick=1800;
   traffic.hasSourceSupportedRoute=vi.fn(()=>false);
   traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  traffic.b137NativeTick=1920;
+  traffic.noteRealSourcePaintAimDrought('B1',foot,240);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   expect(traffic.b443OriginalGoalLocks.has('B1')).toBe(false);
   // Fully OWN source does not give permission for fake paint goals.
   traffic.hasSourceSupportedRoute=vi.fn(()=>true);
-  traffic.b137NativeTick=1800;
+  traffic.b137NativeTick=2100;
   for(const surface of ink.getSurfaces())surface.ownerGrid.fill(Team.B);
-  traffic.noteRealSourcePaintAimDrought('B1',foot,120);
+  traffic.noteRealSourcePaintAimDrought('B1',foot,360);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   expect(traffic.b443OriginalGoalLocks.has('B1')).toBe(false);
   // A genuine splat/respawn must erase the prior life's witness.
-  traffic.p2B1DroughtFoot.set('B1',{nativeTick:1800,foot,misses:120});
+  traffic.p2B1DroughtFoot.set('B1',{
+   firstStillNativeTick:1800,nativeTick:2100,foot,misses:360
+  });
   bot.lifeState='SPLATTED';
   traffic.onNativeSourceCpuRespawn('B1');
   expect(traffic.p2B1DroughtFoot.size).toBe(0);
