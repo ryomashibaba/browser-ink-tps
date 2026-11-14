@@ -2853,7 +2853,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b442LastApprovedFront.delete(id);
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
-   this.realKccLastActorBlocker.delete(id);
+   this.realKccLastActorBlocker?.delete(id);
    this.p2B1DroughtFoot.delete(id);
   if(id==='A1'){
    this.b143ApprovedNativeAllyGoal=null;
