@@ -378,6 +378,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b441UnsafeOrUnreachableHolds=0;
  private b441ClosestApprovedFrontAbsZ:number|null=null;
  private readonly patrolIndex=new Map<string,number>();
+ /** Real native Rapier KCC rejection streak, NOT inferred stationary time.
+  * An alternative may be sought only after 90 denied original 60Hz steps;
+  * every new candidate must independently pass strict source+Recast gates.
+  * This ledger can NEVER approve a step, original face, or cross-team route. */
+ private readonly realKccRejectedSteps=new Map<string,number>();
  /** Original-source CPU recovery intent; based only on its native HP. */
  private readonly originalSourceRecoveryIntent=new Set<string>();
  private auditedTargets=0;
@@ -898,6 +903,35 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     new Vec3(to.x,to.y,to.z),'ink-projectile')
   };
   return b421RealEnemyStandoff(path,enemyFoot,side,lane);
+ }
+ /** Actual KCC rejected this original CPU's grounded 60Hz motion.
+  * No guessed collision or teleported Crowd result can enter this count. */
+ noteRealSourceKccRejectedStep(
+  id:string,actualFoot:Readonly<{x:number;y:number;z:number}>
+ ):void{
+  const bot=this.bots.find(b=>b.id===id);
+  if(!bot||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)||
+     this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+     ![actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)||
+     bot.position.distance(new Vec3(
+      actualFoot.x,actualFoot.y,actualFoot.z))>.01||
+     !this.hasSourceFootSupport(actualFoot))return;
+  this.realKccRejectedSteps.set(id,Math.min(180,
+   (this.realKccRejectedSteps.get(id)??0)+1));
+ }
+ /** Clear the block streak ONLY after actual Rapier-authorized movement;
+  * a successful zero-speed check does not prove the CPU became unstuck. */
+ noteRealSourceKccApprovedStep(
+  id:string,previousFoot:Readonly<{x:number;y:number;z:number}>,
+  acceptedFoot:Readonly<{x:number;y:number;z:number}>
+ ):void{
+  if(![previousFoot.x,previousFoot.y,previousFoot.z,
+    acceptedFoot.x,acceptedFoot.y,acceptedFoot.z].every(Number.isFinite))
+   return;
+  if(Math.hypot(previousFoot.x-acceptedFoot.x,
+     previousFoot.y-acceptedFoot.y,
+     previousFoot.z-acceptedFoot.z)>=.025)
+   this.realKccRejectedSteps.delete(id);
  }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
@@ -1956,10 +1990,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
   }
   const active=this.patrolIndex.get(id)??-1;
+  // Unlike the legacy B34 stationary inference, this is triggered only by
+  // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
+  // first drops remain unchanged while physical movement is successful.
+  const kccBlockedAlternative=!this.enableB441SourceFrontline&&
+   active>=0&&candidates.length>1&&
+   (this.realKccRejectedSteps.get(id)??0)>=90&&
+   bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+   this.hasSourceFootSupport(realFoot);
   // Persist the same audited destination across the tactical think cadence,
   // instead of jittering between nodes every 0.28 seconds. Only move to
   // another original-source destination after genuinely reaching this one.
-  const first=active>=0?active:(id.startsWith('A')?0:1);
+  const first=kccBlockedAlternative?
+   (active+1)%candidates.length:
+   active>=0?active:(id.startsWith('A')?0:1);
   // Optional genuine source gameplay only: rank already vetted candidate
   // endpoints by read-only actual ink ownership. The physical source and
   // Recast audits below are never skipped for a high-ranked point.
@@ -1990,7 +2034,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // B34 can only escape TO A DIFFERENT PRE-EXISTING SOURCE GOAL,
    // physically supported and native-path audited below. The old goal
    // remains the Crowd agent's last requested target if no safe alternate.
-   if(recovering&&index===active)continue;
+   if((recovering||kccBlockedAlternative)&&index===active)continue;
    const goal=candidates[index]!;
    if(goal.z*sign<33||goal.y<2.7||goal.y>5.25)
     throw Error('T21_F3D_UNAPPROVED_UNDERPASS_CROSSING_GOAL');
@@ -2004,6 +2048,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Native path from the REAL CPU foot, never only from a stored proxy.
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
+   // An alternative chosen after a PHYSICAL KCC veto must have complete
+   // original 0.30m-segment support. Existing legacy patrol gates are
+   // deliberately not relaxed or globally changed.
+   if(kccBlockedAlternative&&
+      !this.hasSourceSupportedRoute(audit,sign))continue;
    // W10-B4 regression finding: rejecting every ray-unsupported Recast
    // polyline also vetoes previously physically traversed W8 source patrol
    // paths (B4 then stopped shooting in the full W9 test). The existing
@@ -2054,6 +2103,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b34StationarySourceTicks.set(id,0);
    }
    this.patrolIndex.set(id,index);
+   if(kccBlockedAlternative)this.realKccRejectedSteps.delete(id);
    out.copy(goal);this.realGoalRequests++;
    if(rank){
     this.realPaintAwareGoalsAccepted++;
@@ -2064,6 +2114,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    return true;
   }
+  // A blocked old goal is never declared physically safe merely because
+  // Recast accepted it. If no strict alternate exists, retain the real
+  // CPU foot and retry the previous FIXED patrol on the next think cycle.
+  if(kccBlockedAlternative)this.realKccRejectedSteps.delete(id);
   this.heldRequests++;return false;
  }
 
@@ -2247,6 +2301,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.physicallyFalling.delete(bot.id);
     this.respawnOriginalDrops.delete(bot.id);
     this.patrolIndex.set(bot.id,-1);
+    this.realKccRejectedSteps.delete(bot.id);
     // A new real life cannot inherit the splatted actor's previously
     // approved tactical destination, or A1's old player C-key order.
     // Leave all surviving teammates' independent source goals intact.
@@ -2567,6 +2622,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b443OriginalGoalLocks.delete(id);
   this.b442LastApprovedFront.delete(id);
   this.patrolIndex.set(id,-1);
+  this.realKccRejectedSteps.delete(id);
   if(id==='A1'){
    this.b143ApprovedNativeAllyGoal=null;
    if(this.b471AllyOrder){

@@ -248,3 +248,94 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
  });
 
 });
+
+
+describe('native physically vetoed original CPU goal escape',()=>{
+ it('reroutes only after 90 actual KCC denials onto a separately validated ORIGINAL path',()=>{
+  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+  const real=new Vec3(0,3.2,40);
+  const first=new Vec3(0,3.2,46),second=new Vec3(2,3.2,45);
+  const bot={id:'A2',team:Team.A,position:real,agent:{},
+   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+  Object.assign(source,{
+   stage:{metadata:{id:'undertow-t21d-partial-connectivity-qa'}},
+   bots:[bot],freeCombat:true,
+   respawnOriginalDrops:new Set(),
+   physicallyRejoined:new Set(['A2']),
+   patrolGoals:new Map([['A2',[first,second]]]),
+   patrolIndex:new Map([['A2',0]]),
+   realKccRejectedSteps:new Map(),
+   hasSourceFootSupport:()=>true,
+   hasSourceSupportedRoute:()=>true,
+   nav:{auditPath:(from:Vec3,to:Vec3)=>({
+    reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,
+    nativePathPoints:[from.clone(),to.clone()]
+   })},
+   realGoalRequests:0,heldRequests:0
+  });
+  const out=new Vec3(8,8,8);
+  expect(source.chooseSourceGoal('A2',real,out)).toBe(true);
+  expect(out.equals(first)).toBe(true); // unchanged FIXED baseline
+  for(let tick=0;tick<89;tick++)
+   source.noteRealSourceKccRejectedStep('A2',real);
+  expect(source.realKccRejectedSteps.get('A2')).toBe(89);
+  expect(source.chooseSourceGoal('A2',real,out)).toBe(true);
+  expect(out.equals(first)).toBe(true);
+  source.noteRealSourceKccRejectedStep('A2',real);
+  expect(source.chooseSourceGoal('A2',real,out)).toBe(true);
+  expect(out.equals(second)).toBe(true);
+  expect(source.realKccRejectedSteps.has('A2')).toBe(false);
+  expect(source.patrolIndex.get('A2')).toBe(1);
+  expect(bot.position.equals(real)).toBe(true); // no fake CPU move
+ });
+ it('holds unsupported alternative, stale rejoin and zero-motion KCC checks',()=>{
+  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+  const foot=new Vec3(0,3,40),a=new Vec3(0,3,45),
+   b=new Vec3(3,3,46),out=new Vec3(9,9,9);
+  const bot={id:'A3',team:Team.A,position:foot,agent:{},
+   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+  let supported=true,strict=false;
+  Object.assign(source,{
+   stage:{metadata:{id:'undertow-t21d-partial-connectivity-qa'}},
+   bots:[bot],freeCombat:true,
+   respawnOriginalDrops:new Set(),
+   physicallyRejoined:new Set(['A3']),
+   patrolGoals:new Map([['A3',[a,b]]]),
+   patrolIndex:new Map([['A3',0]]),
+   realKccRejectedSteps:new Map(),
+   hasSourceFootSupport:()=>supported,
+   hasSourceSupportedRoute:()=>strict,
+   nav:{auditPath:(from:Vec3,to:Vec3)=>({
+    reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,
+    nativePathPoints:[from.clone(),to.clone()]
+   })},
+   realGoalRequests:0,heldRequests:0
+  });
+  for(let i=0;i<90;i++)
+   source.noteRealSourceKccRejectedStep('A3',foot);
+  expect(source.chooseSourceGoal('A3',foot,out)).toBe(false);
+  expect(out.equals(new Vec3(9,9,9))).toBe(true);
+  expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+  // No real motion: the count cannot be cleared by a KCC zero-step.
+  for(let i=0;i<50;i++)
+   source.noteRealSourceKccRejectedStep('A3',foot);
+  source.noteRealSourceKccApprovedStep('A3',foot,foot);
+  expect(source.realKccRejectedSteps.get('A3')).toBe(50);
+  source.noteRealSourceKccApprovedStep('A3',foot,
+   new Vec3(0.03,3,40));
+  expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+  supported=false;
+  source.noteRealSourceKccRejectedStep('A3',foot);
+  expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+  supported=true;bot.hp=0;
+  source.noteRealSourceKccRejectedStep('A3',foot);
+  expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+  bot.hp=100;source.physicallyRejoined.delete('A3');
+  source.noteRealSourceKccRejectedStep('A3',foot);
+  expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+  strict=true; // No mutation was made from a rejected alternate.
+  expect(bot.position.equals(foot)).toBe(true);
+ });
+});

@@ -149,6 +149,13 @@ export interface CpuQaSourceGoalAuthority {
   /** Real CPU respawn starts a new SOURCE life before traffic.observe.
    * Invalidate prior physical-rejoin evidence before another bot can aim. */
   onNativeSourceCpuRespawn?(id:string):void;
+  /** Report only REAL 60 Hz Rapier KCC decisions for an already-rejoined
+   * original CPU. These never grant movement, paint, actor or NavLink. */
+  noteRealSourceKccRejectedStep?(
+    id:string,actualFoot:Readonly<{x:number;y:number;z:number}>):void;
+  noteRealSourceKccApprovedStep?(
+    id:string,previousFoot:Readonly<{x:number;y:number;z:number}>,
+    acceptedFoot:Readonly<{x:number;y:number;z:number}>):void;
 }
 
 export interface CpuFireRequest {
@@ -1222,6 +1229,10 @@ export class CpuAgentSystem {
         }
         if(!shared.approved){
           if(this.phase14qF2RecoverableSteps){
+            // The original KCC veto is the only stall evidence; never
+            // infer a collision from a merely stationary Crowd agent.
+            this.f3dSourceGoals?.noteRealSourceKccRejectedStep?.(
+              bot.id,bot.position);
             this.reconcileBlockedT21F2CrowdProxy(bot);
             this.continueBlockedOriginalSourceCpuActions(bot,dt,
               humanTeam,humanPosition,humanActive,canStartNewCombatActions);
@@ -1237,6 +1248,8 @@ export class CpuAgentSystem {
           }));
         }
       }
+      this.f3dSourceGoals?.noteRealSourceKccApprovedStep?.(
+        bot.id,bot.position,accepted);
       bot.position.set(accepted.x,accepted.y,accepted.z);
       this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
 
