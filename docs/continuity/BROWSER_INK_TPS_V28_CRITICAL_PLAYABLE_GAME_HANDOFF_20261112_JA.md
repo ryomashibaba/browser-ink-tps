@@ -1,5 +1,37 @@
 # Browser Ink TPS / T21 — V28 全体批判と実ゲーム完成優先・新チャット統合正本
 
+## 【2026-11-14 20時台／本人明示：V28全体再批判・新チャット唯一の再開基準】
+
+**位置づけ：** 今回の本人依頼に対して、既存V28の最上段とSTART_HEREの入口だけを更新する一度限りの引き継ぎ。新V29・新B番号・新QA・別企画ではなく、実ゲーム進捗は0。下記すべてのV28章、V27以前、固定F1〜F5、T21_FAST_TRACK_ROADMAP.md、FAST_TRACK_EXECUTION_JA.md、DECISIONS_JA.md、CURRENT_CANONICAL.mdの方針および本人の採否を継承する。古い節の「最新」と「次工程」は歴史的記録であり、GitHubのライブHEAD/RAWを優先。
+
+### A. 2026-11-14 最終事実・SHAと判定
+
+- 公開GitHub：ryomashibaba/browser-ink-tps。唯一の研究書込先：research/t21-integrated-a1-c-patrol-four-mode-20261105。**今回の文書保存直前HEAD = `662a98db308784edab045a5ef5f88542d1ecbb03`。このdocs-only commit後にはHEADが変わるため、必ずライブ再確認する。** main `fbd922cea900df8e1a139f21b3c61ed927b3fdd9`、Draft PR #5 Open/Draft、PR head `8cfc95756ef0b56e2c33dc9f89a9041126daa272` は保護対象。
+- 直近真正180秒は [Actions #43576839316](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43576839316)（試験/ゲームSHA `059aad733532e96fdbf56b26d31aa321d0f1e281`、attempt 1）。**2026-11-14 18:20 JST頃に completed/failure**。FAILはB1の80〜180秒の射撃・塗装回復を認証できなかったため。実RAWの `T21_P2_GENUINE_NATIVE_JSON_BEGIN/END` が唯一の同SHA証拠。B441/B448前線研究モードは有効、CPU7/7、180秒=10800 countdown native ticks、TIME_UP、Twin Comets保持の新Rapier/Recast世界再戦と再戦後の実射撃3発は限定PASS。自然4v4や公式Winner成功とはみなさない。
+- 同RUN B1の80秒→180秒：実足元 `(-5.897308208,4.619208171,-48.422490004)` は不変、実射撃要求 `43→43`、実塗装変化セル `1878→1878`、有効照準なし `2590→8587`。P2研究追加探索は**CPU全体**で `195→662` 回、候補採用 `0→3` 回。B1だけの探索成功とは断言しない。
+- 同RUN B2：射撃要求 `94→212`、塗装変化 `2462→2462`、80→180秒の実足元の直線変位0m。B3：`94→212`、`211→211`、変位0m。B4：`108→108`、`870→870`、変位0m。**Bチーム4体が80/90/120/150/180秒の各観測点で停止。** 標本点間の一時運動は除外できないが、問題はB1だけでない。B3の後半には前線承認目標が存在したが実足元が動かず、前線目標の存在＝KCC移動成功ではない。
+- 既存の真正B1開始足・原作Rapier/Recast経路検査：Recast投影開始Y `4.621169`、Rapier支持床Y `4.370488` で支持差 `0.250681m`、既存上限 `0.250000m` を約0.68mm超過。7経路は投影開始点だと0/7、RAW実足元を初点に使うオフライン検査では5/7支持合格、2/7は引き続き不合格。局所修正コミット `9185b15ab64ba1d072d1e8d81d0ca54a9d306255` は軽量PASSだが、**同修正後の真正 #43576839316 でもB1回復FAIL**。経路投影差のみが根因とは判定不可。安全0.25m許容や0.30mサンプル間隔を無断変更しない。
+- 真正FAIL後の2コミットは `7948966d6ee6b33b7711c9c9b682991f32c2c051`（CPU別Recast提案数／Rapier承認・拒否理由・Crowd再同期の読み取り専用計測）と `662a98db308784edab045a5ef5f88542d1ecbb03`（コンストラクターを通らない従来テストへの初期化互換対応）。[軽量CI #43583009273](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/43583009273) SUCCESS：241 PASS/2 SKIP＋109 PASS、TypeScript/Vite PASS、真正ブラウザSKIPPED。**この新計測を本物の180秒Chromiumで実行した証拠はまだ0。CODE_PASS_ONLY。**
+- 原作認証境界は `25 Rapier solids / 17 PaintSurfaces / 26 NavLinks / 0 Scoreable`、Winner NONE、自然敵味方の検査経路0/16、原作接続の検査対象8対0/8。元のB499候補10部品42面は現ゲーム本体への昇格0/10。これらは限定検査の値であり、全マップの完成割合は**UNKNOWN**。正規Ver.7.2.0 Turf Actor transform、Phive collision/material、col_disable_flags、正式得点の認証が未解決。正式4v4、自然敵HP命中・HP0・150tick復活、公式得点/勝敗、本人Windows全面試遊/ART、main/PRマージ/Pages公開はいずれもHOLD。
+
+### B. 自己批判と改訂した実行規律
+
+1. **最も大きな失敗：** 何度もB1の照準/巡回目標/開始点を局所修正し、軽量CI成功を大量に得たが、80〜180秒のB1実移動・射撃・塗装は改善0。真正180秒まで繰り返して根因の切分けが後手に回った。今後B1小ガード、小テスト、診断番号、HUD、長い文書を1工程ごとの完成と呼ばない。二工程連続で本物の遊びの改善0なら必ず方向転換する。**この停止条件はすでに発動済み**。
+2. **単独B1からBチーム共通のF2障害へ主軸を修正：** 本物のCPU Crowdが移動提案しないのか、提案するがRapier KCCが拒否するのか、拒否の原因（原作支持Y/ルート端/他キャラ接触/過速度/Offmesh延期/再同期）を同じ実SHAの既存の読み取り専用計測で分離する。B2/B3に移動目標がある事実だけでKCC故障と断言しない。**まず最新計測コードのソース・シリアライズ・サンプル要件を監査し、必要な一つの有界な真正観測のみ個別承認後に実施する。** 原因が判明するまでゲーム物理の閾値や登録床を緩めない。次も無条件180秒試験にしない。
+3. **F4の原作地形認証は最大の全体HOLDとして並行維持：** B490本人の視覚/物理差、B499候補Face、既存の8接続と足元を同じ位置で照合。正規Ver.7.2.0 Actor/Phive衝突権限が確認できる個別FaceだけPRIVATE隔離→実Rapier KCC→元CPU半径のRecast→普通のゲーム世界へ昇格。不明なら当該Faceのみ `HOLD_REFERENCE_REQUIRED`。架空の床/坂/橋/NavLink/ワープ/敵/HP命中/Scoreable・公式得点を捏造しない。F4材料不足で登録済みF1/F2/F3開発を止めない。
+4. **次の一工程は本体阻害を一括で解決する縦スライス：** 実CPU7と人間の共通60Hz物理・自然な同側の移動→実射撃/実着弾塗装→インク消費/OWN回復→180秒・同武器再戦を同じSHAで評価。必要な関連ファイルをまとめて修復→既存軽量Vitest/型/Viteを原則1回→個別承認後に真正1系統を必要時のみ実施。診断のみはゲーム進捗0、TRUE PASSは本人が普通に遊べる動きの新しい実測を要する。F3の自然敵遭遇/HP・復活、F4原作接続・公式スコア、F5実Windows試遊は段階的なHOLDを維持。
+5. **無駄な実行・競合を止める：** 重いChromium実行・本人Windows・Work/Computer Use・PRIVATE転送・正式QA/公開はそれぞれ対象ごとに明示承認。過去の「効率的な試験を承認」は自動無限再試行や保護変更の許可ではない。公開GitHub標準ubuntu-latestを使い追加課金原則0、本人操作原則0。1人の統合担当が同一研究branchだけをライブHEAD再取得→単親commit→`expected_sha` CAS→`force:false`で書込、他チャットの変更があれば必ず再照合し旧HEAD上書き禁止。高負荷実行中に競合pushしない。新V29/新B番号/新workflow/小QA/HUD/別文書を増やさない。
+6. **報告を成果に合わせて短縮：** `FACT`、`CODE_PASS_ONLY`、`TRUE_RUN_LIMITED_PASS`、`FAIL`、`HOLD_REFERENCE_REQUIRED`、`UNKNOWN`を厳格に分離。毎回、新しく遊べるようになったこと（なければ0）／ゲームSHAと真正Run・軽量CI／最大HOLD／次の一手／本人操作の有無だけ報告。連続「次工程へ」で毎回同じ長文説明や待機ポーリングを繰り返さない。時間とモデル利用予算は実ゲーム成果へ振り向ける。
+
+### C. 新チャットの最初の具体作業（再計画禁止）
+
+**ここから計画の再作成はしない。** START_HERE最上段→本V28最上段→V28全文/既存F1〜F5/Fast Track/DECISIONS必要範囲→研究HEAD/最近のCI/正本とRawを照合。最初の重要な一作業は**現 `662a98db...` のCPU Recast提案・Rapier KCC結果計測が真SOURCE回路で必ず読めることのコード検証**、直近FAIL #43576839316 と現在HEADの差分の照合。その上で真の提案・拒否原因を特定し、F2 Bチーム共通停止へ一括修正する。既存RAWに存在しない新計測の数値はUNKNOWNとする。高負荷試験は承認を得て1系統のみ。F4根拠不足のFaceは局所HOLD、偽の通路を作らない。main/T19C/T20/Draft PR5/Pages/正式QA/原本/PRIVATE/本人Windowsは一切変更しない。
+
+**この移行記録自体の実ゲーム進捗：0。最新コード（文書保存前）＝`662a98db308784edab045a5ef5f88542d1ecbb03`、最新真正B1回復＝FAIL、最新軽量CI＝CODE_PASS_ONLY。新チャットでは必ず文書保存後の研究HEADをライブ取得する。**
+
+---
+
+
 ## 【2026-11-14 本人明示：批判的全体再評価と新チャット唯一の引き継ぎ／既存V28継続】
 
 **位置づけ：** 本人の今回の明示依頼に限り既存V28の最上段を一度更新する。新V29、新企画、新B番号、新機能ではない。既存V28全文、V27以前、固定F1～F5、T21_FAST_TRACK_ROADMAP.md、docs/continuity/FAST_TRACK_EXECUTION_JA.md、永続docs/continuity/DECISIONS_JA.md、CURRENT_CANONICAL.md、本人の全採否・過去の失敗教訓を保持する。**本追補はDOCS ONLY／ゲーム進捗0。** 古い節の「最新」は記録当時の事実であり、今後はGitHubのライブHEADと証拠を優先する。
