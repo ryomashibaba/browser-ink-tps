@@ -350,6 +350,8 @@ async function runApprovedCombatTwinReplay(){
   // Real physical CPU displacement must improve over the pinned
   // 40-90s all-four-stationary baseline. Crowd requests, paint request
   // counts and KCC acceptance counters alone are NOT movement proof.
+  // One independently authorized post-fix 90s REAL source CPU foot check.
+  // No synthetic KCC, extra round, new stage link or automatic retry.
   const bTeam=['B1','B2','B3','B4'];
   const recovered=bTeam.filter(id=>
    byActor[id]?.realFootDisplacement40to90>.25);
