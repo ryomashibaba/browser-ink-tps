@@ -542,7 +542,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
     sourceEndpointProbes:number;
     sourceNativeCharacterFootHit:(p:Vec3)=>{solidId:string}|null;
     hasSourceSupportedRoute:(a:ReturnType<typeof nav.auditPath>,
-     sign:number)=>boolean
+     sign:number,actualFoot?:Vec3)=>boolean
    };
    const realFoot=new Vec3(-5.897308208113267,
     4.619208170858396,-48.42249000392073);
@@ -590,7 +590,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
      // Diagnostic only: true RAW Rapier physical foot as the START, not a
      // new route link, altered runtime snap threshold or fake CPU move.
      firstDeniedUsingActualFoot:firstDenied({...a,
-      nativePathPoints:[realFoot,...a.nativePathPoints.slice(1)]})};
+      nativePathPoints:[realFoot,...a.nativePathPoints.slice(1)]}),
+     actualNativeFootApproved:t.hasSourceSupportedRoute(a,-1,realFoot),
+     inventedRaisedFootDenied:!t.hasSourceSupportedRoute(a,-1,
+      new Vec3(realFoot.x,realFoot.y+.04,realFoot.z))};
    });
    const realSupport=t.sourceNativeCharacterFootHit(realFoot);
    expect([stage.solids.length,stage.paintSurfaces.length,
@@ -598,6 +601,12 @@ describe('F3B playable 8-actor original source runtime',()=>{
    expect(realSupport?.solidId).toMatch(/^UndertowT21D:/);
    expect(candidates.length).toBeGreaterThan(1);
    expect(rows.length).toBe(candidates.length+1);
+   // Real Rapier foot fixes only the 1.96mm Recast projection error.
+   // Two ORIGINAL routes still lack supported intermediate ramp height.
+   expect(rows.filter(x=>x.actualNativeFootApproved).map(x=>x.index))
+    .toEqual([2,3,4,5,6]);
+   expect(rows.every(x=>!x.registeredFullPath&&
+    x.inventedRaisedFootDenied)).toBe(true);
    console.log('P2_B1_GENUINE_80S_REAL_NATIVE_ROUTE_GATE',
     JSON.stringify({observedRun:43573401997,immutablePhysicalFoot:
      [realFoot.x,realFoot.y,realFoot.z],supportId:realSupport?.solidId,

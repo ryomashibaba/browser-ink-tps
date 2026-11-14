@@ -676,11 +676,27 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * Does not create terrain, navigation, or synthetic actor positions.
   * Endpoint ray support is not a complete KCC capsule certificate. */
  private hasSourceSupportedRoute(
-  audit:ReturnType<RecastStageNavigation['auditPath']>,sideSign:number
+  audit:ReturnType<RecastStageNavigation['auditPath']>,sideSign:number,
+  actualNativeStart?:Readonly<{x:number;y:number;z:number}>
  ):boolean{
   this.nativeRouteChecks++;
-  const points=audit.nativePathPoints;
-  if(!this.physics||points.length===0)return false;
+  const original=audit.nativePathPoints;
+  if(!this.physics||original.length===0)return false;
+  // B1 ONLY: a true KCC foot may differ by <=2cm from Recast's
+  // projected start, while the strict 25cm Rapier floor threshold
+  // accidentally rejects the projected 1.96mm-high start. Use the
+  // REAL current foot as the initial support sample, never modify
+  // Recast waypoints, native agent, registered SOURCE or tolerance.
+  let points:readonly Readonly<{x:number;y:number;z:number}>[]=original;
+  if(actualNativeStart){
+   const projected=original[0]!;
+   const snap=Math.hypot(projected.x-actualNativeStart.x,
+    projected.y-actualNativeStart.y,
+    projected.z-actualNativeStart.z);
+   if(!Number.isFinite(snap)||snap>.02||
+      !this.hasSourceFootSupport(actualNativeStart))return false;
+   points=[actualNativeStart,...original.slice(1)];
+  }
   const probe=(point:Readonly<{x:number;y:number;z:number}>):boolean=>{
    this.nativeRouteRayProbes++;
    return [point.x,point.y,point.z].every(Number.isFinite)&&
@@ -2210,10 +2226,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(!audit.reachedTarget||audit.startSnapDistanceMeters>.25||
       audit.endSnapDistanceMeters>.22)continue;
    // An alternative chosen after a PHYSICAL KCC veto must have complete
-   // original 0.30m-segment support. Existing legacy patrol gates are
-   // deliberately not relaxed or globally changed.
-   if(kccBlockedAlternative&&
-      !this.hasSourceSupportedRoute(audit,sign))continue;
+   // original 0.30m-segment support. B1 research uses its ACTUAL post-KCC
+   // start foot only when stationary drought evidence already passed.
+   // Original floor and 0.30m route samples still fail closed unchanged.
+   const fullRegisteredSupport=this.hasSourceSupportedRoute(
+    audit,sign,b1StalledResearchPatrol?realFoot:undefined);
+   if(kccBlockedAlternative&&!fullRegisteredSupport)continue;
    // W10-B4 regression finding: rejecting every ray-unsupported Recast
    // polyline also vetoes previously physically traversed W8 source patrol
    // paths (B4 then stopped shooting in the full W9 test). The existing
@@ -2221,7 +2239,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Rapier KCC and physical collision. Log uncertain patrol routes but
    // do NOT silently rewrite original native goals or cancel that validated
    // locomotion. New cross-team engagement paths still fail closed above.
-   if(!this.hasSourceSupportedRoute(audit,sign))
+   if(!fullRegisteredSupport)
     this.unauditedPatrolRouteRequests++;
    // Observation only: prove the legacy B31 mode repeatedly retargets
    // BEFORE reaching its prior native goal. No Actor position write.
