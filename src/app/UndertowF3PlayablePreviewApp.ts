@@ -7981,6 +7981,8 @@ export class UndertowF3PlayablePreviewApp{
     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
    cpuContinuity:this.cpu.qaContinuitySnapshot(),
    blockedSourceActionEvidence:this.cpu.blockedSourceActionSnapshot(),
+   // Real 60Hz Recast proposals versus Rapier KCC decisions, read-only.
+   cpuSourceNativeGroundMotion:this.cpu.sourceGroundStepEvidenceSnapshot(),
    cpuPaintRequests:this.stats.cpuPaintRequests,
    cpuCombatHits:this.stats.cpuCombatHits,
    humanCpuDirectHits:this.stats.humanCpuDirectHits,

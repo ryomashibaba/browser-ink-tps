@@ -144,6 +144,8 @@ async function runApprovedCombatTwinReplay(){
    cpuSourceTurfRequestsByActor:
     s.b154NativeSevenCpuInk?.actualAcceptedSourceTurfShotRequests??null,
    cpuRealPatrolTravel:s.cpu?.sourcePatrol?.travelMeters??null,
+   // Original physical CPU native step evidence, not a new route grant.
+   cpuGroundStepEvidenceByActor:s.cpuSourceNativeGroundMotion?.byActor??null,
    // The prior P2 true 180s B1 held at 17 genuine ink requests after
    // 80s, but recorded NO actual foot XYZ / existing source destination.
    // Capture ONLY real post-KCC feet and PRE-EXISTING source-verified

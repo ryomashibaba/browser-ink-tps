@@ -345,6 +345,17 @@ describe('F3B playable 8-actor original source runtime',()=>{
     if(done&&frame>=done+360)break;
    }
    const state=traffic.snapshot();
+   // Native 60Hz source CPU observations contain real Crowd and KCC
+   // decisions only. Both movement grants and altered SOURCE stay zero.
+   const motion=cpu.sourceGroundStepEvidenceSnapshot();
+   expect([motion.syntheticFootMoves,motion.syntheticGoals,
+    motion.newSolids,motion.newNavLinks,motion.scoreablePromotions])
+    .toEqual([0,0,0,0,0]);
+   const rows=Object.values(motion.byActor);
+   expect(rows.length).toBeGreaterThan(0);
+   expect(rows.some(r=>r.crowdNoStep+r.crowdProposals>0)).toBe(true);
+   expect(rows.every(r=>r.rapierRejected===
+    Object.values(r.rejectionCauses).reduce((s,n)=>s+n,0))).toBe(true);
    expect(traffic.nativeSourceFreeCombatEnabled()).toBe(state.freeCombatEnabled);
    expect(traffic.nativeSourceAllSevenLiveRejoined())
     .toBe(state.physicalRejoins.length===7);

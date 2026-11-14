@@ -296,6 +296,17 @@ export class CpuAgentSystem {
   private readonly blockedSourceActionRows = new Map<string,{
     supportedWindows:number;mainRequests:number;kitRequests:number
   }>();
+  /** Observation of native Crowd proposals and real Rapier KCC decisions.
+   * These seven SOURCE-only rows never authorize movement, paint or goals. */
+  private readonly sourceGroundStepEvidence=new Map<string,{
+   crowdNoStep:number;crowdProposals:number;rapierRejected:number;
+   rapierAcceptedMoving:number;rapierAcceptedStationary:number;
+   offmeshDeferred:number;overspeedRejected:number;crowdReanchors:number;
+   rejectionCauses:Record<string,number>;
+   lastRejectCause:string|null;lastRejectOwners:readonly string[];
+   lastRealFoot:[number,number,number];
+   lastCrowdCandidate:[number,number,number];
+  }>();
   private readonly qaTurfShotsByActor = new Map<string, number>();
   private b152AcceptedSourceAimShots=0;
   // B64 experimental source-local alternate AIM only. Original FIXED
@@ -788,6 +799,62 @@ export class CpuAgentSystem {
       newPhysicsOrNavLinks:0 as const};
   }
 
+  /** Per-actor SOURCE 60Hz steering and actual KCC outcomes, no simulation.
+   * "Crowd proposal" is NOT a certified physical step. */
+  public sourceGroundStepEvidenceSnapshot(){
+   const byActor=Object.fromEntries([...this.sourceGroundStepEvidence]
+    .sort(([a],[b])=>a.localeCompare(b)).map(([id,row])=>[id,{
+     ...row,rejectionCauses:{...row.rejectionCauses},
+     lastRejectOwners:[...row.lastRejectOwners],
+     lastRealFoot:[...row.lastRealFoot],
+     lastCrowdCandidate:[...row.lastCrowdCandidate]
+    }]));
+   return {source:'REAL_SOURCE_RECAST_PROPOSAL_AND_RAPIER_KCC' as const,
+    byActor,syntheticFootMoves:0 as const,syntheticGoals:0 as const,
+    newSolids:0 as const,newNavLinks:0 as const,scoreablePromotions:0 as const,
+    physicalMotionCertificationFromCounterAlone:false as const};
+  }
+
+  private observeSourceGroundStep(
+   bot:CpuBot,event:'CROWD'|'KCC_REJECTED'|'KCC_APPROVED'|
+    'CROWD_REANCHOR'|'OFFMESH_DEFER'|'OVERSPEED',
+   candidate:Readonly<{x:number;y:number;z:number}>,
+   cause?:string,owners:readonly string[]=[]
+  ):void{
+   if(!this.phase14qF2RecoverableSteps||
+      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+      this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)!==true)return;
+   let row=this.sourceGroundStepEvidence.get(bot.id);
+   if(!row){
+    row={crowdNoStep:0,crowdProposals:0,rapierRejected:0,
+     rapierAcceptedMoving:0,rapierAcceptedStationary:0,
+     offmeshDeferred:0,overspeedRejected:0,crowdReanchors:0,
+     rejectionCauses:{},lastRejectCause:null,lastRejectOwners:[],
+     lastRealFoot:[bot.position.x,bot.position.y,bot.position.z],
+     lastCrowdCandidate:[bot.position.x,bot.position.y,bot.position.z]};
+    this.sourceGroundStepEvidence.set(bot.id,row);
+   }
+   const d=Math.hypot(candidate.x-bot.position.x,
+    candidate.y-bot.position.y,candidate.z-bot.position.z);
+   if(event==='CROWD'){
+    if(d<=.001)row.crowdNoStep++;
+    else row.crowdProposals++;
+   }else if(event==='KCC_APPROVED'){
+    if(d>.015)row.rapierAcceptedMoving++;
+    else row.rapierAcceptedStationary++;
+   }else if(event==='KCC_REJECTED'){
+    row.rapierRejected++;
+    const reason=cause??'UNSPECIFIED';
+    row.rejectionCauses[reason]=(row.rejectionCauses[reason]??0)+1;
+    row.lastRejectCause=reason;
+    row.lastRejectOwners=owners.slice(0,8);
+   }else if(event==='OFFMESH_DEFER')row.offmeshDeferred++;
+   else if(event==='OVERSPEED')row.overspeedRejected++;
+   else row.crowdReanchors++;
+   row.lastRealFoot=[bot.position.x,bot.position.y,bot.position.z];
+   row.lastCrowdCandidate=[candidate.x,candidate.y,candidate.z];
+  }
+
   /** CPU weapon requests accepted for genuine paintable turf, per real actor. */
   public qaTurfShotSnapshot(): Readonly<Record<string, number>> {
     return Object.fromEntries(
@@ -808,6 +875,7 @@ export class CpuAgentSystem {
     this.b35DuplicateNativeRequestsSuppressed=0;
     this.qaTurfShotCooldown.clear();
     this.blockedSourceActionRows.clear();
+    this.sourceGroundStepEvidence.clear();
     this.sourceCommittedPaintAims.clear();
     this.qaTurfShotsByActor.clear();
     this.b152AcceptedSourceAimShots=0;
@@ -1249,6 +1317,7 @@ export class CpuAgentSystem {
       }
 
       const p = bot.agent.position();
+      this.observeSourceGroundStep(bot,'CROWD',p);
       // F2: the original offmesh event may begin only with a free
       // original-source physical capsule corridor. Other moving CPUs can
       // reach the same lip on adjacent links. Queue that fall by leaving
@@ -1261,6 +1330,7 @@ export class CpuAgentSystem {
          this.phase14qGroundCollision!.shouldDeferF2FirstDrop!(
            bot.id,bot.position
          )){
+        this.observeSourceGroundStep(bot,'OFFMESH_DEFER',p);
         this.reconcileBlockedT21F2CrowdProxy(bot);
         this.continueBlockedOriginalSourceCpuActions(bot,dt,
           humanTeam,humanPosition,humanActive,canStartNewCombatActions);
@@ -1311,6 +1381,7 @@ export class CpuAgentSystem {
         }catch(error){
           if(this.phase14qF2RecoverableSteps&&
              String(error).includes('T21_PHASE14Q_CPU_CROWD_OVERSPEED_UNAPPROVED')){
+            this.observeSourceGroundStep(bot,'OVERSPEED',accepted);
             this.reconcileBlockedT21F2CrowdProxy(bot);
             this.continueBlockedOriginalSourceCpuActions(bot,dt,
               humanTeam,humanPosition,humanActive,canStartNewCombatActions);
@@ -1320,6 +1391,8 @@ export class CpuAgentSystem {
         }
         if(!shared.approved){
           if(this.phase14qF2RecoverableSteps){
+            this.observeSourceGroundStep(bot,'KCC_REJECTED',accepted,
+             shared.cause,shared.colliderOwnerIds);
             // The original KCC veto is the only stall evidence; never
             // infer a collision from a merely stationary Crowd agent.
             this.f3dSourceGoals?.noteRealSourceKccRejectedStep?.(
@@ -1339,6 +1412,7 @@ export class CpuAgentSystem {
           }));
         }
       }
+      this.observeSourceGroundStep(bot,'KCC_APPROVED',accepted);
       this.f3dSourceGoals?.noteRealSourceKccApprovedStep?.(
         bot.id,bot.position,accepted);
       bot.position.set(accepted.x,accepted.y,accepted.z);
@@ -1439,6 +1513,7 @@ export class CpuAgentSystem {
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
     if(!this.phase14qF2RecoverableSteps||!bot.agent)
       throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');
+    this.observeSourceGroundStep(bot,'CROWD_REANCHOR',bot.agent.position());
     const nav=this.navigation.closestPoint(bot.position);
     if(Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
       nav.z-bot.position.z)>.20)
