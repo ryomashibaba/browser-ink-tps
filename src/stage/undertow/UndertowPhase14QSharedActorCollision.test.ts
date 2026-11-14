@@ -585,4 +585,26 @@ it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stag
   expect(freeze.activationReady).toBe(false);
   w.actors.dispose();
  });
+
+ it('applies the same original-ramp Rapier authority to the REAL B2 90s rejected foot, not an actor-name bypass',()=>{
+  const w=world();
+  // Genuine 90-second RAW at c3cd288d, Actions #43649553165.
+  const from={x:-6.162266254425049,y:4.610341548919678,z:-49.032161712646484};
+  const raw={x:-6.167247295379639,y:4.612900257110596,z:-49.0317268371582};
+  w.actors.syncRealCpuFoot('B2',from);
+  expect(w.actors.sourceFootSupport('B2',from)?.solidId)
+   .toBe('UndertowT21D:right-low-route-ramp-negative-z');
+  const first=w.actors.auditGroundStep('B2',from,raw,DT,true);
+  expect(first.cause).toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+  const corrected=w.actors.tryOriginalDownhillKccStep('B2',from,raw,DT);
+  expect(corrected).not.toBeNull();
+  expect(corrected!.y).toBeLessThan(from.y);
+  expect(w.actors.auditGroundStep('B2',from,corrected!,DT,true).approved)
+   .toBe(true);
+  expect(w.actors.qaRegisteredRealCpuCapsule('B2')?.foot).toEqual(from);
+  expect([w.stage.solids.length,w.stage.paintSurfaces.length,
+   w.stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(freeze.activationReady).toBe(false);
+  w.actors.dispose();
+ });
 });

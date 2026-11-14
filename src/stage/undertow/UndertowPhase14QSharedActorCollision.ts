@@ -316,17 +316,17 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
-  /** SOURCE B1/B3 ramp only: shorten a real Crowd downhill proposal to <=2cm
+  /** SOURCE registered ramp only: shorten a real Crowd downhill proposal to <=2cm
    * and add a Rapier-measured descent, preserving unchanged 0.25m
    * floor support, native KCC, actor collision and speed authority.
    * Returns no actor mutation; caller must independently re-audit. */
   public tryOriginalDownhillKccStep(
     id:string,from:T21QFoot,to:T21QFoot,dt:number
   ):T21QFoot|null{
-    if((id!=='B1'&&id!=='B3')||!Number.isFinite(dt)||
+    if(!Number.isFinite(dt)||
        Math.abs(dt-1/60)>1e-8||
        ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite)||
-       !this.actors.has(id))return null;
+       !this.actors.has(id)||!this.sourceFootSupport(id,from))return null;
     const limit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
     const requested=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z);
     const horizontal=Math.hypot(to.x-from.x,to.z-from.z);
