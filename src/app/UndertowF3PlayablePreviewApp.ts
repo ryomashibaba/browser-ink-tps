@@ -74,7 +74,7 @@ import {b209OriginalRampEdge,createB209OriginalRampEdgeCoach} from './B209Origin
 import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS} from '../stage/undertow/UndertowSpillwayRouteRampGeometry';
 import {b195NativeCoopMissionView} from './B195NativeCoopMissionView';
 import {b197CoopReplayDecision} from './B197CoopReplayDecision';
-import {b154OriginalTeamInkOptIn}
+import {b154OriginalTeamInkOptIn,b154OriginalCpuImpactRasterOutcome}
  from './W10B154OriginalTeamInkMode';
 import {buildB155OriginalSourceConnectivityReview}
  from './W10B155OriginalSourceConnectivityReview';
@@ -321,6 +321,12 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b154AcceptedCpuInk=new Map<string,{
   stampEvents:number;changedCells:number;
   impactEvents:number;impactChangedCells:number;footChangedCells:number;
+  originalImpactChangedEvents:number;
+  originalImpactAlreadyOwnedEvents:number;
+  originalImpactNoEligibleEvents:number;
+  originalImpactOtherZeroEvents:number;
+  originalImpactEligibleCells:number;
+  originalImpactAlreadyOwnedCells:number;
  }>();
  private readonly b149ActualContact={
   enabled:new URL(location.href).searchParams.get('t21QaDrive')==='source'&&
@@ -721,7 +727,10 @@ export class UndertowF3PlayablePreviewApp{
        ['A1','A2','A3','B1','B2','B3','B4'].includes(event.actorId)){
      const ink=this.b154AcceptedCpuInk.get(event.actorId)??{
       stampEvents:0,changedCells:0,
-      impactEvents:0,impactChangedCells:0,footChangedCells:0
+      impactEvents:0,impactChangedCells:0,footChangedCells:0,
+      originalImpactChangedEvents:0,originalImpactAlreadyOwnedEvents:0,
+      originalImpactNoEligibleEvents:0,originalImpactOtherZeroEvents:0,
+      originalImpactEligibleCells:0,originalImpactAlreadyOwnedCells:0
      };
      ink.stampEvents++;
      ink.changedCells+=changedCells;
@@ -729,6 +738,19 @@ export class UndertowF3PlayablePreviewApp{
         event.type===PaintEventType.WallImpact){
       ink.impactEvents++;
       ink.impactChangedCells+=changedCells;
+      // Genuine post-raster evidence: an OWN-covered floor is different
+      // from a projectile impact reaching no eligible original ink cell.
+      const outcome=b154OriginalCpuImpactRasterOutcome(event,raster);
+      if(outcome){
+       ink.originalImpactEligibleCells+=raster.rasterEligibleCells;
+       ink.originalImpactAlreadyOwnedCells+=raster.rasterAlreadyTeamOwnedCells;
+       if(outcome==='CHANGED')ink.originalImpactChangedEvents++;
+       else if(outcome==='ALREADY_TEAM_OWNED')
+        ink.originalImpactAlreadyOwnedEvents++;
+       else if(outcome==='NO_ELIGIBLE_CELLS')
+        ink.originalImpactNoEligibleEvents++;
+       else ink.originalImpactOtherZeroEvents++;
+      }
      }
      if(event.type===PaintEventType.Foot)
       ink.footChangedCells+=changedCells;
@@ -8059,7 +8081,10 @@ export class UndertowF3PlayablePreviewApp{
     byActor:Object.fromEntries(['A1','A2','A3','B1','B2','B3','B4'].map(id=>[
      id,{...(this.b154AcceptedCpuInk.get(id)??{
       stampEvents:0,changedCells:0,
-      impactEvents:0,impactChangedCells:0,footChangedCells:0
+      impactEvents:0,impactChangedCells:0,footChangedCells:0,
+      originalImpactChangedEvents:0,originalImpactAlreadyOwnedEvents:0,
+      originalImpactNoEligibleEvents:0,originalImpactOtherZeroEvents:0,
+      originalImpactEligibleCells:0,originalImpactAlreadyOwnedCells:0
      })}
     ])),
     source:'REAL_PAINT_COORDINATOR_GAMEPLAY_INK_ACCEPTED_CHANGES',
