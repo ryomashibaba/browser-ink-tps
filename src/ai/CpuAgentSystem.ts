@@ -15,7 +15,8 @@ import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityM
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
-import {b180OriginalSourcePatchOpportunity}
+import {b180OriginalSourcePatchOpportunity,
+ b180OriginalSourceUnownedNeighborAim}
  from './B180OriginalSourcePaintOpportunity';
 import {chooseB181OriginalSourceSight,b182ReuseNativeSight,type B181SightPoint}
  from './B181OriginalSourceCombatSight';
@@ -2893,7 +2894,15 @@ export class CpuAgentSystem {
       if(sample.owner===bot.team&&opportunity<=0)continue;
       if(this.b180OriginalPatchAimEnabled&&opportunity<=0)continue;
       if(sample.owner!==bot.team)this.b64CandidatesUnowned++;
-      const sourcePoint=sample.surface.localToWorld(sample.u,sample.v);
+      const ownedNeighbor=this.b180OriginalPatchAimEnabled&&
+       sample.owner===bot.team?
+       b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+      // The actual 9-cell patch can contain unowned corners beyond
+      // the weapon's real paint radius. Do not shoot at an OWN center.
+      if(this.b180OriginalPatchAimEnabled&&sample.owner===bot.team&&
+         !ownedNeighbor)continue;
+      const sourcePoint=ownedNeighbor??
+       sample.surface.localToWorld(sample.u,sample.v);
       // Reject out-of-range genuine paint before choosing it, not AFTER
       // the aim is selected: a nearer audited source pixel may still fire.
       if(!this.cpuTargetInRange(
@@ -2959,7 +2968,11 @@ export class CpuAgentSystem {
       const sample=this.gameplayInk.sampleWorld(this.samplePoint,
        .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
       if(!sample||sample.surface.isScoreable)continue;
-      const candidate=sample.surface.localToWorld(sample.u,sample.v);
+      const ownedNeighbor=sample.owner===bot.team?
+       b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+      if(sample.owner===bot.team&&!ownedNeighbor)continue;
+      const candidate=ownedNeighbor??
+       sample.surface.localToWorld(sample.u,sample.v);
       if(![candidate.x,candidate.y,candidate.z].every(Number.isFinite)||
          Math.abs(candidate.y-bot.position.y)>.35||
          !this.cpuTargetInRange(
