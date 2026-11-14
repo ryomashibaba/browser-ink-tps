@@ -104,6 +104,8 @@ on:
       - 'src/ai/CpuAgentSystem.ts'
       - 'src/ai/B180OriginalSourcePaintOpportunity.ts'
       - 'src/ai/B180OriginalSourcePaintOpportunity.test.ts'
+      - 'src/ai/B216OriginalSourceBackfillInk.ts'
+      - 'src/ai/B216OriginalSourceBackfillInk.test.ts'
       - 'src/app/W10B154OriginalTeamInkMode.ts'
       - 'src/app/W10B154OriginalTeamInkMode.test.ts'
       - 'src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts'
