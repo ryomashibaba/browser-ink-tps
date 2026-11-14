@@ -38,6 +38,7 @@ function fixture(originalF3: boolean) {
   system.pendingKitRequests = [];
   system.sourceCommittedPaintAims = new Map();
   system.selectedSourcePaintSaturation = new Map();
+  system.selectedSourceEmptyAimStreak = new Map();
   system.b215NativeInkDecisionsByActor = new Map();
   system.f3dSourceGoals = originalF3
     ? { chooseSourceGoal: () => false } : null;
