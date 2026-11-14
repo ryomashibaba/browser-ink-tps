@@ -549,4 +549,40 @@ it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stag
    w.stage.navigationLinks?.length]).toEqual([25,17,26]);
   w.actors.dispose();
  });
+
+ it('B3 genuine 90s foot recovers only via ORIGINAL registered ramp KCC, not a floor bypass',()=>{
+  const w=world();
+  const from={x:-6.310656547546387,y:4.606138229370117,z:-49.365596771240234};
+  const raw={x:-6.315646648406982,y:4.608527660369873,z:-49.365909576416016};
+  w.actors.syncRealCpuFoot('B3',from);
+  const first=w.actors.auditGroundStep('B3',from,raw,DT,true);
+  expect(first.cause).toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+  expect(first.approved).toBe(false);
+  const corrected=w.actors.tryOriginalDownhillKccStep('B3',from,raw,DT);
+  expect(corrected).not.toBeNull();
+  expect(corrected!.y).toBeLessThan(from.y);
+  const physical=w.actors.auditGroundStep('B3',from,corrected!,DT,true);
+  expect(physical.approved).toBe(true);
+  expect(physical.colliderOwnerIds).toEqual([]);
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const hit=w.physics.castCharacterFootSupport(
+   new Vec3(corrected!.x,corrected!.y+off,corrected!.z),off,'HUMAN');
+  expect(hit?.solidId).toBe('UndertowT21D:right-low-route-ramp-negative-z');
+  expect(Math.abs(hit!.point.y-corrected!.y)).toBeLessThanOrEqual(.25);
+  expect(w.actors.qaRegisteredRealCpuCapsule('B3')?.foot).toEqual(from);
+  expect(w.actors.tryOriginalDownhillKccStep('B2',from,raw,DT)).toBeNull();
+  expect(w.actors.tryOriginalDownhillKccStep('B4',from,raw,DT)).toBeNull();
+  expect(w.actors.tryOriginalDownhillKccStep('B3',from,{
+   x:raw.x,y:from.y-.2,z:raw.z},DT)).toBeNull();
+  const flat=w.stage.metadata.teamBSpawn;
+  const upper={x:flat[0],y:flat[1],z:flat[2]};
+  w.actors.syncRealCpuFoot('B3',upper);
+  const upperRaw={x:upper.x+.01,y:upper.y,z:upper.z};
+  expect(w.actors.tryOriginalDownhillKccStep('B3',upper,upperRaw,DT))
+   .toBeNull();
+  expect([w.stage.solids.length,w.stage.paintSurfaces.length,
+   w.stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(freeze.activationReady).toBe(false);
+  w.actors.dispose();
+ });
 });

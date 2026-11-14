@@ -1395,12 +1395,12 @@ export class CpuAgentSystem {
           }
           throw error;
         }
-        // B1 real SOURCE ramp: original Rapier floor + unchanged KCC
+        // B1/B3 real SOURCE ramp: original Rapier floor + unchanged KCC
         // must certify this short downhill motion twice before adoption.
         if(!shared.approved&&this.phase14qF2RecoverableSteps&&
-           bot.id==='B1'&&
+           (bot.id==='B1'||bot.id==='B3')&&
            shared.cause==='UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION'&&
-           this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.('B1')===true){
+           this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true){
           const downhill=this.phase14qGroundCollision
            .tryOriginalDownhillKccStep?.(bot.id,bot.position,accepted,dt);
           if(downhill){
