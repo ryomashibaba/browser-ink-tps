@@ -1334,7 +1334,9 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       weaponId:bot.weaponId,target:prior.clone()
     });
     system.b216SourceStageAimValidated=vi.fn(
-      (_:unknown,target:{x:number})=>target.x<2.3);
+      (_:unknown,target:{x:number;z:number})=>
+        Math.hypot(target.x-realNeutral.x,
+          target.z-realNeutral.z)>.1);
     expect(revalidate()?.distance(prior)).toBeLessThan(1e-5);
     expect(system.sourceCommittedPaintAims.get('B4').target
       .distance(prior)).toBeLessThan(1e-5);
