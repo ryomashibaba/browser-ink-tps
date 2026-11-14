@@ -507,4 +507,46 @@ it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stag
   expect(freeze.activationReady).toBe(false);
   w.actors.dispose();
  });
+
+ it('B3 genuine 90s stationary ramp KCC direct native candidate diagnosis',()=>{
+  const w=world();
+  const from={x:-6.310656547546387,y:4.606138229370117,z:-49.365596771240234};
+  const crowd={x:-6.315646648406982,y:4.608527660369873,z:-49.365909576416016};
+  const goal={x:-6.460616111755371,y:4.640660762786865,z:-48.65611267089844};
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const proof=(p:{x:number;y:number;z:number})=>{
+   const hit=w.physics.castCharacterFootSupport(
+    new Vec3(p.x,p.y+off,p.z),off,'HUMAN');
+   return {solid:hit?.solidId??null,floor:hit?.point.y??null,
+    gap:hit?p.y-hit.point.y:null,
+    supported:!!hit&&Math.abs(p.y-hit.point.y)<=.25&&
+     w.stage.solids.some(s=>s.id===hit.solidId)};
+  };
+  w.actors.syncRealCpuFoot('B3',from);
+  const samples=[crowd,
+   {...crowd,y:from.y},{...crowd,y:from.y-.015},
+   {...crowd,y:from.y-.035},
+   {x:from.x-.015,y:from.y,z:from.z},
+   {x:from.x-.015,y:from.y-.015,z:from.z},
+   {x:from.x-.03,y:from.y-.015,z:from.z},
+   {x:from.x,y:from.y,z:from.z+.02},
+   {x:from.x,y:from.y-.015,z:from.z+.02}
+  ].map(p=>{
+   const verdict=w.actors.auditGroundStep('B3',from,p,DT,true);
+   return {to:[p.x,p.y,p.z],support:proof(p),cause:verdict.cause,
+    approved:verdict.approved,owners:verdict.colliderOwnerIds};
+  });
+  console.log('T21_V28_B3_GENUINE_90S_ORIGINAL_KCC_PROBE',
+   JSON.stringify({run:43647240746,
+    foot:[from.x,from.y,from.z],
+    crowd:[crowd.x,crowd.y,crowd.z],
+    goal:[goal.x,goal.y,goal.z],origin:proof(from),
+    samples,b1OnlyMethod:w.actors.tryOriginalDownhillKccStep('B3',from,crowd,DT),
+    noActorPositionWrites:true,source:[25,17,26,0]}));
+  expect(samples.length).toBe(9);
+  expect(proof(from).supported).toBe(true);
+  expect([w.stage.solids.length,w.stage.paintSurfaces.length,
+   w.stage.navigationLinks?.length]).toEqual([25,17,26]);
+  w.actors.dispose();
+ });
 });
