@@ -99,12 +99,14 @@ function original(s,stage){
 }
 
 async function runApprovedCombatTwinReplay(){
+ const boundedF2=process.env.T21_F2_GROUND_STALL_ONCE==='1';
  if(process.env.GITHUB_ACTIONS!=='true'||
     process.platform!=='linux'||
-    process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE!=='1')
-  fail('P2_ONE_PUBLIC_NATIVE_APPROVAL_REQUIRED');
- report.schema='T21_P2_ONE_REAL_SELECTED_FRONTLINE_COMBAT_TWIN_180_REPLAY';
- report.outcome='HOLD_P2_TRUE_NATIVE_PENDING';
+    (!boundedF2&&process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE!=='1'))
+  fail('P2_OR_F2_PUBLIC_NATIVE_APPROVAL_REQUIRED');
+ report.schema=boundedF2?'T21_F2_REAL_GROUND_STALL_90S':
+  'T21_P2_ONE_REAL_SELECTED_FRONTLINE_COMBAT_TWIN_180_REPLAY';
+ report.outcome=boundedF2?'HOLD_F2_REAL_GROUND_PENDING':'HOLD_P2_TRUE_NATIVE_PENDING';
  persist();
  const capture=()=>evalPage(`(()=>{
   const s=window.__t21F3?.snapshot?.();
@@ -291,6 +293,9 @@ async function runApprovedCombatTwinReplay(){
   record('P2_ACTUAL_ORIGINAL_INK_AFTER_'+elapsedAtLeast+'_SECONDS',n);
   return n;
  };
+ // Observe first-side stoppage without replaying the full 180s.
+ const f2At40=boundedF2?await actualInkAt(40):null;
+ const f2At60=boundedF2?await actualInkAt(60):null;
  const ink80=await actualInkAt(80);
  const mid=await until(async()=>{
   const n=await capture();
@@ -299,6 +304,55 @@ async function runApprovedCombatTwinReplay(){
  },3900000);
  originalCombat(mid,'REAL_90_SECONDS');
  record('P2_TRUE_NATIVE_CLOCK_90_SECONDS',mid);
+ if(boundedF2){
+  const checkpoints=[f2At40,f2At60,ink80,mid];
+  const ids=['A1','A2','A3','B1','B2','B3','B4'];
+  const fields=['crowdNoStep','crowdProposals','rapierRejected',
+   'rapierAcceptedMoving','rapierAcceptedStationary','offmeshDeferred',
+   'overspeedRejected','crowdReanchors'];
+  for(const [i,s] of checkpoints.entries()){
+   const rows=s?.cpuGroundStepEvidenceByActor;
+   if(!rows||ids.some(id=>!rows[id]||
+      fields.some(k=>!Number.isSafeInteger(rows[id][k]))))
+    fail('F2_NATIVE_CROWD_KCC_OBSERVATION_MISSING',{
+     checkpoint:i,tick:s?.tick,availableActors:Object.keys(rows??{})});
+  }
+  const byActor=Object.fromEntries(ids.map(id=>{
+   const initial=checkpoints[0].cpuGroundStepEvidenceByActor[id];
+   const final=mid.cpuGroundStepEvidenceByActor[id];
+   const counts=Object.fromEntries(fields.map(k=>[k,{
+    first:initial[k],last:final[k],delta:final[k]-initial[k]}]));
+   const reasons=Object.fromEntries(Object.keys(final.rejectionCauses??{})
+    .map(k=>[k,(final.rejectionCauses[k]??0)-
+     (initial.rejectionCauses?.[k]??0)]));
+   const firstFoot=checkpoints[0].cpuActualPhysicalFootByActor?.[id]??null;
+   const lastFoot=mid.cpuActualPhysicalFootByActor?.[id]??null;
+   const displacement=firstFoot&&lastFoot?
+    Math.hypot(...firstFoot.map((v,i)=>lastFoot[i]-v)):null;
+   return [id,{counts,rejectionCausesSince40:reasons,
+    realFootAt40:firstFoot,realFootAt90:lastFoot,
+    realFootDisplacement40to90:displacement,
+    currentOriginalGoal:mid.cpuExistingPatrolGoalByActor?.[id]??null,
+    lastKccReject:final.lastRejectCause,
+    lastRejectColliderOwners:final.lastRejectOwners,
+    lastRecastCandidate:final.lastCrowdCandidate}];
+  }));
+  report.oneRunEvidence={
+   source:'25/17/26/0',realChromium:true,
+   artificialTicks:0,actorTeleports:0,scoreWrites:0,
+   officialWinner:'NONE',formal4v4:false,
+   snapshots:checkpoints.map(s=>({tick:s.tick,
+    realElapsedSeconds:180-s.remaining,
+    sevenCpuRejoined:s.cpuRejoined,
+    nativeCrowdKccEvidence:s.cpuGroundStepEvidenceByActor})),
+   byActor,onlyObservedNotMovementRepair:true,
+   noNewStageOrNavOrScoreAuthority:true};
+  report.outcome='F2_90S_REAL_RECAST_KCC_OBSERVED_NOT_GAMEPLAY_PASS';
+  persist();
+  console.log('T21_F2_90S_REAL_GROUND_ROOT_CAUSE_EVIDENCE',
+   JSON.stringify(report.oneRunEvidence));
+  return;
+ }
  const ink120=await actualInkAt(120);
  const ink150=await actualInkAt(150);
  const end=await until(async()=>{
@@ -471,7 +525,8 @@ async function run(){
  });
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
- if(process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE==='1'){
+ if(process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE==='1'||
+    process.env.T21_F2_GROUND_STALL_ONCE==='1'){
   await runApprovedCombatTwinReplay();
   return;
  }
