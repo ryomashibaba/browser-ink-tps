@@ -2,7 +2,7 @@
 /** B385: real CDP input -> user-visible B384 switch -> new original SOURCE
  * WebGL2/7 CPU -> native READY 12-weapon selection -> actual KCC/fire ->
  * real 180 second terminal (or honest HOLD). No time, actor, aim, score,
- * Authorized one P2 B441 genuine 180s on 2026-11-14: strict original SOURCE and RAW.
+ * Authorized next B1 route-recovery witness (one B441 180s, 2026-11-14); no gameplay edits.
  * camera, projectiles, ink, HP or native step injection.
  */
 import {spawn,execFileSync} from 'node:child_process';
