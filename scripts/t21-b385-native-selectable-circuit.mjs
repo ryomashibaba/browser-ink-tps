@@ -129,6 +129,19 @@ async function runApprovedCombatTwinReplay(){
    shots:s.shotsFired,ink:s.player?.ink,hp:s.player?.hp,
    humanPaint:s.b23HumanInkFeedback?.humanChangedCells,
    cpuShots:s.cpuSourceTurfShots,
+   // Read-only post-raster CPU ink: real accepted GameplayInkSystem cells,
+   // not queued shoots, client-predicted turf, fake official score or
+   // a newly created paint stamp. Source gameplay is never modified.
+   cpuActualChangedCells:s.b154NativeSevenCpuInk?
+    s.b154NativeSevenCpuInk.teamAChangedCells+
+    s.b154NativeSevenCpuInk.teamBChangedCells:null,
+   cpuActualByActor:s.b154NativeSevenCpuInk?.byActor??null,
+   cpuRealPatrolTravel:s.cpu?.sourcePatrol?.travelMeters??null,
+   cpuLives:s.cpu?.cpu?.map(c=>({
+    id:c.id,lifeState:c.lifeState,hp:c.hp,rejoined:c.rejoined
+   }))??null,
+   cpuActualSplats:s.cpuSplats??null,
+   cpuActualRespawns:s.cpuRespawns??null,
    finishVisible:!!f&&!f.hidden&&f.style.display!=='none',
    finishState:f?.dataset.t21B59State,
    replayReady:!!r&&!r.hidden&&!r.disabled&&
@@ -215,6 +228,26 @@ async function runApprovedCombatTwinReplay(){
  originalCombat(started,'FIRST_PLAYING');
  report.realPointerLock=true;
  record('P2_FIRST_REAL_SEVEN_CPU_JOIN',started);
+ // ONE authorized Chrome world: genuine native clock observations at
+ // real elapsed checkpoints. These are READS only; no extra input, tick,
+ // collision, source ink, score, HP or virtual player is introduced.
+ const actualInkAt=async(elapsedAtLeast)=>{
+  const n=await until(async()=>{
+   const x=await capture();
+   return x?.phase==='PLAYING'&&!x.stop&&!x.paused&&
+    x.remaining>0&&180-x.remaining>=elapsedAtLeast?x:false;
+  },3900000);
+  originalCombat(n,'REAL_INK_AT_LEAST_'+elapsedAtLeast);
+  if(!Number.isSafeInteger(n.cpuActualChangedCells)||
+     n.cpuActualChangedCells<0||!n.cpuActualByActor||
+     !['A1','A2','A3','B1','B2','B3','B4'].every(id=>
+       Number.isSafeInteger(n.cpuActualByActor[id]?.changedCells)))
+    fail('P2_REAL_POST_RASTER_CPU_INK_MISSING',{
+     elapsedAtLeast,tick:n.tick,remaining:n.remaining});
+  record('P2_ACTUAL_ORIGINAL_INK_AFTER_'+elapsedAtLeast+'_SECONDS',n);
+  return n;
+ };
+ const ink80=await actualInkAt(80);
  const mid=await until(async()=>{
   const n=await capture();
   return n?.phase==='PLAYING'&&n.remaining<=90&&
@@ -222,6 +255,8 @@ async function runApprovedCombatTwinReplay(){
  },3900000);
  originalCombat(mid,'REAL_90_SECONDS');
  record('P2_TRUE_NATIVE_CLOCK_90_SECONDS',mid);
+ const ink120=await actualInkAt(120);
+ const ink150=await actualInkAt(150);
  const end=await until(async()=>{
   const n=await capture();
   return n?.phase==='TIME_UP'&&n.remaining===0&&n.paused&&
@@ -233,6 +268,58 @@ async function runApprovedCombatTwinReplay(){
  if(elapsed<10800-0.02||elapsed>10805)
   fail('P2_NOT_TRUE_10800_NATIVE_COUNTDOWN',{elapsed,started,end});
  record('P2_REAL_180_SECOND_TIME_UP_AND_VISIBLE_RESULT',end);
+ // Compare ACTUAL same-world post-raster cumulative CPU ownership
+ // transitions. No positive outcome is required: a zero plateau must
+ // remain an honest 0, not a test-helper fabricated performance PASS.
+ const ids=['A1','A2','A3','B1','B2','B3','B4'];
+ const totalInk=(n)=>n?.cpuActualChangedCells;
+ const checkpoints=[ink80,mid,ink120,ink150,end];
+ if(checkpoints.some(n=>
+    !Number.isSafeInteger(totalInk(n))||
+    !n.cpuActualByActor||!ids.every(id=>
+      Number.isSafeInteger(n.cpuActualByActor[id]?.changedCells)))||
+    checkpoints.some((n,i)=>
+      i>0&&totalInk(n)<totalInk(checkpoints[i-1])))
+  fail('P2_POST_RASTER_NATIVE_CUMULATIVE_EVIDENCE_INVALID',
+   checkpoints.map(x=>({tick:x.tick,remaining:x.remaining,
+    changed:x.cpuActualChangedCells})));
+ const byActor=Object.fromEntries(ids.map(id=>{
+  const first=ink80.cpuActualByActor[id],last=end.cpuActualByActor[id];
+  return [id,{
+   originalActualChangedCells80toEnd:last.changedCells-first.changedCells,
+   actualImpactChangedCells80toEnd:
+    last.impactChangedCells-first.impactChangedCells,
+   actualAlreadyTeamOwnedImpacts80toEnd:
+    last.originalImpactAlreadyOwnedEvents-first.originalImpactAlreadyOwnedEvents,
+   actualNoEligibleImpacts80toEnd:
+    last.originalImpactNoEligibleEvents-first.originalImpactNoEligibleEvents,
+   actualChangedImpacts80toEnd:
+    last.originalImpactChangedEvents-first.originalImpactChangedEvents
+  }];
+ }));
+ const genuineInkComparison={
+  source:'25/17/26/0',realBrowser:'Chromium CDP WebGL2',
+  nativeFirstTick:ink80.tick,nativeEndTick:end.tick,
+  firstActualElapsedSeconds:180-ink80.remaining,
+  lastActualElapsedSeconds:180-end.remaining,
+  observedOriginalSourceCellsAt80:ink80.cpuActualChangedCells,
+  observedOriginalSourceCellsAt90:mid.cpuActualChangedCells,
+  observedOriginalSourceCellsAt120:ink120.cpuActualChangedCells,
+  observedOriginalSourceCellsAt150:ink150.cpuActualChangedCells,
+  observedOriginalSourceCellsAtTimeUp:end.cpuActualChangedCells,
+  actualCpuCellChangesAfter80:
+   end.cpuActualChangedCells-ink80.cpuActualChangedCells,
+  originalSourceCpuByActor:byActor,
+  realCpuShotRequestsAt80:ink80.cpuShots,
+  realCpuShotRequestsAtTimeUp:end.cpuShots,
+  actualPhysicalCpuTravelMetersAt80:ink80.cpuRealPatrolTravel,
+  actualPhysicalCpuTravelMetersAtTimeUp:end.cpuRealPatrolTravel,
+  realCpuLifeAtTimeUp:end.cpuLives,
+  noArtificialClockOrInkOrActors:true,
+  sourceScoringCertified:false,originalOpponentRoutesCertified:false
+ };
+ report.originalSourceInkComparison=genuineInkComparison;
+ record('P2_REAL_ORIGINAL_CPU_INK_80S_TO_TIMEUP',genuineInkComparison);
  await picture('p2-combat-timeup');
  await clickButton('#t21-f3-b59-restart');
  const replay=await until(async()=>{
