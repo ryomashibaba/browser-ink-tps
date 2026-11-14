@@ -2279,9 +2279,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     ranked.filter(r=>r.priority!=='UNSAMPLED').length;
   }
   for(let tries=0;tries<candidates.length;tries++){
-   const rank=ranked?.[tries];
+   const scheduledRank=ranked?.[tries];
    const index=b1KccRampRecoveryOrder?.[tries]??
-    (rank?rank.index:(first+tries)%candidates.length);
+    (scheduledRank?scheduledRank.index:(first+tries)%candidates.length);
+   // B1's true KCC-only local route order must not falsely assign a
+   // different original ink-priority row to the selected goal.
+   const rank=b1KccRampRecoveryOrder?
+    ranked?.find(row=>row.index===index):scheduledRank;
    // B34 can only escape TO A DIFFERENT PRE-EXISTING SOURCE GOAL,
    // physically supported and native-path audited below. The old goal
    // remains the Crowd agent's last requested target if no safe alternate.
