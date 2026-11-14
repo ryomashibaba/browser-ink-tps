@@ -2132,6 +2132,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Unlike the legacy B34 stationary inference, this is triggered only by
   // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
   // first drops remain unchanged while physical movement is successful.
+  // Genuine B1 80s foot route authority is independently audited by the focused source test.
   // B1 P2 research may hold a legacy patrol target even when NO B441
   // frontline goal was actually approved from its physical foot. Do not
   // disable the fallback merely because the research URL was selected.
