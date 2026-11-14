@@ -606,6 +606,27 @@ describe('F3B playable 8-actor original source runtime',()=>{
      inventedRaisedFootDenied:!t.hasSourceSupportedRoute(a,-1,
       new Vec3(realFoot.x,realFoot.y+.04,realFoot.z))};
    });
+   // Read-only replay of genuine SOURCE B1 90s foot (#43603193704).
+   // Reuse identical static Rapier/Recast route checks; NO gameplay writes.
+   const latestB1Foot=new Vec3(-6.161229133605957,
+    4.610357761383057,-49.02988815307617);
+   const latestRows=[...candidates,observedGoal].map((goal,index)=>{
+    const audit=nav.auditPath(latestB1Foot,goal);
+    return {index,goal:[goal.x,goal.y,goal.z],
+     reached:audit.reachedTarget,
+     startSnap:audit.startSnapDistanceMeters,
+     endSnap:audit.endSnapDistanceMeters,
+     approvedWithoutFootFix:t.hasSourceSupportedRoute(audit,-1),
+     approvedRealFootStart:t.hasSourceSupportedRoute(audit,-1,latestB1Foot),
+     firstDeniedRealFoot:firstDenied({...audit,
+      nativePathPoints:[latestB1Foot,...audit.nativePathPoints.slice(1)]})
+    };
+   });
+   console.log('T21_V28_B1_REAL_90S_ORIGINAL_ROUTE_AUDIT',
+    JSON.stringify({run:43603193704,
+     foot:[latestB1Foot.x,latestB1Foot.y,latestB1Foot.z],
+     originalSolid:t.sourceNativeCharacterFootHit(latestB1Foot)?.solidId??null,
+     original25Solids:true,actorAndNavWrites:0,rows:latestRows}));
    const realSupport=t.sourceNativeCharacterFootHit(realFoot);
    expect([stage.solids.length,stage.paintSurfaces.length,
     stage.navigationLinks?.length]).toEqual([25,17,26]);
