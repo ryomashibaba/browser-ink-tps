@@ -236,7 +236,7 @@ export function proposeB441OriginalRampLocalGoals(
  for(const u of [.2,.5,.8])for(const w of [.25,.5,.75]){
   const point=[0,1,2].map(k=>
    a![k]!*(1-u)*(1-w)+b![k]!*u*(1-w)+
-   c![k]!*(1-u)*w+d![k]!*u*w) as StageVector3;
+   c![k]!*(1-u)*w+d![k]!*u*w) as [number,number,number];
   if(!point.every(Number.isFinite)||
      point[2]*(side==='A'?1:-1)<33||
      point[1]<2.7||point[1]>5.25)continue;
