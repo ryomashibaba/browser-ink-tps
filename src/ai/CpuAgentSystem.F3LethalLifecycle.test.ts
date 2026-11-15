@@ -445,6 +445,8 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.currentHumanGuarding=false;
     projectile.cpuAgents={applyAreaDamage:vi.fn()};
     projectile.combatTargets={applyAreaDamage:vi.fn()};
+    // Isolated Object.create fixture bypasses the real physics constructor.
+    projectile.physics={castStageSegment:vi.fn(()=>null)};
     let mode:'HUMAN'|'SQUID'='HUMAN';
     projectile.enableNativeSourceHumanPhysicalContact(()=>mode);
     const flight=(height:number)=>projectile.findNativeSourceHumanPhysicalHit(
@@ -1789,6 +1791,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       if(sourceEnabled)sub.enableNativeSourceHumanSubBodyContact();
       sub.cpuAgents=system;
       sub.combatTargets={applyAreaDamage:vi.fn()};
+      sub.physics={castStageSegment:vi.fn(()=>null)};
       sub.paintExplosion=vi.fn();
       sub.feedback={subBurst:vi.fn()};
       sub.stats={playerSubExplosions:0};
@@ -1819,6 +1822,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     real.enableNativeSourceHumanSubBodyContact();
     real.cpuAgents=system;
     real.combatTargets={applyAreaDamage:vi.fn()};
+    real.physics={castStageSegment:vi.fn(()=>null)};
     real.paintExplosion=vi.fn();
     real.feedback={subBurst:vi.fn()};
     real.stats={playerSubExplosions:0};
