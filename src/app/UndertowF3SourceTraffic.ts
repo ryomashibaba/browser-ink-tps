@@ -2287,36 +2287,44 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
    }
 
-   // A 120+ weapon-ready NO-AIM streak is actionable even while the true
-   // Rapier foot is still MOVING. The previous rescue only admitted a
-   // stationary B-foot or a newly discovered front; 180s RAW showed
-   // thousands of late no-aim choices during real KCC locomotion.
-   // Retarget only to a DIFFERENT already-vetted original same-side
-   // frontline, with actually unowned shootable SOURCE grid ahead and
-   // fresh 0.30m Rapier + Recast route from the real foot.
+   // Genuine 180s B1-B4 may move yet have 120+ WEAPON-READY
+   // NO-AIM results. A B1 with ZERO approved frontline goals still has
+   // pre-existing SOURCE patrol feet; the former rescue missed it.
+   // Choose only among existing originals. A paintable destination is
+   // NOT a guaranteed shot or movement: the real foot and whole route
+   // must still pass native Recast/Rapier, including actor obstruction.
    const movingDrought=this.p2BTeamDroughtFoot.get(id);
-   const heldDroughtGoal=this.b443OriginalGoalLocks.get(id);
+   const currentFrontLock=this.b443OriginalGoalLocks.get(id);
+   const useApprovedFronts=fronts.length>1&&!!currentFrontLock;
+   const useOriginalPatrol=fronts.length===0&&!currentFrontLock;
+   const originalDroughtGoals=useApprovedFronts?fronts:
+     useOriginalPatrol?(this.patrolGoals.get(id)??[]):[];
+   const activePatrolIndex=this.patrolIndex.get(id)??-1;
+   const currentDroughtGoal=useApprovedFronts?currentFrontLock!.target:
+     useOriginalPatrol?originalDroughtGoals[activePatrolIndex]:null;
    if(this.enableB441SourceFrontline&&this.freeCombat&&this.sourceInk&&
       this.physics&&bot.weaponId&&bot.team===Team.B&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
-      this.physicallyRejoined.has(id)&&fronts.length>1&&
-      heldDroughtGoal&&movingDrought&&movingDrought.misses>=120&&
+      this.physicallyRejoined.has(id)&&
+      originalDroughtGoals.length>1&&currentDroughtGoal&&
+      movingDrought&&movingDrought.misses>=120&&
       this.b137NativeTick>=movingDrought.nativeTick&&
       this.b137NativeTick-movingDrought.nativeTick<=40&&
       realFoot.distance(movingDrought.foot)<=.22&&
       this.b137NativeTick-
        (this.p2BTeamLastFullRouteAuditTick.get(id)??-1000)>=120&&
       this.hasSourceFootSupport(realFoot)&&
-      !this.canPaintFromOriginalGoal(bot,heldDroughtGoal.target)){
-    // One bounded alternative audit per 120 REAL native ticks; failed
-    // options leave the approved in-flight goal intact.
+      !this.canPaintFromOriginalGoal(bot,currentDroughtGoal)){
+    // Bounded to once per 120 native ticks. Failed candidates neither
+    // release the existing target nor modify the physical CPU position.
     this.p2BTeamLastFullRouteAuditTick.set(id,this.b137NativeTick);
     const ranked=distributeOriginalSourceGoalCoverage(
-     rankOriginalSourcePatrolGoals(fronts,bot.team,this.sourceInk,0),
-     fronts,this.actualTeamCoveragePositions(id,bot.team));
+     rankOriginalSourcePatrolGoals(originalDroughtGoals,
+      bot.team,this.sourceInk,0),
+     originalDroughtGoals,this.actualTeamCoveragePositions(id,bot.team));
     for(const row of ranked){
-     const goal=fronts[row.index]!;
-     if(goal.distance(heldDroughtGoal.target)<2||
+     const goal=originalDroughtGoals[row.index]!;
+     if(goal.distance(currentDroughtGoal)<2||
         goal.distance(realFoot)<1.5||goal.z*sign<33||
         !this.hasSourceFootSupport(goal)||
         !this.canPaintFromOriginalGoal(bot,goal))continue;
@@ -2325,16 +2333,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
         native.endSnapDistanceMeters>.20||
         !this.hasSourceSupportedRoute(native,sign,realFoot,true)||
         this.kccActorBlocksOriginalRoute(id,realFoot,native))continue;
-     this.b443OriginalGoalLocks.set(id,{
-      target:goal.clone(),firstApprovedTick:this.b137NativeTick,
-      arrivedSinceTick:null
-     });
-     this.b442LastApprovedFront.set(id,{
-      target:goal.clone(),nativeTick:this.b137NativeTick
-     });
+     if(useApprovedFronts){
+      this.b443OriginalGoalLocks.set(id,{
+       target:goal.clone(),firstApprovedTick:this.b137NativeTick,
+       arrivedSinceTick:null
+      });
+      this.b442LastApprovedFront.set(id,{
+       target:goal.clone(),nativeTick:this.b137NativeTick
+      });
+      this.patrolIndex.set(id,-1);
+      this.b441ActualGoalRequests++;
+     }else{
+      // An already-existing patrol candidate is NOT a new B443 front.
+      // Preserve the normal native patrol ledger and avoid promoting it.
+      this.patrolIndex.set(id,row.index);
+     }
      this.p2BTeamDroughtFoot.delete(id);
-     this.patrolIndex.set(id,-1);
-     out.copy(goal);this.realGoalRequests++;this.b441ActualGoalRequests++;
+     out.copy(goal);this.realGoalRequests++;
      return true;
     }
    }

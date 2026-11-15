@@ -314,6 +314,86 @@ describe('genuine SOURCE bot must not report arrival at another floor elevation'
 });
 
 describe('original source paint-drought retarget must respect shot authority',()=>{
+
+ it('retargets moving B1 drought to an existing original patrol only after native route approval',()=>{
+  // Controlled SOURCE-only decision fixture, not a claim of Chromium
+  // locomotion or a real ink-change cell.
+  const stage=undertowT21dConnectivityQaStage();
+  const foot=new Vec3(-3,3,-45),other=new Vec3(3,3,-45);
+  const bot={id:'B1',team:Team.B,position:foot.clone(),
+   lifeState:'ACTIVE',mobilityState:'GROUND',hp:100,
+   agent:{},weaponId:'pulse-sprayer'};
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  traffic.stage=stage;traffic.physics={};
+  traffic.bots=[bot];traffic.freeCombat=true;
+  traffic.enableB441SourceFrontline=true;
+  traffic.enableB192HumanCombat=false;
+  traffic.enableB137OriginalAllyRally=false;
+  traffic.physicallyRejoined=new Set(['B1']);
+  traffic.physicallyFalling=new Set();
+  traffic.cleared=new Set();
+  traffic.respawnOriginalDrops=new Set();
+  traffic.originalSourceRecoveryIntent=new Set();
+  traffic.patrolGoals=new Map([['B1',[foot.clone(),other.clone()]]]);
+  traffic.patrolIndex=new Map([['B1',0]]);
+  traffic.b441FrontGoals=new Map([['B1',[]]]);
+  traffic.b445FrontlineGates=new Map();
+  traffic.b446LiveFootProbes=new Map([['B1',{}]]);
+  traffic.b443OriginalGoalLocks=new Map();
+  traffic.b442LastApprovedFront=new Map();
+  traffic.b467LiveSourceGoals=new Map();
+  traffic.b470LastNativeRetry=new Map();
+  traffic.realKccRejectedSteps=new Map();
+  traffic.p2BTeamLastFullRouteAuditTick=new Map();
+  traffic.p2BTeamDroughtFoot=new Map([['B1',{
+   firstStillNativeTick:1300,nativeTick:1300,foot:foot.clone(),
+   stillAnchor:foot.clone(),misses:150
+  }]]);
+  traffic.b137NativeTick=1300;
+  traffic.realGoalRequests=0;traffic.b441ActualGoalRequests=0;
+  traffic.heldRequests=0;
+  traffic.sourceInk={sampleWorld:()=>null};
+  traffic.sourceNativeCharacterFootHit=vi.fn((p:Vec3)=>({
+   solidId:'UndertowT21D:right-low-team-b',point:p.clone()
+  }));
+  traffic.hasSourceFootSupport=vi.fn(()=>true);
+  traffic.hasSourceSupportedRoute=vi.fn(()=>true);
+  traffic.kccActorBlocksOriginalRoute=vi.fn(()=>false);
+  traffic.canPaintFromOriginalGoal=vi.fn((_bot:unknown,g:Vec3)=>
+   g.distance(other)<.01);
+  const route=vi.fn((_a:Vec3,_b:Vec3)=>({
+   reachedTarget:false,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,pointCount:0,nativePathPoints:[]
+  }));
+  traffic.nav={auditPath:route};
+  const result=new Vec3(90,90,90);
+  // Native route HOLD cannot be bypassed even when a potential target
+  // has non-OWN original ink and the current source foot is valid.
+  expect(traffic.chooseSourceGoal('B1',foot,result)).toBe(false);
+  expect(traffic.patrolIndex.get('B1')).toBe(0);
+  expect(result).toEqual(new Vec3(90,90,90));
+  expect(traffic.b443OriginalGoalLocks.size).toBe(0);
+  route.mockImplementation((a:Vec3,b:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,pointCount:2,
+   nativePathPoints:[a.clone(),b.clone()]
+  }));
+  traffic.b137NativeTick=1421;
+  traffic.p2BTeamDroughtFoot.set('B1',{
+   firstStillNativeTick:1421,nativeTick:1421,
+   foot:foot.clone(),stillAnchor:foot.clone(),misses:180
+  });
+  expect(traffic.chooseSourceGoal('B1',foot,result)).toBe(true);
+  expect(result).toEqual(other);
+  expect(traffic.patrolIndex.get('B1')).toBe(1);
+  expect(traffic.b443OriginalGoalLocks.size).toBe(0);
+  expect(traffic.b441ActualGoalRequests).toBe(0);
+  expect(bot.position).toEqual(foot);
+  expect(traffic.hasSourceSupportedRoute).toHaveBeenCalled();
+  expect(traffic.kccActorBlocksOriginalRoute).toHaveBeenCalled();
+  expect([stage.solids.length,stage.paintSurfaces.length,
+   stage.navigationLinks?.length]).toEqual([25,17,26]);
+ });
  it('denies paint-drought goal if real original source ink, range or first Rapier shot blocker fails',()=>{
   const original=undertowT21dConnectivityQaStage();
   const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
