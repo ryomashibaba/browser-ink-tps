@@ -733,7 +733,12 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     const charged=bot.ink;
     system.stats.cpuSubUses=1;
     system.pendingKitRequests.push(req);
-    system.applyProjectileHit(shot,80,'HUMAN');
+    // The earlier undelivered SUB was rejected while physical rejoin
+    // was lost. The separately tested lethal hit occurs only after
+    // this original CPU genuinely rejoined in its current life.
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    expect(system.applyProjectileHit(shot,80,'HUMAN')?.lethalHpZero)
+      .toBe(true);
     expect(bot.lifeState).toBe('SPLATTED');
     expect(system.pendingShots).toHaveLength(0);
     expect(system.pendingKitRequests).toHaveLength(0);
