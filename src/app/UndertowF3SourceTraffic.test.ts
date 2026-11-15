@@ -647,6 +647,74 @@ describe('F3B playable 8-actor original source runtime',()=>{
   }finally{stub.mockRestore()}
  });
 
+ it('reports genuine 90-second B4 registered-ramp existing patrol route viability without new native goal or body',()=>{
+  const stub=vi.spyOn(Entity.prototype,'addComponent')
+   .mockImplementation(()=>null as never);
+  try{
+   const original=undertowT21dConnectivityQaStage();
+   const stats=new PerformanceStats(),ink=new GameplayInkSystem();
+   const app={root:new Entity('B4_NATIVE_90S_ROUTE_ORIGINAL_AUDIT')} as never;
+   const nav=new RecastStageNavigation(original,stats);
+   const physics=new RapierStagePhysics(DT,original);
+   physics.step();
+   const slots=planSourceSupportedT21QaSpawnSlots(original,nav,physics);
+   const stage=withProvisionalT21QaSpawnMetadata(original,slots);
+   const shared=new UndertowPhase14QSharedActorCollision(physics,stage,true);
+   const liveHuman=new UndertowF3NativeHumanCrowd(nav,stage);
+   const cpu=new CpuAgentSystem(app,nav,ink,
+    {enqueue:vi.fn()} as never,stats,stage,Team.A,
+    new UndertowPhase14ECpuHandoff(stage,true),shared,liveHuman,true);
+   try{
+    const bots=(cpu as unknown as {bots:Bot[]}).bots;
+    const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,
+     physics,undefined,false,false,false,false);
+    const t=traffic as unknown as {
+     patrolGoals:Map<string,Vec3[]>;
+     sourceNativeCharacterFootHit:(p:Vec3)=>{solidId:string}|null;
+     hasSourceSupportedRoute:(a:ReturnType<typeof nav.auditPath>,
+      sign:number,actualFoot?:Vec3)=>boolean;
+     hasSourceFootSupport:(p:Vec3)=>boolean;
+    };
+    // Both samples are from unchanged genuine first-wave 90s native RAW.
+    const feet=[
+     {id:'B4',p:new Vec3(-6.294005870819092,4.5892939639091495,
+       -49.23163604736328)},
+     {id:'B2',p:new Vec3(-5.767031192779541,4.277590274810791,
+       -49.52889633178711)}
+    ];
+    const rows=feet.map(({id,p})=>{
+     const solid=t.sourceNativeCharacterFootHit(p)?.solidId??null;
+     const candidates=t.patrolGoals.get(id)??[];
+     return {id,realFoot:p.toArray(),support:solid,
+      supportApproved:t.hasSourceFootSupport(p),
+      count:candidates.length,candidates:candidates.map((goal,index)=>{
+       const route=nav.auditPath(p,goal);
+       return {index,goal:goal.toArray(),
+        solidId:t.sourceNativeCharacterFootHit(goal)?.solidId??null,
+        sameOriginalSolid:t.sourceNativeCharacterFootHit(goal)?.solidId===solid,
+        distance:p.distance(goal),reached:route.reachedTarget,
+        snapStart:route.startSnapDistanceMeters,
+        snapEnd:route.endSnapDistanceMeters,
+        fullRegistered:t.hasSourceSupportedRoute(route,-1,p),
+        nativePoints:route.pointCount};
+      })};
+    });
+    console.log('T21_V28_GENUINE_B2_B4_90S_REGISTERED_ROUTE_DIAGNOSTIC',
+     JSON.stringify({runs:[43662350239,43665852579],
+      realNativeFeet:true,noBodyMove:true,noStageOrNavWrites:true,
+      source:[stage.solids.length,stage.paintSurfaces.length,
+       stage.navigationLinks?.length],rows}));
+    expect([stage.solids.length,stage.paintSurfaces.length,
+     stage.navigationLinks?.length]).toEqual([25,17,26]);
+    expect(rows.every(x=>x.supportApproved&&x.count>1)).toBe(true);
+    expect(rows.every(x=>x.candidates.every(g=>
+     g.goal.length===3&&g.goal.every(Number.isFinite)))).toBe(true);
+   }finally{
+    cpu.reset(Team.A);liveHuman.dispose();shared.dispose();
+   }
+  }finally{stub.mockRestore()}
+ });
+
  it('B1 P2 late-foot original ink rescue is route-audited and fails closed',()=>{
   // Genuine immutable SOURCE shape and owner grid, but controlled
   // auditPath result: NOT a claim of real Rapier/Crowd locomotion.
