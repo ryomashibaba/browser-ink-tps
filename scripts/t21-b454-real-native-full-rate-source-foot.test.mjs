@@ -37,6 +37,11 @@ function fixture(){
 test('accepts only complete same-world native ticks without route promotion',()=>{
  const {raw,source}=fixture();const v=auditRealB454(raw,source);
  assert.equal(v.B2B4.B2.missingNativeTicks,0);
+ assert.equal(v.B2B4.B2.groundedSourceReadySamples,730);
+ assert.equal(v.B2B4.B2.observedGroundedMotionNativeTicks,0);
+ assert.equal(v.B2B4.B2.longestGroundedStationaryNativeTicks,729);
+ assert.equal(v.B2B4.B2.first120GroundedMeters,0);
+ assert.equal(v.B2B4.B2.last120GroundedMeters,0);
  assert.equal(v.B2B4.B4.independentlyMatchedSparseChromePolls,30);
  assert.equal(v.B2B4.B2.fullyContinuousCapsuleContactCertified,false);
  assert.equal(v.originalCollisionSafetyGateChanged,false);
@@ -56,4 +61,25 @@ test('rejects fake original provenance, missing tick, altered real poll or score
   assert.throws(()=>auditRealB454(d.raw,d.source),
    /B454_ORIGINAL_NATIVE_60HZ_SOURCE_HOLD/);
  }
+});
+
+test('separates genuine late CPU travel from an actually stationary early foot',()=>{
+ const {raw,source}=fixture();
+ // Preserve a continuous real-foot-shaped 60Hz sequence and update the
+ // independent sparse Chromium observations to match the exact same ticks.
+ const rows=source.rows.B2;
+ for(let k=300;k<rows.length;k++)
+  rows[k].foot=[1+(k-299)*.03,3.1,-53];
+ for(const frame of raw.b441NativeEvidence.realFrames){
+  const k=frame.tick-1055;
+  frame.physicalFeet.find(p=>p.id==='B2').foot=[...rows[k].foot];
+ }
+ const proof=auditRealB454(raw,source).B2B4.B2;
+ assert.equal(proof.groundedSourceReadySamples,730);
+ assert.equal(proof.observedGroundedMotionNativeTicks,430);
+ assert.equal(proof.longestGroundedStationaryNativeTicks,299);
+ assert.equal(proof.first120GroundedMeters,0);
+ assert.ok(proof.last120GroundedMeters>3.5);
+ assert.ok(proof.witnessedNativeXZPolylineMeters>12);
+ assert.equal(proof.originalGoalReachabilityGranted,false);
 });

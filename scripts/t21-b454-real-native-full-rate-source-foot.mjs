@@ -50,6 +50,13 @@ export function auditRealB454(raw,source){
    fail('UNBOUNDED_OR_MISSING_NATIVE_FULL_RATE_'+id);
   let nRegistered=0,nWithin025=0,unregistered=0,nonGrounded=0;
   let maxNativeStep=0,totalNativeMeters=0,closest=null;
+  // Actual 60Hz displacement, not an inferred Recast goal or QA path.
+  // Distinguish a genuinely stationary physical foot from a rejected
+  // hypothetical route without relaxing any original Rapier/KCC gate.
+  let groundedSamples=0,motionTicks=0,stationaryRun=0;
+  let longestGroundedStationaryNativeTicks=0;
+  let first120GroundedMeters=0,last120GroundedMeters=0;
+  const firstTick=rows[0].tick,lastTick=rows.at(-1).tick;
   const byTick=new Map();
   for(let k=0;k<rows.length;k++){
    const v=rows[k];
@@ -73,10 +80,24 @@ export function auditRealB454(raw,source){
    byTick.set(v.tick,v);
    if(v.registeredOriginalHit)nRegistered++;else unregistered++;
    if(v.withinUnchanged025m)nWithin025++;
-   if(v.life!=='ACTIVE'||v.mode!=='GROUND'||!v.rejoined)nonGrounded++;
+   const ready=v.life==='ACTIVE'&&v.mode==='GROUND'&&v.rejoined;
+   if(!ready)nonGrounded++;else groundedSamples++;
    if(k>0){
-    const d=xzd(rows[k-1].foot,v.foot);
+    const previous=rows[k-1];
+    const d=xzd(previous.foot,v.foot);
     maxNativeStep=Math.max(maxNativeStep,d);totalNativeMeters+=d;
+    // Only consecutive physically rejoined GROUND frames count for the
+    // stuck-vs-moving split. 2mm excludes ordinary float jitter, not
+    // actual physics, collisions, or planned motion permissions.
+    if(ready&&previous.life==='ACTIVE'&&
+       previous.mode==='GROUND'&&previous.rejoined){
+      if(d>=.002){motionTicks++;stationaryRun=0}
+      else stationaryRun++;
+      longestGroundedStationaryNativeTicks=Math.max(
+       longestGroundedStationaryNativeTicks,stationaryRun);
+      if(v.tick-firstTick<120)first120GroundedMeters+=d;
+      if(lastTick-v.tick<120)last120GroundedMeters+=d;
+    }else stationaryRun=0;
    }
    for(const g of probe.b450FailedOriginalGoals){
     const t=g.firstDenied;
@@ -109,6 +130,12 @@ export function auditRealB454(raw,source){
    noRegisteredStaticHitSamples:unregistered,
    nongroundedOrNonActiveSamples:nonGrounded,
    witnessedNativeXZPolylineMeters:totalNativeMeters,
+   // Descriptive actual physics-foot measurements, NEVER new route proof.
+   groundedSourceReadySamples:groundedSamples,
+   observedGroundedMotionNativeTicks:motionTicks,
+   longestGroundedStationaryNativeTicks,
+   first120GroundedMeters,
+   last120GroundedMeters,
    maximumConsecutiveNativeTickXZStepMeters:maxNativeStep,
    independentlyMatchedSparseChromePolls:polledMatches,
    closestSameWorldActualFootToDeniedNativeRecast:closest,
