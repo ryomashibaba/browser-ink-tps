@@ -305,6 +305,44 @@ jobs:
         run: |
           npx vitest run src/app/B499OriginalEightSeamsLiveRapierRecast.test.ts
           node -e "const d=require('/tmp/t21-b499-original-eight-seams.json');if(d.schema!=='B499_REAL_8_CI688_FACE_SEAMS_CURRENT_RECAST_RAPIER_V1'||d.originalSource!=='25/17/26/0'||d.originalSourceTriangles!==42||d.seamDetails.length!==8||d.newFloorOrNavLinkAdded!==0||d.nativeCrossTeamTraversalCertified!==false)process.exit(1);console.log('B499_REAL_ORIGINAL_EIGHT_SEAMS_DID_NOT_PROMOTE')"
+      - name: Recheck eight seam source export against private-compatible Phive input parser
+        if: ${{ contains(github.event.head_commit.message, '[b499-eight-source-seams]') }}
+        run: |
+          python3 - <<'PY'
+          import json,subprocess,tempfile
+          from pathlib import Path
+          source=Path('/tmp/t21-b499-original-eight-seams.json')
+          report=json.loads(source.read_text())
+          with tempfile.TemporaryDirectory(prefix='t21-f4-no-original-binary-') as d:
+              dest=Path(d); obj=dest/'synthetic-qa-only.obj'; mat=dest/'synthetic-qa-only.json'
+              # Fabricated disabled colliders test parser structure ONLY.
+              # They are NOT original Phive gameplay sources.
+              lines=['usemtl QA_ONLY_HUMAN_DISABLED']; n=0
+              for row in report['sourceFaceCentroidSamples']:
+                  for p in row['sourceTriangleVertices']:
+                      lines.append('v '+' '.join(map(str,p)))
+                  lines.append(f'f {n+1} {n+2} {n+3}'); n+=3
+              obj.write_text('\n'.join(lines)+'\n')
+              mat.write_text(json.dumps({'QA_ONLY_HUMAN_DISABLED':{
+                  'mat_flags':['Unridable'],
+                  'col_disable_flags':['SplPlayer']}}))
+              out=dest/'isolated-candidates.json'
+              subprocess.run(['python3','scripts/f4_phive_original_collision_probe.py',
+                  '--b499',str(source),'--phive-obj',str(obj),
+                  '--phive-materials',str(mat),'--output',str(out)],check=True)
+              data=json.loads(out.read_text())
+              seams=data['eightSeamCollisionCandidates']
+              assert seams['originalSourceTriangles']==42
+              assert seams['originalFaceSeams']==8
+              assert all(len(v['faces'])==42 and len(v['eightSeams'])==8
+                  for v in seams['possibleCoordinateFramesOnly'].values())
+              assert all(not f['originalPlayerColliderAuthorized'] for v
+                  in seams['possibleCoordinateFramesOnly'].values()
+                  for f in v['faces'])
+              assert not data['runtimePromotionAuthorized']
+              assert data['naturalCrossTeamRoutesCertified']==0
+              print('F4_B499_PHIVE_PARSER_ONLY_42_FACE_EIGHT_SEAM_PASS')
+          PY
       - name: Archive B499 authenticated source-face-to-original-stage 8-seam audit
         if: ${{ contains(github.event.head_commit.message, '[b499-eight-source-seams]') && always() }}
         uses: actions/upload-artifact@v4

@@ -90,7 +90,10 @@ describe('B499 genuine CURRENT 25-solid original Recast/Rapier for all 8 CI688 s
     originalFaceSamples.push({
      sourceComponentId:face.id,sourceOBJ:face.sourceObject,
      sourceMaterial:face.sourceMaterial,side:face.side,
-     faceLocalIndex:i/3,...witness
+     faceLocalIndex:i/3,
+     // Exact ORIGINAL triangle coordinates, not a guessed collision,
+     // enable future LOCAL-only comparison to version-matched Phive OBJ.
+     sourceTriangleVertices:[a,b,c],...witness
     });
    }
    summaries[face.id]={side:face.side,sourceOBJ:face.sourceObject,

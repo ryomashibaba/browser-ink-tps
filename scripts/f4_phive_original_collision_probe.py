@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """F4 source-only Phive inspection: NEVER mutate or authorize gameplay.
 
-Inputs: pre-existing B239 exact FloorLine00 numeric report plus user-owned
+Inputs: pre-existing B239 exact FloorLine00 OR B499 42-source-face report plus user-owned
 PhiveConverter OBJ and material JSON from an independently verified matching
 Splatoon 3 v7.2.0 Turf collision asset. No game binaries are bundled.
 
@@ -215,9 +215,167 @@ def parse_materials(materials: object) -> dict:
     return materials
 
 
-def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
-    src = json.loads(b239.read_text(encoding="utf-8"))
-    faces = pinned_original_faces(src)
+
+def pinned_eight_seam_faces(data: dict) -> tuple[list[dict], list[dict]]:
+    """Validate existing B499 numeric-only 42 faces/8 seams without promoting them."""
+    expected = {
+        "schema": "B499_REAL_8_CI688_FACE_SEAMS_CURRENT_RECAST_RAPIER_V1",
+        "originalSource": SOURCE_STAGE,
+        "sourceTriangleAuthority": "CI688_EXACT_TEMPLE01_SOURCE_EXPORT",
+        "originalSourceFaceComponents": 10,
+        "originalSourceTriangles": 42,
+        "currentCi688ExactSourceFaceSeams": 8,
+        "currentRegisteredSourceComponentsFromTheseTen": 0,
+        "originalStageSolids": 25,
+        "originalPaintSurfaces": 17,
+        "originalNavLinks": 26,
+        "originalScoreable": 0,
+        "newFloorOrNavLinkAdded": 0,
+        "geometryNavPaintAuthorityWrites": 0,
+        "nativeCrossTeamTraversalCertified": False,
+        "sourceCollisionFaceFor7_2TurfCertified": False,
+        "fullOriginalCpuKccCrossingCertified": False,
+        "verdict": "REAL_SOURCE_TRIANGLES_VS_CURRENT_STAGE_DIAGNOSTIC_HOLD",
+    }
+    if not isinstance(data, dict) or any(data.get(k) != v for k, v in expected.items()):
+        raise ValueError("F4_B499_EIGHT_SEAM_SOURCE_PROVENANCE_FAILED")
+    rows, seams = data.get("sourceFaceCentroidSamples"), data.get("seamDetails")
+    if not isinstance(rows, list) or len(rows) != 42 or not isinstance(seams, list) or len(seams) != 8:
+        raise ValueError("F4_B499_FACE_OR_SEAM_COUNT_DRIFT")
+    parsed, unique = [], set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("F4_B499_SOURCE_FACE_MALFORMED")
+        side, cid, mat = (row.get("side"), row.get("sourceComponentId"),
+                          row.get("sourceMaterial"))
+        index, coords, centroid = (row.get("faceLocalIndex"),
+                                   row.get("sourceTriangleVertices"), row.get("sourcePoint"))
+        if (side not in ("POSITIVE_Z", "NEGATIVE_Z") or
+            not isinstance(cid, str) or not cid or
+            not isinstance(mat, str) or not mat or
+            not isinstance(index, int) or index < 0 or
+            not isinstance(coords, list) or len(coords) != 3 or
+            not isinstance(centroid, list) or len(centroid) != 3 or
+            (cid, index) in unique or
+            any(not isinstance(p, list) or len(p) != 3 or
+                any(type(n) not in (int, float) or not math.isfinite(n) for n in p)
+                for p in coords) or
+            any(type(n) not in (int, float) or not math.isfinite(n) for n in centroid)):
+            raise ValueError("F4_B499_UNTRUSTED_SOURCE_TRIANGLE")
+        tri = tuple(tuple(float(v) for v in p) for p in coords)
+        if any(abs(sum(v[i] for v in tri) / 3 - centroid[i]) > 1e-5
+               for i in range(3)):
+            raise ValueError("F4_B499_CENTROID_NOT_EXACT_TRIANGLE")
+        a,b,c=tri
+        ab=(b[0]-a[0],b[1]-a[1],b[2]-a[2])
+        ac=(c[0]-a[0],c[1]-a[1],c[2]-a[2])
+        cross=(ab[1]*ac[2]-ab[2]*ac[1],
+               ab[2]*ac[0]-ab[0]*ac[2],
+               ab[0]*ac[1]-ab[1]*ac[0])
+        if math.hypot(*cross) < 1e-9:
+            raise ValueError("F4_B499_DEGENERATE_SOURCE_TRIANGLE")
+        unique.add((cid,index))
+        parsed.append({"side":side,"component":cid,"material":mat,
+                       "faceLocalIndex":index,"tri":tri})
+    if (len({x["component"] for x in parsed}) != 10 or
+        sum(x["side"]=="POSITIVE_Z" for x in parsed) != 21 or
+        sum(x["side"]=="NEGATIVE_Z" for x in parsed) != 21):
+        raise ValueError("F4_B499_COMPONENT_OR_SIDE_DRIFT")
+    components = {(x["component"],x["side"]) for x in parsed}
+    edges=set()
+    for s in seams:
+        if not isinstance(s,dict):
+            raise ValueError("F4_B499_INVALID_SEAM")
+        side,up,down=s.get("side"),s.get("sourceFaceFrom"),s.get("sourceFaceTo")
+        if (side not in ("POSITIVE_Z","NEGATIVE_Z") or
+            (up,side) not in components or (down,side) not in components or
+            up==down or (side,up,down) in edges or
+            s.get("crossingPermissionGranted") is not False or
+            s.get("original7_2TurfCollisionAuthority") is not False):
+            raise ValueError("F4_B499_SEAM_NOT_ORIGINAL_UNVERIFIED")
+        edges.add((side,up,down))
+    if sum(s[0]=="POSITIVE_Z" for s in edges)!=4:
+        raise ValueError("F4_B499_SEAM_SIDE_DRIFT")
+    return parsed,seams
+
+
+def scan_eight_seam_phive_candidate_coverage(
+    source_faces: list[dict], seams: list[dict],
+    selected: list[tuple], materials: dict
+) -> dict:
+    """Four *interior* samples per original face, two possible frames.
+    A match is only a candidate; no positive player-collision claim.
+    """
+    byframe={}
+    for frame in ("stageProject","originalObj"):
+        observed=[]
+        for row in source_faces:
+            triangle=row["tri"] if frame=="stageProject" else tuple(
+                original_frame(p) for p in row["tri"])
+            hits=defaultdict(set)
+            for material,collision in selected:
+                for i,p in enumerate(sample_points(triangle)):
+                    y=projected_y(p[0],p[2],*collision)
+                    if y is not None and abs(y-p[1])<=.10:
+                        hits[material].add(i)
+            candidates=[{
+                "name":m,"interiorSamples":len(v),
+                "collisionDisableFlags":materials[m].get("col_disable_flags",[]),
+                "materialFlags":materials[m].get("mat_flags",[]),
+                "explicitHumanCollisionDisabled":bool(
+                    HUMAN_COLLISION_DISABLED.intersection(
+                        materials[m].get("col_disable_flags",[]))),
+                "explicitUnridable":bool(UNRIDABLE_MATERIAL.intersection(
+                    materials[m].get("mat_flags",[])))
+            } for m,v in sorted(hits.items())]
+            all_covered=len(set().union(*hits.values()))==4 if hits else False
+            observed.append({
+                "sourceComponentId":row["component"],"side":row["side"],
+                "faceLocalIndex":row["faceLocalIndex"],
+                "sourceMaterial":row["material"],"interiorSamples":4,
+                "candidateCoveredSamples":len(set().union(*hits.values())) if hits else 0,
+                "allFourInteriorSamplesCoveredByAnyCandidate":all_covered,
+                "candidateMaterials":candidates,
+                "originalPlayerColliderAuthorized":False
+            })
+        links=[]
+        for seam in seams:
+            side=seam["side"]
+            def counts(component):
+                group=[x for x in observed if x["side"]==side and
+                       x["sourceComponentId"]==component]
+                return {"originalTriangles":len(group),
+                        "trianglesWithCandidateCollisionInterior":
+                            sum(x["allFourInteriorSamplesCoveredByAnyCandidate"] for x in group)}
+            links.append({
+                "side":side,
+                "from":seam["sourceFaceFrom"],"to":seam["sourceFaceTo"],
+                "upstream":counts(seam["sourceFaceFrom"]),
+                "downstream":counts(seam["sourceFaceTo"]),
+                "nativeSeamTraversalAuthorized":False,
+                "realPlayerCollisionCertified":False
+            })
+        byframe[frame]={"originalSourceTriangleCandidates":len(observed),
+                        "faces":observed,"eightSeams":links,
+                        "sourceCollisionAuthorityGranted":False}
+    return {
+        "source":"CI688_EXACT_TEMPLE01_SOURCE_EXPORT",
+        "originalSourceTriangles":42,"originalFaceSeams":8,
+        "possibleCoordinateFramesOnly":byframe,
+        "sourceCollisionAssetVersionAuthenticated":False,
+        "originalActorPlacementCertified":False,
+        "originalContinuousCpuKccAndRecastCertified":False,
+        "originalCrossTeamTraversalAuthorized":False,
+        "sourceGeometryOrNavModified":False
+    }
+
+def run(b239: Path | None, collision_obj: Path, materials_json: Path,
+        b499: Path | None = None) -> dict:
+    if b239 is None and b499 is None:
+        raise ValueError("F4_NO_PINNED_ORIGINAL_FACE_EVIDENCE")
+    faces = pinned_original_faces(json.loads(b239.read_text(encoding="utf-8"))) if b239 else {}
+    source_faces, seams = pinned_eight_seam_faces(
+        json.loads(b499.read_text(encoding="utf-8"))) if b499 else ([],[])
     materials = parse_materials(json.loads(materials_json.read_text(encoding="utf-8")))
     prepared = {}
     bounds = []
@@ -228,6 +386,12 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
                 prepared[(frame, side, k)] = sample_points(pts)
                 bounds.append((tuple(min(p[c] for p in pts) for c in range(3)),
                                tuple(max(p[c] for p in pts) for c in range(3))))
+    for row in source_faces:
+        for frame in ("stageProject","originalObj"):
+            pts=row["tri"] if frame=="stageProject" else tuple(
+                original_frame(p) for p in row["tri"])
+            bounds.append((tuple(min(p[c] for p in pts) for c in range(3)),
+                           tuple(max(p[c] for p in pts) for c in range(3))))
     scanned = parse_collision_obj(collision_obj, bounds)
     # A skipped n-gon in an independently converted collision mesh is a
     # completeness gap, never silent evidence that there is no floor there.
@@ -272,7 +436,10 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
         "source": SOURCE_STAGE,
         "originalVisualObject": EXPECTED_OBJECT,
         "visualOriginalSHA256": EXPECTED_SHA,
-        "b239ReportSHA256": digest(b239),
+        "b239ReportSHA256": digest(b239) if b239 else None,
+        "b499ReportSHA256": digest(b499) if b499 else None,
+        "eightSeamCollisionCandidates": scan_eight_seam_phive_candidate_coverage(
+            source_faces,seams,scanned["selected"],materials) if b499 else None,
         "candidateCollisionObjSHA256": digest(collision_obj),
         "candidateMaterialJsonSHA256": digest(materials_json),
         "candidateCollisionObjVertices": scanned["vertices"],
@@ -296,15 +463,17 @@ def run(b239: Path, collision_obj: Path, materials_json: Path) -> dict:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--b239", type=Path, required=True,
+    p.add_argument("--b239", type=Path,
                    help="Existing B239 numeric-only pin-verified original source report")
+    p.add_argument("--b499", type=Path,
+                   help="Existing 42-triangle 8-seam original B499 JSON, local use only")
     p.add_argument("--phive-obj", type=Path, required=True,
                    help="Independently sourced converted original Phive .bphsh geometry")
     p.add_argument("--phive-materials", type=Path, required=True,
                    help="Matching PhiveConverter material JSON, not guessed flags")
     p.add_argument("--output", type=Path, help="Optional private numeric JSON evidence")
     args = p.parse_args()
-    report = run(args.b239, args.phive_obj, args.phive_materials)
+    report = run(args.b239, args.phive_obj, args.phive_materials, args.b499)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
