@@ -1055,9 +1055,17 @@ export class UndertowF3PlayablePreviewApp{
          targetSupport:targetHit,firstStageBlock:block
         });
        });
-      // P2 single SOURCE research opt-in; never touches the canonical
-      // P1 player circuit, normal fixed patrol, Actor, original map or Ink.
-      if(b441OptIn)this.cpu.enableP2OriginalOuterSourceBackfill();
+      // The ordinary B207 180s SOURCE combat uses the same seven REAL
+      // physical CPUs, original owner-grid and B216 Rapier shot-line gate
+      // as the B441 study. Recover actual 120+ weapon-ready NO-AIM droughts
+      // in this playable mode too, rather than leaving thousands of genuine
+      // late-round CPU decisions idle. Every candidate is still verified
+      // against real original support, range, cover and paid projectiles.
+      // Keep co-op, circuit, fixed patrol goals and T20 unchanged.
+      const ordinarySourceCombat=b214BattleInk&&
+        sourceCanonicalPlayableMode(location.href)==='combat';
+      if(b441OptIn||ordinarySourceCombat)
+        this.cpu.enableP2OriginalOuterSourceBackfill();
     }
   }
   this.canvas.dataset.t21B154TeamCoverage=
