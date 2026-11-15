@@ -471,12 +471,12 @@ async function runApprovedCombatTwinReplay(){
   // a formal 4v4 performance certificate. Independent actual native
   // Chrome reruns may differ; report any regression without hiding it.
   p2OriginalLateInkBeforeAfter:{
-   baselineSourceRun:43677911722,
-   baselineHeadSha:'4d215e5090196cb26415c3b70dc93d413a930f63',
+   baselineSourceRun:43681217477,
+   baselineHeadSha:'56275795391470cfa910ffb2da0d550f5b182db9',
    baselineIntervalSeconds:[90,180],
    realP2SourceOnly:true,
    byActor:Object.fromEntries(
-    Object.entries({B1:29,B2:278,B3:364,B4:949}).map(([id,before])=>{
+    Object.entries({B1:225,B2:1274,B3:472,B4:1287}).map(([id,before])=>{
      const after=bTeamAfter90[id]?.actualInkCellsAdded90ToTimeUp;
      return [id,{
       actualChangedCellsBefore:before,
