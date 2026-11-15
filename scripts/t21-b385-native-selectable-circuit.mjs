@@ -671,6 +671,56 @@ async function runShortNormalSourceCombat(){
   'PASS_REAL_NORMAL_7CPU_SHORT_OBSERVATION';
  persist();
  console.log('T21_V28_REAL_NORMAL_B207_SOURCE_COMBAT',JSON.stringify(report.oneRunEvidence));
+ if(process.env.T21_P2_B207_36S_ONCE==='1'&&!fullNormal){
+  // One real 36s observation in the SAME native B207 world.
+  const later=await until(async()=>{
+   const n=await state();
+   if(n?.stopReason)fail('B207_36S_STOP',{tick:n.tick,reason:n.stopReason});
+   return n?.matchState==='PLAYING'&&!n.paused&&
+    n.cpu?.physicalRejoins?.length===7&&n.timeRemainingSeconds<=144?n:false;
+  },2400000);
+  if(!sourceOk(later))fail('B207_36S_SOURCE_AUTHORITY_DRIFT');
+  const BTeam=Object.fromEntries(['B1','B2','B3','B4'].map(id=>{
+   const firstFoot=last.cpu.cpu.find(c=>c.id===id)?.physicalFoot;
+   const lastFoot=later.cpu.cpu.find(c=>c.id===id)?.physicalFoot;
+   const firstKcc=last.cpuSourceNativeGroundMotion?.byActor?.[id];
+   const lastKcc=later.cpuSourceNativeGroundMotion?.byActor?.[id];
+   const ink12=last.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells;
+   const ink36=later.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells;
+   return [id,{
+    realFoot12:firstFoot??null,realFoot36:lastFoot??null,
+    realDisplacement12to36Meters:
+     Array.isArray(firstFoot)&&Array.isArray(lastFoot)&&
+     [...firstFoot,...lastFoot].every(Number.isFinite)?
+      Math.hypot(...firstFoot.map((v,i)=>lastFoot[i]-v)):null,
+    originalPaintCellGain:Number.isSafeInteger(ink12)&&
+     Number.isSafeInteger(ink36)?ink36-ink12:null,
+    acceptedNativeMovingKccGain:(lastKcc?.rapierAcceptedMoving??0)-
+     (firstKcc?.rapierAcceptedMoving??0),
+    realNativeKccRejections:(lastKcc?.rapierRejected??0)-
+     (firstKcc?.rapierRejected??0),
+    lastRealRejectCause:lastKcc?.lastRejectCause??null
+   }];
+  }));
+  const extended={sameTrueWorld:true,source:'25/17/26/0',
+   elapsedSeconds:180-later.timeRemainingSeconds,
+   nativeTicks:[last.tick,later.tick],
+   allSevenLiveRejoined:later.cpu.physicalRejoins.length===7,
+   rampGoals12:frontlineReadout(last).existingOriginalRampLocal,
+   rampGoals36:frontlineReadout(later).existingOriginalRampLocal,
+   BTeam,syntheticTicksActorInkScoreOrLinks:0,
+   formal4v4Certified:false};
+  report.oneRunEvidence.extended36=extended;
+  const held=['B2','B4'].filter(id=>
+   !(BTeam[id]?.realDisplacement12to36Meters>.25));
+  report.outcome=held.length===0?'PASS_B207_36S_REAL_B2_B4_MOTION':
+   'HOLD_B207_36S_B2_B4_MOTION_NOT_SUSTAINED';
+  persist();
+  console.log('T21_V28_B207_REAL_36S_MOTION',JSON.stringify(extended));
+  if(held.length)fail('B207_36S_B2_B4_REMAIN_STUCK',{held,BTeam});
+  await picture('v28-b207-real-36s-foot');
+  return;
+ }
  if(!fullNormal)return;
  // Continue THE SAME original 7-CPU physical world, with genuine native
  // clock and raster, rather than entering the old B441 research URL.
