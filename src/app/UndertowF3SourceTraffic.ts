@@ -393,11 +393,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly realKccLastActorBlocker=new Map<string,{
   ownerId:string;nativeTick:number
  }>();
- /** B1 P2 real weapon-ready drought: witness only, no route authority. */
- private readonly p2B1DroughtFoot=new Map<string,{
-  firstStillNativeTick:number;nativeTick:number;foot:Vec3;misses:number
+ /** Genuine SOURCE weapon-ready no-aim and physical-stillness witness;
+  * B1-B4 may reuse existing original goals, never fabricate paint or feet. */
+ private readonly p2BTeamDroughtFoot=new Map<string,{
+  firstStillNativeTick:number;nativeTick:number;foot:Vec3;
+  stillAnchor:Vec3;misses:number
  }>();
- private p2B1LastFullRouteAuditTick=-1000;
+ private readonly p2BTeamLastFullRouteAuditTick=new Map<string,number>();
  /** Original-source CPU recovery intent; based only on its native HP. */
  private readonly originalSourceRecoveryIntent=new Set<string>();
  private auditedTargets=0;
@@ -945,9 +947,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  noteRealSourcePaintAimDrought(id:string,
   actualFoot:Readonly<{x:number;y:number;z:number}>,
   consecutiveNoAimDecisions:number):void{
-  if(id!=='B1')return;
+  if(!['B1','B2','B3','B4'].includes(id))return;
   if(consecutiveNoAimDecisions===0){
-   this.p2B1DroughtFoot.delete(id);return;
+   this.p2BTeamDroughtFoot.delete(id);return;
   }
   const bot=this.bots.find(b=>b.id===id);
   if(!this.enableB441SourceFrontline||!this.freeCombat||
@@ -962,7 +964,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      ![actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)||
      Math.hypot(bot.position.x-actualFoot.x,
       bot.position.y-actualFoot.y,bot.position.z-actualFoot.z)>.01)return;
-  const old=this.p2B1DroughtFoot.get(id);
+  const old=this.p2BTeamDroughtFoot.get(id);
   // A weapon drought alone cannot imply a blocked Crowd/KCC move:
   // retain a 120+ tick stationary witness from genuine post-KCC feet.
   // Any actual >=0.22m displacement or decreasing/out-of-order count
@@ -970,13 +972,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const samePhysicalStay=!!old&&
    this.b137NativeTick>old.nativeTick&&
    consecutiveNoAimDecisions>old.misses&&
-   Math.hypot(old.foot.x-actualFoot.x,
-    old.foot.y-actualFoot.y,old.foot.z-actualFoot.z)<=.22;
-  this.p2B1DroughtFoot.set(id,{
+   Math.hypot(old.stillAnchor.x-actualFoot.x,
+    old.stillAnchor.y-actualFoot.y,
+    old.stillAnchor.z-actualFoot.z)<=.22;
+  this.p2BTeamDroughtFoot.set(id,{
    firstStillNativeTick:samePhysicalStay?
     old!.firstStillNativeTick:this.b137NativeTick,
    nativeTick:this.b137NativeTick,
    foot:new Vec3(actualFoot.x,actualFoot.y,actualFoot.z),
+   stillAnchor:samePhysicalStay?old!.stillAnchor.clone():
+    new Vec3(actualFoot.x,actualFoot.y,actualFoot.z),
    misses:consecutiveNoAimDecisions
   });
  }
@@ -1990,7 +1995,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Unlike B2/B4, B1 with no FRONT goal from the landing had no late
    // real-foot admission. Only an observed 120+ weapon-ready NO-AIM
    // streak may trigger another strict ORIGINAL same-side route audit.
-   if(id==='B1'&&this.sourceInk&&this.freeCombat&&
+   if(bot.team===Team.B&&this.sourceInk&&this.freeCombat&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
       bot.agent&&this.physicallyRejoined.has(id)&&
       fronts.length<4&&
@@ -2000,15 +2005,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.stage.navigationLinks?.length===26&&
       this.stage.paintSurfaces.every(s=>
        (s.flags&SurfaceFlags.Scoreable)===0)){
-    const witness=this.p2B1DroughtFoot.get(id);
+    const witness=this.p2BTeamDroughtFoot.get(id);
     if(witness&&witness.misses>=120&&
        this.b137NativeTick-witness.firstStillNativeTick>=120&&
        this.b137NativeTick>=witness.nativeTick&&
        this.b137NativeTick-witness.nativeTick<=40&&
-       this.b137NativeTick-this.p2B1LastFullRouteAuditTick>=120&&
+       this.b137NativeTick-(this.p2BTeamLastFullRouteAuditTick.get(id)??-1000)>=120&&
        realFoot.distance(witness.foot)<=.22){
      // No more than one full native route re-audit per 120 real ticks.
-     this.p2B1LastFullRouteAuditTick=this.b137NativeTick;
+     this.p2BTeamLastFullRouteAuditTick.set(id,this.b137NativeTick);
      const realHit=this.sourceNativeCharacterFootHit(realFoot);
      const flat=realHit?inspectB130OriginalFlatSource({
       nativeTick:this.b137NativeTick,
@@ -2065,7 +2070,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        this.b442LastApprovedFront.set(id,{
         target:goal.clone(),nativeTick:this.b137NativeTick
        });
-       this.p2B1DroughtFoot.delete(id);
+       this.p2BTeamDroughtFoot.delete(id);
        this.patrolIndex.set(id,-1);
        out.copy(goal);
        this.realGoalRequests++;this.b441ActualGoalRequests++;
@@ -2239,7 +2244,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // strictly SOURCE-audited patrol goal. The older B1 no-aim drought
   // remains an additional trigger; no synthetic body/route is created.
   const b1Drought=this.enableB441SourceFrontline&&id==='B1'?
-   this.p2B1DroughtFoot?.get(id):undefined;
+   this.p2BTeamDroughtFoot?.get(id):undefined;
   const b1StalledResearchPatrol=this.enableB441SourceFrontline&&
    id==='B1'&&active>=0&&candidates.length>1&&
    !this.b443OriginalGoalLocks.has(id)&&
@@ -2402,7 +2407,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    this.patrolIndex.set(id,index);
    if(b1StalledResearchPatrol)
-    this.p2B1DroughtFoot.delete(id);
+    this.p2BTeamDroughtFoot.delete(id);
    if(kccBlockedAlternative){
     this.realKccRejectedSteps.delete(id);
     this.realKccB3RecoveryAnchor?.delete(id);
@@ -2609,7 +2614,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.patrolIndex.set(bot.id,-1);
     this.realKccRejectedSteps.delete(bot.id);
     this.realKccB3RecoveryAnchor?.delete(bot.id);
-    this.p2B1DroughtFoot.delete(bot.id);
+    this.p2BTeamDroughtFoot.delete(bot.id);
+    this.p2BTeamLastFullRouteAuditTick.delete(bot.id);
     // A new real life cannot inherit the splatted actor's previously
     // approved tactical destination, or A1's old player C-key order.
     // Leave all surviving teammates' independent source goals intact.
@@ -2933,7 +2939,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.realKccRejectedSteps.delete(id);
   this.realKccB3RecoveryAnchor?.delete(id);
    this.realKccLastActorBlocker?.delete(id);
-   this.p2B1DroughtFoot.delete(id);
+   this.p2BTeamDroughtFoot.delete(id);
+   this.p2BTeamLastFullRouteAuditTick.delete(id);
   if(id==='A1'){
    this.b143ApprovedNativeAllyGoal=null;
    if(this.b471AllyOrder){

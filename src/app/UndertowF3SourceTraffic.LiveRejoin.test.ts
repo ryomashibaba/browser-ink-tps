@@ -27,8 +27,8 @@ function fixture(){
   bots,physicallyRejoined:historical,physicallyFalling:new Set(),
   respawnOriginalDrops:new Set(),cleared:new Set(),released:new Set(),
   lastMoved:new Map(),patrolIndex:new Map(),patrolGoals:new Map(),
-  realKccRejectedSteps:new Map(),p2B1DroughtFoot:new Map(),
-  p2B1LastFullRouteAuditTick:-1000,
+  realKccRejectedSteps:new Map(),p2BTeamDroughtFoot:new Map(),
+  p2BTeamLastFullRouteAuditTick:new Map(),
   b93UpperDetours:new Map(),routePlan:{distinctFirstDropLinks:[]},
   // The snapshot has accumulated additional observational ledgers since
   // this lightweight lifecycle fixture was introduced. Keep them empty,
@@ -390,6 +390,41 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
  expect(source.patrolIndex.get('B1')).toBe(1);
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
+});
+
+
+it('P2 B-team no-aim reroute requires genuinely stationary feet, not moving a few centimeters each sample',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-8,4.6,-44);
+ const bot={id:'B2',team:Team.B,position:foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const b3={id:'B3',team:Team.B,position:foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ Object.assign(source,{
+  bots:[bot,b3],freeCombat:true,sourceInk:{},
+  enableB441SourceFrontline:true,
+  physicallyRejoined:new Set(['B2','B3']),
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
+  b137NativeTick:1000
+ });
+ source.noteRealSourcePaintAimDrought('B2',bot.position,120);
+ expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1000);
+ for(let i=1;i<=5;i++){
+  source.b137NativeTick=1000+i*30;
+  // Real feet could drift <22cm PER sample but >22cm in total.
+  bot.position.x=foot.x+i*.08;
+  source.noteRealSourcePaintAimDrought('B2',bot.position,120+i*30);
+ }
+ expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1120);
+ expect(source.p2BTeamDroughtFoot.get('B2')?.stillAnchor.x)
+  .toBeCloseTo(foot.x+.32);
+ source.b137NativeTick=1200;
+ source.noteRealSourcePaintAimDrought('B3',b3.position,120);
+ expect(source.p2BTeamDroughtFoot.get('B3')?.firstStillNativeTick).toBe(1200);
+ expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1120);
+ source.noteRealSourcePaintAimDrought('B2',bot.position,0);
+ expect(source.p2BTeamDroughtFoot.has('B2')).toBe(false);
+ expect(source.p2BTeamDroughtFoot.has('B3')).toBe(true);
 });
 
 it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL direction',()=>{
