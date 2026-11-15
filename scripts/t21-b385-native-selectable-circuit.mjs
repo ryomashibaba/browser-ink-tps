@@ -633,6 +633,23 @@ async function runShortNormalSourceCombat(){
    originalKccBefore:first.cpuSourceNativeGroundMotion?.byActor?.[id]??null,
    originalKccAfter:last.cpuSourceNativeGroundMotion?.byActor?.[id]??null}];
  }));
+ const frontlineReadout=(n)=>{
+  const p=n.cpu?.sourcePatrol;
+  const ids=new Set(['B1','B2','B3','B4']);
+  return {strictSourceFrontlineEnabled:p?.b441Enabled===true,
+   genuineFrontlineGoalRequests:p?.b441ActualGoalRequests??null,
+   nativeGoalRetentions:p?.b443NativeGoalRetentions??null,
+   nativeUnsafeOrStalledReleases:p?.b443ReleasedUnsafeOrStalled??null,
+   originalVerifiedFronts:p?.b445OriginalFrontlineGates?.filter(g=>ids.has(g.id))
+    .map(g=>({id:g.id,approvedGoals:g.approvedOriginalGoals?.length??0,
+     nativeGoalRequests:g.runtimeTrueOriginalGoalRequests??0,
+     unsafeOrUnreachableHolds:g.runtimeUnsafeOrUnreachableHolds??0}))??[],
+   actualBTeamFrontTargetByActor:p?.b442LastApprovedRealFrontTargets
+    ?.filter(g=>ids.has(g.id))
+    .map(g=>({id:g.id,realFoot:g.physicalFoot,
+     certifiedGoal:g.target,distanceXZ:g.distanceXZ,
+     lastApprovedNativeTick:g.lastApprovedNativeTick}))??[]};
+ };
  report.oneRunEvidence={
   mode:'ORDINARY_B207_SOURCE_COMBAT_NOT_B441_RESEARCH',
   realSevenCpuJoined:7,realSource:'25/17/26/0',
@@ -643,6 +660,8 @@ async function runShortNormalSourceCombat(){
   actualNativeSearchesAfter:last.b216RealNativePaintBackfill?.p2DenseRealFootSearches,
   actualRealCpuInkRequests:last.cpuSourceTurfShots,
   actualCpuSplats:last.cpuSplats,actualCpuRespawns:last.cpuRespawns,
+  frontGoalsAtFirstNativeFoot:frontlineReadout(first),
+  frontGoalsAfterTwelveNativeSeconds:frontlineReadout(last),
   byActor,noFakeActorsTicksInkScore:true,
   sourceScoreable:0,officialWinner:'NONE',
   originalOpponentRoutesCertified:false,full180sCertified:false};
