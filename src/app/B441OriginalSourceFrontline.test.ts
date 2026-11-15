@@ -1,3 +1,13 @@
+import {beforeAll} from 'vitest';
+import {Vec3} from 'playcanvas';
+import {RapierStagePhysics,initializeRapier} from '../physics/RapierStagePhysics';
+import {RecastStageNavigation,initializeRecastNavigation}
+ from '../navigation/RecastStageNavigation';
+import {PerformanceStats} from '../core/PerformanceStats';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS}
+ from '../stage/undertow/UndertowSpillwayRouteRampGeometry';
+import {b450FirstSourceDenial} from './B450OriginalRouteWitness';
 import {describe,it,expect} from 'vitest';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
@@ -235,5 +245,72 @@ describe('B471 true C-key A1 SOURCE co-op command input is fail closed',()=>{
   expect(gate(truth,{...stage,navigationLinks:[]})).toBe(false);
   expect(gate(truth,{...stage,paintSurfaces:stage.paintSurfaces.map((p,i)=>
    i===0?{...p,flags:p.flags|SurfaceFlags.Scoreable}:p)})).toBe(false);
+ });
+});
+
+
+// F4: no private OBJ/Phive data, changes to a stage, artificial actors,
+// path permissions or CPU pose writes. Reproduce real B207 B2/B4 feet
+// against the CURRENT original-source 25/17/26/0 Rapier and Recast only.
+describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
+ beforeAll(async()=>{
+  await Promise.all([initializeRapier(),initializeRecastNavigation()]);
+ });
+ it('reports genuine Recast Y vs original Rapier for 9 exact existing ramp interiors without granting routes',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);
+  physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const record=UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(x=>x.side==='NEGATIVE_Z')!;
+  const ramp=stage.solids.find(s=>s.id==='UndertowT21D:'+record.id)!;
+  expect(ramp.triangleMesh).toEqual(record.mesh);
+  const v=record.mesh.vertices;
+  const xyz=(u:number,w:number)=>new Vec3(...([0,1,2].map(k=>
+   (1-u)*(1-w)*v[0]![k]+u*(1-w)*v[1]![k]+
+   (1-u)*w*v[2]![k]+u*w*v[3]![k]) as [number,number,number]));
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const hit=(p:Readonly<{x:number;y:number;z:number}>)=>{
+   const h=physics.castCharacterFootSupport(
+    new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+   const gap=h?Math.abs(h.point.y-p.y):null;
+   return {solidId:h?.solidId??null,gap,
+    supported:!!h&&gap!==null&&gap<=.25&&
+     stage.solids.some(s=>s.id===h.solidId)};
+  };
+  const pts=[.2,.5,.8].flatMap(u=>
+   [.25,.5,.75].map(w=>({u,w,goal:xyz(u,w)})));
+  expect(pts).toHaveLength(9);
+  const rows=Object.fromEntries(([
+   ['B2',[-2.5257151126861572,3.2148218154907227,-50.62419509887695]],
+   ['B4',[-6.294005870819092,4.5892939639091495,-49.23163604736328]]
+  ] as const).map(([id,p])=>{
+   const from=new Vec3(...p);
+   return [id,pts.map(({u,w,goal})=>{
+    const route=nav.auditPath(from,goal);
+    const denied=b450FirstSourceDenial(route.nativePathPoints,-1,hit);
+    return {u,w,goal:[goal.x,goal.y,goal.z],
+     footSupport:hit(from),goalSupport:hit(goal),
+     reachedTarget:route.reachedTarget,
+     startSnap:Number(route.startSnapDistanceMeters.toFixed(4)),
+     endSnap:Number(route.endSnapDistanceMeters.toFixed(4)),
+     firstDenied:denied.cause,
+     denialSolid:denied.hitSolidId,
+     heightGap:denied.verticalGapMeters,
+     strictApproved:route.reachedTarget&&
+      route.startSnapDistanceMeters<=.20&&
+      route.endSnapDistanceMeters<=.20&&
+      denied.cause==='NONE'&&hit(from).supported&&hit(goal).supported};
+   })];
+  }));
+  const realGoals=Object.fromEntries(Object.entries(rows).map(
+   ([id,arr])=>[id,arr.filter(x=>x.strictApproved).length]));
+  console.log('F4_B207_RAMP_LOCAL_ORIGINAL_NATIVE_ROUTE_DIAG',
+   JSON.stringify({source:'25/17/26/0',realB207Witness:true,
+    authority:'STRICT_0_30M_RAPIER_RECAST_DIAG_ONLY',
+    originalRapierSolids:25,scoreable:0,
+    strictCandidateCounts:realGoals,rows}));
+  expect(stage.solids).toHaveLength(25);
+  expect(stage.paintSurfaces).toHaveLength(17);
+  expect(stage.navigationLinks).toHaveLength(26);
  });
 });
