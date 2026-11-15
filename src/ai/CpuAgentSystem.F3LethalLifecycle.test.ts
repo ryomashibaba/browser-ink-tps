@@ -68,6 +68,51 @@ function fixture(originalF3: boolean) {
 }
 
 
+describe('SOURCE real projectile damage rechecks the CURRENT physical life',()=>{
+ it('rejects a stale CPU ray if the genuine target loses SOURCE rejoin before HP damage',()=>{
+  const {system,bot}=fixture(true);
+  system.phase14qF2RecoverableSteps=true;
+  let live=true;
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>live;
+  const from=new Vec3(-2,.68,0),to=new Vec3(2,.68,0);
+  const ray=system.findNearestCombatHit(from,to,Team.A);
+  expect(ray?.botId).toBe('B1'); // actual SOURCE 0.29m Rapier CPU capsule
+  live=false; // a different source lifecycle event invalidated the old hit
+  const hp=bot.hp,life=bot.lifeState;
+  expect(system.applyProjectileHit(ray!,20,'HUMAN')).toBeNull();
+  expect(bot.hp).toBe(hp);
+  expect(bot.lifeState).toBe(life);
+  expect(system.stats.cpuCombatHits).toBe(0);
+  expect(system.stats.humanCpuDirectHits).toBe(0);
+  expect(system.stats.cpuSplats).toBe(0);
+  // Invalid guarded shot cannot use a stale shield collision either.
+  system.absorbCpuGuardDamage=vi.fn(()=>true);
+  expect(system.applyProjectileHit({...ray!,guarded:true},20,'HUMAN'))
+   .toBeNull();
+  expect(system.absorbCpuGuardDamage).not.toHaveBeenCalled();
+  live=true;
+  const valid=system.findNearestCombatHit(from,to,Team.A);
+  expect(valid?.botId).toBe('B1');
+  expect(system.applyProjectileHit(valid!,20,'HUMAN')?.realHpLoss).toBe(20);
+  expect(bot.hp).toBe(30);
+  expect(system.stats.cpuCombatHits).toBe(1);
+  expect(system.stats.humanCpuDirectHits).toBe(1);
+  expect(system.stats.cpuSplats).toBe(0);
+  // Even if an adapter accidentally claims rejoin, a FIRST_DROP actor
+  // remains a noncombatant until its physical Crowd/Rapier return.
+  bot.mobilityState='FIRST_DROP_REJOIN';
+  expect(system.applyProjectileHit(valid!,20,'CPU','A1')).toBeNull();
+  expect(bot.hp).toBe(30);
+ });
+ it('preserves the old T20/default projectile HP contract',()=>{
+  const {system,bot,shot}=fixture(false);
+  expect(system.applyProjectileHit(shot,20,'HUMAN')?.realHpLoss).toBe(20);
+  expect(bot.hp).toBe(30);
+  expect(system.stats.humanCpuDirectHits).toBe(1);
+  expect(system.stats.cpuSplats).toBe(0);
+ });
+});
+
 describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement',()=>{
   it('continues only real supported and rejoined SOURCE actions, never invents movement',()=>{
     const {system,bot}=fixture(true);

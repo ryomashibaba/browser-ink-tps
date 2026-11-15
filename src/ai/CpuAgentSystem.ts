@@ -2125,7 +2125,14 @@ export class CpuAgentSystem {
       !bot ||
       bot.lifeState !== 'ACTIVE' ||
       bot.hp <= 0 ||
-      isCpuJumpAirborne(bot)
+      isCpuJumpAirborne(bot) ||
+      // A SOURCE projectile resolves its collision before HP application.
+      // The same current-life physical-rejoin gate used at ray lookup
+      // and native SUB/AoE damage must hold HERE as well: a splat/new
+      // upper-spawn life or off-floor rejoin cannot accept stale damage.
+      // Frozen T20/default projectile semantics stay unchanged.
+      (this.f3dSourceGoals !== null &&
+       !this.liveSourceCombatOpponent(bot))
     ) return null;
     if(!Number.isFinite(damage)||damage<=0)return null;
     if (hit.guarded && this.absorbCpuGuardDamage(bot, damage))
