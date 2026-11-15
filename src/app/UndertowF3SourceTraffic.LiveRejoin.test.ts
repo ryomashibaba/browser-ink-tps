@@ -3,7 +3,8 @@ import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
+import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals}
+ from './B441OriginalSourceFrontline';
 import {nativeSourceCpuCanStartActionsBeforeTickEnd}
  from './NativeSourceRoundActionWindow';
 import {FixedStepClock} from '../core/FixedStepClock';
@@ -578,6 +579,66 @@ it('B1 real KCC veto prefers a different original same-ramp goal, never a new fo
  expect(bot.position.equals(foot)).toBe(true);
 });
 
+
+it('B2/B4 genuine 120-tick teammate congestion tries only EXISTING original ramp targets',()=>{
+ const floor='UndertowT21D:right-low-route-ramp-negative-z';
+ const foot=new Vec3(-5.303488254547119,4.285635948181152,-48.5355339050293);
+ const b2={id:'B2',team:Team.B,position:foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const b3={id:'B3',team:Team.B,
+  position:new Vec3(-5.80,4.45,-48.89),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ let fullNativeOriginalRoute=false;
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[b2,b3],
+  physicallyRejoined:new Set(['B2','B3']),
+  enableB441SourceFrontline:true,physics:{},
+  b137NativeTick:1400,lastMoved:new Map([['B2',1282]]),
+  b441FrontGoals:new Map([['B2',[]]]),
+  b441OriginalRampGoal:new Map(),b441OriginalRampLastAuditTick:new Map(),
+  b441OriginalRampApprovals:0,b441OriginalRampRetentions:0,
+  b441OriginalRampRejected:0,realKccRejectedSteps:new Map(),
+  sourceNativeCharacterFootHit:()=>({solidId:floor}),
+  hasSourceFootSupport:()=>true,
+  hasSourceSupportedRoute:()=>fullNativeOriginalRoute,
+  kccActorBlocksOriginalRoute:()=>false,
+  nav:{auditPath:(a:Vec3,b:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   nativePathPoints:[a.clone(),b.clone()]})},
+  realGoalRequests:0
+ });
+ const out=new Vec3(99,99,99);
+ // Proximity alone or 118 stationary ticks is NEVER a route grant.
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ source.b137NativeTick=1402;
+ // 120 stationary ticks may trigger a TRY, not override Rapier support.
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(99,99,99))).toBe(true);
+ expect(source.b441OriginalRampGoal.size).toBe(0);
+ fullNativeOriginalRoute=true;
+ source.b137NativeTick+=60; // existing bounded re-audit cadence
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(true);
+ expect(out.equals(foot)).toBe(false);
+ const original=proposeB441OriginalRampLocalGoals(
+  source.stage,'B').map(p=>new Vec3(...p.point));
+ expect(original.some(p=>p.distance(out)<.001)).toBe(true);
+ expect(source.b441OriginalRampApprovals).toBe(1);
+ expect(b2.position.equals(foot)).toBe(true);
+ expect(b3.position.equals(new Vec3(-5.80,4.45,-48.89))).toBe(true);
+ // An unblocked or moving CPU cannot bypass the old 36-veto condition.
+ source.b441OriginalRampGoal.clear();
+ source.realKccRejectedSteps.clear();
+ source.b137NativeTick+=60;
+ b3.position.set(-15,4.45,-45);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ b3.position.set(-5.80,4.45,-48.89);
+ source.lastMoved.set('B2',source.b137NativeTick-4);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ source.lastMoved.set('B2',1282);
+ source.physicallyRejoined.delete('B3');
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+});
 
 it('B4 genuine 90s stalled ramp prefers a distinct existing SAME-SOLID original goal only after strict Recast and Rapier approval',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);

@@ -806,8 +806,30 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b137NativeTick-witness.nativeTick>B34_GROUNDED_STALL_TICKS||
       realFoot.distance(witness.foot)>.22)return false;
   }
+  // TRUE 720-tick original B2/B4 RAW: each remained at the SAME
+  // registered ramp foot for 429/442 consecutive physics ticks while
+  // physically rejoined B-teammates occupied a ~0.61m corridor.
+  // A long real-foot standstill is NOT proof of a KCC rejection.
+  // It is only a reason to TRY a different PRE-EXISTING original ramp
+  // goal early; every entire Recast/Rapier route and moving actor veto
+  // below remains unchanged. Other SOURCE modes and B3 remain unchanged.
+  const lastRealTravel=this.lastMoved?.get(id);
+  const crowdedStationaryOriginalFoot=
+   (id==='B2'||id==='B4')&&
+   Number.isSafeInteger(lastRealTravel)&&lastRealTravel!==undefined&&
+   lastRealTravel>0&&this.b137NativeTick>=lastRealTravel+120&&
+   this.bots.some(mate=>{
+    if(mate.id===id||mate.team!==bot.team||
+       !sourceNativeLiveRejoinedCpu(mate,this.physicallyRejoined)||
+       mate.mobilityState!=='GROUND')return false;
+    const separation=Math.hypot(
+     mate.position.x-realFoot.x,mate.position.z-realFoot.z);
+    return Math.abs(mate.position.y-realFoot.y)<.60&&
+      separation>=.57&&separation<=1.3;
+   });
   if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
-      B34_GROUNDED_STALL_TICKS)return false;
+      B34_GROUNDED_STALL_TICKS&&!crowdedStationaryOriginalFoot)
+   return false;
   if(!inFlight){
    const previous=this.b441OriginalRampLastAuditTick?.get(id)??-999999;
    if(this.b137NativeTick-previous<60)return false;
