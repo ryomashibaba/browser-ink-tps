@@ -638,6 +638,19 @@ it('B2/B4 genuine 120-tick teammate congestion tries only EXISTING original ramp
  source.lastMoved.set('B2',1282);
  source.physicallyRejoined.delete('B3');
  expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ // Genuine B4 is also covered, without requiring a made-up KCC veto.
+ source.physicallyRejoined.add('B3');
+ source.physicallyRejoined.delete('B2');
+ source.physicallyRejoined.add('B4');
+ b2.id='B4';
+ source.b441FrontGoals.set('B4',[]);
+ source.lastMoved.set('B4',source.b137NativeTick-121);
+ source.b441OriginalRampLastAuditTick.clear();
+ out.set(99,99,99);
+ expect(source.tryOriginalRampLocalRecovery('B4',foot,out)).toBe(true);
+ expect(proposeB441OriginalRampLocalGoals(source.stage,'B')
+  .some(p=>new Vec3(...p.point).distance(out)<.001)).toBe(true);
+ expect(b2.position.equals(foot)).toBe(true);
 });
 
 it('B4 genuine 90s stalled ramp prefers a distinct existing SAME-SOLID original goal only after strict Recast and Rapier approval',()=>{
