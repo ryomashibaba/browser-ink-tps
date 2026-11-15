@@ -647,7 +647,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
   }finally{stub.mockRestore()}
  });
 
- it('reports genuine 90-second B4 registered-ramp existing patrol route viability without new native goal or body',()=>{
+ it('audits genuine B2 B3 B4 90-second registered original-source routes without adding actor goals or terrain',()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent')
    .mockImplementation(()=>null as never);
   try{
@@ -680,7 +680,10 @@ describe('F3B playable 8-actor original source runtime',()=>{
      {id:'B4',p:new Vec3(-6.294005870819092,4.5892939639091495,
        -49.23163604736328)},
      {id:'B2',p:new Vec3(-5.767031192779541,4.277590274810791,
-       -49.52889633178711)}
+       -49.52889633178711)},
+     // New genuine Chromium #43667197355 B3 stationary 90s physical foot.
+     {id:'B3',p:new Vec3(-6.185220718383789,4.594249048432543,
+       -48.97983169555664)}
     ];
     const rows=feet.map(({id,p})=>{
      const solid=t.sourceNativeCharacterFootHit(p)?.solidId??null;
