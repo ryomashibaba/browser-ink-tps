@@ -999,8 +999,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   id:string,foot:Readonly<{x:number;y:number;z:number}>,
   audit:ReturnType<RecastStageNavigation['auditPath']>
  ):boolean{
+  // Genuine 90s B2 KCC now reports real B3/B4 contact rather than
+  // unsupported floor. Treat its same-team capsule as an actual path
+  // veto too; never reject a route from an optical proximity alone.
   if(!this.enableB441SourceFrontline||
-     (id!=='B3'&&id!=='B4')||
+     (id!=='B2'&&id!=='B3'&&id!=='B4')||
      (this.realKccRejectedSteps.get(id)??0)<90)return false;
   const witness=this.realKccLastActorBlocker?.get(id);
   if(!witness||!Number.isSafeInteger(this.b137NativeTick)||
@@ -2247,13 +2250,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const ranked=initialRanks&&this.enableStableSourceGoal&&!recovering?
    prioritizeExistingInFlightSourceGoal(
     initialRanks,candidates,active,realFoot):initialRanks;
-  // Original 90s B1 KCC evidence: a registered negative-z ramp foot.
-  // On genuine 90+ grounded KCC vetoes only, prefer the NEAREST
-  // DIFFERENT original patrol point on the SAME registered solid.
-  // Each candidate still has to pass the unchanged full Recast/Rapier
-  // route, end-support and per-native-tick physical KCC gates.
-  const b1KccRampRecoveryOrder=(()=>{
-   if(id!=='B1'||!this.enableB441SourceFrontline||
+  // Genuine F2 90s #43662350239: B4 remained fixed on the SAME
+  // registered negative-z ramp after 227 more unsupported next feet,
+  // even though the prior height-drift fix greatly reduced denials.
+  // Reuse B1's existing same-solid ORIGINAL patrol-goal preference
+  // for B4's 90+ real KCC denials. No new goal, synthetic waypoint,
+  // stage collider or NavLink. Full original Recast/Rapier audits below
+  // still own every alternative and each eventual actor step.
+  const sameRampKccRecoveryOrder=(()=>{
+   if((id!=='B1'&&id!=='B4')||!this.enableB441SourceFrontline||
       !kccBlockedAlternative||
       (this.realKccRejectedSteps.get(id)??0)<90||
       !this.physics||
@@ -2280,11 +2285,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
   for(let tries=0;tries<candidates.length;tries++){
    const scheduledRank=ranked?.[tries];
-   const index=b1KccRampRecoveryOrder?.[tries]??
+   const index=sameRampKccRecoveryOrder?.[tries]??
     (scheduledRank?scheduledRank.index:(first+tries)%candidates.length);
-   // B1's true KCC-only local route order must not falsely assign a
-   // different original ink-priority row to the selected goal.
-   const rank=b1KccRampRecoveryOrder?
+   // The real B1/B4 same-solid route preference must not falsely
+   // assign a different original ink-priority row to the selected goal.
+   const rank=sameRampKccRecoveryOrder?
     ranked?.find(row=>row.index===index):scheduledRank;
    // B34 can only escape TO A DIFFERENT PRE-EXISTING SOURCE GOAL,
    // physically supported and native-path audited below. The old goal

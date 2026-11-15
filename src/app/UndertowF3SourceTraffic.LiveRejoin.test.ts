@@ -463,3 +463,84 @@ it('B1 real KCC veto prefers a different original same-ramp goal, never a new fo
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
 });
+
+
+it('B4 genuine 90s stalled ramp prefers a distinct existing SAME-SOLID original goal only after strict Recast and Rapier approval',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-6.294005870819092,4.5892939639091495,-49.23163604736328);
+ const far=new Vec3(-17.2657470703125,4.599999904632568,-48.05963134765625);
+ const near=new Vec3(-4.364792823791504,3.8463597297668457,-49.683570861816406);
+ const bot={id:'B4',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ let safe=true;
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
+  enableB441SourceFrontline:true,
+  physics:{castCharacterFootSupport:()=>({})},
+  physicallyRejoined:new Set(['B4']),respawnOriginalDrops:new Set(),
+  originalSourceRecoveryIntent:new Set(),b443OriginalGoalLocks:new Map(),
+  b442LastApprovedFront:new Map(),b441FrontGoals:new Map([['B4',[]]]),
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B4',{}]]),
+  b467LiveSourceGoals:new Map(),b467LastLiveRetryTick:new Map(),
+  patrolGoals:new Map([['B4',[far,near]]]),
+  patrolIndex:new Map([['B4',0]]),
+  realKccRejectedSteps:new Map([['B4',90]]),
+  realKccLastActorBlocker:new Map(),
+  hasSourceFootSupport:()=>true,
+  sourceNativeCharacterFootHit:(p:Vec3)=>({solidId:
+   p.equals(foot)||p.equals(near)?
+    'UndertowT21D:right-low-route-ramp-negative-z':
+    'UndertowT21D:right-low-team-b'}),
+  hasSourceSupportedRoute:()=>safe,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,nativePathPoints:[from.clone(),to.clone()]
+  })},realGoalRequests:0,heldRequests:0
+ });
+ const out=new Vec3(9,9,9);
+ expect(source.chooseSourceGoal('B4',foot,out)).toBe(true);
+ expect(out.equals(near)).toBe(true);
+ expect(source.patrolIndex.get('B4')).toBe(1);
+ expect(source.realKccRejectedSteps.has('B4')).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+ source.patrolIndex.set('B4',0);
+ source.realKccRejectedSteps.set('B4',90);
+ safe=false;out.set(9,9,9);
+ expect(source.chooseSourceGoal('B4',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(9,9,9))).toBe(true);
+ expect(source.patrolIndex.get('B4')).toBe(0);
+ expect(bot.position.equals(foot)).toBe(true);
+});
+
+it('B2 real same-team capsule KCC veto rejects only a recently contacted teammate on the original first route',()=>{
+ const foot=new Vec3(-5.767031192779541,4.277590274810791,-49.52889633178711);
+ const blocked=new Vec3(-6.294005870819092,4.5892939639091495,-49.23163604736328);
+ const b2={id:'B2',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const b4={id:'B4',team:Team.B,position:blocked,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ Object.assign(source,{stage:undertowT21dConnectivityQaStage(),
+  bots:[b2,b4],physicallyRejoined:new Set(['B2','B4']),
+  realKccRejectedSteps:new Map(),realKccLastActorBlocker:new Map(),
+  enableB441SourceFrontline:true,b137NativeTick:400,
+  hasSourceFootSupport:()=>true});
+ for(let i=0;i<90;i++){
+  source.b137NativeTick=400+i;
+  source.noteRealSourceKccRejectedStep('B2',foot,['B4']);
+ }
+ const path=(p:Vec3)=>({nativePathPoints:[foot,p],
+  reachedTarget:true,startSnapDistanceMeters:0,
+  endSnapDistanceMeters:0,pointCount:2});
+ expect(source.kccActorBlocksOriginalRoute('B2',foot,
+  path(new Vec3(-17.265747,4.6,-48.059631)))).toBe(true);
+ expect(source.kccActorBlocksOriginalRoute('B2',foot,
+  path(new Vec3(-2.270069,3.158,-50.710491)))).toBe(false);
+ // Genuine >2.5cm Rapier travel clears the prior blocker witness.
+ source.noteRealSourceKccApprovedStep('B2',foot,
+  new Vec3(foot.x+.03,foot.y,foot.z));
+ expect(source.kccActorBlocksOriginalRoute('B2',foot,
+  path(new Vec3(-17.265747,4.6,-48.059631)))).toBe(false);
+ expect(b2.position.equals(foot)).toBe(true);
+ expect(b4.position.equals(blocked)).toBe(true);
+});
