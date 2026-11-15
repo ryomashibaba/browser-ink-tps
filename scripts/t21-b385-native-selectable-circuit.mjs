@@ -805,6 +805,14 @@ async function runShortNormalSourceCombat(){
  }));
  // True original post-Rapier foot positions at 90,120,150 and 180
  // show an ACTUAL motion lower bound (not integral path length).
+ const actualGroundTotal=(n,id)=>{
+  const v=n.cpu?.sourcePatrol?.realGroundTravelMetersByActor?.[id];
+  return Number.isFinite(v)&&v>=0?v:null;
+ };
+ const actualGroundDelta=(a,b,id)=>{
+  const x=actualGroundTotal(a,id),y=actualGroundTotal(b,id);
+  return x!==null&&y!==null&&y>=x?y-x:null;
+ };
  const lateBTeam=Object.fromEntries(bTeamIds.map(id=>{
   const d90to120=nativeDistance(s90,s120,id);
   const d120to150=nativeDistance(s120,s150,id);
@@ -828,6 +836,8 @@ async function runShortNormalSourceCombat(){
    physical150to180Meters:d150to180,
    physical90to180NetMeters:nativeDistance(s90,end,id),
    physicalCheckpointPathLowerBoundMeters:totalLowerBound,
+   actualIntegratedNativeGroundDistance90to180Meters:
+    actualGroundDelta(s90,end,id),
    actualPaintedCells90to180:
     Number.isSafeInteger(paint90)&&Number.isSafeInteger(paint180)?
      paint180-paint90:null,
@@ -842,7 +852,10 @@ async function runShortNormalSourceCombat(){
   }];
  }));
  const lateBTeamStalled=bTeamIds.filter(id=>{
-  const n=lateBTeam[id].physicalCheckpointPathLowerBoundMeters;
+  const row=lateBTeam[id];
+  // True 60Hz path distance handles an actor revisiting one old foot.
+  const n=row.actualIntegratedNativeGroundDistance90to180Meters??
+   row.physicalCheckpointPathLowerBoundMeters;
   return n===null||n<=.25;
  });
  const lateMovement={

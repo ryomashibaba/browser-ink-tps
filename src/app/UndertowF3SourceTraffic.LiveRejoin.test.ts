@@ -108,6 +108,17 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
    .toEqual(Array(7).fill(true));
   expect(traffic.snapshot().physicalRejoins).toHaveLength(7);
  });
+ it('reports only actual original CPU grounded travel rather than an inferred Crowd path',()=>{
+  const {traffic}=fixture();
+  const t:any=traffic;
+  t.realGroundTravelMetersByActor=new Map([['B3',12.5],['B4',3.25]]);
+  const v=traffic.snapshot().sourcePatrol.realGroundTravelMetersByActor;
+  expect(Object.keys(v)).toHaveLength(7);
+  expect(v.B3).toBe(12.5);
+  expect(v.B4).toBe(3.25);
+  expect(v.B2).toBe(0);
+  expect(v.A1).toBe(0);
+ });
  it('immediate genuine HP-zero splat hides B1 BEFORE next traffic.observe()',()=>{
   const {traffic,bots,historical}=fixture();
   bots[3]!.lifeState='SPLATTED';bots[3]!.hp=0;

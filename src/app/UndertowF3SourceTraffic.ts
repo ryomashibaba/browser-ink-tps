@@ -283,6 +283,8 @@ export interface F3TrafficSnapshot{
   readonly rejectedUnsupportedGoals:number;
   readonly deniedUnsupportedEnemyFeet:number;
   readonly travelMeters:number;
+  /** Actual 60Hz Rapier-grounded cumulative meters per original CPU. */
+  readonly realGroundTravelMetersByActor:Readonly<Record<string,number>>;
   /** B34 real original-foot locomotion and certified Recast goal traces. */
   readonly groundedFreeCombatCpuSamples:number;
   readonly nearlyStationaryGroundedCpuSamples:number;
@@ -493,6 +495,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private rejectedUnsupportedGoals=0;
  private deniedUnsupportedEnemyFeet=0;
  private travelMeters=0;
+ private readonly realGroundTravelMetersByActor=new Map<string,number>();
  private groundedFreeCombatCpuSamples=0;
  private nearlyStationaryGroundedCpuSamples=0;
  private requestedGoalDirectMeters=0;
@@ -2854,6 +2857,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }else this.b34StationarySourceTicks.set(bot.id,0);
    if(this.freeCombat&&bot.mobilityState==='GROUND'&&step<.18){
     this.travelMeters+=step;
+    if(sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined))
+     this.realGroundTravelMetersByActor?.set(bot.id,
+      (this.realGroundTravelMetersByActor.get(bot.id)??0)+step);
     this.groundedFreeCombatCpuSamples++;
     if(step<=.015)this.nearlyStationaryGroundedCpuSamples++;
    }
@@ -3364,6 +3370,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     rejectedUnsupportedGoals:this.rejectedUnsupportedGoals,
     deniedUnsupportedEnemyFeet:this.deniedUnsupportedEnemyFeet,
     travelMeters:this.travelMeters,
+    realGroundTravelMetersByActor:Object.fromEntries(this.bots.map(bot=>
+     [bot.id,this.realGroundTravelMetersByActor?.get(bot.id)??0])),
     groundedFreeCombatCpuSamples:this.groundedFreeCombatCpuSamples,
     nearlyStationaryGroundedCpuSamples:
      this.nearlyStationaryGroundedCpuSamples,
