@@ -761,8 +761,8 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.b467LiveSourceGoals=new Map();
   traffic.b470LastNativeRetry=new Map();
   traffic.realKccRejectedSteps=new Map();
-  traffic.p2B1DroughtFoot=new Map();
-  traffic.p2B1LastFullRouteAuditTick=-1000;
+  traffic.p2BTeamDroughtFoot=new Map();
+  traffic.p2BTeamLastFullRouteAuditTick=new Map();
   traffic.enableB441SourceFrontline=true;
   traffic.enableB192HumanCombat=false;
   traffic.enableB137OriginalAllyRally=false;
@@ -778,15 +778,15 @@ describe('F3B playable 8-actor original source runtime',()=>{
   // Nothing can be promoted without the REAL no-aim witness.
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   traffic.noteRealSourcePaintAimDrought('B1',foot,119);
-  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(0);
   traffic.noteRealSourcePaintAimDrought('B1',foot,120);
-  expect(traffic.p2B1DroughtFoot.size).toBe(1);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(1);
   // One isolated no-aim timestamp does NOT demonstrate real physical
   // stationarity. The original validated route remains unchanged.
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   traffic.b137NativeTick=1320;
   traffic.noteRealSourcePaintAimDrought('B1',foot,240);
-  expect(traffic.p2B1DroughtFoot.get('B1')?.firstStillNativeTick)
+  expect(traffic.p2BTeamDroughtFoot.get('B1')?.firstStillNativeTick)
    .toBe(1200);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
   expect(out.distance(foot)).toBeGreaterThanOrEqual(2);
@@ -794,7 +794,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
   expect(traffic.nav.auditPath).toHaveBeenCalled();
   expect(traffic.hasSourceSupportedRoute).toHaveBeenCalled();
   expect(traffic.b443OriginalGoalLocks.get('B1')?.target).toEqual(out);
-  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(0);
   expect(bot.position).toEqual(originalFoot);
   // The critical earlier gap: an existing safe in-flight goal should
   // be preserved with one drought snapshot, but reconsidered after
@@ -812,7 +812,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
   expect(out.distance(formerlyApproved)).toBeGreaterThanOrEqual(2);
   expect(traffic.b443OriginalGoalLocks.get('B1')?.target).toEqual(out);
-  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(0);
   expect(bot.position).toEqual(originalFoot);
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);
@@ -848,27 +848,28 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.patrolGoals.set('B1',[foot.clone(),other]);
   traffic.patrolIndex.set('B1',0);
   traffic.b137NativeTick=2400;
-  traffic.p2B1DroughtFoot.set('B1',{
+  traffic.p2BTeamDroughtFoot.set('B1',{
    firstStillNativeTick:2200,nativeTick:2400,
-   foot:foot.clone(),misses:240
+   foot:foot.clone(),stillAnchor:foot.clone(),misses:240
   });
   traffic.hasSourceSupportedRoute=vi.fn(()=>false);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(false);
   expect(traffic.patrolIndex.get('B1')).toBe(0);
-  expect(traffic.p2B1DroughtFoot.has('B1')).toBe(true);
+  expect(traffic.p2BTeamDroughtFoot.has('B1')).toBe(true);
   traffic.hasSourceSupportedRoute=vi.fn(()=>true);
   expect(traffic.chooseSourceGoal('B1',foot,out)).toBe(true);
   expect(out).toEqual(other);
   expect(traffic.patrolIndex.get('B1')).toBe(1);
-  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(0);
   expect(bot.position).toEqual(originalFoot);
   // A genuine splat/respawn must erase the prior life's witness.
-  traffic.p2B1DroughtFoot.set('B1',{
-   firstStillNativeTick:1800,nativeTick:2100,foot,misses:360
+  traffic.p2BTeamDroughtFoot.set('B1',{
+   firstStillNativeTick:1800,nativeTick:2100,foot,
+   stillAnchor:foot.clone(),misses:360
   });
   bot.lifeState='SPLATTED';
   traffic.onNativeSourceCpuRespawn('B1');
-  expect(traffic.p2B1DroughtFoot.size).toBe(0);
+  expect(traffic.p2BTeamDroughtFoot.size).toBe(0);
  });
 
 });

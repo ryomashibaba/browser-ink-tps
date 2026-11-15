@@ -470,8 +470,9 @@ it('B2 real weapon-ready no-aim uses another existing ORIGINAL paint goal only a
  const denied=new Vec3(8,8,8);
  expect(source.chooseSourceGoal('B2',bot.position,denied)).toBe(false);
  expect(denied.equals(new Vec3(8,8,8))).toBe(true);
- expect(source.b443OriginalGoalLocks.get('B2')?.target.equals(current))
-  .toBe(true);
+ // A genuinely denied old path also releases the old lock; this
+ // cannot be misreported as a newly approved navigation destination.
+ expect(source.b443OriginalGoalLocks.has('B2')).toBe(false);
  // Full physical source and native path checks must independently pass
  // before a new real Crowd target can replace the already audited goal.
  source.b137NativeTick=1242;
