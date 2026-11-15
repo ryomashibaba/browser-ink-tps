@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // P1_USER_APPROVED_NATIVE_INK_LOOP_ONCE_20261113: run the existing same-world real fire -> registered OWN squid refill -> reshoot gate once; no runtime changes.
+// B3_TRUE_RAMP_CROWD_CONGESTION_ONCE_20261116: one genuine original 7CPU 720-tick comparative trial of native B3 foot; no game behavior changed in runner.
 // B448_APPROVED_NATIVE_A3_ONCE_20261113: execute the pre-existing 720-tick A3 original-frontline gate once; no runtime changes.
 // B441_APPROVED_SINGLE_NATIVE_RUN_20261113: one authorized 720-tick, 15-minute max native SOURCE trial; no runtime or stage changes.
 // P1_360_POSTJOIN_CONTRACT: prior single-run authorization was consumed; static 360 read-only outcome is isolated from the original >=600-tick K2. No automatic browser rerun.
