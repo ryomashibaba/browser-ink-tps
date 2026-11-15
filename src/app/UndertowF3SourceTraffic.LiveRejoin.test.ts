@@ -3,6 +3,7 @@ import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {proposeB441OriginalFrontline} from './B441OriginalSourceFrontline';
 import {nativeSourceCpuCanStartActionsBeforeTickEnd}
  from './NativeSourceRoundActionWindow';
 import {FixedStepClock} from '../core/FixedStepClock';
@@ -425,6 +426,64 @@ it('P2 B-team no-aim reroute requires genuinely stationary feet, not moving a fe
  source.noteRealSourcePaintAimDrought('B2',bot.position,0);
  expect(source.p2BTeamDroughtFoot.has('B2')).toBe(false);
  expect(source.p2BTeamDroughtFoot.has('B3')).toBe(true);
+});
+
+
+it('B2 real weapon-ready no-aim uses another existing ORIGINAL paint goal only after strict same-side Rapier and Recast approval',()=>{
+ const stage=undertowT21dConnectivityQaStage();
+ const proposals=proposeB441OriginalFrontline(stage,'B');
+ const current=new Vec3(...proposals[0]!.point);
+ const other=proposals.find(p=>new Vec3(...p.point).distance(current)>2.5);
+ expect(other).toBeDefined();
+ const bot={id:'B2',team:Team.B,position:current.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ let routeValid=false;
+ Object.assign(source,{
+  stage,bots:[bot],freeCombat:true,enableB441SourceFrontline:true,
+  physics:{},sourceInk:{sampleWorld:()=>({owner:Team.Neutral})},
+  physicallyRejoined:new Set(['B2']),respawnOriginalDrops:new Set(),
+  originalSourceRecoveryIntent:new Set(),
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
+  b443OriginalGoalLocks:new Map([['B2',{
+   target:current.clone(),firstApprovedTick:900,arrivedSinceTick:null
+  }]]),b442LastApprovedFront:new Map(),
+  b441FrontGoals:new Map([['B2',[current.clone()]]]),
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B2',{}]]),
+  b467LiveSourceGoals:new Map(),b467LastLiveRetryTick:new Map(),
+  patrolGoals:new Map([['B2',[current.clone()]]]),patrolIndex:new Map([['B2',0]]),
+  realKccRejectedSteps:new Map(),b137NativeTick:1000,
+  sourceNativeCharacterFootHit:()=>({
+   solidId:'UndertowT21D:right-low-team-b'
+  }),
+  hasSourceFootSupport:()=>true,
+  hasSourceSupportedRoute:()=>routeValid,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   pointCount:2,nativePathPoints:[from.clone(),to.clone()]
+  })},realGoalRequests:0,heldRequests:0
+ });
+ source.noteRealSourcePaintAimDrought('B2',bot.position,120);
+ source.b137NativeTick=1120;
+ source.noteRealSourcePaintAimDrought('B2',bot.position,150);
+ source.b137NativeTick=1121;
+ const denied=new Vec3(8,8,8);
+ expect(source.chooseSourceGoal('B2',bot.position,denied)).toBe(false);
+ expect(denied.equals(new Vec3(8,8,8))).toBe(true);
+ expect(source.b443OriginalGoalLocks.get('B2')?.target.equals(current))
+  .toBe(true);
+ // Full physical source and native path checks must independently pass
+ // before a new real Crowd target can replace the already audited goal.
+ source.b137NativeTick=1242;
+ source.noteRealSourcePaintAimDrought('B2',bot.position,180);
+ routeValid=true;
+ const approved=new Vec3(8,8,8);
+ expect(source.chooseSourceGoal('B2',bot.position,approved)).toBe(true);
+ expect(approved.distance(current)).toBeGreaterThan(2);
+ expect(proposals.some(p=>approved.distance(new Vec3(...p.point))<.01))
+  .toBe(true);
+ expect(bot.position.equals(current)).toBe(true);
+ expect(source.p2BTeamDroughtFoot.has('B2')).toBe(false);
 });
 
 it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL direction',()=>{
