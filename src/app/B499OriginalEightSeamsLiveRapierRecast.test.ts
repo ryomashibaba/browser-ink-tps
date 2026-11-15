@@ -7,7 +7,12 @@ import {PerformanceStats} from '../core/PerformanceStats';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../navigation/RecastStageNavigation';
-import {b218OriginalRouteFaceChainSeams} from './B218OriginalRouteFaceChainSeams';
+import {b218OriginalRouteFaceChainSeams,b218OriginalTriangleMeshSeparation}
+ from './B218OriginalRouteFaceChainSeams';
+import {rasterizeStageFootprint} from '../stage/StageFootprint';
+import {stageSolidCollisionEnabled,stageSolidNavigationEnabled,
+ type StageSolidDefinition,type StageTriangleMeshGeometry,
+ type StageVector3} from '../stage/StageDefinition';
 import {b220SourceTriangleCentroidWitness}
  from './B220OriginalNativeRecastSeamProbe';
 import {UNDERTOW_UNDERPASS_ROUTE_COMPONENTS as FACES,
@@ -202,5 +207,109 @@ describe('B499 genuine CURRENT 25-solid original Recast/Rapier for all 8 CI688 s
     })),
     verdict:report.verdict
    }));
+ });
+
+
+ it('locates BOTH actual registered-floor endcaps for the original ten-piece F4 underpass before any collision import',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  expect([stage.solids.length,stage.paintSurfaces.length,
+   stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(stage.paintSurfaces.every(x=>
+   (x.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  const physics=new RapierStagePhysics(1/60,stage);
+  physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  // The existing StageFootprint raster is the SAME active mask from which
+  // the current physical slab geometry is built. Do not fill its holes
+  // with speculative bridge triangles or use an approximate bbox.
+  const registeredFlatTop=(s:StageSolidDefinition):StageTriangleMeshGeometry=>{
+   if(!s.footprint||!stageSolidCollisionEnabled(s)||
+      !stageSolidNavigationEnabled(s))
+    throw Error('B500_REGISTERED_SOURCE_FLAT_FOOTPRINT_REQUIRED');
+   const polygons=rasterizeStageFootprint(
+    s.size[0],s.size[2],s.footprint).rectangles;
+   const v:StageVector3[]=[],indices:number[]=[];
+   const xbase=s.center[0]-s.size[0]/2;
+   const zbase=s.center[2]-s.size[2]/2;
+   const y=s.center[1]+s.size[1]/2;
+   for(const p of polygons){
+    const x0=xbase+p.minU,x1=xbase+p.maxU,
+     z0=zbase+p.minV,z1=zbase+p.maxV;
+    const begin=v.length;
+    v.push([x0,y,z0],[x1,y,z0],[x0,y,z1],[x1,y,z1]);
+    indices.push(begin,begin+1,begin+2,begin+1,begin+3,begin+2);
+   }
+   if(v.length===0)throw Error('B500_EMPTY_REGISTERED_FLOOR');
+   return {vertices:v,indices};
+  };
+  const records=(['POSITIVE_Z','NEGATIVE_Z'] as const).map(side=>{
+   const suffix=side==='POSITIVE_Z'?'positive-z':'negative-z';
+   const first=FACES.find(f=>
+    f.id==='underpass-route-slope01-'+suffix&&f.side===side);
+   const last=FACES.find(f=>
+    f.id==='underpass-route-slope00-inner-'+suffix&&f.side===side);
+   const entry=stage.solids.find(s=>
+    s.id==='UndertowT21D:right-low-route-ramp-'+suffix);
+   const exit=stage.solids.find(s=>
+    s.id==='UndertowT21D:glass-underpass-'+suffix);
+   expect(first).toBeDefined();expect(last).toBeDefined();
+   expect(entry?.triangleMesh).toBeDefined();
+   expect(exit?.footprint).toBeDefined();
+   expect(entry?.center).toEqual([0,0,0]);
+   // Read-only current original-solid geometry; no collision/Nav mutations.
+   const entryGap=b218OriginalTriangleMeshSeparation(
+    first!.mesh,entry!.triangleMesh!);
+   const exitRegisteredTop=registeredFlatTop(exit!);
+   const exitGap=b218OriginalTriangleMeshSeparation(
+    last!.mesh,exitRegisteredTop);
+   const centroid=(mesh:StageTriangleMeshGeometry)=>{
+    const i=mesh.indices;
+    const a=mesh.vertices[i[0]!]!,b=mesh.vertices[i[1]!]!,
+     c=mesh.vertices[i[2]!]!;
+    return new Vec3(...([0,1,2].map(k=>
+     (a[k]!+b[k]!+c[k]!)/3) as [number,number,number]));
+   };
+   const endProbe=(mesh:StageTriangleMeshGeometry)=>{
+    const point=centroid(mesh);
+    const navPoint=nav.auditNavMeshProjection(point);
+    const hit=physics.castStageSegment(
+     new Vec3(point.x,point.y+1.2,point.z),
+     new Vec3(point.x,point.y-1.2,point.z),'ink-projectile');
+    return {exactSourceCentroid:[point.x,point.y,point.z],
+     nativeNearestProjectionMeters:Number.isFinite(
+      navPoint.distanceMeters)?navPoint.distanceMeters:null,
+     registeredRapierHitSolidId:hit?.solidId??null,
+     rapierYGapMeters:hit?Math.abs(hit.point.y-point.y):null,
+     sourceColliderItselfRegistered:false};
+   };
+   expect(Number.isFinite(entryGap)&&entryGap>=0).toBe(true);
+   expect(Number.isFinite(exitGap)&&exitGap>=0).toBe(true);
+   return {side,originalSourceEntryFace:first!.id,
+    originalSourceExitFace:last!.id,
+    actualRegisteredEntrySolid:entry!.id,
+    actualRegisteredExitSolid:exit!.id,
+    entryExactSourceToCurrentPhysicalRampGapMeters:
+     Number(entryGap.toFixed(6)),
+    exitExactSourceToCurrentPhysicalUnderpassGapMeters:
+     Number(exitGap.toFixed(6)),
+    exitRegisteredTopTriangles:exitRegisteredTop.indices.length/3,
+    entryOriginalCentroidProbe:endProbe(first!.mesh),
+    exitOriginalCentroidProbe:endProbe(last!.mesh),
+    originalTurfCollisionFlagsProven:false,
+    continuousHumanOrCpuKccProven:false,
+    originalOpponentRouteAuthorized:false};
+  });
+  const evidence={
+   schema:'T21_V28_F4_B500_TRUE_ORIGINAL_UNDERPASS_ENTRY_EXIT_ENDCAPS',
+   source:'25/17/26/0',sourceFaces:10,sourceTriangles:42,
+   sides:records,originalStageGeometryWrites:0,
+   appendedStageSolids:0,appendedNavLinks:0,scoreable:0,
+   original72TurfCollisionAuthorityVerified:false,
+   naturalOpposingPathCertified:false,
+   verdict:'HOLD_MISSING_7_2_TURF_COLLISION_AND_CONTINUOUS_ROUTE'
+  };
+  console.log('T21_V28_F4_B500_PHYSICAL_REGISTERED_ENDCAP_GAPS',
+   JSON.stringify(evidence));
+  expect(stage.solids).toHaveLength(25);
  });
 });
