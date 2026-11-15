@@ -130,16 +130,31 @@ describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
   expect(candidates(foot,foot,undefined,
    'DISTANT_ORIGINAL_ONLY')).toEqual([]);
  });
+ it('preserves old dense aim order and adds distant existing-foot proposals only in P2',()=>{
+  const facing={x:1,y:0,z:0};
+  const normal=candidates(foot,goal,facing,'LOCAL');
+  expect(normal).toHaveLength(12);
+  const dense=candidates(foot,foot,facing,'DENSE_ORIGINAL_ONLY');
+  expect(dense.slice(0,96).map(p=>p.radiusMeters))
+   .toEqual([1.2,1.7,2.5,3.5,4.5,5.5]
+    .flatMap(radius=>Array(16).fill(radius)));
+  expect(dense.slice(96).map(p=>p.radiusMeters))
+   .toEqual([7.5,10].flatMap(radius=>Array(16).fill(radius)));
+  expect(dense.slice(96).every(p=>
+   Math.hypot(p.x-foot.x,p.z-foot.z)<=10.001)).toBe(true);
+  expect(dense.every(p=>!('navLink' in p)&&!('shot' in p)&&
+   !('score' in p))).toBe(true);
+ });
  it('proposes dense research-only original-foot directions without authorizing a shot',()=>{
   const facing={x:0,y:0,z:-1};
   const x=candidates(foot,foot,facing,'DENSE_ORIGINAL_ONLY');
-  expect(x).toHaveLength(96);
+  expect(x).toHaveLength(128);
   expect(new Set(x.map(p=>p.radiusMeters))).toEqual(
-   new Set([1.2,1.7,2.5,3.5,4.5,5.5]));
-  for(const radius of [1.2,1.7,2.5,3.5,4.5,5.5])
+   new Set([1.2,1.7,2.5,3.5,4.5,5.5,7.5,10]));
+  for(const radius of [1.2,1.7,2.5,3.5,4.5,5.5,7.5,10])
    expect(x.filter(p=>p.radiusMeters===radius)).toHaveLength(16);
   expect(x.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.z)&&
-   Math.hypot(p.x-foot.x,p.z-foot.z)<=5.501)).toBe(true);
+   Math.hypot(p.x-foot.x,p.z-foot.z)<=10.001)).toBe(true);
   expect(x[0]).not.toHaveProperty('navLink');
   expect(x[0]).not.toHaveProperty('sourceScoreable');
   expect(x[0]).not.toHaveProperty('shot');
@@ -216,7 +231,7 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
    (s.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
   // Actual original ownerGrid is the only authority for whether a floor
   // offers ink opportunity. Simulate a fully painted SOURCE floor in this
-  // isolated test: even 96 extra proposals must not create a fake shot.
+  // isolated test: even 128 extra proposals must not create a fake shot.
   const sourceSample=ink.sampleWorld(aim!, .28,SurfaceFlags.Paintable,
    SurfaceFlags.Wall);
   expect(sourceSample).not.toBeNull();

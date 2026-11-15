@@ -48,7 +48,13 @@ export function b216OriginalFootBackfillCandidates(
  // The caller must separately verify the real source grid, actual weapon
  // range and both original Rapier support and first blocking ray.
  const radii=distanceBand==='DENSE_ORIGINAL_ONLY'?
-  ([1.2,1.7,2.5,3.5,4.5,5.5] as const):
+  // True 180s P2 measured >4k late NO-AIM checks for B1/B2/B3
+  // while their Rapier feet CONTINUED moving. Their nearby 5.5m grid
+  // is often already OWN; try existing farther original floor only
+  // after the weapon-ready 120+ no-aim drought trigger.
+  // No candidate is fireable until live range, ownerGrid, original
+  // foot+target support and first physical projectile ray ALL pass.
+  ([1.2,1.7,2.5,3.5,4.5,5.5,7.5,10] as const):
   distanceBand==='DISTANT_ORIGINAL_ONLY'?
   ([4.5,5.5] as const):
   atGoal?([1.7,2.5,3.5] as const):([2.5,3.5] as const);
