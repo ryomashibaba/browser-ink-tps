@@ -4,6 +4,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
+import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
@@ -2166,4 +2167,54 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
   system.observeSelectedSourceOriginalCpuImpact('B1','ALREADY_TEAM_OWNED');
   expect(system.selectedSourcePaintSaturation.size).toBe(0);
  });
+});
+
+
+describe('F3 native registered-source turf weapon coverage',()=>{
+  it('five previously idle CPU classes select paid real-class weapons without fabricating any enemy or moving an actor',()=>{
+    const cases=[
+      ['metro-roller','ROLLER_FLICK'],
+      ['dash-brush','BRUSH_SWIPE'],
+      ['canopy-guard','BRELLA_BURST'],
+      ['chord-stringer','STRINGER_RELEASE'],
+      ['ink-saber','SPLATANA_RELEASE']
+    ] as const;
+    expect(WEAPON_ORDER).toHaveLength(12);
+    for(const [kit,expected] of cases){
+      const {system,bot}=fixture(true);
+      bot.weaponId=kit;bot.hp=100;bot.ink=100;
+      bot.position=new Vec3(0,3.1,48);
+      bot.weaponFacing=new Vec3(0,0,1);
+      bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=0;
+      bot.weaponBurstCooldown=0;bot.weaponRollPaintCooldown=0;
+      bot.weaponGuardBreakSeconds=0;bot.weaponGuardHp=100;
+      bot.weaponGuarding=false;bot.fireRemaining=0;
+      bot.agent={};
+      system.phase14qF2RecoverableSteps=true;
+      system.phase14qGroundCollision={};
+      system.b64InkAngleSweepEnabled=false;
+      system.b215SelectedBattlePaintPacing=false;
+      system.p2OuterOriginalBackfill=false;
+      system.qaTurfShotCooldown=new Map();
+      system.stats.cpuSourceTurfShots=0;
+      system.stats.cpuShots=0;
+      system.chooseCombatTarget=vi.fn(()=>null);
+      // The original floor candidate and line-of-fire checks are
+      // separately exercised by B216; this tests actual CPU class dispatch.
+      const floor=new Vec3(0,3.1,49.7);
+      system.chooseOriginalSourceTurfTarget=vi.fn(()=>floor);
+      system.queueCpuWeaponRequest=vi.fn(()=>true);
+      const before=bot.position.clone();
+      const frames=kit==='chord-stringer'||kit==='ink-saber'?75:1;
+      for(let i=0;i<frames;i++)
+       system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(0,3.1,56),false);
+      expect(system.chooseOriginalSourceTurfTarget,
+       kit+' should seek real original floor without an enemy').toHaveBeenCalled();
+      const calls=system.queueCpuWeaponRequest.mock.calls;
+      expect(calls.length,kit+' actual weapon class action').toBeGreaterThan(0);
+      expect(calls[0][3],kit).toBe(expected);
+      expect(calls[0][1]).toEqual(floor);
+      expect(bot.position).toEqual(before);
+    }
+  });
 });

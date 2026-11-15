@@ -2690,7 +2690,16 @@ export class CpuAgentSystem {
        profile.weaponClass === 'BLASTER' ||
        profile.weaponClass === 'SLOSHER' ||
        profile.weaponClass === 'CHARGER' ||
-       profile.weaponClass === 'SPLATLING');
+       profile.weaponClass === 'SPLATLING' ||
+       // All 12 actual CPU kits must paint their registered original
+       // source floor even when no enemy can physically cross F4.
+       // Use the EXISTING paid projectile/roller/brush/splatana actions:
+       // no automatic walking stamps, synthetic shots or new geometry.
+       profile.weaponClass === 'ROLLER' ||
+       profile.weaponClass === 'BRUSH' ||
+       profile.weaponClass === 'BRELLA' ||
+       profile.weaponClass === 'STRINGER' ||
+       profile.weaponClass === 'SPLATANA');
     const cooldown = Math.max(0,
       (this.qaTurfShotCooldown.get(bot.id) ?? 0) - dt);
     this.qaTurfShotCooldown.set(bot.id, cooldown);
@@ -3209,8 +3218,11 @@ export class CpuAgentSystem {
        sample.surface.localToWorld(sample.u,sample.v);
       // Reject out-of-range genuine paint before choosing it, not AFTER
       // the aim is selected: a nearer audited source pixel may still fire.
-      if(!this.cpuTargetInRange(
-        bot,sourcePoint,weaponProfile(bot.weaponId)))continue;
+      const currentProfile=weaponProfile(bot.weaponId);
+      if(!this.cpuTargetInRange(bot,sourcePoint,currentProfile)||
+         (currentProfile.weaponClass==='BRUSH'&&
+          horizontalDistanceSq(bot.position,sourcePoint)>2.45*2.45))
+       continue;
       // B216's already registered native Rapier foot + fire-line veto
       // also applies to the existing frontal B64 source aim. Seek another
       // REAL candidate instead of spending ink into original cover.
@@ -3351,7 +3363,12 @@ export class CpuAgentSystem {
     const dz = goal.z - bot.position.z;
     const span = Math.hypot(dx, dz);
     if (!Number.isFinite(span) || span < 1.65) return null;
-    for (const distance of [3.0, 2.3, 1.7]) {
+    // BRUSH can only paint with a physical 2.45m swipe: seeking the
+    // ordinary 3m original floor first selected an aim it could not fire.
+    // Keep all original owner-grid, range and stage-ray checks below.
+    const sourceDistances=weaponProfile(bot.weaponId).weaponClass==='BRUSH'
+      ?[1.7]:[3.0,2.3,1.7];
+    for (const distance of sourceDistances) {
       if (span < distance + 0.25) continue;
       const t = distance / span;
       this.samplePoint.set(
