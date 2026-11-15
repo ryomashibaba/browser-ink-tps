@@ -2302,11 +2302,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const activePatrolIndex=this.patrolIndex.get(id)??-1;
    const currentDroughtGoal=useApprovedFronts?currentFrontLock!.target:
      useOriginalPatrol?originalDroughtGoals[activePatrolIndex]:null;
+   // A SOURCE-only CPU may genuinely lose its native movement goal
+   // after an earlier path HOLD. A valid 120+ real NO-AIM drought can
+   // recover an EXISTING verified patrol, not only replace one.
    if(this.enableB441SourceFrontline&&this.freeCombat&&this.sourceInk&&
       this.physics&&bot.weaponId&&bot.team===Team.B&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
       this.physicallyRejoined.has(id)&&
-      originalDroughtGoals.length>1&&currentDroughtGoal&&
+      originalDroughtGoals.length>1&&
+      (currentDroughtGoal!==null||useOriginalPatrol)&&
       movingDrought&&movingDrought.misses>=120&&
       this.b137NativeTick>=movingDrought.nativeTick&&
       this.b137NativeTick-movingDrought.nativeTick<=40&&
@@ -2314,7 +2318,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b137NativeTick-
        (this.p2BTeamLastFullRouteAuditTick.get(id)??-1000)>=120&&
       this.hasSourceFootSupport(realFoot)&&
-      !this.canPaintFromOriginalGoal(bot,currentDroughtGoal)){
+      (!currentDroughtGoal||
+       !this.canPaintFromOriginalGoal(bot,currentDroughtGoal))){
     // Bounded to once per 120 native ticks. Failed candidates neither
     // release the existing target nor modify the physical CPU position.
     this.p2BTeamLastFullRouteAuditTick.set(id,this.b137NativeTick);
@@ -2324,7 +2329,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      originalDroughtGoals,this.actualTeamCoveragePositions(id,bot.team));
     for(const row of ranked){
      const goal=originalDroughtGoals[row.index]!;
-     if(goal.distance(currentDroughtGoal)<2||
+     if((currentDroughtGoal&&
+         goal.distance(currentDroughtGoal)<2)||
         goal.distance(realFoot)<1.5||goal.z*sign<33||
         !this.hasSourceFootSupport(goal)||
         !this.canPaintFromOriginalGoal(bot,goal))continue;

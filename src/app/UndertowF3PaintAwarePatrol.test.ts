@@ -391,6 +391,40 @@ describe('original source paint-drought retarget must respect shot authority',()
   expect(bot.position).toEqual(foot);
   expect(traffic.hasSourceSupportedRoute).toHaveBeenCalled();
   expect(traffic.kccActorBlocksOriginalRoute).toHaveBeenCalled();
+  // Missing previous native goal: acquire a paint-relevant PREEXISTING
+  // patrol instead of blindly issuing B team's default index-1 goal.
+  // This is still a mock route, not a real KCC walking certification.
+  const unpaintable=new Vec3(-5,3,-46);
+  const shootable=new Vec3(5,3,-46);
+  traffic.patrolGoals.set('B1',[foot.clone(),unpaintable,shootable]);
+  traffic.patrolIndex.delete('B1');
+  traffic.canPaintFromOriginalGoal=vi.fn((_bot:unknown,g:Vec3)=>
+   g.distance(shootable)<.01);
+  traffic.p2BTeamDroughtFoot.set('B1',{
+   firstStillNativeTick:1600,nativeTick:1600,foot:foot.clone(),
+   stillAnchor:foot.clone(),misses:210
+  });
+  traffic.b137NativeTick=1600;
+  expect(traffic.chooseSourceGoal('B1',foot,result)).toBe(true);
+  expect(result).toEqual(shootable);
+  expect(traffic.patrolIndex.get('B1')).toBe(2);
+  expect(traffic.b443OriginalGoalLocks.size).toBe(0);
+  expect(traffic.b441ActualGoalRequests).toBe(0);
+  expect(bot.position).toEqual(foot);
+  // With NO authentic newly shootable source cell, even a missing
+  // native goal cannot promote a made-up target or paint result.
+  traffic.patrolIndex.delete('B1');
+  traffic.canPaintFromOriginalGoal=vi.fn(()=>false);
+  traffic.b137NativeTick=1800;
+  traffic.p2BTeamDroughtFoot.set('B1',{
+   firstStillNativeTick:1800,nativeTick:1800,foot:foot.clone(),
+   stillAnchor:foot.clone(),misses:240
+  });
+  // The fallback still may issue a legacy ORIGINAL patrol target. That
+  // remains a move request only, never an ink-shot/score authorization.
+  traffic.chooseSourceGoal('B1',foot,result);
+  expect(bot.position).toEqual(foot);
+  expect(traffic.b443OriginalGoalLocks.size).toBe(0);
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);
  });
