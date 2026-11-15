@@ -741,6 +741,30 @@ async function runShortNormalSourceCombat(){
  };
  const s60=await sample(60),s90=await sample(90),
   s120=await sample(120),s150=await sample(150);
+ // Native KCC feet, not Crowd intention, rendered mesh or synthetic steps.
+ const physicalFoot=(n,id)=>{
+  const p=n.cpu?.cpu?.find(x=>x.id===id)?.physicalFoot;
+  return Array.isArray(p)&&p.length===3&&p.every(Number.isFinite)?p:null;
+ };
+ const nativeDistance=(a,b,id)=>{
+  const x=physicalFoot(a,id),y=physicalFoot(b,id);
+  return x&&y?Math.hypot(...x.map((v,i)=>y[i]-v)):null;
+ };
+ const bTeamIds=['B1','B2','B3','B4'];
+ const real90={
+  schema:'T21_V28_REAL_B207_90S_NATIVE_CHECKPOINT',source:'25/17/26/0',
+  realTick:s90.tick,elapsedSeconds:180-s90.timeRemainingSeconds,
+  trueSevenCpuRejoined:s90.cpu.physicalRejoins.length,
+  exactOriginalRampLocal:s90.cpu.sourcePatrol?.originalRampLocal??null,
+  actualPhysicalFeet:Object.fromEntries(
+   bTeamIds.map(id=>[id,physicalFoot(s90,id)])),
+  actualPaintChangedCells:Object.fromEntries(
+   bTeamIds.map(id=>[id,
+    s90.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells??null])),
+  officialWinner:'NONE',scoreable:0,syntheticGameWrites:0
+ };
+ report.realNormal90sCheckpoint=real90;persist();
+ console.log('T21_V28_B207_NATIVE_90S_SOURCE',JSON.stringify(real90));
  const end=await until(async()=>{
   const n=await state();
   if(n?.stopReason)fail('FULL_180_NATIVE_STOP_AT_TERMINAL',{
@@ -770,7 +794,8 @@ async function runShortNormalSourceCombat(){
    deniedKccDelta:
     (kcc(b,id,'rapierRejected')??0)-
     (kcc(a,id,'rapierRejected')??0),
-   lastRealFoot:b.cpu.cpu.find(z=>z.id===id)?.physicalFoot??null
+   lastRealFoot:b.cpu.cpu.find(z=>z.id===id)?.physicalFoot??null,
+   realFootDisplacementMeters:nativeDistance(a,b,id)
   });
   return [id,{first12to90:metrics(last,s90),
    late90to180:metrics(s90,end),
@@ -778,6 +803,61 @@ async function runShortNormalSourceCombat(){
    lastKccRejectedReason:
     end.cpuSourceNativeGroundMotion?.byActor?.[id]?.lastRejectCause??null}];
  }));
+ // True original post-Rapier foot positions at 90,120,150 and 180
+ // show an ACTUAL motion lower bound (not integral path length).
+ const lateBTeam=Object.fromEntries(bTeamIds.map(id=>{
+  const d90to120=nativeDistance(s90,s120,id);
+  const d120to150=nativeDistance(s120,s150,id);
+  const d150to180=nativeDistance(s150,end,id);
+  const intervalValues=[d90to120,d120to150,d150to180];
+  const totalLowerBound=intervalValues.every(x=>Number.isFinite(x))?
+   intervalValues.reduce((a,b)=>a+b,0):null;
+  const paint90=cumulative(s90,id,'changedCells');
+  const paint180=cumulative(end,id,'changedCells');
+  const firstKcc=kcc(s90,id,'rapierAcceptedMoving');
+  const lastKcc=kcc(end,id,'rapierAcceptedMoving');
+  const firstReject=kcc(s90,id,'rapierRejected');
+  const lastReject=kcc(end,id,'rapierRejected');
+  return [id,{
+   realPhysicalFoot90:physicalFoot(s90,id),
+   realPhysicalFoot120:physicalFoot(s120,id),
+   realPhysicalFoot150:physicalFoot(s150,id),
+   realPhysicalFoot180:physicalFoot(end,id),
+   physical90to120Meters:d90to120,
+   physical120to150Meters:d120to150,
+   physical150to180Meters:d150to180,
+   physical90to180NetMeters:nativeDistance(s90,end,id),
+   physicalCheckpointPathLowerBoundMeters:totalLowerBound,
+   actualPaintedCells90to180:
+    Number.isSafeInteger(paint90)&&Number.isSafeInteger(paint180)?
+     paint180-paint90:null,
+   realMovingKcc90to180:
+    Number.isSafeInteger(firstKcc)&&Number.isSafeInteger(lastKcc)?
+     lastKcc-firstKcc:null,
+   realDeniedKcc90to180:
+    Number.isSafeInteger(firstReject)&&Number.isSafeInteger(lastReject)?
+     lastReject-firstReject:null,
+   latestRealKccRejectCause:
+    end.cpuSourceNativeGroundMotion?.byActor?.[id]?.lastRejectCause??null
+  }];
+ }));
+ const lateBTeamStalled=bTeamIds.filter(id=>{
+  const n=lateBTeam[id].physicalCheckpointPathLowerBoundMeters;
+  return n===null||n<=.25;
+ });
+ const lateMovement={
+  schema:'T21_V28_B207_NATIVE_90_TO_180_FOUR_CPU_GROUND',
+  source:'25/17/26/0',checkpointSeconds:[90,120,150,180],
+  rampGoalsAt90:s90.cpu.sourcePatrol?.originalRampLocal??null,
+  rampGoalsAt180:end.cpu.sourcePatrol?.originalRampLocal??null,
+  cpu:lateBTeam,stalledByPhysicalCheckpoints:lateBTeamStalled,
+  allFourBTeamPhysicallyMoved:lateBTeamStalled.length===0,
+  artificialClockInkActorOrScoreWrites:0,
+  opponentRoutesCertified:false,formal4v4Certified:false
+ };
+ report.lateBTeam90to180=lateMovement;persist();
+ console.log('T21_V28_B207_NATIVE_90_TO_180_REAL_MOTION',
+  JSON.stringify(lateMovement));
  // Unlike a fake 10800-absolute-tick check, a genuine original
  // SOURCE world first spends native ticks in STAGING while all seven
  // CPU bodies physically rejoin. The 180-second countdown begins only
@@ -807,11 +887,15 @@ async function runShortNormalSourceCombat(){
   p2RealFootPaintSearchesAtEnd:
    end.b216RealNativePaintBackfill?.p2DenseRealFootSearches??null,
   originalCpuByActor:rows,realFinishUi:finish,
+  realBTeam90to180:lateMovement,
+  lateBTeamMovementCertified:lateBTeamStalled.length===0,
   officialWinner:'NONE',sourceScoreable:0,
   nativeScoreWrites:0,nativeActorWrites:0,
   originalOpponentRoutesProven:false,
   formal4v4Certified:false,gameplayQualityCertified:false};
- report.outcome='PASS_REAL_NORMAL_COMBAT_180S_TIME_UP';
+ report.outcome=lateBTeamStalled.length===0?
+  'PASS_B207_REAL_180S_FOUR_B_FEET_ACTIVE_AND_TIME_UP':
+  'HOLD_B207_REAL_180S_TIME_UP_B_TEAM_LATE_STALLED';
  persist();
  console.log('T21_V28_TRUE_NORMAL_COMBAT_180S',
   JSON.stringify(report.fullNormal180));
@@ -829,7 +913,9 @@ async function runShortNormalSourceCombat(){
  },120000);
  report.fullNormal180.genuineUserReplayNewWorld=true;
  report.fullNormal180.replayNativeTick=replay.tick;
- report.outcome='PASS_REAL_NORMAL_180S_AND_NATIVE_FRESH_REPLAY';
+ report.outcome=lateBTeamStalled.length===0?
+  'PASS_B207_REAL_180S_FOUR_B_FEET_AND_FRESH_REPLAY':
+  'HOLD_B207_REAL_180S_FRESH_REPLAY_B_TEAM_LATE_STALLED';
  persist();
  console.log('T21_V28_REAL_NORMAL_COMBAT_REPLAY_PASS',{
   freshNativeWorld:true,firstRoundActualTimeUp:true,scoreable:0});
