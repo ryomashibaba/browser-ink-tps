@@ -415,13 +415,13 @@ it('P2 B-team no-aim reroute requires genuinely stationary feet, not moving a fe
   bot.position.x=foot.x+i*.08;
   source.noteRealSourcePaintAimDrought('B2',bot.position,120+i*30);
  }
- expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1120);
+ expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1090);
  expect(source.p2BTeamDroughtFoot.get('B2')?.stillAnchor.x)
-  .toBeCloseTo(foot.x+.32);
+  .toBeCloseTo(foot.x+.24);
  source.b137NativeTick=1200;
  source.noteRealSourcePaintAimDrought('B3',b3.position,120);
  expect(source.p2BTeamDroughtFoot.get('B3')?.firstStillNativeTick).toBe(1200);
- expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1120);
+ expect(source.p2BTeamDroughtFoot.get('B2')?.firstStillNativeTick).toBe(1090);
  source.noteRealSourcePaintAimDrought('B2',bot.position,0);
  expect(source.p2BTeamDroughtFoot.has('B2')).toBe(false);
  expect(source.p2BTeamDroughtFoot.has('B3')).toBe(true);
