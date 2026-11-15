@@ -6,6 +6,7 @@
  * V28 owner-requested single 180s SOURCE gameplay validation at previous game SHA 52c0218b; no gameplay or physics change.
  * camera, projectiles, ink, HP or native step injection.
  * V28 B2/B4 genuine registered-ramp KCC height-drift fix: single 90s physical-foot witness. No change to gameplay or proof gates.
+ * V28 after fe91f5d: one owner-requested B2 real-blocker + B4 same-original-ramp 90s physical-foot verification. No gameplay edit.
  */
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
