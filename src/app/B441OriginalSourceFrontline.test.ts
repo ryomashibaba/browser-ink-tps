@@ -273,7 +273,7 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
    const h=physics.castCharacterFootSupport(
     new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
    const gap=h?Math.abs(h.point.y-p.y):null;
-   return {solidId:h?.solidId??null,gap,
+   return {solidId:h?.solidId??null,gapMeters:gap,
     supported:!!h&&gap!==null&&gap<=.25&&
      stage.solids.some(s=>s.id===h.solidId)};
   };
