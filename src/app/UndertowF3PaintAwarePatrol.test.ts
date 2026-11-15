@@ -47,6 +47,43 @@ describe('W10-B31 authoritative source-ink-aware CPU patrol only',()=>{
  });
 });
 
+describe('V28 real P2 outer existing-ink coverage priority',()=>{
+ it('seeks truly unpainted distant original cells while legacy rankings stay fixed',()=>{
+  const ink=new GameplayInkSystem();
+  const source=new PaintSurface(
+   'UndertowT21D:right-low-team-b:paint',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   40,40,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  ink.registerSurface(source);
+  source.ownerGrid.fill(Team.B);
+  const g=[new Vec3(-8,3,0),new Vec3(8,3,0)];
+  // Exactly two actual neutral ORIGINAL cells are away from the first
+  // goal. The old 0.75m grid cannot see them at all.
+  for(const z of [4.5,7.5]){
+   const p=ink.sampleWorld(new Vec3(-8,3.06,z),
+    .38,SurfaceFlags.Paintable)!;
+   expect(p.surface.id).toBe(source.id);
+   source.ownerGrid[source.index(
+    Math.floor(p.u/source.cellSize),Math.floor(p.v/source.cellSize))]=Team.Neutral;
+  }
+  const before=Array.from(source.ownerGrid);
+  const ordinary=rankOriginalSourcePatrolGoals(g,Team.B,ink,1);
+  expect(ordinary.map(x=>x.index)).toEqual([1,0]);
+  expect(ordinary.every(x=>x.neighborhoodOpportunity===0)).toBe(true);
+  const outer=rankOriginalSourcePatrolGoals(g,Team.B,ink,1,true);
+  expect(outer.map(x=>x.index)).toEqual([0,1]);
+  expect(outer[0]!.neighborhoodOpportunity).toBeGreaterThan(0);
+  expect(outer[1]!.neighborhoodOpportunity).toBe(0);
+  expect(outer.every(x=>x.sourceOnly&&!x.pathAuthorized)).toBe(true);
+  expect(outer[0]!.sampledOriginalCells).toBe(13);
+  expect(existingOriginalSourceInkOpportunity(outer[0]!)).toBe(true);
+  expect(existingOriginalSourceInkOpportunity(ordinary[0]!)).toBe(false);
+  expect(Array.from(source.ownerGrid)).toEqual(before);
+  expect(g.map(p=>p.toString())).toEqual(
+   [new Vec3(-8,3,0),new Vec3(8,3,0)].map(p=>p.toString()));
+ });
+});
+
 describe('W10-B33 prior original goal hysteresis, not fabricated Nav',()=>{
  it('holds an in-flight PREAPPROVED goal before ownership priority',()=>{
   const ink=ownerInk([Team.A,Team.Neutral,Team.B,Team.A]);
