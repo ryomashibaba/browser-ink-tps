@@ -937,6 +937,13 @@ export class UndertowF3PlayablePreviewApp{
    b31Params.get('t21W10B441')==='sourceFrontline';
   const b448OptIn=b441OptIn&&
    b31Params.get('t21W10B448')==='realA3Front';
+  // F2/F3 integration: the ordinary B207 game should use the ALREADY
+  // proven original-source, strictly path-verified same-side CPU patrol,
+  // rather than remaining on a fixed exhausted source aim indefinitely.
+  // This is not B448's extra A3 research permission, nor any new route.
+  const ordinarySourceCombat=b214BattleInk&&
+   sourceCanonicalPlayableMode(location.href)==='combat';
+  const realOriginalCombatPatrol=b441OptIn||ordinarySourceCombat;
   this.traffic=new UndertowF3SourceTraffic(
    stage,this.nav,slots,bots,this.physics,this.ink,
    b31Enabled,b33StableGoals,b34Recover,
@@ -945,8 +952,8 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally,
    b31Params.get('t21QaDrive')==='source'&&
    realAllyRally&&realAllyInk,
-   b192HumanCombatEnabled,b193Coop,b441OptIn,b448OptIn,
-   b214BattleInk);
+   b192HumanCombatEnabled,b193Coop,realOriginalCombatPatrol,
+   b448OptIn,b214BattleInk);
   this.canvas.dataset.t21B448RealA3OriginalGoal=b448OptIn?
    'STRICT_REAL_CPU_A3_ORIGINAL_GOAL_REAUTHORIZATION':'OFF';
   this.canvas.dataset.t21B441OriginalFrontline=b441OptIn?
@@ -1055,16 +1062,11 @@ export class UndertowF3PlayablePreviewApp{
          targetSupport:targetHit,firstStageBlock:block
         });
        });
-      // The ordinary B207 180s SOURCE combat uses the same seven REAL
-      // physical CPUs, original owner-grid and B216 Rapier shot-line gate
-      // as the B441 study. Recover actual 120+ weapon-ready NO-AIM droughts
-      // in this playable mode too, rather than leaving thousands of genuine
-      // late-round CPU decisions idle. Every candidate is still verified
-      // against real original support, range, cover and paid projectiles.
-      // Keep co-op, circuit, fixed patrol goals and T20 unchanged.
-      const ordinarySourceCombat=b214BattleInk&&
-        sourceCanonicalPlayableMode(location.href)==='combat';
-      if(b441OptIn||ordinarySourceCombat)
+      // Original-verified patrol destinations plus actual paid paint
+      // recovery now share the SAME ordinary B207 seven-CPU SOURCE world.
+      // The B216 real original Rapier/ownerGrid/weapon gates still decide
+      // which projectile may fire; no Actor jump, score or new floor.
+      if(realOriginalCombatPatrol)
         this.cpu.enableP2OriginalOuterSourceBackfill();
     }
   }
