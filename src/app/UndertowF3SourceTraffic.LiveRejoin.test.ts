@@ -498,6 +498,7 @@ it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL di
  Object.assign(source,{stage:undertowT21dConnectivityQaStage(),
   bots:[b4,b3],physicallyRejoined:new Set(['B3','B4']),
   realKccRejectedSteps:new Map(),realKccLastActorBlocker:new Map(),
+  realKccBTeamRecoveryAnchor:new Map(),
   enableB441SourceFrontline:true,b137NativeTick:300,
   hasSourceFootSupport:()=>true});
  for(let i=0;i<90;i++){
@@ -518,6 +519,9 @@ it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL di
   path(new Vec3(-2.27,3.158,-50.71)))).toBe(false);
  source.noteRealSourceKccApprovedStep('B4',foot,
   new Vec3(foot.x-.03,foot.y,foot.z));
+ expect(source.realKccLastActorBlocker.has('B4')).toBe(true);
+ source.noteRealSourceKccApprovedStep('B4',foot,
+  new Vec3(foot.x-.26,foot.y,foot.z));
  expect(source.realKccLastActorBlocker.has('B4')).toBe(false);
 });
 
@@ -618,6 +622,7 @@ it('B2 real same-team capsule KCC veto rejects only a recently contacted teammat
  Object.assign(source,{stage:undertowT21dConnectivityQaStage(),
   bots:[b2,b4],physicallyRejoined:new Set(['B2','B4']),
   realKccRejectedSteps:new Map(),realKccLastActorBlocker:new Map(),
+  realKccBTeamRecoveryAnchor:new Map(),
   enableB441SourceFrontline:true,b137NativeTick:400,
   hasSourceFootSupport:()=>true});
  for(let i=0;i<90;i++){
@@ -631,9 +636,14 @@ it('B2 real same-team capsule KCC veto rejects only a recently contacted teammat
   path(new Vec3(-17.265747,4.6,-48.059631)))).toBe(true);
  expect(source.kccActorBlocksOriginalRoute('B2',foot,
   path(new Vec3(-2.270069,3.158,-50.710491)))).toBe(false);
- // Genuine >2.5cm Rapier travel clears the prior blocker witness.
+ // 3cm real KCC jitter is not recovery. A 26cm genuine accepted
+ // physical foot step clears the old denied-foot episode.
  source.noteRealSourceKccApprovedStep('B2',foot,
   new Vec3(foot.x+.03,foot.y,foot.z));
+ expect(source.kccActorBlocksOriginalRoute('B2',foot,
+  path(new Vec3(-17.265747,4.6,-48.059631)))).toBe(true);
+ source.noteRealSourceKccApprovedStep('B2',foot,
+  new Vec3(foot.x+.26,foot.y,foot.z));
  expect(source.kccActorBlocksOriginalRoute('B2',foot,
   path(new Vec3(-17.265747,4.6,-48.059631)))).toBe(false);
  expect(b2.position.equals(foot)).toBe(true);
@@ -659,7 +669,7 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
   b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B3',{}]]),
   b467LiveSourceGoals:new Map(),patrolGoals:new Map([['B3',[far,near]]]),
   patrolIndex:new Map([['B3',0]]),
-  realKccRejectedSteps:new Map(),realKccB3RecoveryAnchor:new Map(),
+  realKccRejectedSteps:new Map(),realKccBTeamRecoveryAnchor:new Map(),
   realKccLastActorBlocker:new Map(),
   hasSourceFootSupport:()=>true,
   sourceNativeCharacterFootHit:(p:Vec3)=>({solidId:
@@ -681,12 +691,12 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
    new Vec3(foot.x+.03,foot.y,foot.z));
  }
  expect(source.realKccRejectedSteps.get('B3')).toBe(90);
- expect(source.realKccB3RecoveryAnchor.get('B3')?.equals(foot)).toBe(true);
+ expect(source.realKccBTeamRecoveryAnchor.get('B3')?.equals(foot)).toBe(true);
  const out=new Vec3(9,9,9);
  expect(source.chooseSourceGoal('B3',foot,out)).toBe(true);
  expect(out.equals(near)).toBe(true);
  expect(source.realKccRejectedSteps.has('B3')).toBe(false);
- expect(source.realKccB3RecoveryAnchor.has('B3')).toBe(false);
+ expect(source.realKccBTeamRecoveryAnchor.has('B3')).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
  // The original strict full-route Rapier/Recast veto is unchanged.
  source.patrolIndex.set('B3',0);
@@ -702,7 +712,7 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
  source.noteRealSourceKccApprovedStep('B3',foot,
   new Vec3(foot.x-.30,foot.y,foot.z));
  expect(source.realKccRejectedSteps.has('B3')).toBe(false);
- expect(source.realKccB3RecoveryAnchor.has('B3')).toBe(false);
+ expect(source.realKccBTeamRecoveryAnchor.has('B3')).toBe(false);
  // Even if each accepted physical step was <2.5cm, the NEXT genuine
  // rejected foot observation cannot retain the old streak once actual
  // horizontal distance from the prior KCC anchor exceeded 25cm.
@@ -711,6 +721,6 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
  bot.position=progressed; // controlled test fixture, never a runtime move
  source.noteRealSourceKccRejectedStep('B3',progressed);
  expect(source.realKccRejectedSteps.get('B3')).toBe(1);
- expect(source.realKccB3RecoveryAnchor.get('B3')?.equals(progressed))
+ expect(source.realKccBTeamRecoveryAnchor.get('B3')?.equals(progressed))
   .toBe(true);
 });

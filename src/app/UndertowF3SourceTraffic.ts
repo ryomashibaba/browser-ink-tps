@@ -383,12 +383,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * every new candidate must independently pass strict source+Recast gates.
   * This ledger can NEVER approve a step, original face, or cross-team route. */
  private readonly realKccRejectedSteps=new Map<string,number>();
- /** Genuine B3 #43667197355: 209 rejected ORIGINAL next feet during
-  * 40-90s, but small <=3cm Rapier-authorized jitter repeatedly erased
-  * its KCC veto streak. Keep the anchor at its REAL rejected KCC foot
-  * until >=25cm of genuine horizontal progress, or an alternate source
-  * goal is independently approved. Never authorizes actor movement. */
- private readonly realKccB3RecoveryAnchor=new Map<string,Vec3>();
+ /** Genuine B3 #43667197355 and B2/B4 native actor-contact evidence:
+  * accepted <=3cm Rapier foot jitter must not erase repeated KCC
+  * refusals. Keep the true B-team foot anchor until >=25cm of
+  * actual horizontal progress or an independently authorized original
+  * alternative. Never authorizes actor movement, stage or crossing. */
+ private readonly realKccBTeamRecoveryAnchor=new Map<string,Vec3>();
  /** Real KCC contact owner, never mere distance-based collision inference. */
  private readonly realKccLastActorBlocker=new Map<string,{
   ownerId:string;nativeTick:number
@@ -1000,16 +1000,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      !this.hasSourceFootSupport(actualFoot))return;
   this.realKccRejectedSteps.set(id,Math.min(180,
    (this.realKccRejectedSteps.get(id)??0)+1));
-  if(id==='B3'&&this.enableB441SourceFrontline&&
-     this.realKccB3RecoveryAnchor){
-   const anchor=this.realKccB3RecoveryAnchor.get(id);
+  if((id==='B2'||id==='B3'||id==='B4')&&
+     this.enableB441SourceFrontline&&
+     this.realKccBTeamRecoveryAnchor){
+   const anchor=this.realKccBTeamRecoveryAnchor.get(id);
    // A genuine 25cm advance made in several individually <2.5cm
    // accepted Rapier steps must also clear stale denial history.
    if(!anchor||Math.hypot(
       actualFoot.x-anchor.x,actualFoot.z-anchor.z)>=.25){
     this.realKccRejectedSteps.set(id,1);
     this.realKccLastActorBlocker?.delete(id);
-    this.realKccB3RecoveryAnchor.set(id,
+    this.realKccBTeamRecoveryAnchor.set(id,
      new Vec3(actualFoot.x,actualFoot.y,actualFoot.z));
    }
   }
@@ -1072,13 +1073,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // jitter as continuous recovery. Only REAL KCC-grounded 25cm XZ
    // progress from the first genuine denied SOURCE step clears its
    // stalled-ramp witness. Other actors retain their original behavior.
-   const anchor=id==='B3'&&this.enableB441SourceFrontline?
-    this.realKccB3RecoveryAnchor?.get(id):null;
+   const anchor=(id==='B2'||id==='B3'||id==='B4')&&
+    this.enableB441SourceFrontline?
+    this.realKccBTeamRecoveryAnchor?.get(id):null;
    if(anchor&&Math.hypot(
       acceptedFoot.x-anchor.x,acceptedFoot.z-anchor.z)<.25)return;
    this.realKccRejectedSteps.delete(id);
    this.realKccLastActorBlocker?.delete(id);
-   this.realKccB3RecoveryAnchor?.delete(id);
+   this.realKccBTeamRecoveryAnchor?.delete(id);
   }
  }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
@@ -2247,7 +2249,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     });
     if(releasedTrueKccFront){
      this.realKccRejectedSteps.delete(id);
-     this.realKccB3RecoveryAnchor.delete(id);
+     this.realKccBTeamRecoveryAnchor.delete(id);
      this.realKccLastActorBlocker.delete(id);
     }
     this.realGoalRequests++;
@@ -2439,7 +2441,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.p2BTeamDroughtFoot.delete(id);
    if(kccBlockedAlternative){
     this.realKccRejectedSteps.delete(id);
-    this.realKccB3RecoveryAnchor?.delete(id);
+    this.realKccBTeamRecoveryAnchor?.delete(id);
    }
    out.copy(goal);this.realGoalRequests++;
    if(rank){
@@ -2456,7 +2458,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // CPU foot and retry the previous FIXED patrol on the next think cycle.
   if(kccBlockedAlternative){
    this.realKccRejectedSteps.delete(id);
-   this.realKccB3RecoveryAnchor?.delete(id);
+   this.realKccBTeamRecoveryAnchor?.delete(id);
   }
   this.heldRequests++;return false;
  }
@@ -2642,7 +2644,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.respawnOriginalDrops.delete(bot.id);
     this.patrolIndex.set(bot.id,-1);
     this.realKccRejectedSteps.delete(bot.id);
-    this.realKccB3RecoveryAnchor?.delete(bot.id);
+    this.realKccBTeamRecoveryAnchor?.delete(bot.id);
     this.p2BTeamDroughtFoot.delete(bot.id);
     this.p2BTeamLastFullRouteAuditTick.delete(bot.id);
     // A new real life cannot inherit the splatted actor's previously
@@ -2966,7 +2968,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b442LastApprovedFront.delete(id);
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
-  this.realKccB3RecoveryAnchor?.delete(id);
+  this.realKccBTeamRecoveryAnchor?.delete(id);
    this.realKccLastActorBlocker?.delete(id);
    this.p2BTeamDroughtFoot.delete(id);
    this.p2BTeamLastFullRouteAuditTick.delete(id);
