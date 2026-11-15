@@ -483,6 +483,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
 
   it('SOURCE CPU blast and human HP obey real original wall cover, T20 remains unchanged',()=>{
     const {system,bot}=fixture(true);
+    bot.position.set(2,0,0);
     bot.hp=75;
     system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
     const projectile:any=Object.create(ProjectileSystem.prototype);
@@ -1707,7 +1708,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     sub.stats={playerSubExplosions:0};
     sub.deactivate=vi.fn();
     const bomb:any={active:true,team:Team.A,
-      position:new Vec3(0,.68,0)};
+      position:new Vec3(1,.68,0)};
     bot.mobilityState='FIRST_DROP_REJOIN';
     sub.explode(bomb,profile,'CONTACT_IMPACT');
     expect(bot.hp).toBe(100);
