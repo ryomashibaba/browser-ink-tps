@@ -28,7 +28,7 @@ const priorities:Readonly<Record<OriginalPatrolInkPriority,number>>={
  */
 export function rankOriginalSourcePatrolGoals(
  goals:readonly Vec3[],team:Team.A|Team.B,ink:GameplayInkSystem,
- startIndex:number,includeOuterOriginalInk=false
+ startIndex:number
 ):OriginalPatrolInkRank[]{
  if(!Number.isSafeInteger(startIndex)||startIndex<0)
   throw Error('W10_B31_UNVERIFIED_START_INDEX');
@@ -59,21 +59,10 @@ export function rankOriginalSourcePatrolGoals(
   let weight=center?2:1,activeCells=center?1:0;
   if(sourceOnlySurface&&center){
    // Use the SURFACE's genuine U/V basis (not synthetic XZ turf).
-   // Default: the original four 0.75m samples, unchanged.
-   // P2 B-team only: after the real 180s no-aim diagnosis, also
-   // READ the authentic owner's existing cells 4.5/7.5m out from
-   // an already-listed goal. This changes preference, never creates
-   // a source goal or approves a shot, route, actor or score. Preserve
-   // the original surface ID and ACTIVE footprint cell requirements.
-   const nearby:[[number,number],[number,number],
-    [number,number],[number,number]]=[
-     [.75,0],[-.75,0],[0,.75],[0,-.75]
-    ];
-   const outer:readonly (readonly [number,number])[]=
-    includeOuterOriginalInk?
-     [[4.5,0],[-4.5,0],[0,4.5],[0,-4.5],
-      [7.5,0],[-7.5,0],[0,7.5],[0,-7.5]]:[];
-   for(const [du,dv] of [...nearby,...outer]){
+   // Query four additional nearby existing owner-grid cells without
+   // adding goals, scoring, paint, traversal or terrain. Only the
+   // exact SAME ORIGINAL surface and active mask count as evidence.
+   for(const [du,dv] of [[.75,0],[-.75,0],[0,.75],[0,-.75]] as const){
     const neighbor=ink.sampleWorld(new Vec3(
      goal.x+surface.uAxis.x*du+surface.vAxis.x*dv,
      goal.y+.06+surface.uAxis.y*du+surface.vAxis.y*dv,

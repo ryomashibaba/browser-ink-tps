@@ -1859,8 +1859,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       if(this.sourceInk&&(fronts.length>=2||distributeFirstSourceBGoal)){
        const points=originalProposals.map(p=>new Vec3(...p.point));
        const ranked=rankOriginalSourcePatrolGoals(
-        points,bot.team,this.sourceInk,0,
-         this.enableB441SourceFrontline&&bot.team===Team.B);
+        points,bot.team,this.sourceInk,0);
        const separated=distributeOriginalSourceGoalCoverage(
         ranked,points,this.actualTeamCoveragePositions(id,bot.team));
        prioritized=separated.map(row=>originalProposals[row.index]!);
@@ -1952,8 +1951,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       const originalPoints=proposals.map(p=>new Vec3(...p.point));
       const ranked=distributeOriginalSourceGoalCoverage(
        rankOriginalSourcePatrolGoals(
-        originalPoints,bot.team,this.sourceInk,0,
-         this.enableB441SourceFrontline&&bot.team===Team.B),
+        originalPoints,bot.team,this.sourceInk,0),
        originalPoints,this.actualTeamCoveragePositions(id,bot.team));
       this.b470RankedActualGoalAudits++;
       for(const choice of ranked){
@@ -2032,8 +2030,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       const candidateFeet=proposals.map(p=>new Vec3(...p.point));
       const ranked=distributeOriginalSourceGoalCoverage(
        rankOriginalSourcePatrolGoals(
-        candidateFeet,Team.B,this.sourceInk,0,
-         this.enableB441SourceFrontline),
+        candidateFeet,Team.B,this.sourceInk,0),
        candidateFeet,this.actualTeamCoveragePositions(id,Team.B));
       for(const row of ranked){
        // OWN/sampled with real neutral neighbors is allowed, but never
@@ -2151,8 +2148,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       (id==='A2'||id==='A3'||id==='B1'||id==='B3')){
     const other=goals.filter(p=>p.distance(completed!)>.01);
     const ranked=distributeOriginalSourceGoalCoverage(
-     rankOriginalSourcePatrolGoals(other,bot.team,this.sourceInk,0,
-      this.enableB441SourceFrontline&&bot.team===Team.B),
+     rankOriginalSourcePatrolGoals(other,bot.team,this.sourceInk,0),
      other,this.actualTeamCoveragePositions(id,bot.team));
     goals=[...ranked.map(row=>other[row.index]!),
      ...goals.filter(p=>p.distance(completed!)<=.01)];
@@ -2164,8 +2160,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b467LiveSourceGoals.has(id)&&this.sourceInk){
     const nonCompleted=goals.filter(p=>p.distance(completed!)>.01);
     const ranked=distributeOriginalSourceGoalCoverage(
-     rankOriginalSourcePatrolGoals(nonCompleted,bot.team,this.sourceInk,0,
-      this.enableB441SourceFrontline&&bot.team===Team.B),
+     rankOriginalSourcePatrolGoals(nonCompleted,bot.team,this.sourceInk,0),
      nonCompleted,this.actualTeamCoveragePositions(id,bot.team));
     goals=[...ranked.map(row=>nonCompleted[row.index]!),
      ...goals.filter(p=>p.distance(completed!)<=.01)];
@@ -2280,8 +2275,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Unavailable original paint-surface sampling simply defers to the
   // previous deterministic loop: no synthetic paint inference.
   const initialRanks=this.enablePaintAwarePatrol&&this.sourceInk?
-   rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first,
-    this.enableB441SourceFrontline&&bot.team===Team.B):
+   rankOriginalSourcePatrolGoals(candidates,bot.team,this.sourceInk,first):
    null;
   const prior=candidates[active];
   const priorDistance=prior?Math.hypot(
