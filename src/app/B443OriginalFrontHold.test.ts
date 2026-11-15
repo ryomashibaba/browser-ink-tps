@@ -29,6 +29,15 @@ describe('B443 actual SOURCE front-goal hysteresis (no new stage authority)',()=
   expect(choose(350,100,230,.2,2,.2).decision)
    .toBe('ROTATE_AFTER_DWELL');
  });
+ it('releases a true KCC-denied approach only with multiple ORIGINAL goals',()=>{
+  expect(choose(181,100,null,5,2,.1,89).decision).toBe('KEEP_APPROACH');
+  expect(choose(181,100,null,5,2,.1,90).decision)
+   .toBe('RELEASE_STALLED_OR_INVALID');
+  expect(choose(181,100,null,5,1,.1,120).decision).toBe('KEEP_APPROACH');
+  expect(choose(181,100,null,1.4,2,.1,90).decision).toBe('KEEP_DWELL');
+  expect(choose(181,100,null,5,2,.1,-1).decision)
+   .toBe('RELEASE_STALLED_OR_INVALID');
+ });
  it('never pins an unreachable far-away approved SOURCE goal indefinitely',()=>{
   expect(choose(399,100,null,12,2,.1).decision).toBe('KEEP_APPROACH');
   expect(choose(400,100,null,12,2,.1).decision)

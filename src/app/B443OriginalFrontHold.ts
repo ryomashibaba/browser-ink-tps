@@ -12,7 +12,8 @@ export function decideB443OriginalFrontHold(
  nativeTick:number,firstApprovedTick:number,
  arrivedSinceTick:number|null,physicalGoalXZDistance:number,
  originalVerifiedGoalCount:number,
- physicalFootToOriginalGoalVerticalMeters:number
+ physicalFootToOriginalGoalVerticalMeters:number,
+ genuineOriginalKccDeniedSteps=0
 ):B443OriginalHoldResult{
  const release={decision:'RELEASE_STALLED_OR_INVALID' as const,
   arrivedSinceTick:null};
@@ -27,13 +28,20 @@ export function decideB443OriginalFrontHold(
     !Number.isFinite(physicalFootToOriginalGoalVerticalMeters)||
     physicalFootToOriginalGoalVerticalMeters<0||
     !Number.isSafeInteger(originalVerifiedGoalCount)||
-    originalVerifiedGoalCount<1)return release;
+    originalVerifiedGoalCount<1||
+    !Number.isSafeInteger(genuineOriginalKccDeniedSteps)||
+    genuineOriginalKccDeniedSteps<0)return release;
  // Source has real multi-level floors at Y=3.0/4.5/7.5m. A
  // 2D-near CPU on a different certified floor has NOT arrived.
  // Require the existing B470 native floor-height band (<=0.30m)
  // in addition to the original same-side XZ arrival radius.
  const originalFootSameElevation=
   physicalFootToOriginalGoalVerticalMeters<=.30;
+ // A true 90+ Rapier rejection can release an unreachable APPROACH
+ // before the default 300-tick hold, only if a distinct certified
+ // SOURCE frontline goal already exists. New route is not authorized here.
+ if(originalVerifiedGoalCount>=2&&genuineOriginalKccDeniedSteps>=90&&
+    physicalGoalXZDistance>1.5)return release;
  const near=originalFootSameElevation&&physicalGoalXZDistance<=1.5;
  const arrival=!originalFootSameElevation?null:
   near?(arrivedSinceTick??nativeTick):arrivedSinceTick;

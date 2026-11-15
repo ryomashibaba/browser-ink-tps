@@ -2081,6 +2081,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    const lock=this.b443OriginalGoalLocks.get(id);
    let completed:Vec3|null=null;
+   // Only genuine B-team 90+ physical KCC rejects can override a still
+   // moving FRONT lock, and only with a distinct vetted original target.
+   const trueKccStalledFront=!!lock&&this.enableB441SourceFrontline&&
+    bot.team===Team.B&&bot.lifeState==='ACTIVE'&&
+    bot.mobilityState==='GROUND'&&this.physicallyRejoined.has(id)&&
+    fronts.length>=2&&(this.realKccRejectedSteps.get(id)??0)>=90;
+   let releasedTrueKccFront:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
    // when CPU feet came within 1.5m of the first verified SOURCE goal.
    // Keep an APPROVED goal through approach and for 120 authentic ticks
@@ -2091,7 +2098,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     const decision=decideB443OriginalFrontHold(
      this.b137NativeTick,lock.firstApprovedTick,
      lock.arrivedSinceTick,distance,fronts.length,
-     Math.abs(lock.target.y-realFoot.y));
+     Math.abs(lock.target.y-realFoot.y),
+     trueKccStalledFront?(this.realKccRejectedSteps.get(id)??0):0);
+    if(trueKccStalledFront&&
+       decision.decision==='RELEASE_STALLED_OR_INVALID'&&
+       distance>1.5)
+     releasedTrueKccFront=lock.target.clone();
     if(decision.decision==='KEEP_APPROACH'||
        decision.decision==='KEEP_DWELL'||
        decision.decision==='ROTATE_AFTER_DWELL'){
@@ -2142,6 +2154,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    let goals=completed&&fronts.length>1?
     [...fronts.filter(p=>p.distance(completed)>.01),
      ...fronts.filter(p=>p.distance(completed)<=.01)]:fronts;
+   // A genuine KCC-vetoed Crowd target may not simply be resubmitted.
+   if(releasedTrueKccFront)
+    goals=goals.filter(p=>p.distance(releasedTrueKccFront!)>=2);
    // B470: existing A/B local goals are also prioritized by actual
    // unscored source ink when a native 120-tick dwell really completed.
    if(completed&&fronts.length>2&&this.sourceInk&&
@@ -2186,7 +2201,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     const route=this.nav.auditPath(realFoot,goal);
     if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
         route.endSnapDistanceMeters>.20||
-        !this.hasSourceSupportedRoute(route,sign)||
+        !this.hasSourceSupportedRoute(route,sign,
+         releasedTrueKccFront?realFoot:undefined,
+         releasedTrueKccFront!==null)||
         this.kccActorBlocksOriginalRoute(id,realFoot,route)){
      if(gate)gate.runtimeUnsupportedNativePath++;
      this.b441UnsafeOrUnreachableHolds++;continue;
@@ -2228,10 +2245,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b442LastApprovedFront.set(id,{
      target:goal.clone(),nativeTick:this.b137NativeTick
     });
+    if(releasedTrueKccFront){
+     this.realKccRejectedSteps.delete(id);
+     this.realKccB3RecoveryAnchor.delete(id);
+     this.realKccLastActorBlocker.delete(id);
+    }
     this.realGoalRequests++;
     this.b441ActualGoalRequests++;
     return true;
    }
+   // Without a verified alternate the physical KCC veto remains.
+   if(releasedTrueKccFront){this.heldRequests++;return false;}
   }
   const active=this.patrolIndex.get(id)??-1;
   // Unlike the legacy B34 stationary inference, this is triggered only by
