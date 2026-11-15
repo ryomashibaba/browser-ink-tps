@@ -608,4 +608,14 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
   new Vec3(foot.x-.30,foot.y,foot.z));
  expect(source.realKccRejectedSteps.has('B3')).toBe(false);
  expect(source.realKccB3RecoveryAnchor.has('B3')).toBe(false);
+ // Even if each accepted physical step was <2.5cm, the NEXT genuine
+ // rejected foot observation cannot retain the old streak once actual
+ // horizontal distance from the prior KCC anchor exceeded 25cm.
+ for(let i=0;i<22;i++)source.noteRealSourceKccRejectedStep('B3',foot);
+ const progressed=new Vec3(foot.x+.26,foot.y,foot.z);
+ bot.position=progressed; // controlled test fixture, never a runtime move
+ source.noteRealSourceKccRejectedStep('B3',progressed);
+ expect(source.realKccRejectedSteps.get('B3')).toBe(1);
+ expect(source.realKccB3RecoveryAnchor.get('B3')?.equals(progressed))
+  .toBe(true);
 });

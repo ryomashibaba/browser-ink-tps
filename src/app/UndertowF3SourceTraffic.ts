@@ -996,9 +996,18 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.realKccRejectedSteps.set(id,Math.min(180,
    (this.realKccRejectedSteps.get(id)??0)+1));
   if(id==='B3'&&this.enableB441SourceFrontline&&
-     !this.realKccB3RecoveryAnchor?.has(id))
-   this.realKccB3RecoveryAnchor?.set(id,
-    new Vec3(actualFoot.x,actualFoot.y,actualFoot.z));
+     this.realKccB3RecoveryAnchor){
+   const anchor=this.realKccB3RecoveryAnchor.get(id);
+   // A genuine 25cm advance made in several individually <2.5cm
+   // accepted Rapier steps must also clear stale denial history.
+   if(!anchor||Math.hypot(
+      actualFoot.x-anchor.x,actualFoot.z-anchor.z)>=.25){
+    this.realKccRejectedSteps.set(id,1);
+    this.realKccLastActorBlocker?.delete(id);
+    this.realKccB3RecoveryAnchor.set(id,
+     new Vec3(actualFoot.x,actualFoot.y,actualFoot.z));
+   }
+  }
   const owner=realKccOwners.find(otherId=>{
    const other=this.bots.find(b=>b.id===otherId);
    return !!other&&other.id!==id&&other.team===bot.team&&
