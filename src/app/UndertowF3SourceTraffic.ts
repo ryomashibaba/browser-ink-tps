@@ -19,7 +19,7 @@ import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollision
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
 import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
- diversifyB153OriginalAllyInkCandidates}
+ diversifyB153OriginalAllyInkCandidates,b150OriginalAllyNativeShotReachable}
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
@@ -858,6 +858,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      bot.mobilityState!=='GROUND'||!bot.agent||
      !this.freeCombat||!this.physicallyRejoined.has('A1')||
      !this.b137HumanFootValid||!this.sourceInk||!this.physics||!approved||
+     !bot.weaponId||
      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
      this.stage.solids.length!==25||this.stage.paintSurfaces.length!==17||
      this.stage.navigationLinks?.length!==26||
@@ -891,6 +892,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      source.solidId!==humanSource.solidId||
      !flat(realFoot,source.solidId)||
      !flat(human,humanSource.solidId))return false;
+  const nativeWeaponRange=cpuWeaponRangeMeters(weaponProfile(bot.weaponId));
+  if(!Number.isFinite(nativeWeaponRange)||nativeWeaponRange<=0)return false;
+  const muzzle=new Vec3(realFoot.x,
+   realFoot.y+GAME_CONFIG.cpu.muzzleHeightMeters,realFoot.z);
   const candidates=b150OriginalAllyInkCandidates(realFoot,human);
   const diversified=diversifyB153OriginalAllyInkCandidates(
    candidates,this.b150ApprovedInkAims);
@@ -907,6 +912,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(!targetHit||targetHit.solidId!==source.solidId||
       Math.abs(targetHit.point.y-target.y)>.22||
       !flat(target,targetHit.solidId))continue;
+   // Previously the first valid unowned source grid cell could be
+   // OUTSIDE A1's actual equipped range, so CpuAgentSystem rejected it
+   // after the selection loop and never tried the next legitimate aim.
+   // Reject real original cover too; inspect a different EXISTING cell.
+   const firstBlock=this.physics.castStageSegment(
+    muzzle,target,'ink-projectile');
+   if(!b150OriginalAllyNativeShotReachable(
+      realFoot,target,nativeWeaponRange,source.solidId,firstBlock))continue;
    out.copy(target);
    if(this.b150ApprovedInkAims>0)this.b153DiversifiedAimApprovals++;
    this.b150ApprovedInkAims++;

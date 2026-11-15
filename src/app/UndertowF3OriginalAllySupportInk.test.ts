@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {eligibleB150OriginalAllyInk as eligible,
  b150OriginalAllyInkCandidates as candidates,
  diversifyB153OriginalAllyInkCandidates as diversify,
+ b150OriginalAllyNativeShotReachable as canShoot,
  type B150Foot}
  from './UndertowF3OriginalAllySupportInk';
 describe('B150 opt-in real station must precede any source ink aim',()=>{
@@ -53,5 +54,36 @@ describe('B153 diversify only already source-proposed directions',()=>{
   expect(diversify([],5)).toEqual([]);
   expect(diversify([points[0]!],5)).toEqual([points[0]]);
   expect(diversify(points,2).every(p=>points.includes(p))).toBe(true);
+ });
+});
+
+
+describe('original A1 ally shot opportunity is real native reach, not just a paint pixel',()=>{
+ const cpu={x:1,y:3.1,z:48};
+ const target={x:4,y:3.1,z:48};
+ const solid='UndertowT21D:right-low-team-a';
+ it('accepts genuine in-range unblocked original-floor aim',()=>{
+  expect(canShoot(cpu,target,3.2,solid,null)).toBe(true);
+  expect(canShoot(cpu,target,3.2,solid,{
+   solidId:solid,point:{x:4,y:3.07,z:48}
+  })).toBe(true);
+ });
+ it('rejects out-of-range aim so another real source pixel can be considered',()=>{
+  expect(canShoot(cpu,target,2.5,solid,null)).toBe(false);
+  expect(canShoot(cpu,target,3.2,'UNREGISTERED',null)).toBe(false);
+  expect(canShoot(cpu,target,NaN,solid,null)).toBe(false);
+  expect(canShoot(cpu,{...target,z:Infinity},3.2,solid,null)).toBe(false);
+ });
+ it('rejects original cover, including an earlier blocker on same source slab',()=>{
+  expect(canShoot(cpu,target,4,solid,{
+   solidId:'UndertowT21D:original-cover',
+   point:{x:2,y:3.8,z:48}
+  })).toBe(false);
+  expect(canShoot(cpu,target,4,solid,{
+   solidId:solid,point:{x:2.5,y:3.1,z:48}
+  })).toBe(false);
+  expect(canShoot(cpu,target,4,solid,{
+   solidId:solid,point:{x:NaN,y:3,z:48}
+  })).toBe(false);
  });
 });

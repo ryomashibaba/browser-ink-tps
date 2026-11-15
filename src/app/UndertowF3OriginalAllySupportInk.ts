@@ -63,3 +63,27 @@ export function diversifyB153OriginalAllyInkCandidates(
  const start=completedApprovals%points.length;
  return [...points.slice(start),...points.slice(0,start)];
 }
+
+/** Keep A1 co-op paint suggestions inside the REAL native weapon lane.
+ * This is only a read-only filter after original ownerGrid/solid/footprint
+ * admission; it does not grant a shot, projectile, hit or ink raster.
+ * The first original Rapier blocker may be the certified target floor
+ * itself, but never an intervening wall or an earlier hit on that floor. */
+export function b150OriginalAllyNativeShotReachable(
+ actualCpuFoot:B150Foot,target:B150Foot,
+ nativeWeaponRangeMeters:number,originalSolidId:string,
+ firstStageBlock:Readonly<{solidId:string;point:B150Foot}>|null
+):boolean{
+ if(!originalSolidId.startsWith('UndertowT21D:')||
+    !Number.isFinite(nativeWeaponRangeMeters)||
+    nativeWeaponRangeMeters<=0||
+    [actualCpuFoot,target].some(p=>
+     ![p.x,p.y,p.z].every(Number.isFinite))||
+    Math.hypot(actualCpuFoot.x-target.x,
+     actualCpuFoot.z-target.z)>nativeWeaponRangeMeters)return false;
+ if(!firstStageBlock)return true;
+ const hit=firstStageBlock.point;
+ return firstStageBlock.solidId===originalSolidId&&
+  [hit.x,hit.y,hit.z].every(Number.isFinite)&&
+  Math.hypot(hit.x-target.x,hit.y-target.y,hit.z-target.z)<=.22;
+}
