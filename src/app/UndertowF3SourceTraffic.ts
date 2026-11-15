@@ -28,6 +28,7 @@ import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
  from './B421RealEnemyStandoff';
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
+import {b180OriginalSourceUnownedNeighborAim} from '../ai/B180OriginalSourcePaintOpportunity';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk,originalSourceRegisteredOwnFoot} from './OriginalSourceCombatRetreat';
@@ -1044,6 +1045,52 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   };
   return b421RealEnemyStandoff(path,enemyFoot,side,lane);
  }
+
+ /** An ORIGINAL goal can be preferred for painting only when true
+  * ownerGrid cells, native weapon range, registered floor and the first
+  * Rapier projectile blocker all predict a real paint opportunity.
+  * This grants no shots, navigation, Actor motion, or official score. */
+ private canPaintFromOriginalGoal(bot:F3TrafficCpu,goal:Vec3):boolean{
+  if(!this.sourceInk||!this.physics||!bot.weaponId||
+     !this.hasSourceFootSupport(goal))return false;
+  const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId));
+  if(!Number.isFinite(range)||range<1.7)return false;
+  const muzzle=new Vec3(goal.x,
+   goal.y+GAME_CONFIG.cpu.muzzleHeightMeters,goal.z);
+  // Bounded 40 ORIGINAL samples, only used during a live 120+ NO-AIM
+  // drought. Every move still needs a separate full native path audit.
+  for(const radius of [1.7,2.5,3.5,4.5,5.5]){
+   if(radius>range)continue;
+   for(let angle=0;angle<8;angle++){
+    const theta=angle*Math.PI/4;
+    const point=new Vec3(goal.x+radius*Math.cos(theta),
+     goal.y+.10,goal.z+radius*Math.sin(theta));
+    const sample=this.sourceInk.sampleWorld(point,.28,
+     SurfaceFlags.Paintable,SurfaceFlags.Wall);
+    if(!sample||!sample.surface.id.startsWith('UndertowT21D:')||
+       sample.surface.isScoreable||
+       (sample.flags&SurfaceFlags.Paintable)===0)continue;
+    const surface=sample.surface;
+    const x=Math.floor(sample.u/surface.cellSize);
+    const y=Math.floor(sample.v/surface.cellSize);
+    if(!surface.isCellActive(x,y))continue;
+    const target=sample.owner===bot.team?
+     b180OriginalSourceUnownedNeighborAim(sample,bot.team):
+     surface.localToWorld(sample.u,sample.v);
+    if(!target||![target.x,target.y,target.z].every(Number.isFinite)||
+       muzzle.distance(target)>range)continue;
+    const support=this.sourceNativeCharacterFootHit(target);
+    if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
+       Math.abs(support.point.y-target.y)>.25)continue;
+    const block=this.physics.castStageSegment(muzzle,target,'ink-projectile');
+    if(block&&(block.solidId!==support.solidId||
+       block.point.distance(target)>.22))continue;
+    return true;
+   }
+  }
+  return false;
+ }
+
  /** This method is reached only from the P2-only original weapon-ready
   * NO-AIM path. Store real B1 foot evidence without moving the actor. */
  noteRealSourcePaintAimDrought(id:string,
@@ -2237,6 +2284,58 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        return true;
       }
      }
+    }
+   }
+
+   // A 120+ weapon-ready NO-AIM streak is actionable even while the true
+   // Rapier foot is still MOVING. The previous rescue only admitted a
+   // stationary B-foot or a newly discovered front; 180s RAW showed
+   // thousands of late no-aim choices during real KCC locomotion.
+   // Retarget only to a DIFFERENT already-vetted original same-side
+   // frontline, with actually unowned shootable SOURCE grid ahead and
+   // fresh 0.30m Rapier + Recast route from the real foot.
+   const movingDrought=this.p2BTeamDroughtFoot.get(id);
+   const heldDroughtGoal=this.b443OriginalGoalLocks.get(id);
+   if(this.enableB441SourceFrontline&&this.freeCombat&&this.sourceInk&&
+      this.physics&&bot.weaponId&&bot.team===Team.B&&
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+      this.physicallyRejoined.has(id)&&fronts.length>1&&
+      heldDroughtGoal&&movingDrought&&movingDrought.misses>=120&&
+      this.b137NativeTick>=movingDrought.nativeTick&&
+      this.b137NativeTick-movingDrought.nativeTick<=40&&
+      realFoot.distance(movingDrought.foot)<=.22&&
+      this.b137NativeTick-
+       (this.p2BTeamLastFullRouteAuditTick.get(id)??-1000)>=120&&
+      this.hasSourceFootSupport(realFoot)&&
+      !this.canPaintFromOriginalGoal(bot,heldDroughtGoal.target)){
+    // One bounded alternative audit per 120 REAL native ticks; failed
+    // options leave the approved in-flight goal intact.
+    this.p2BTeamLastFullRouteAuditTick.set(id,this.b137NativeTick);
+    const ranked=distributeOriginalSourceGoalCoverage(
+     rankOriginalSourcePatrolGoals(fronts,bot.team,this.sourceInk,0),
+     fronts,this.actualTeamCoveragePositions(id,bot.team));
+    for(const row of ranked){
+     const goal=fronts[row.index]!;
+     if(goal.distance(heldDroughtGoal.target)<2||
+        goal.distance(realFoot)<1.5||goal.z*sign<33||
+        !this.hasSourceFootSupport(goal)||
+        !this.canPaintFromOriginalGoal(bot,goal))continue;
+     const native=this.nav.auditPath(realFoot,goal);
+     if(!native.reachedTarget||native.startSnapDistanceMeters>.20||
+        native.endSnapDistanceMeters>.20||
+        !this.hasSourceSupportedRoute(native,sign,realFoot,true)||
+        this.kccActorBlocksOriginalRoute(id,realFoot,native))continue;
+     this.b443OriginalGoalLocks.set(id,{
+      target:goal.clone(),firstApprovedTick:this.b137NativeTick,
+      arrivedSinceTick:null
+     });
+     this.b442LastApprovedFront.set(id,{
+      target:goal.clone(),nativeTick:this.b137NativeTick
+     });
+     this.p2BTeamDroughtFoot.delete(id);
+     this.patrolIndex.set(id,-1);
+     out.copy(goal);this.realGoalRequests++;this.b441ActualGoalRequests++;
+     return true;
     }
    }
    const lock=this.b443OriginalGoalLocks.get(id);
