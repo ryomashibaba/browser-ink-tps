@@ -393,6 +393,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly realKccLastActorBlocker=new Map<string,{
   ownerId:string;nativeTick:number
  }>();
+ /** Actual B4 Rapier unsupported-destination witness. Neither original
+  * stage nor CPU pose can be changed by this diagnostic source signal. */
+ private readonly realKccB4Unsupported=new Map<string,{
+  nativeTick:number;foot:Vec3
+ }>();
  /** Genuine SOURCE weapon-ready no-aim and physical-stillness witness;
   * B1-B4 may reuse existing original goals, never fabricate paint or feet. */
  private readonly p2BTeamDroughtFoot=new Map<string,{
@@ -989,7 +994,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * No guessed collision or teleported Crowd result can enter this count. */
  noteRealSourceKccRejectedStep(
   id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
-  realKccOwners:readonly string[]=[]
+  realKccOwners:readonly string[]=[],realKccCause?:string
  ):void{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)||
@@ -1021,6 +1026,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   });
   if(owner)this.realKccLastActorBlocker?.set(id,{
    ownerId:owner,nativeTick:this.b137NativeTick});
+  if(id==='B4'&&this.enableB441SourceFrontline&&
+     realKccCause==='UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION'&&
+     realKccOwners.length===0)
+   this.realKccB4Unsupported?.set(id,{
+    nativeTick:this.b137NativeTick,
+    foot:new Vec3(actualFoot.x,actualFoot.y,actualFoot.z)});
+  else this.realKccB4Unsupported?.delete(id);
  }
  /** Genuine KCC denial: do not keep issuing a SOURCE goal whose actual
   * first Recast leg points into the REAL nearby teammate that blocked
@@ -1077,6 +1089,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined)&&
    Math.abs(other.position.y-bot.position.y)<1;
  }
+ /** A witnessed unsupported B4 destination only accelerates TRYING
+  * another already registered goal; original Recast+Rapier still veto. */
+ private recentRealB4UnsupportedOriginalStep(id:string,foot:Vec3):boolean{
+  if(id!=='B4'||!this.enableB441SourceFrontline||
+     (this.realKccRejectedSteps.get(id)??0)<B34_GROUNDED_STALL_TICKS)
+   return false;
+  const last=this.realKccB4Unsupported?.get(id);
+  const bot=this.bots.find(x=>x.id===id);
+  return !!last&&!!bot&&
+   sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)&&
+   this.b137NativeTick>=last.nativeTick&&
+   this.b137NativeTick-last.nativeTick<=B34_GROUNDED_STALL_TICKS&&
+   foot.distance(last.foot)<=.22&&
+   this.hasSourceFootSupport(foot);
+ }
  /** Clear the block streak ONLY after actual Rapier-authorized movement;
   * a successful zero-speed check does not prove the CPU became unstuck. */
  noteRealSourceKccApprovedStep(
@@ -1100,6 +1127,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       acceptedFoot.x-anchor.x,acceptedFoot.z-anchor.z)<.25)return;
    this.realKccRejectedSteps.delete(id);
    this.realKccLastActorBlocker?.delete(id);
+   this.realKccB4Unsupported?.delete(id);
    this.realKccBTeamRecoveryAnchor?.delete(id);
   }
  }
@@ -2308,10 +2336,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Use the SAME real-capsule witness for both original front-lock
   // release and legacy registered-source patrol fallback.
   const actualTeammateBlocked=this.recentRealTeammateKccBlock(id);
+  const actualB4UnsupportedBlocked=
+   this.recentRealB4UnsupportedOriginalStep(id,realFoot);
   const kccBlockedAlternative=
    active>=0&&candidates.length>1&&
    ((this.realKccRejectedSteps.get(id)??0)>=90||
-    actualTeammateBlocked||b1StalledResearchPatrol)&&
+    actualTeammateBlocked||actualB4UnsupportedBlocked||
+    b1StalledResearchPatrol)&&
    bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
    this.physicallyRejoined.has(id)&&
    this.hasSourceFootSupport(realFoot);
@@ -2995,6 +3026,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
   this.realKccBTeamRecoveryAnchor?.delete(id);
+  this.realKccB4Unsupported?.delete(id);
    this.realKccLastActorBlocker?.delete(id);
    this.p2BTeamDroughtFoot.delete(id);
    this.p2BTeamLastFullRouteAuditTick.delete(id);

@@ -651,6 +651,38 @@ it('B2 real same-team capsule KCC veto rejects only a recently contacted teammat
 });
 
 
+it('B4 recognizes only true recent unsupported original Rapier KCC and leaves the actual foot unchanged',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-6.294005870819092,4.5892939639091495,-49.23163604736328);
+ const bot={id:'B4',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],
+  enableB441SourceFrontline:true,physicallyRejoined:new Set(['B4']),
+  b137NativeTick:1780,realKccRejectedSteps:new Map(),
+  realKccBTeamRecoveryAnchor:new Map(),
+  realKccLastActorBlocker:new Map(),realKccB4Unsupported:new Map(),
+  hasSourceFootSupport:()=>true
+ });
+ const retry=()=>source.recentRealB4UnsupportedOriginalStep('B4',foot);
+ for(let i=0;i<35;i++)source.noteRealSourceKccRejectedStep(
+  'B4',foot,[],'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+ expect(retry()).toBe(false);
+ source.noteRealSourceKccRejectedStep(
+  'B4',foot,[],'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+ expect(retry()).toBe(true);
+ source.b137NativeTick+=37;expect(retry()).toBe(false);
+ source.b137NativeTick-=37;
+ source.noteRealSourceKccRejectedStep('B4',foot,[],'OTHER_RAPIER_CAUSE');
+ expect(retry()).toBe(false);
+ source.noteRealSourceKccRejectedStep(
+  'B4',foot,[],'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+ expect(retry()).toBe(true);
+ source.noteRealSourceKccApprovedStep('B4',foot,
+  new Vec3(foot.x+.3,foot.y,foot.z));
+ expect(retry()).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+});
 it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small Rapier jitter and reroutes only to another rechecked SOURCE goal',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
  const foot=new Vec3(-6.185220718383789,4.594249048432543,-48.97983169555664);

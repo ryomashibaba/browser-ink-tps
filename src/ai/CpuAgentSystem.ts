@@ -163,7 +163,7 @@ export interface CpuQaSourceGoalAuthority {
    * original CPU. These never grant movement, paint, actor or NavLink. */
   noteRealSourceKccRejectedStep?(
      id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
-     realKccOwners?:readonly string[]):void;
+     realKccOwners?:readonly string[],realKccCause?:string):void;
   noteRealSourceKccApprovedStep?(
     id:string,previousFoot:Readonly<{x:number;y:number;z:number}>,
     acceptedFoot:Readonly<{x:number;y:number;z:number}>):void;
@@ -1433,7 +1433,7 @@ export class CpuAgentSystem {
             // The original KCC veto is the only stall evidence; never
             // infer a collision from a merely stationary Crowd agent.
             this.f3dSourceGoals?.noteRealSourceKccRejectedStep?.(
-               bot.id,bot.position,shared.colliderOwnerIds);
+               bot.id,bot.position,shared.colliderOwnerIds,shared.cause);
             this.reconcileBlockedT21F2CrowdProxy(bot);
             this.continueBlockedOriginalSourceCpuActions(bot,dt,
               humanTeam,humanPosition,humanActive,canStartNewCombatActions);
