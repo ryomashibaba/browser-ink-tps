@@ -357,6 +357,37 @@ export class UndertowPhase14QSharedActorCollision{
     return verified.approved?corrected:null;
   }
 
+  /** Genuine P2 native 180s showed B2/B4 Crowd XZ already aligned with
+   * the physical foot while Recast Y alone rose 2-3cm above registered
+   * ORIGINAL ramp support. A repeated reanchor discarded their actual
+   * path before the next genuine Crowd horizontal step. This helper
+   * changes no goal, clock, body, stage or navigation path: the candidate
+   * preserves native Crowd XZ but retains the *current* Rapier-supported
+   * foot Y. Only the original same-solid ray and real 60Hz shared KCC
+   * may authorize that candidate. It can return a true zero-motion foot.
+   */
+  public tryOriginalCrowdHeightMismatchKccStep(
+    id:string,from:T21QFoot,to:T21QFoot,dt:number
+  ):T21QFoot|null{
+    if(!Number.isFinite(dt)||Math.abs(dt-1/60)>1e-8||
+       ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite)||
+       !this.actors.has(id))return null;
+    const rise=to.y-from.y;
+    const horizontal=Math.hypot(to.x-from.x,to.z-from.z);
+    const requested=Math.hypot(horizontal,rise);
+    if(rise<=.008||rise>.04||horizontal>.025||
+       requested>GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt+1e-5)
+      return null;
+    const origin=this.sourceFootSupport(id,from);
+    if(origin?.solidId!=='UndertowT21D:right-low-route-ramp-negative-z'||
+       this.registeredOriginalSourceFootSupport(to))return null;
+    const corrected={x:to.x,y:from.y,z:to.z};
+    const destination=this.registeredOriginalSourceFootSupport(corrected);
+    if(destination?.solidId!==origin.solidId)return null;
+    return this.auditGroundStep(id,from,corrected,dt,true).approved?
+      corrected:null;
+  }
+
   /**
    * F2 opt-in first-drop admission gate. Before detaching an authentic
    * upper Crowd agent into its independent original-source Rapier fall,

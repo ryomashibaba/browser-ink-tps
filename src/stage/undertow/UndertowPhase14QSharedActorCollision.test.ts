@@ -607,4 +607,47 @@ it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stag
   expect(freeze.activationReady).toBe(false);
   w.actors.dispose();
  });
+  it('keeps genuine 180s B2/B4 physical ramp height against tiny native Crowd Y drift only after original KCC',()=>{
+   const w=world();
+   // First round actual native RAW: Actions #43652042382, tick 11855.
+   const stalled=[
+    {id:'B2',from:{x:-5.877044419973234,y:4.605353034719721,z:-48.34676733420872},
+     crowd:{x:-5.877044200897217,y:4.6287522315979,z:-48.34676742553711}},
+    {id:'B4',from:{x:-6.2543789849807,y:4.5892939639091495,z:-49.22996341298023},
+     crowd:{x:-6.254378795623779,y:4.609862327575684,z:-49.22996520996094}}
+   ] as const;
+   for(const {id,from,crowd} of stalled){
+    w.actors.syncRealCpuFoot(id,from);
+    expect(w.actors.sourceFootSupport(id,from)?.solidId)
+     .toBe('UndertowT21D:right-low-route-ramp-negative-z');
+    const rejected=w.actors.auditGroundStep(id,from,crowd,DT,true);
+    expect(rejected.approved).toBe(false);
+    expect(rejected.cause).toBe('UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+    const corrected=w.actors.tryOriginalCrowdHeightMismatchKccStep(
+     id,from,crowd,DT);
+    expect(corrected).not.toBeNull();
+    expect(corrected!.x).toBe(crowd.x);
+    expect(corrected!.y).toBe(from.y);
+    expect(corrected!.z).toBe(crowd.z);
+    expect(w.actors.auditGroundStep(id,from,corrected!,DT,true).approved)
+     .toBe(true);
+    expect(w.actors.qaRegisteredRealCpuCapsule(id)?.foot).toEqual(from);
+    expect(w.actors.tryOriginalCrowdHeightMismatchKccStep(id,from,
+     {...crowd,y:from.y+.10},DT)).toBeNull();
+    expect(w.actors.tryOriginalCrowdHeightMismatchKccStep(id,from,
+     {...crowd,x:from.x+.08},DT)).toBeNull();
+    w.actors.removeRealCpuFoot(id);
+   }
+   const upper=w.stage.metadata.teamBSpawn;
+   const high={x:upper[0],y:upper[1],z:upper[2]};
+   w.actors.syncRealCpuFoot('B2',high);
+   expect(w.actors.tryOriginalCrowdHeightMismatchKccStep('B2',high,
+    {...high,y:high.y+.023},DT)).toBeNull();
+   expect(w.actors.tryOriginalCrowdHeightMismatchKccStep('B3',high,
+    {...high,y:high.y+.023},DT)).toBeNull();
+   expect([w.stage.solids.length,w.stage.paintSurfaces.length,
+    w.stage.navigationLinks?.length]).toEqual([25,17,26]);
+   expect(freeze.activationReady).toBe(false);
+   w.actors.dispose();
+  });
 });

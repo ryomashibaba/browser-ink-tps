@@ -129,6 +129,12 @@ export interface CpuSharedGroundStepAuthority {
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,dt:number
   ):Readonly<{x:number;y:number;z:number}>|null;
+  /** Rapier-only support for tiny upward Crowd/nav-height drift on an
+   * already registered original ramp; never a new actor or route. */
+  tryOriginalCrowdHeightMismatchKccStep?(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,dt:number
+  ):Readonly<{x:number;y:number;z:number}>|null;
 }
 
 /** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
@@ -1403,11 +1409,19 @@ export class CpuAgentSystem {
            this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true){
           const downhill=this.phase14qGroundCollision
            .tryOriginalDownhillKccStep?.(bot.id,bot.position,accepted,dt);
-          if(downhill){
+          // Genuine P2 180s B2/B4: Crowd repeatedly requested nearly
+          // zero XZ with a +2cm navmesh Y drift above the SAME ramp.
+          // Only retain the genuine native XZ and registered Rapier-foot Y;
+          // original static support, speed and dynamic KCC must reapprove.
+          const candidate=downhill??
+            this.phase14qGroundCollision
+             .tryOriginalCrowdHeightMismatchKccStep?.(
+              bot.id,bot.position,accepted,dt);
+          if(candidate){
             const physical=this.phase14qGroundCollision.auditGroundStep(
-             bot.id,bot.position,downhill,dt,true);
+             bot.id,bot.position,candidate,dt,true);
             if(physical.approved){
-              accepted={x:downhill.x,y:downhill.y,z:downhill.z};
+              accepted={x:candidate.x,y:candidate.y,z:candidate.z};
               shared=physical;
             }
           }
