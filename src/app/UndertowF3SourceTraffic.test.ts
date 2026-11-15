@@ -672,7 +672,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
      patrolGoals:Map<string,Vec3[]>;
      sourceNativeCharacterFootHit:(p:Vec3)=>{solidId:string}|null;
      hasSourceSupportedRoute:(a:ReturnType<typeof nav.auditPath>,
-      sign:number,actualFoot?:Vec3)=>boolean;
+      sign:number,actualFoot?:Vec3,realKccBlockedRecovery?:boolean)=>boolean;
      hasSourceFootSupport:(p:Vec3)=>boolean;
     };
     // Both samples are from unchanged genuine first-wave 90s native RAW.
@@ -696,6 +696,7 @@ describe('F3B playable 8-actor original source runtime',()=>{
         snapStart:route.startSnapDistanceMeters,
         snapEnd:route.endSnapDistanceMeters,
         fullRegistered:t.hasSourceSupportedRoute(route,-1,p),
+        fullAfterRealKccStall:t.hasSourceSupportedRoute(route,-1,p,true),
         nativePoints:route.pointCount};
       })};
     });
@@ -707,6 +708,12 @@ describe('F3B playable 8-actor original source runtime',()=>{
     expect([stage.solids.length,stage.paintSurfaces.length,
      stage.navigationLinks?.length]).toEqual([25,17,26]);
     expect(rows.every(x=>x.supportApproved&&x.count>1)).toBe(true);
+    // No original-support exception: a 3.973cm REAL B4 projection
+    // enters the actual 0.30m Rapier checks only after a true KCC stall.
+    expect(rows.find(x=>x.id==='B4')!.candidates.some(g=>
+     g.sameOriginalSolid&&g.fullAfterRealKccStall)).toBe(true);
+    expect(rows.find(x=>x.id==='B4')!.candidates.every(g=>
+     !g.fullRegistered)).toBe(true);
     expect(rows.every(x=>x.candidates.every(g=>
      g.goal.length===3&&g.goal.every(Number.isFinite)))).toBe(true);
    }finally{

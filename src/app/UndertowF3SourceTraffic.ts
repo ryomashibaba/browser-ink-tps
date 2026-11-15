@@ -681,23 +681,28 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * Endpoint ray support is not a complete KCC capsule certificate. */
  private hasSourceSupportedRoute(
   audit:ReturnType<RecastStageNavigation['auditPath']>,sideSign:number,
-  actualNativeStart?:Readonly<{x:number;y:number;z:number}>
+  actualNativeStart?:Readonly<{x:number;y:number;z:number}>,
+  realKccBlockedRecovery=false
  ):boolean{
   this.nativeRouteChecks++;
   const original=audit.nativePathPoints;
   if(!this.physics||original.length===0)return false;
-  // B1 ONLY: a true KCC foot may differ by <=2cm from Recast's
-  // projected start, while the strict 25cm Rapier floor threshold
-  // accidentally rejects the projected 1.96mm-high start. Use the
-  // REAL current foot as the initial support sample, never modify
-  // Recast waypoints, native agent, registered SOURCE or tolerance.
+  // The real Rapier KCC foot may differ by <=2cm from Recast's
+  // projected start. Genuine 90s B4 on the registered ramp differs by
+  // 3.973cm and all six ORIGINAL routes were refused BEFORE any static
+  // route sampling. ONLY after 90 genuinely rejected KCC steps, allow
+  // <=5cm start projection drift; still use the REAL physical foot as
+  // the first point and recheck every original 0.30m support sample.
+  // This never changes Recast waypoints, actor motion, source geometry,
+  // or the 25cm native Rapier support gap.
   let points:readonly Readonly<{x:number;y:number;z:number}>[]=original;
   if(actualNativeStart){
    const projected=original[0]!;
    const snap=Math.hypot(projected.x-actualNativeStart.x,
     projected.y-actualNativeStart.y,
     projected.z-actualNativeStart.z);
-   if(!Number.isFinite(snap)||snap>.02||
+   if(!Number.isFinite(snap)||
+      snap>(realKccBlockedRecovery?.05:.02)||
       !this.hasSourceFootSupport(actualNativeStart))return false;
    points=[actualNativeStart,...original.slice(1)];
   }
@@ -2312,7 +2317,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // 0.30m-segment support from the registered physical CPU foot.
    // Original floor and 0.30m route samples still fail closed unchanged.
    const fullRegisteredSupport=this.hasSourceSupportedRoute(
-    audit,sign,kccBlockedAlternative?realFoot:undefined);
+    audit,sign,kccBlockedAlternative?realFoot:undefined,
+    kccBlockedAlternative);
    if(kccBlockedAlternative&&!fullRegisteredSupport)continue;
    if(kccBlockedAlternative&&
       this.kccActorBlocksOriginalRoute(id,realFoot,audit))continue;
