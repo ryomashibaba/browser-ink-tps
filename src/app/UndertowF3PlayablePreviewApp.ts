@@ -1082,7 +1082,12 @@ export class UndertowF3PlayablePreviewApp{
   const b474NativeSteering=b474OriginalFrontSteeringRefreshSelected(b31Params);
   this.canvas.dataset.t21B474NativeSteering=b474NativeSteering?
    'BOUNDED_REAL_SOURCE_GOAL_REISSUE':'OFF';
-  if(b474NativeSteering||b31Params.get('t21W10B35')==='nativeTargetRefresh')
+  // B207's newly enabled STRICT same-side original patrol must also
+  // keep a still-valid native Crowd goal instead of reissuing it every
+  // think cycle. B35 suppresses only identical requests on the same agent.
+  // No physical Actor, Recast path, T20 mode or score changes.
+  if(b474NativeSteering||ordinarySourceCombat||
+     b31Params.get('t21W10B35')==='nativeTargetRefresh')
    this.cpu.enableB35SourceNativeRetargetSuppression();
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
