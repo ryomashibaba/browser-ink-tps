@@ -708,12 +708,22 @@ async function runShortNormalSourceCombat(){
    lastKccRejectedReason:
     end.cpuSourceNativeGroundMotion?.byActor?.[id]?.lastRejectCause??null}];
  }));
+ // Unlike a fake 10800-absolute-tick check, a genuine original
+ // SOURCE world first spends native ticks in STAGING while all seven
+ // CPU bodies physically rejoin. The 180-second countdown begins only
+ // on the first real PLAYING tick. Compare native elapsed countdown,
+ // compensating for the genuine remaining time already consumed when
+ // the first seven-CPU observation was captured.
+ const trueCountdownTicks=end.tick-first.tick+
+   (180-first.timeRemainingSeconds)*60;
  if(ids.some(id=>snapshots.some(n=>
    !Number.isSafeInteger(cumulative(n,id,'changedCells'))))||
-   end.tick<10800||end.tick>10815||
+   !Number.isFinite(trueCountdownTicks)||
+   Math.abs(trueCountdownTicks-10800)>4||
    snapshots.some((n,i)=>i>0&&n.tick<snapshots[i-1].tick))
   fail('FULL_180_NATIVE_PAINT_OR_CLOCK_EVIDENCE_INVALID',{
    ticks:snapshots.map(n=>n.tick),
+   countdownTicks:trueCountdownTicks,
    changedCells:rows});
  const finish=await evalPage('(()=>{const x=document.querySelector("#t21-f3-b59-session-finished"),r=document.querySelector("#t21-f3-b59-restart");return {visible:!!x&&!x.hidden&&x.style.display!=="none",state:x?.dataset.t21B59State,replayVisible:!!r&&!r.hidden&&!r.disabled};})()');
  if(!finish?.visible||finish.state!=='FINISHED'||!finish.replayVisible)
