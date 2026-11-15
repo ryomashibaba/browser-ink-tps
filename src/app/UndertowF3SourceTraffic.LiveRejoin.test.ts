@@ -544,3 +544,68 @@ it('B2 real same-team capsule KCC veto rejects only a recently contacted teammat
  expect(b2.position.equals(foot)).toBe(true);
  expect(b4.position.equals(blocked)).toBe(true);
 });
+
+
+it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small Rapier jitter and reroutes only to another rechecked SOURCE goal',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-6.185220718383789,4.594249048432543,-48.97983169555664);
+ const far=new Vec3(-17.2657470703125,4.599999904632568,-48.05963134765625);
+ const near=new Vec3(-4.364792823791504,3.8463597297668457,-49.683570861816406);
+ const bot={id:'B3',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ let strict=true;
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
+  enableB441SourceFrontline:true,
+  physics:{castCharacterFootSupport:()=>({})},
+  physicallyRejoined:new Set(['B3']),respawnOriginalDrops:new Set(),
+  originalSourceRecoveryIntent:new Set(),b443OriginalGoalLocks:new Map(),
+  b442LastApprovedFront:new Map(),b441FrontGoals:new Map([['B3',[]]]),
+  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map([['B3',{}]]),
+  b467LiveSourceGoals:new Map(),patrolGoals:new Map([['B3',[far,near]]]),
+  patrolIndex:new Map([['B3',0]]),
+  realKccRejectedSteps:new Map(),realKccB3RecoveryAnchor:new Map(),
+  realKccLastActorBlocker:new Map(),
+  hasSourceFootSupport:()=>true,
+  sourceNativeCharacterFootHit:(p:Vec3)=>({solidId:
+   p.equals(foot)||p.equals(near)?
+    'UndertowT21D:right-low-route-ramp-negative-z':
+    'UndertowT21D:right-low-team-b'}),
+  hasSourceSupportedRoute:()=>strict,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,nativePathPoints:[from.clone(),to.clone()]
+  })},realGoalRequests:0,heldRequests:0
+ });
+ // Controlled small-step fixture, NOT synthetic native movement proof.
+ // These 3cm accepted KCC samples cannot erase real B3's 90 rejected
+ // requests while no observed foot advanced 25cm horizontally.
+ for(let i=0;i<90;i++){
+  source.noteRealSourceKccRejectedStep('B3',foot);
+  source.noteRealSourceKccApprovedStep('B3',foot,
+   new Vec3(foot.x+.03,foot.y,foot.z));
+ }
+ expect(source.realKccRejectedSteps.get('B3')).toBe(90);
+ expect(source.realKccB3RecoveryAnchor.get('B3')?.equals(foot)).toBe(true);
+ const out=new Vec3(9,9,9);
+ expect(source.chooseSourceGoal('B3',foot,out)).toBe(true);
+ expect(out.equals(near)).toBe(true);
+ expect(source.realKccRejectedSteps.has('B3')).toBe(false);
+ expect(source.realKccB3RecoveryAnchor.has('B3')).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+ // The original strict full-route Rapier/Recast veto is unchanged.
+ source.patrolIndex.set('B3',0);
+ strict=false;
+ for(let i=0;i<90;i++)source.noteRealSourceKccRejectedStep('B3',foot);
+ out.set(9,9,9);
+ expect(source.chooseSourceGoal('B3',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(9,9,9))).toBe(true);
+ expect(bot.position.equals(foot)).toBe(true);
+ // Unlike 3cm jitter, actual 30cm XZ progress clears the stale witness.
+ strict=true;
+ for(let i=0;i<22;i++)source.noteRealSourceKccRejectedStep('B3',foot);
+ source.noteRealSourceKccApprovedStep('B3',foot,
+  new Vec3(foot.x-.30,foot.y,foot.z));
+ expect(source.realKccRejectedSteps.has('B3')).toBe(false);
+ expect(source.realKccB3RecoveryAnchor.has('B3')).toBe(false);
+});
