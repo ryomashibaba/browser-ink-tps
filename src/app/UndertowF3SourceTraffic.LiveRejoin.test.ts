@@ -683,6 +683,48 @@ it('B4 recognizes only true recent unsupported original Rapier KCC and leaves th
  expect(retry()).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
 });
+it('B3 truly unsupported native foot may recheck original ramp even with two distant front goals, but cannot bypass an unobserved veto',()=>{
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ const foot=new Vec3(-6.158311367034912,4.59292937040329,
+  -48.93313217163086);
+ const bot={id:'B3',team:Team.B,position:foot,agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const rampId='UndertowT21D:right-low-route-ramp-negative-z';
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[bot],
+  enableB441SourceFrontline:true,
+  physics:{castCharacterFootSupport:()=>({})},
+  physicallyRejoined:new Set(['B3']),
+  b137NativeTick:3218,
+  b441FrontGoals:new Map([['B3',[
+   new Vec3(-24.385263365,4.502,-44.321323812),
+   new Vec3(-6.185263365,4.502,-37.321323812)]]]),
+  b441OriginalRampGoal:new Map(),b441OriginalRampLastAuditTick:new Map(),
+  b441OriginalRampApprovals:0,b441OriginalRampRetentions:0,
+  b441OriginalRampRejected:0,
+  realKccRejectedSteps:new Map(),realKccBTeamRecoveryAnchor:new Map(),
+  realKccLastActorBlocker:new Map(),realKccB3Unsupported:new Map(),
+  hasSourceFootSupport:()=>true,
+  sourceNativeCharacterFootHit:()=>({solidId:rampId}),
+  nav:{auditPath:(a:Vec3,b:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,
+   endSnapDistanceMeters:0,nativePathPoints:[a,b]})},
+  hasSourceSupportedRoute:()=>true,
+  kccActorBlocksOriginalRoute:()=>false,realGoalRequests:0
+ });
+ const out=new Vec3(9,9,9);
+ for(let i=0;i<36;i++)source.noteRealSourceKccRejectedStep(
+  'B3',foot,[],'OTHER_RAPIER_CAUSE');
+ expect(source.tryOriginalRampLocalRecovery('B3',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(9,9,9))).toBe(true);
+ for(let i=0;i<36;i++)source.noteRealSourceKccRejectedStep(
+  'B3',foot,[],'UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION');
+ expect(source.tryOriginalRampLocalRecovery('B3',foot,out)).toBe(true);
+ expect(source.b441OriginalRampApprovals).toBe(1);
+ expect(out.equals(new Vec3(9,9,9))).toBe(false);
+ expect(bot.position.equals(foot)).toBe(true);
+ expect(source.b441FrontGoals.get('B3')).toHaveLength(2);
+});
 it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small Rapier jitter and reroutes only to another rechecked SOURCE goal',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
  const foot=new Vec3(-6.185220718383789,4.594249048432543,-48.97983169555664);

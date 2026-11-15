@@ -410,6 +410,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly realKccB4Unsupported=new Map<string,{
   nativeTick:number;foot:Vec3
  }>();
+ /** Only true, current B3 native KCC original-floor rejection;
+  * it can trigger a new fully verified SAME-RAMP goal, never movement. */
+ private readonly realKccB3Unsupported=new Map<string,{
+  nativeTick:number;foot:Vec3
+ }>();
  /** Genuine SOURCE weapon-ready no-aim and physical-stillness witness;
   * B1-B4 may reuse existing original goals, never fabricate paint or feet. */
  private readonly p2BTeamDroughtFoot=new Map<string,{
@@ -761,8 +766,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   id:string,realFoot:Vec3,out:Vec3
  ):boolean{
   if(!this.enableB441SourceFrontline||!this.physics||
-     (id!=='B2'&&id!=='B4')||
-     (this.b441FrontGoals.get(id)?.length??0)!==0||
+     (id!=='B2'&&id!=='B3'&&id!=='B4')||
+     (id!=='B3'&&(this.b441FrontGoals.get(id)?.length??0)!==0)||
      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
      this.stage.solids.length!==25||
      this.stage.paintSurfaces.length!==17||
@@ -781,6 +786,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(prior&&realFoot.distance(prior)<=1.2)
    this.b441OriginalRampGoal?.delete(id);
   const inFlight=this.b441OriginalRampGoal?.get(id);
+  // B3 has already-certified distant fronts. Do not override these
+  // unless Rapier recently and ACTUALLY refused unsupported original
+  // ground, with the real CPU still on this same registered ramp.
+  if(id==='B3'&&!inFlight){
+   const witness=this.realKccB3Unsupported?.get(id);
+   if(!witness||
+      this.b137NativeTick<witness.nativeTick||
+      this.b137NativeTick-witness.nativeTick>B34_GROUNDED_STALL_TICKS||
+      realFoot.distance(witness.foot)>.22)return false;
+  }
   if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
       B34_GROUNDED_STALL_TICKS)return false;
   if(!inFlight){
@@ -1112,6 +1127,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     nativeTick:this.b137NativeTick,
     foot:new Vec3(actualFoot.x,actualFoot.y,actualFoot.z)});
   else this.realKccB4Unsupported?.delete(id);
+  if(id==='B3'&&this.enableB441SourceFrontline&&
+     realKccCause==='UNSUPPORTED_ORIGINAL_SOURCE_DESTINATION'&&
+     realKccOwners.length===0)
+   this.realKccB3Unsupported?.set(id,{
+    nativeTick:this.b137NativeTick,
+    foot:new Vec3(actualFoot.x,actualFoot.y,actualFoot.z)});
+  else this.realKccB3Unsupported?.delete(id);
  }
  /** Genuine KCC denial: do not keep issuing a SOURCE goal whose actual
   * first Recast leg points into the REAL nearby teammate that blocked
@@ -1770,6 +1792,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }else this.b137MissingSourceFloorProof++;
    }
   }
+  // B3's two genuine distant front goals can still lead into a Rapier
+  // unsupported local leg (true 36s B3: 0.07m, 105 KCC denials).
+  // Only a CURRENT witnessed unsupported ramp contact can preempt
+  // those goals with another STRICTLY audited registered ramp target.
+  if(id==='B3'&&this.tryOriginalRampLocalRecovery(id,realFoot,out))
+   return true;
   // B441 opt-in: toward a frontward point on EXISTING original solid.
   // Even after constructor proof, re-check the current true CPU foot to
   // that goal in native Recast, every ~0.30m Rapier segment and endpoint.
@@ -3109,6 +3137,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.realKccRejectedSteps.delete(id);
   this.realKccBTeamRecoveryAnchor?.delete(id);
   this.realKccB4Unsupported?.delete(id);
+  this.realKccB3Unsupported?.delete(id);
    this.realKccLastActorBlocker?.delete(id);
    this.p2BTeamDroughtFoot.delete(id);
    this.p2BTeamLastFullRouteAuditTick.delete(id);
