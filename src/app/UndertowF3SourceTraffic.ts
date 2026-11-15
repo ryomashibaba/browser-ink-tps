@@ -2296,7 +2296,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // stage collider or NavLink. Full original Recast/Rapier audits below
   // still own every alternative and each eventual actor step.
   const sameRampKccRecoveryOrder=(()=>{
-   if((id!=='B1'&&id!=='B3'&&id!=='B4')||
+   // B2 has the same observed 90+ genuine KCC rejection evidence and
+   // pre-existing ORIGINAL source patrol feet as B1/B3/B4. It was
+   // unnecessarily omitted from the same-solid alternate preference.
+   // This affects candidate order only. Native Recast, 0.30m Rapier
+   // support, and actual CPU/actor obstruction veto still decide.
+   if(!['B1','B2','B3','B4'].includes(id)||
       !this.enableB441SourceFrontline||
       !kccBlockedAlternative||
       (this.realKccRejectedSteps.get(id)??0)<90||
