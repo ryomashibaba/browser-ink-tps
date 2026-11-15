@@ -36,45 +36,6 @@ beforeAll(async()=>{
 });
 describe('F3B playable 8-actor original source runtime',()=>{
 
- it('denies paint-drought goal if real original source ink, range or first Rapier shot blocker fails',()=>{
-  const original=undertowT21dConnectivityQaStage();
-  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
-  const solid='UndertowT21D:right-low-team-b';
-  traffic.stage=original;
-  traffic.hasSourceFootSupport=vi.fn(()=>true);
-  traffic.sourceNativeCharacterFootHit=vi.fn((target:Vec3)=>({
-   solidId:solid,point:target.clone()
-  }));
-  const surface={
-   id:'UndertowT21D:original-real-floor',isScoreable:false,
-   cellSize:.25,isCellActive:()=>true,
-   localToWorld:()=>new Vec3(2,3,0)
-  };
-  let owner:Team=Team.Neutral;
-  traffic.sourceInk={sampleWorld:()=>({
-   surface,owner,flags:SurfaceFlags.Paintable,u:1,v:1
-  })};
-  const cast=vi.fn((_from:Vec3,_to:Vec3,_kind:string):
-   {solidId:string;point:Vec3}|null=>null);
-  traffic.physics={castStageSegment:cast};
-  const bot={team:Team.B,weaponId:'pulse-sprayer'};
-  const goal=new Vec3(0,3,0);
-  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(true);
-  expect(cast).toHaveBeenCalled();
-  cast.mockImplementation(()=>({
-   solidId:'UndertowT21D:original-real-wall',point:new Vec3(1,4,0)
-  }));
-  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
-  cast.mockImplementation(()=>null);
-  owner=Team.B;
-  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
-  owner=Team.Neutral;
-  surface.id='UNREGISTERED';
-  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
-  expect(original.solids).toHaveLength(25);
-  expect(original.paintSurfaces).toHaveLength(17);
-  expect(original.navigationLinks).toHaveLength(26);
- });
  it('uses real HUMAN Rapier support for both original registered grates without adding a floor or route',()=>{
   const stage=undertowT21dConnectivityQaStage();
   const originalGrates=stage.solids.filter(s=>s.collisionBehavior==='GRATE');

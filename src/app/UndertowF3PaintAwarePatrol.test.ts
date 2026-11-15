@@ -3,6 +3,8 @@ import {Vec3} from 'playcanvas';
 import {Team,SurfaceFlags} from '../ink/types';
 import {GameplayInkSystem,type GameplayInkSample} from '../ink/GameplayInkSystem';
 import {PaintSurface} from '../ink/PaintSurface';
+import {UndertowF3SourceTraffic} from './UndertowF3SourceTraffic';
+import {undertowT21dConnectivityQaStage} from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,B34_GROUNDED_STALL_TICKS,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 
 const goals=[new Vec3(1,3,40),new Vec3(2,3,41),
@@ -308,5 +310,47 @@ describe('genuine SOURCE bot must not report arrival at another floor elevation'
   expect(sameLevel[0]!.index).toBe(1);
   expect(differentLevel.every(r=>r.sourceOnly&&!r.pathAuthorized)).toBe(true);
   expect(ranked[0]!.index).toBe(1);
+ });
+});
+
+describe('original source paint-drought retarget must respect shot authority',()=>{
+ it('denies paint-drought goal if real original source ink, range or first Rapier shot blocker fails',()=>{
+  const original=undertowT21dConnectivityQaStage();
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  const solid='UndertowT21D:right-low-team-b';
+  traffic.stage=original;
+  traffic.hasSourceFootSupport=vi.fn(()=>true);
+  traffic.sourceNativeCharacterFootHit=vi.fn((target:Vec3)=>({
+   solidId:solid,point:target.clone()
+  }));
+  const surface={
+   id:'UndertowT21D:original-real-floor',isScoreable:false,
+   cellSize:.25,isCellActive:()=>true,
+   localToWorld:()=>new Vec3(2,3,0)
+  };
+  let owner:Team=Team.Neutral;
+  traffic.sourceInk={sampleWorld:()=>({
+   surface,owner,flags:SurfaceFlags.Paintable,u:1,v:1
+  })};
+  const cast=vi.fn((_from:Vec3,_to:Vec3,_kind:string):
+   {solidId:string;point:Vec3}|null=>null);
+  traffic.physics={castStageSegment:cast};
+  const bot={team:Team.B,weaponId:'pulse-sprayer'};
+  const goal=new Vec3(0,3,0);
+  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(true);
+  expect(cast).toHaveBeenCalled();
+  cast.mockImplementation(()=>({
+   solidId:'UndertowT21D:original-real-wall',point:new Vec3(1,4,0)
+  }));
+  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
+  cast.mockImplementation(()=>null);
+  owner=Team.B;
+  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
+  owner=Team.Neutral;
+  surface.id='UNREGISTERED';
+  expect(traffic.canPaintFromOriginalGoal(bot,goal)).toBe(false);
+  expect(original.solids).toHaveLength(25);
+  expect(original.paintSurfaces).toHaveLength(17);
+  expect(original.navigationLinks).toHaveLength(26);
  });
 });
