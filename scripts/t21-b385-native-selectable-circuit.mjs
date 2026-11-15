@@ -8,6 +8,7 @@
  * V28 B2/B4 genuine registered-ramp KCC height-drift fix: single 90s physical-foot witness. No change to gameplay or proof gates.
  * V28 after fe91f5d: one owner-requested B2 real-blocker + B4 same-original-ramp 90s physical-foot verification. No gameplay edit.
  * V28 after 1b2b581e: verify exactly one authentic 90s B4 3.973cm recovered native-start full-original-route trial, no actor or stage edits.
+ * V28 B3 genuine 90s 25cm-progress recovery confirmation at 49efc050; single source Chromium run, no clock, source or actor simulation.
  */
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
