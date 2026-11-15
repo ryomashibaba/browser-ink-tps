@@ -1,5 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
+import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
+import {DEFAULT_WEAPON_ID,WEAPON_ORDER} from '../weapons/WeaponCatalog';
 describe('B207 real native 180s combat world selection',()=>{
  it('starts an original source-only human combat round, never scoreable',()=>{
   const q=new URL(b207CombatRoundUrl('https://example.org/game')).searchParams;
@@ -7,6 +9,27 @@ describe('B207 real native 180s combat world selection',()=>{
    t21Play:'preview',t21QaDrive:'source',t21W10B183:'firstDropPlay',
    t21W10B192:'humanCombat',t21W10B112:'humanGround',
    t21W10B203:'fullRound'});
+ });
+ it('takes every genuine 12-weapon human selection into a new 180s combat world',()=>{
+  for(const id of WEAPON_ORDER){
+   const url=b207CombatRoundUrl('https://example.org/game?'+
+    't21W10B389=forged&production=1&cpuWarp=1#old',id);
+   const u=new URL(url),p=u.searchParams;
+   expect(u.hash).toBe('');
+   expect(u.pathname).toBe('/game');
+   expect(p.get('t21W10B203')).toBe('fullRound');
+   expect(p.get('t21W10B192')).toBe('humanCombat');
+   expect(p.has('production')).toBe(false);
+   expect(p.has('cpuWarp')).toBe(false);
+   expect(p.get('t21W10B389')).toBe(id===DEFAULT_WEAPON_ID?null:id);
+   expect(b389NativeBootWeapon(p)).toBe(id===DEFAULT_WEAPON_ID?null:id);
+  }
+ });
+ it('rejects an unknown weapon instead of passing it to the new native world',()=>{
+  expect(()=>b207CombatRoundUrl('https://example.org/game','fake'))
+   .toThrow('B207_UNKNOWN_NATIVE_SELECTED_WEAPON');
+  expect(()=>b207CombatRoundUrl('https://example.org/game',''))
+   .toThrow('B207_UNKNOWN_NATIVE_SELECTED_WEAPON');
  });
  it('discards former ally and unauthenticated QA stage shortcuts',()=>{
   const u=new URL(b207CombatRoundUrl('https://example.org/game?'+

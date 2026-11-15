@@ -1366,7 +1366,8 @@ export class UndertowF3PlayablePreviewApp{
        this.stopReason||this.survey.snapshot().active||this.galleryIndex>=0||
        ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
        ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
-    window.location.assign(b207CombatRoundUrl(window.location.href));
+    window.location.assign(b207CombatRoundUrl(
+      window.location.href,this.projectiles.currentPlayerWeapon.id));
    });
    this.panel.appendChild(round);
    if(round.disabled){
