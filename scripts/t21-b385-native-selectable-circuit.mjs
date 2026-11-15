@@ -682,7 +682,6 @@ async function runShortNormalSourceCombat(){
   fail('FULL_180_TERMINAL_SOURCE_AUTHORITY',{
    tick:end.tick,joins:end.cpu.physicalRejoins.length});
  const snapshots=[first,last,s60,s90,s120,s150,end];
- const ids=['A1','A2','A3','B1','B2','B3','B4'];
  const cumulative=(n,id,k)=>n.b154NativeSevenCpuInk?.byActor?.[id]?.[k];
  const kcc=(n,id,k)=>n.cpuSourceNativeGroundMotion?.byActor?.[id]?.[k];
  const rows=Object.fromEntries(ids.map(id=>{
