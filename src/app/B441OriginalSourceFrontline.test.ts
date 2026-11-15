@@ -20,7 +20,7 @@ import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
- b471MayRequestActualA1SourceOrder}
+ b471MayRequestActualA1SourceOrder,proposeB441OriginalRampLocalGoals}
  from './B441OriginalSourceFrontline';
 describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  const make=()=>undertowT21dConnectivityQaStage();
@@ -280,6 +280,13 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
   const pts=[.2,.5,.8].flatMap(u=>
    [.25,.5,.75].map(w=>({u,w,goal:xyz(u,w)})));
   expect(pts).toHaveLength(9);
+  const exact=proposeB441OriginalRampLocalGoals(stage,'B');
+  expect(exact).toHaveLength(9);
+  expect(exact.every(e=>e.originalExactRamp===true&&
+   e.nativeRouteAuthorized===false&&
+   e.sourceSolidId==='UndertowT21D:right-low-route-ramp-negative-z'&&
+   pts.some(x=>x.goal.distance(new Vec3(...e.point))<.00001)))
+   .toBe(true);
   const rows=Object.fromEntries(([
    ['B2',[-2.5257151126861572,3.2148218154907227,-50.62419509887695]],
    ['B4',[-6.294005870819092,4.5892939639091495,-49.23163604736328]]

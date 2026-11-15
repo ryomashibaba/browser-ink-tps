@@ -7,6 +7,8 @@ import {stageSolidCollisionEnabled,stageSolidNavigationEnabled}
  from '../stage/StageDefinition';
 import {pointInStageFootprint} from '../stage/StageFootprint';
 import {SurfaceFlags} from '../ink/types';
+import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS}
+ from '../stage/undertow/UndertowSpillwayRouteRampGeometry';
 export type B441Side='A'|'B';
 export interface B441OriginalFrontierProposal {
  readonly sourcePaintSurfaceId:string;
@@ -200,4 +202,46 @@ export function proposeB441OriginalFrontline(
   if(selected.length===32)break;
  }
  return selected;
+}
+
+/** F4 - coordinates strictly INSIDE registered original FloorConcrete03.
+ * Candidate enumeration is not a new floor, physics permission, or path.
+ * Native Crowd and complete Rapier/Recast clearance still decide runtime. */
+export function proposeB441OriginalRampLocalGoals(
+ stage:StageDefinition,side:B441Side
+):readonly {sourceSolidId:string;point:StageVector3;
+ originalExactRamp:true;nativeRouteAuthorized:false}[]{
+ if(!authorized(stage))return [];
+ const record=UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(r=>
+  r.side===(side==='A'?'POSITIVE_Z':'NEGATIVE_Z'));
+ if(!record)return [];
+ const id='UndertowT21D:'+record.id;
+ const solid=stage.solids.find(s=>s.id===id);
+ const paint=stage.paintSurfaces.find(s=>s.id===id+':paint'&&
+  s.backingSolidId===id);
+ const mesh=solid?.triangleMesh,exact=record.mesh;
+ if(!solid||!paint||!mesh||
+    !stageSolidCollisionEnabled(solid)||
+    !stageSolidNavigationEnabled(solid)||
+    (paint.flags&SurfaceFlags.Paintable)===0||
+    mesh.vertices.length!==4||
+    mesh.indices.length!==exact.indices.length||
+    mesh.indices.some((v,i)=>v!==exact.indices[i])||
+    mesh.vertices.some((v,i)=>
+     v.some((n,j)=>n!==exact.vertices[i]?.[j])))
+  return [];
+ const [a,b,c,d]=exact.vertices;
+ const result:{sourceSolidId:string;point:StageVector3;
+  originalExactRamp:true;nativeRouteAuthorized:false}[]=[];
+ for(const u of [.2,.5,.8])for(const w of [.25,.5,.75]){
+  const point=[0,1,2].map(k=>
+   a![k]!*(1-u)*(1-w)+b![k]!*u*(1-w)+
+   c![k]!*(1-u)*w+d![k]!*u*w) as StageVector3;
+  if(!point.every(Number.isFinite)||
+     point[2]*(side==='A'?1:-1)<33||
+     point[1]<2.7||point[1]>5.25)continue;
+  result.push({sourceSolidId:id,point,
+   originalExactRamp:true,nativeRouteAuthorized:false});
+ }
+ return result;
 }

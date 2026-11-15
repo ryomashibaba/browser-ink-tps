@@ -31,7 +31,8 @@ import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk,originalSourceRegisteredOwnFoot} from './OriginalSourceCombatRetreat';
-import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
+import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals,
+ b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
  b470MayAuditRealInkRankedSameSideFront,
  b471MayRequestActualA1SourceOrder}
@@ -162,6 +163,11 @@ export interface F3TrafficSnapshot{
   readonly b441ActualGoalRequests:number;
   readonly b441UnsafeOrUnreachableHolds:number;
   readonly b441ClosestApprovedFrontAbsZ:number|null;
+  readonly originalRampLocal:{
+   readonly approved:number;readonly retained:number;readonly rejected:number;
+   readonly active:readonly {id:string;point:[number,number,number]}[];
+   readonly crossTeamRoutesAuthorized:false;
+  };
   /** B445: original real lower-landing rejection reasons per CPU. */
   readonly b445OriginalFrontlineGates:readonly B445RealSourceGoalGate[];
   readonly b446LivePhysicalFootDryRouteProbes:
@@ -323,6 +329,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly egress=new Map<string,StageVector3>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
+ /** Only genuine original-ramp, native-approved recovery GOALS; never feet. */
+ private readonly b441OriginalRampGoal=new Map<string,Vec3>();
+ private readonly b441OriginalRampLastAuditTick=new Map<string,number>();
+ private b441OriginalRampApprovals=0;
+ private b441OriginalRampRetentions=0;
+ private b441OriginalRampRejected=0;
  private readonly b445FrontlineGates=new Map<string,B445RealSourceGoalGate>();
  private readonly b446LiveFootProbes=
   new Map<string,B446RealFootDryRouteProbe>();
@@ -740,6 +752,73 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return true;
  }
 
+ /** F4: native-source B2/B4 can become stuck ON the registered
+  * FloorConcrete03 ramp. On a genuine 36+ Rapier KCC stall, try only
+  * existing ramp-internal points. Use existing 5cm real-foot start
+  * reconciliation plus full original Recast and 0.30m/.25m Rapier
+  * checks. No floor, path, actor, score or original height edits. */
+ private tryOriginalRampLocalRecovery(
+  id:string,realFoot:Vec3,out:Vec3
+ ):boolean{
+  if(!this.enableB441SourceFrontline||!this.physics||
+     (id!=='B2'&&id!=='B4')||
+     (this.b441FrontGoals.get(id)?.length??0)!==0||
+     this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+     this.stage.solids.length!==25||
+     this.stage.paintSurfaces.length!==17||
+     this.stage.navigationLinks?.length!==26||
+     this.stage.paintSurfaces.some(p=>
+      (p.flags&SurfaceFlags.Scoreable)!==0))return false;
+  const bot=this.bots.find(b=>b.id===id);
+  if(!bot||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined))
+   return false;
+  const sourceId='UndertowT21D:right-low-route-ramp-negative-z';
+  if(this.sourceNativeCharacterFootHit(realFoot)?.solidId!==sourceId)
+   return false;
+  const proposals=proposeB441OriginalRampLocalGoals(this.stage,'B');
+  if(!proposals.length)return false;
+  const prior=this.b441OriginalRampGoal?.get(id);
+  if(prior&&realFoot.distance(prior)<=1.2)
+   this.b441OriginalRampGoal?.delete(id);
+  const inFlight=this.b441OriginalRampGoal?.get(id);
+  if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
+      B34_GROUNDED_STALL_TICKS)return false;
+  if(!inFlight){
+   const previous=this.b441OriginalRampLastAuditTick?.get(id)??-999999;
+   if(this.b137NativeTick-previous<60)return false;
+   this.b441OriginalRampLastAuditTick?.set(id,this.b137NativeTick);
+  }
+  const options=inFlight?
+   proposals.filter(p=>new Vec3(...p.point).distance(inFlight)<.001):
+   [...proposals].sort((a,b)=>
+    Math.abs(new Vec3(...a.point).distance(realFoot)-2.5)-
+    Math.abs(new Vec3(...b.point).distance(realFoot)-2.5));
+  for(const proposal of options){
+   if(proposal.sourceSolidId!==sourceId)continue;
+   const goal=new Vec3(...proposal.point);
+   if(goal.distance(realFoot)<1.5||goal.z> -33||
+      this.sourceNativeCharacterFootHit(goal)?.solidId!==sourceId)
+    continue;
+   const route=this.nav.auditPath(realFoot,goal);
+   if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
+      route.endSnapDistanceMeters>.20||
+      !this.hasSourceSupportedRoute(route,-1,realFoot,true)||
+      this.kccActorBlocksOriginalRoute(id,realFoot,route)){
+    this.b441OriginalRampRejected=(this.b441OriginalRampRejected??0)+1;
+    continue;
+   }
+   if(inFlight)this.b441OriginalRampRetentions=
+    (this.b441OriginalRampRetentions??0)+1;
+   else{
+    this.b441OriginalRampApprovals=(this.b441OriginalRampApprovals??0)+1;
+    this.b441OriginalRampGoal?.set(id,goal.clone());
+   }
+   out.copy(goal);this.realGoalRequests++;
+   return true;
+  }
+  if(inFlight)this.b441OriginalRampGoal?.delete(id);
+  return false;
+ }
  /** B150 source-only real A1 teammate ink support. Real source foot,
   * approved B142/B143 station, same original Rapier solid, original
   * footprint margin and genuinely unowned Paintable cells are mandatory.
@@ -2310,6 +2389,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Without a verified alternate the physical KCC veto remains.
    if(releasedTrueKccFront){this.heldRequests++;return false;}
   }
+  if(this.tryOriginalRampLocalRecovery(id,realFoot,out))return true;
   const active=this.patrolIndex.get(id)??-1;
   // Unlike the legacy B34 stationary inference, this is triggered only by
   // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
@@ -3023,6 +3103,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.originalSourceRecoveryIntent.delete(id);
   this.b443OriginalGoalLocks.delete(id);
   this.b442LastApprovedFront.delete(id);
+  this.b441OriginalRampGoal?.delete(id);
+  this.b441OriginalRampLastAuditTick?.delete(id);
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
   this.realKccBTeamRecoveryAnchor?.delete(id);
@@ -3124,6 +3206,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     b441ActualGoalRequests:this.b441ActualGoalRequests,
     b441UnsafeOrUnreachableHolds:this.b441UnsafeOrUnreachableHolds,
     b441ClosestApprovedFrontAbsZ:this.b441ClosestApprovedFrontAbsZ,
+    originalRampLocal:{
+     approved:this.b441OriginalRampApprovals??0,
+     retained:this.b441OriginalRampRetentions??0,
+     rejected:this.b441OriginalRampRejected??0,
+     active:[...(this.b441OriginalRampGoal??new Map<string,Vec3>())]
+      .map(([id,goal])=>({id,point:[goal.x,goal.y,goal.z] as
+       [number,number,number]})),
+     crossTeamRoutesAuthorized:false as const
+    },
     b445OriginalFrontlineGates:[...this.b445FrontlineGates.values()]
      .map(v=>({...v,actualOriginalLanding:[...v.actualOriginalLanding] as
        [number,number,number],

@@ -639,6 +639,7 @@ async function runShortNormalSourceCombat(){
   return {strictSourceFrontlineEnabled:p?.b441Enabled===true,
    genuineFrontlineGoalRequests:p?.b441ActualGoalRequests??null,
    nativeGoalRetentions:p?.b443NativeGoalRetentions??null,
+   existingOriginalRampLocal:p?.originalRampLocal??null,
    nativeUnsafeOrStalledReleases:p?.b443ReleasedUnsafeOrStalled??null,
    originalVerifiedFronts:p?.b445OriginalFrontlineGates?.filter(g=>ids.has(g.id))
     .map(g=>({id:g.id,approvedGoals:g.approvedOriginalGoals?.length??0,
