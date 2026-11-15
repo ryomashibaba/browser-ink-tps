@@ -467,6 +467,25 @@ async function runApprovedCombatTwinReplay(){
    end.cpuActualChangedCells-ink80.cpuActualChangedCells,
   originalSourceCpuByActor:byActor,
   realBTeam90ToTimeUp:bTeamAfter90,
+  // Comparable original SOURCE measurements, not identical RNG seeds or
+  // a formal 4v4 performance certificate. Independent actual native
+  // Chrome reruns may differ; report any regression without hiding it.
+  p2OriginalLateInkBeforeAfter:{
+   baselineSourceRun:43677911722,
+   baselineHeadSha:'4d215e5090196cb26415c3b70dc93d413a930f63',
+   baselineIntervalSeconds:[90,180],
+   realP2SourceOnly:true,
+   byActor:Object.fromEntries(
+    Object.entries({B1:29,B2:278,B3:364,B4:949}).map(([id,before])=>{
+     const after=bTeamAfter90[id]?.actualInkCellsAdded90ToTimeUp;
+     return [id,{
+      actualChangedCellsBefore:before,
+      actualChangedCellsAfter:Number.isSafeInteger(after)?after:null,
+      change:Number.isSafeInteger(after)?after-before:null,
+      comparativeNotDeterministicProof:true
+     }];
+    }))
+  },
   realCpuShotRequestsAt80:ink80.cpuShots,
   realCpuShotRequestsAtTimeUp:end.cpuShots,
   actualPhysicalCpuTravelMetersAt80:ink80.cpuRealPatrolTravel,
