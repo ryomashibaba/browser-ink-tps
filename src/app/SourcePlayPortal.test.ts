@@ -12,9 +12,10 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourceStoppedWorldMenuHref}
  from './SourcePlayPortal';
 import {sourceCoopEligible} from './B193SourceCoopMode';
-import {b384SourceCircuitSelected} from './B384SourceCircuit';
+import {b384SourceCircuitHref,b384SourceCircuitSelected}
+ from './B384SourceCircuit';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
-import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
+import {WEAPON_ORDER,DEFAULT_WEAPON_ID} from '../weapons/WeaponCatalog';
 describe('fail-closed human SOURCE world can exit only to a clean mode menu',()=>{
  const root='https://example.org/browser-ink-tps/play-source.html';
  const urls=sourcePlayWeaponModeDestinations(root,'ink-saber');
@@ -130,6 +131,33 @@ describe('T21 real playable SOURCE game entry',()=>{
    .toThrow('T21_SOURCE_PORTAL_INVALID_ORIGIN');
   expect(()=>sourcePlayPortalDestinations('https://example.org/index.html'))
    .toThrow('T21_SOURCE_PORTAL_INVALID_ORIGIN');
+ });
+});
+
+describe('user-selected native SOURCE circuit entry preserves the existing weapon',()=>{
+ it('carries the chosen weapon from genuine preview into a new 180s physical circuit',()=>{
+  const old='https://example.org/browser-ink-tps/?t21Play=preview&'+
+   't21QaDrive=source&cpuWarp=1&production=1#discard';
+  for(const id of WEAPON_ORDER){
+   const href=b384SourceCircuitHref(old,true,id);
+   expect(href).not.toBeNull();
+   const u=new URL(href!);
+   expect(b384SourceCircuitSelected(u.searchParams)).toBe(true);
+   expect(u.hash).toBe('');
+   expect(u.searchParams.has('cpuWarp')).toBe(false);
+   expect(u.searchParams.has('production')).toBe(false);
+   expect(u.searchParams.get('t21W10B389'))
+    .toBe(id===DEFAULT_WEAPON_ID?null:id);
+   expect(b389NativeBootWeapon(u.searchParams))
+    .toBe(id===DEFAULT_WEAPON_ID?null:id);
+   const off=b384SourceCircuitHref(href!,false,id);
+   expect(new URL(off!).searchParams.has('t21W10B389')).toBe(false);
+   expect(new URL(off!).searchParams.has('t21W10B384')).toBe(false);
+  }
+ });
+ it('denies an unknown weapon rather than constructing a forged world',()=>{
+  expect(b384SourceCircuitHref('https://example.org/?t21Play=preview',
+   true,'nonexistent')).toBeNull();
  });
 });
 

@@ -1400,7 +1400,8 @@ export class UndertowF3PlayablePreviewApp{
        this.survey.snapshot().active||this.galleryIndex>=0||
        ['ARMED','RUNNING'].includes(this.b25Run.snapshot().status)||
        ['ARMED','RUNNING'].includes(this.b22Trial.snapshot().status))return;
-    const url=b384SourceCircuitHref(window.location.href,!b384Active);
+    const url=b384SourceCircuitHref(window.location.href,!b384Active,
+     this.projectiles.currentPlayerWeapon.id);
     if(url)window.location.assign(url);
    });
   this.panel.querySelector('#t21-f3-b207-combat-round')!

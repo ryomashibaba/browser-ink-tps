@@ -1,14 +1,19 @@
-/** B384: restart a fresh native source world with B183/B186 60Hz
- * physical original circuit and the existing 12-weapon READY selector.
- * No authored floor/actor/scoring/clock permissions added. */
-export function b384SourceCircuitHref(href:string,enable:boolean):string|null{
+import {WEAPON_ORDER,DEFAULT_WEAPON_ID,type WeaponId}
+ from '../weapons/WeaponCatalog';
+/** B384: reboot the genuine B183/B186 native original SOURCE circuit.
+ * Carry only an already selected, validated human kit when explicitly
+ * ENTERING the circuit; never transfer game actors, paint, score or clock. */
+export function b384SourceCircuitHref(
+ href:string,enable:boolean,weaponId?:string
+):string|null{
  const url=new URL(href);
  // Ordinary preview can launch the same genuine source-only world.
  if(!['http:','https:'].includes(url.protocol)||
     url.searchParams.get('t21Play')!=='preview'||
     (url.searchParams.has('t21QaDrive')&&
      url.searchParams.get('t21QaDrive')!=='source')||
-    url.searchParams.get('t21QaInput')==='deterministic')return null;
+    url.searchParams.get('t21QaInput')==='deterministic'||
+  weaponId!==undefined&&!WEAPON_ORDER.includes(weaponId as WeaponId))return null;
  const next=new URL(url.pathname,url.origin);
  next.searchParams.set('t21Play','preview');
  next.searchParams.set('t21QaDrive','source');
@@ -18,6 +23,9 @@ export function b384SourceCircuitHref(href:string,enable:boolean):string|null{
   next.searchParams.set('t21W10B192','humanCombat');
   next.searchParams.set('t21W10B203','fullRound');
   next.searchParams.set('t21W10B384','loadoutCircuit');
+  // Existing B389 strictly recognizes this canonical native circuit.
+  if(weaponId&&weaponId!==DEFAULT_WEAPON_ID)
+   next.searchParams.set('t21W10B389',weaponId);
  }
  return next.href;
 }
