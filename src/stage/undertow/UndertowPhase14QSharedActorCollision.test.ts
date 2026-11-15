@@ -638,6 +638,17 @@ it('refuses unsafe 60Hz, overspeed, untrusted actor identity and production stag
      {...crowd,x:from.x+.08},DT)).toBeNull();
     w.actors.removeRealCpuFoot(id);
    }
+   // An existing REAL CPU capsule overlapping the physical foot must
+   // still veto the same tiny-height correction: KCC, not a fake walkway.
+   const blocked=stalled[0]!;
+   w.actors.syncRealCpuFoot('B2',blocked.from);
+   w.actors.syncRealCpuFoot('B3',{
+    x:blocked.from.x+.20,y:blocked.from.y,z:blocked.from.z
+   });
+   expect(w.actors.tryOriginalCrowdHeightMismatchKccStep(
+    'B2',blocked.from,blocked.crowd,DT)).toBeNull();
+   w.actors.removeRealCpuFoot('B3');
+   w.actors.removeRealCpuFoot('B2');
    const upper=w.stage.metadata.teamBSpawn;
    const high={x:upper[0],y:upper[1],z:upper[2]};
    w.actors.syncRealCpuFoot('B2',high);
