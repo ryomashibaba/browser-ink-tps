@@ -5,6 +5,7 @@
  * Authorized B1 true Rapier foot vs Recast start correction: one scoped 180s real witness.
  * V28 owner-requested single 180s SOURCE gameplay validation at previous game SHA 52c0218b; no gameplay or physics change.
  * camera, projectiles, ink, HP or native step injection.
+ * V28 B2/B4 genuine registered-ramp KCC height-drift fix: single 90s physical-foot witness. No change to gameplay or proof gates.
  */
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
