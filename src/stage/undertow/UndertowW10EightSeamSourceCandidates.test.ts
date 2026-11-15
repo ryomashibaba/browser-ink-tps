@@ -4,7 +4,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
 import {b218OriginalRouteFaceChainSeams}
  from '../../app/B218OriginalRouteFaceChainSeams';
-import {auditW10EightOriginalFaceChainSeams}
+import {auditW10EightOriginalFaceChainSeams,
+ auditW10OriginalRegisteredRampEntrance}
  from './UndertowW10EightSeamSourceCandidates';
 
 describe('W10 exact eight CI688 original source face seams and 54 existing candidate components',()=>{
@@ -93,5 +94,34 @@ describe('W10 exact eight CI688 original source face seams and 54 existing candi
      from:x.nearestIndependentUnplaced[0].upstreamGapMeters,
      to:x.nearestIndependentUnplaced[0].downstreamGapMeters}:null
    }))));
+ });
+
+ it('matches authentic B500 entrance to all 54 source meshes without creating a walking bridge',()=>{
+  const stageRefs=[frozen.solids,frozen.paintSurfaces,frozen.navigationLinks];
+  const result=auditW10OriginalRegisteredRampEntrance();
+  expect(result.schema).toBe('T21_V28_F4_ENTRY_ORIGINAL_SOURCE_CANDIDATES');
+  expect(result.frozen).toBe('25/17/26/0');
+  expect(result.rows).toHaveLength(2);
+  for(const row of result.rows){
+   expect(row.measuredDirectGapMeters).toBeCloseTo(1.246508,5);
+   expect(row.sourceCandidatesOriginallyExamined).toBe(27);
+   expect(row.independentCandidatesExamined).toBeGreaterThan(0);
+   for(const c of [...row.closestStatic,...row.closestUnplaced]){
+    expect(Number.isFinite(c.toRegisteredRampMeters)).toBe(true);
+    expect(Number.isFinite(c.toOriginalSlopeMeters)).toBe(true);
+    expect(c.original72TurfCollisionVerified).toBe(false);
+    expect(c.realKccTraversalCertified).toBe(false);
+   }
+   expect(row.noStageGeometryAdded).toBe(true);
+   expect(row.originalCollisionOrTraversalAuthorized).toBe(false);
+  }
+  expect(frozen.solids).toBe(stageRefs[0]);
+  expect(frozen.paintSurfaces).toBe(stageRefs[1]);
+  expect(frozen.navigationLinks).toBe(stageRefs[2]);
+  expect(result.stagePhysicsAndNavWrites).toBe(0);
+  expect(result.officialScoreable).toBe(0);
+  expect(result.naturalOpponentCrossingCertified).toBe(false);
+  console.log('T21_V28_F4_REAL_ENTRANCE_CANDIDATE_RANK',
+   JSON.stringify(result));
  });
 });

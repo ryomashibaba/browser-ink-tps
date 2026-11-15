@@ -15,6 +15,8 @@ import type {StageTriangleMeshGeometry,StageVector3}
  from '../StageDefinition';
 import {UNDERTOW_UNDERPASS_ROUTE_COMPONENTS}
  from './UndertowSpillwayUnderpassRouteGeometry';
+import {UNDERTOW_RIGHT_LOW_ROUTE_RAMPS}
+ from './UndertowSpillwayRouteRampGeometry';
 import {UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES}
  from './UndertowSpillwaySourceNativeReviewGeometry';
 import {UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES}
@@ -68,13 +70,7 @@ export type W10EightSeamRow=Readonly<{
  originalVersion72CollisionFlagsCertified:false;
  stageRouteOrNavEnabled:false;
 }>;
-export function auditW10EightOriginalFaceChainSeams(){
- const b218=b218OriginalRouteFaceChainSeams();
- if(FROZEN.solids.length!==25||FROZEN.paintSurfaces.length!==17||
-    FROZEN.navigationLinks.length!==26||FROZEN.activationReady||
-    b218.adjacentSeams!==8||b218.previousAllFiveFaceRecastExperimentSucceeded||
-    b218.productionAuthorized)
-  throw Error('T21_W10_EIGHT_SEAMS_FROZEN_PROVENANCE_REQUIRED');
+function collectExactOriginalSourceInventory(){
  const b9=[
   ...UNDERTOW_T21_SOURCE_NATIVE_REVIEW_MESHES,
   ...UNDERTOW_T21_SOURCE_NATIVE_SUPPLEMENT_MESHES,
@@ -111,12 +107,26 @@ export function auditW10EightOriginalFaceChainSeams(){
  if(b9Count!==40||UNDERTOW_T21_SOURCE_BATCH2_MESHES.length!==14||
     candidates.length!==54||duplicateSourceIdentities<0)
   throw Error('T21_W10_EIGHT_SEAMS_SOURCE_INVENTORY_DRIFT');
- const mesh=(points:readonly StageVector3[]):StageTriangleMeshGeometry=>{
+
+ return {candidates,b9Count,duplicateSourceIdentities};
+}
+const sourceCandidateMesh=(points:readonly StageVector3[]):StageTriangleMeshGeometry=>{
   if(points.length<3||points.length%3!==0||
      points.some(p=>p.length!==3||!p.every(Number.isFinite)))
    throw Error('T21_W10_EIGHT_SEAMS_INVALID_EXACT_SOURCE');
   return {vertices:points,indices:points.map((_,i)=>i)};
  };
+
+export function auditW10EightOriginalFaceChainSeams(){
+ const b218=b218OriginalRouteFaceChainSeams();
+ if(FROZEN.solids.length!==25||FROZEN.paintSurfaces.length!==17||
+    FROZEN.navigationLinks.length!==26||FROZEN.activationReady||
+    b218.adjacentSeams!==8||b218.previousAllFiveFaceRecastExperimentSucceeded||
+    b218.productionAuthorized)
+  throw Error('T21_W10_EIGHT_SEAMS_FROZEN_PROVENANCE_REQUIRED');
+ const {candidates,b9Count,duplicateSourceIdentities}=
+  collectExactOriginalSourceInventory();
+ const mesh=sourceCandidateMesh;
  const endpoint=(id:string):Surface=>{
   const source=UNDERTOW_UNDERPASS_ROUTE_COMPONENTS.find(x=>x.id===id);
   if(!source)throw Error('T21_W10_EIGHT_SEAMS_MISSING_FACE_'+id);
@@ -200,4 +210,77 @@ export function auditW10EightOriginalFaceChainSeams(){
   officialGameplayCertified:false as const,
   productionAuthorized:false as const
  };
+}
+
+/** Research ONLY. Identify candidates for the B500 1.246508m gap
+ * between the CURRENT registered right-low ramp and ORIGINAL FloorSlope01.
+ * Colliders, SetActor, movement paths and score are never promoted. */
+export function auditW10OriginalRegisteredRampEntrance(){
+ const audit=b218OriginalRouteFaceChainSeams();
+ if(FROZEN.solids.length!==25||FROZEN.paintSurfaces.length!==17||
+    FROZEN.navigationLinks.length!==26||FROZEN.activationReady||
+    audit.adjacentSeams!==8||audit.productionAuthorized)
+  throw Error('F4_ENTRY_STAGE_AUTHORITY_DRIFT');
+ const {candidates}=collectExactOriginalSourceInventory();
+ const rows=(['POSITIVE_Z','NEGATIVE_Z'] as const).map(side=>{
+  const suffix=side==='POSITIVE_Z'?'positive-z':'negative-z';
+  const ramp=UNDERTOW_RIGHT_LOW_ROUTE_RAMPS.find(x=>
+   x.side===side&&x.id==='right-low-route-ramp-'+suffix);
+  const slope=UNDERTOW_UNDERPASS_ROUTE_COMPONENTS.find(x=>
+   x.side===side&&x.id==='underpass-route-slope01-'+suffix);
+  const active=FROZEN.solids.find(x=>x.id==='UndertowT21D:'+ramp?.id);
+  if(!ramp||!slope||!active||active.triangleMesh!==ramp.mesh)
+   throw Error('F4_ENTRY_REGISTERED_RAMP_NOT_EXACT_SOURCE');
+  const gap=distanceBetweenExactTriangleMeshes(ramp.mesh,slope.mesh);
+  if(!Number.isFinite(gap)||Math.abs(gap-1.246508)>.000025)
+   throw Error('F4_ENTRY_B500_REAL_MEASUREMENT_DRIFT');
+  const list=candidates.filter(c=>c.side===side).map(c=>{
+   const m=sourceCandidateMesh(c.vertices);
+   const toRamp=distanceBetweenExactTriangleMeshes(ramp.mesh,m);
+   const toSlope=distanceBetweenExactTriangleMeshes(slope.mesh,m);
+   if(!Number.isFinite(toRamp)||!Number.isFinite(toSlope))
+    throw Error('F4_ENTRY_INVALID_EXACT_SOURCE_DISTANCE');
+   return {
+    sourceComponentId:c.sourceComponentId,
+    sourceMaterial:c.sourceMaterial,
+    placementAuthority:c.placementAuthority,
+    sourceTriangles:m.indices.length/3,
+    toRegisteredRampMeters:Number(toRamp.toFixed(6)),
+    toOriginalSlopeMeters:Number(toSlope.toFixed(6)),
+    worstEndpointMeters:Number(Math.max(toRamp,toSlope).toFixed(6)),
+    pairWithin30cm:toRamp<=.30&&toSlope<=.30,
+    isEndpointItself:
+     (c.sourceComponentId.startsWith(ramp.sourceObject+'|')&&toRamp<.000001)||
+     (c.sourceComponentId.startsWith(slope.sourceObject+'|')&&toSlope<.000001),
+    actorPlacementKnown:c.placementAuthority==='STATIC_MODEL_SOURCE',
+    original72TurfCollisionVerified:false as const,
+    realKccTraversalCertified:false as const
+   };
+  }).filter(x=>!x.isEndpointItself)
+   .sort((a,b)=>a.worstEndpointMeters-b.worstEndpointMeters||
+    a.toRegisteredRampMeters+a.toOriginalSlopeMeters-
+    b.toRegisteredRampMeters-b.toOriginalSlopeMeters||
+    a.sourceComponentId.localeCompare(b.sourceComponentId));
+  const bridges=list.filter(x=>x.pairWithin30cm);
+  return {side,registeredRampId:active.id,
+   exactMissingSlope01Id:slope.id,
+   measuredDirectGapMeters:Number(gap.toFixed(6)),
+   sourceCandidatesOriginallyExamined:27,
+   independentCandidatesExamined:list.length,
+   geometricNearPairCount:bridges.length,
+   knownPlacedNearPairCount:bridges.filter(x=>x.actorPlacementKnown).length,
+   setActorUnresolvedNearPairCount:
+    bridges.filter(x=>!x.actorPlacementKnown).length,
+   closestStatic:list.filter(x=>x.actorPlacementKnown).slice(0,3),
+   closestUnplaced:list.filter(x=>!x.actorPlacementKnown).slice(0,3),
+   noStageGeometryAdded:true as const,
+   originalCollisionOrTraversalAuthorized:false as const};
+ });
+ return {
+  schema:'T21_V28_F4_ENTRY_ORIGINAL_SOURCE_CANDIDATES' as const,
+  frozen:'25/17/26/0' as const,
+  sourceCandidateInventory:54 as const,
+  rows,stagePhysicsAndNavWrites:0 as const,
+  officialScoreable:0 as const,
+  naturalOpponentCrossingCertified:false as const};
 }
