@@ -773,6 +773,75 @@ it('B4 recognizes only true recent unsupported original Rapier KCC and leaves th
  expect(retry()).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
 });
+it('B3 true 120-tick original-ramp teammate crowd tries only strictly approved ramp goal',()=>{
+ const floor='UndertowT21D:right-low-route-ramp-negative-z';
+ const b3Foot=new Vec3(-6.1225128173828125,4.5975302529335025,-48.8333740234375);
+ const b2Foot=new Vec3(-5.868,4.6,-48.271);
+ const b3={id:'B3',team:Team.B,position:b3Foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const b2={id:'B2',team:Team.B,position:b2Foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ let fullRoute=false,actorBlocked=false;
+ const distantFront=new Vec3(-24.385263365,4.502,-44.321323812);
+ const otherFront=new Vec3(-6.185263365,4.502,-37.321323812);
+ Object.assign(source,{
+  stage:undertowT21dConnectivityQaStage(),bots:[b3,b2],
+  enableB441SourceFrontline:true,physics:{},
+  physicallyRejoined:new Set(['B2','B3']),
+  b137NativeTick:1600,lastMoved:new Map([['B3',1478]]),
+  b441FrontGoals:new Map([['B3',[distantFront,otherFront]]),
+  b443OriginalGoalLocks:new Map([['B3',{
+   target:distantFront.clone(),firstApprovedTick:1300,arrivedSinceTick:null
+  }]]),
+  b441OriginalRampGoal:new Map(),b441OriginalRampLastAuditTick:new Map(),
+  b441OriginalRampApprovals:0,b441OriginalRampRetentions:0,
+  b441OriginalRampRejected:0,realKccRejectedSteps:new Map(),
+  realKccB3Unsupported:new Map(),
+  sourceNativeCharacterFootHit:()=>({solidId:floor}),
+  hasSourceFootSupport:()=>true,
+  hasSourceSupportedRoute:()=>fullRoute,
+  kccActorBlocksOriginalRoute:()=>actorBlocked,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>({
+   reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   nativePathPoints:[from.clone(),to.clone()]})},
+  realGoalRequests:0
+ });
+ const out=new Vec3(99,99,99);
+ // No previously observed UNSUPPORTED KCC denial: a genuine stationary,
+ // crowded B3 may request a search, but a failed Rapier route gives NO goal.
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+ expect(source.b441OriginalRampGoal.size).toBe(0);
+ expect(out.equals(new Vec3(99,99,99))).toBe(true);
+ // Re-evaluate only after the existing 60-tick retry interval.
+ source.b137NativeTick+=60;fullRoute=true;actorBlocked=true;
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+ source.b137NativeTick+=60;actorBlocked=false;
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(true);
+ expect(proposeB441OriginalRampLocalGoals(source.stage,'B')
+  .some(p=>new Vec3(...p.point).distance(out)<.001)).toBe(true);
+ expect(source.b441FrontGoals.get('B3')).toHaveLength(2);
+ expect(source.b443OriginalGoalLocks.get('B3').target.equals(distantFront))
+  .toBe(true);
+ expect(b3.position.equals(b3Foot)).toBe(true);
+ expect(b2.position.equals(b2Foot)).toBe(true);
+ // Already completed B3 front must NOT be overridden by crowd.
+ source.b441OriginalRampGoal.clear();
+ source.b137NativeTick+=60;
+ source.b443OriginalGoalLocks.get('B3').target.copy(b3Foot);
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+ // Actual proximity, live rejoin and time are mandatory.
+ source.b443OriginalGoalLocks.get('B3').target.copy(distantFront);
+ b2.position.set(-15,4.6,-49);
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+ b2.position.copy(b2Foot);
+ source.lastMoved.set('B3',source.b137NativeTick-2);
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+ source.lastMoved.set('B3',1478);
+ source.physicallyRejoined.delete('B2');
+ expect(source.tryOriginalRampLocalRecovery('B3',b3Foot,out)).toBe(false);
+});
+
 it('B3 truly unsupported native foot may recheck original ramp even with two distant front goals, but cannot bypass an unobserved veto',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
  const foot=new Vec3(-6.158311367034912,4.59292937040329,

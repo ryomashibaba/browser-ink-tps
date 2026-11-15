@@ -796,26 +796,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(prior&&realFoot.distance(prior)<=1.2)
    this.b441OriginalRampGoal?.delete(id);
   const inFlight=this.b441OriginalRampGoal?.get(id);
-  // B3 has already-certified distant fronts. Do not override these
-  // unless Rapier recently and ACTUALLY refused unsupported original
-  // ground, with the real CPU still on this same registered ramp.
-  if(id==='B3'&&!inFlight){
-   const witness=this.realKccB3Unsupported?.get(id);
-   if(!witness||
-      this.b137NativeTick<witness.nativeTick||
-      this.b137NativeTick-witness.nativeTick>B34_GROUNDED_STALL_TICKS||
-      realFoot.distance(witness.foot)>.22)return false;
-  }
-  // TRUE 720-tick original B2/B4 RAW: each remained at the SAME
-  // registered ramp foot for 429/442 consecutive physics ticks while
-  // physically rejoined B-teammates occupied a ~0.61m corridor.
-  // A long real-foot standstill is NOT proof of a KCC rejection.
-  // It is only a reason to TRY a different PRE-EXISTING original ramp
-  // goal early; every entire Recast/Rapier route and moving actor veto
-  // below remains unchanged. Other SOURCE modes and B3 remain unchanged.
+  // True 720-tick SOURCE B2/B4 congestion recovery improved actual
+  // 60Hz B4 movement; B3 nevertheless remained grounded on the SAME
+  // original ramp, ~0.61-0.64m from B2 for 200+ native ticks.
+  // Do not overwrite B3's existing independently approved distant
+  // FRONT goal just because a teammate is nearby: only try an already
+  // existing ORIGINAL ramp goal when actual KCC foot has stayed still
+  // for 120 ticks and that goal has NOT already been reached.
+  // This is a candidate-trigger, never a new Recast/Rapier permission.
   const lastRealTravel=this.lastMoved?.get(id);
+  const b3InFlightFront=this.b443OriginalGoalLocks?.get(id)?.target;
+  const unfinishedB3Front=id!=='B3'||!b3InFlightFront||
+   Math.hypot(b3InFlightFront.x-realFoot.x,
+    b3InFlightFront.y-realFoot.y,b3InFlightFront.z-realFoot.z)>=1.5;
   const crowdedStationaryOriginalFoot=
-   (id==='B2'||id==='B4')&&
+   (id==='B2'||id==='B3'||id==='B4')&&unfinishedB3Front&&
    Number.isSafeInteger(lastRealTravel)&&lastRealTravel!==undefined&&
    lastRealTravel>0&&this.b137NativeTick>=lastRealTravel+120&&
    this.bots.some(mate=>{
@@ -827,6 +822,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     return Math.abs(mate.position.y-realFoot.y)<.60&&
       separation>=.57&&separation<=1.3;
    });
+  // B3's original, genuine unsupported KCC denial remains sufficient.
+  // Without it, only the separate physical-foot congestion witness above
+  // can trigger a TRY; B3 still must pass the unchanged full route below.
+  if(id==='B3'&&!inFlight){
+   const witness=this.realKccB3Unsupported?.get(id);
+   const trueUnsupported=!!witness&&
+      this.b137NativeTick>=witness.nativeTick&&
+      this.b137NativeTick-witness.nativeTick<=B34_GROUNDED_STALL_TICKS&&
+      realFoot.distance(witness.foot)<=.22;
+   if(!trueUnsupported&&!crowdedStationaryOriginalFoot)return false;
+  }
   if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
       B34_GROUNDED_STALL_TICKS&&!crowdedStationaryOriginalFoot)
    return false;
