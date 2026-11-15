@@ -790,7 +790,7 @@ it('B3 true 120-tick original-ramp teammate crowd tries only strictly approved r
   enableB441SourceFrontline:true,physics:{},
   physicallyRejoined:new Set(['B2','B3']),
   b137NativeTick:1600,lastMoved:new Map([['B3',1478]]),
-  b441FrontGoals:new Map([['B3',[distantFront,otherFront]]),
+  b441FrontGoals:new Map([['B3',[distantFront,otherFront]]]),
   b443OriginalGoalLocks:new Map([['B3',{
    target:distantFront.clone(),firstApprovedTick:1300,arrivedSinceTick:null
   }]]),
