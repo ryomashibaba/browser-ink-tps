@@ -2361,9 +2361,13 @@ export class ProjectileSystem {
     sourceMeleeOrigin?:Vec3,
     sourceHumanMelee=false
   ): void {
-    const meleeClear=this.nativeSourceHumanPhysicalMode&&sourceMeleeOrigin?
-      (body:Vec3)=>this.sourceMeleeLineClear(sourceMeleeOrigin,body):
-      undefined;
+    // In the selected 25/17/26/0 physical SOURCE round, real Rapier
+    // cover blocks blast HP too, not only melee HP. This reads existing
+    // registered solids; it never changes explosion radius, damage,
+    // paint, actor positions, or legacy T20 bomb behavior.
+    const meleeClear=this.nativeSourceHumanPhysicalMode?
+      (body:Vec3)=>this.sourceMeleeLineClear(
+       sourceMeleeOrigin??point,body):undefined;
     // Only the four canonical 25/17/26/0 physical SOURCE rounds enable
     // the real shared CPU Rapier-capsule hit shape. All other hit modes
     // retain the historical center approximation.

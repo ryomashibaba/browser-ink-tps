@@ -319,12 +319,26 @@ export class SubWeaponSystem {
     // Rapier CPU capsule as SOURCE CPU bombs, not the historical single
     // center point (which misses legitimate edge/crown blast contact).
     // No floor, weapon radius, damage, navigation or stage grant.
+    // Human SOURCE bombs use the SAME registered Rapier cover as the
+    // physical CPU capsule: radius overlap cannot damage a body through
+    // original walls. No new terrain or synthetic line of sight is added.
+    // Non-SOURCE T20 bomb damage keeps its original radius-only rule.
+    const originalSourceBlastClear=this.nativeSourceHumanSubBodyContactEnabled?
+      (body:Vec3)=>{
+       const span=slot.position.distance(body);
+       if(!Number.isFinite(span))return false;
+       if(span<=1e-8)return true;
+       const hit=this.physics.castStageSegment(
+         slot.position,body,'ink-projectile');
+       return !hit||Number.isFinite(hit.distance)&&
+        hit.distance>=Math.max(0,span-.025);
+      }:undefined;
     this.cpuAgents.applyAreaDamage(
       slot.position,
       profile.outerDamageRadiusMeters,
       profile.outerDamage,
       slot.team,
-      undefined,
+      originalSourceBlastClear,
       this.nativeSourceHumanSubBodyContactEnabled
     );
     this.combatTargets.applyAreaDamage(
@@ -339,7 +353,7 @@ export class SubWeaponSystem {
         profile.innerDamageRadiusMeters,
         profile.innerExtraDamage,
         slot.team,
-        undefined,
+        originalSourceBlastClear,
         this.nativeSourceHumanSubBodyContactEnabled
       );
       this.combatTargets.applyAreaDamage(

@@ -481,6 +481,47 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(projectile.stats.cpuPlayerHits).toBe(1);
   });
 
+  it('SOURCE CPU blast and human HP obey real original wall cover, T20 remains unchanged',()=>{
+    const {system,bot}=fixture(true);
+    bot.hp=75;
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    const projectile:any=Object.create(ProjectileSystem.prototype);
+    projectile.cpuAgents=system;
+    projectile.combatTargets={applyAreaDamage:vi.fn()};
+    projectile.nativeSourceHumanPhysicalMode=()=> 'HUMAN';
+    projectile.currentHumanDamageable=true;
+    projectile.currentHumanTeam=Team.A;
+    projectile.currentHumanPosition=new Vec3(2,.68,0);
+    projectile.currentHumanGuarding=false;
+    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.stats={cpuPlayerHits:0};
+    const wall={solidId:'UndertowT21D:registered-original-cover',
+      distance:.11,point:new Vec3(.11,.68,0)};
+    projectile.physics={castStageSegment:vi.fn(()=>wall)};
+    const explosion=new Vec3(0,.68,0);
+    // SOURCE CPU: actual capsule overlap is not enough behind Rapier.
+    projectile.applyExternalAreaDamage(explosion,3,20,Team.A);
+    expect(bot.hp).toBe(75);
+    expect(system.stats.cpuCombatHits).toBe(0);
+    // SOURCE HUMAN: same native blast center and world blocker.
+    projectile.applyExternalAreaDamage(explosion,3,20,Team.B);
+    expect(projectile.resources.applyDamage).not.toHaveBeenCalled();
+    expect(projectile.stats.cpuPlayerHits).toBe(0);
+    // Clear sight with precisely the same registered actors/coordinates.
+    projectile.physics.castStageSegment=vi.fn(()=>null);
+    projectile.applyExternalAreaDamage(explosion,3,20,Team.A);
+    expect(bot.hp).toBe(55);
+    expect(system.stats.cpuCombatHits).toBe(1);
+    projectile.applyExternalAreaDamage(explosion,3,20,Team.B);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+    // Frozen legacy T20 keeps radius-only HP damage and no SOURCE ray.
+    const old=fixture(false);
+    old.bot.hp=75;
+    expect(old.system.applyAreaDamage(explosion,3,20,Team.A)).toBe(1);
+    expect(old.bot.hp).toBe(55);
+  });
+
   it('SOURCE thrown CPU SUB strikes only a real opponent ahead of the original stage blocker',()=>{
     const make=()=>{
       const slot:any={active:true,landed:false,actorId:'B1',
@@ -1660,6 +1701,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     sub.enableNativeSourceHumanSubBodyContact();
     sub.cpuAgents=system;
     sub.combatTargets={applyAreaDamage:vi.fn()};
+    sub.physics={castStageSegment:vi.fn(()=>null)};
     sub.paintExplosion=vi.fn();
     sub.feedback={subBurst:vi.fn()};
     sub.stats={playerSubExplosions:0};
@@ -1674,10 +1716,22 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(sub.paintExplosion).toHaveBeenCalledOnce();
     // Existing genuine landing and rejoin permits the unchanged bomb.
     bot.mobilityState='GROUND';actuallyRejoined=true;
+    // A registered original wall blocks both genuine SOURCE blast rings.
+    sub.physics.castStageSegment=vi.fn((from:Vec3,to:Vec3)=>({
+      solidId:'UndertowT21D:original-opaque-wall',
+      distance:.09,point:from.clone().add(
+       to.clone().sub(from).normalize().mulScalar(.09))
+    }));
+    sub.explode(bomb,profile,'CONTACT_IMPACT');
+    expect(bot.hp).toBe(100);
+    expect(system.stats.cpuCombatHits).toBe(0);
+    // Only an independently unobstructed, still-live original CPU body
+    // may take ordinary SUB damage; do not award hit/ink to wall tests.
+    sub.physics.castStageSegment=vi.fn(()=>null);
     sub.explode(bomb,profile,'CONTACT_IMPACT');
     expect(bot.hp).toBeLessThan(100);
     expect(system.stats.cpuCombatHits).toBeGreaterThan(0);
-    expect(sub.paintExplosion).toHaveBeenCalledTimes(2);
+    expect(sub.paintExplosion).toHaveBeenCalledTimes(3);
     // Frozen T20 has no SOURCE rejoin authority to check; preserve its
     // historical radius and pending first-drop damage semantics.
     const old=fixture(false);
