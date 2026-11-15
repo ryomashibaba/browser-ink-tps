@@ -74,8 +74,32 @@ export function b421RealEnemyStandoff(
  }
  // No LOS-authorized ranged candidate: keep the previously strict
  // standoff only. The real projectile can still be blocked; no fake hit.
- const goal=chooseB142OriginalAllyStandoff(path,realEnemyFoot);
+ let goal=chooseB142OriginalAllyStandoff(path,realEnemyFoot);
+ // B142's 30cm SAME-LEVEL preference can suppress all authentic
+ // encounters on a verified original ramp. Preserve B142 for flat
+ // routes; only when it vetoes an elevated path, use its same 2m-back
+ // interpolation on the already-supplied native Recast polyline.
+ // Caller must STILL prove the intermediate Rapier support and final
+ // native path before submitting this point to the actual Crowd agent.
+ if(!goal&&path.length>=2&&
+    Math.abs(path[0]!.y-realEnemyFoot.y)<=1.75){
+  let remaining=2;
+  for(let i=path.length-1;i>0;i--){
+   const a=path[i-1]!,b=path[i]!;
+   const span=Math.hypot(a.x-b.x,a.z-b.z);
+   if(span<=1e-6)continue;
+   if(remaining>span){remaining-=span;continue;}
+   const t=remaining/span;
+   const candidate={x:b.x+(a.x-b.x)*t,
+    y:b.y+(a.y-b.y)*t,z:b.z+(a.z-b.z)*t};
+   if(accepted(candidate)&&
+      Math.abs(candidate.y-realEnemyFoot.y)<=1.75)
+    goal=candidate;
+   break;
+  }
+ }
  if(!goal||!accepted(goal))return null;
  const d=Math.hypot(goal.x-realEnemyFoot.x,goal.z-realEnemyFoot.z);
- return d>=1.7&&d<=3.5?goal:null;
+ return d>=1.7&&d<=3.5&&
+  Math.abs(goal.y-realEnemyFoot.y)<=1.75?goal:null;
 }

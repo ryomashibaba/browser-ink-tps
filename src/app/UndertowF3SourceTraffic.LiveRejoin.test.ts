@@ -162,7 +162,9 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   expect(alive()).toBe(false);
   historical.add(enemy.id);expect(alive()).toBe(true);
   enemy.position.z=-40;expect(alive()).toBe(false);
-  enemy.position.z=40;enemy.position.y=3.6;expect(alive()).toBe(false);
+  enemy.position.z=40;enemy.position.y=3.6;
+  expect(alive()).toBe(true); // eligible ORIGINAL ramp, route not yet proved
+  enemy.position.y=5.4;expect(alive()).toBe(false);
   enemy.position.y=3;enemy.position.x=Number.NaN;expect(alive()).toBe(false);
   enemy.position.x=0;enemy.hp=Number.NaN;expect(alive()).toBe(false);
   enemy.hp=100;expect(alive()).toBe(true);

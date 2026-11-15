@@ -11,10 +11,11 @@ describe('B192 source-only actual HUMAN pursuit',()=>{
  it('accepts real same-side enemy foot proposal (route still unproven)',()=>{
   expect(can(v)).toBe(true);expect(can({...v,cpuId:'B4'})).toBe(true);
  });
- it('refuses the disconnected opposite side and wrong floor',()=>{
+ it('allows only real same-side SOURCE elevations, not disconnected source floors',()=>{
   expect(can({...v,humanFoot:{x:4,y:4,z:40}})).toBe(false);
   expect(can({...v,humanFoot:{x:4,y:4,z:-32}})).toBe(false);
-  expect(can({...v,humanFoot:{x:4,y:4.5,z:-40}})).toBe(false);
+  expect(can({...v,humanFoot:{x:4,y:4.5,z:-40}})).toBe(true);
+  expect(can({...v,humanFoot:{x:4,y:5.3,z:-40}})).toBe(false);
  });
  it('requires initial seven-CPU start and same-tick grounded alive HUMAN',()=>{
   expect(can({...v,humanTick:99})).toBe(false);
@@ -51,6 +52,15 @@ describe('B192 genuine path-based CPU combat standoff proposal',()=>{
  it('stops two meters before the living human on the supplied source path',()=>{
   expect(standoff(originalRecastPath,actualHuman))
    .toEqual({x:2,y:4,z:-40});
+ });
+ it('can nominate an already-supplied original ramp waypoint, never a new floor',()=>{
+  const human={x:4,y:4.5,z:-40};
+  const path=[{x:0,y:3,z:-40},{x:2,y:3.5,z:-40},human];
+  expect(standoff(path,human)).toEqual(path[1]);
+  // Still only a proposal: caller must certify full native Recast and
+  // original Rapier route before any physical actor moves toward it.
+  expect(standoff([{x:0,y:3,z:40},{x:2,y:3.5,z:40},
+   {x:4,y:4.5,z:40}],{x:4,y:4.5,z:40})).toBeNull();
  });
  it('never targets an occupied real physics capsule or a too-short route',()=>{
   expect(standoff([{x:2.3,y:4,z:-40},actualHuman],actualHuman))

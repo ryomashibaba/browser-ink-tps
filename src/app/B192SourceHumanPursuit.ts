@@ -1,7 +1,7 @@
 /** Strict gameplay CPU→real HUMAN goal eligibility, NOT route authority. */
 import {Team} from '../ink/types';
-import {chooseB142OriginalAllyStandoff, type B142Foot}
- from './UndertowF3OriginalAllyStandoff';
+import type {B142Foot} from './UndertowF3OriginalAllyStandoff';
+import {b421RealEnemyStandoff} from './B421RealEnemyStandoff';
 export interface B192HumanCandidate{
  enabled:boolean;nativeTick:number;humanTick:number;
  cpuId:string;cpuTeam:Team.A|Team.B;
@@ -28,7 +28,7 @@ export function eligibleB192SourceHumanPursuit(p:B192HumanCandidate):boolean{
  // The genuine A-human must ALREADY be on the true B side; the
  // unresolved underpass is never treated as a free teleport or bridge.
  if(a.z> -33||b.z> -33||a.y<2.7||a.y>5.25||
-    b.y<2.7||b.y>5.25||Math.abs(a.y-b.y)>.30)
+    b.y<2.7||b.y>5.25||Math.abs(a.y-b.y)>1.75)
   return false;
  const d=Math.hypot(a.x-b.x,a.z-b.z);
  return d>=1.7&&d<=10;
@@ -42,9 +42,12 @@ export function eligibleB192SourceHumanPursuit(p:B192HumanCandidate):boolean{
 export function chooseB192OriginalEnemyStandoff(
  path:readonly B142Foot[],realHumanFoot:B142Foot
 ):B142Foot|null{
- const p=chooseB142OriginalAllyStandoff(path,realHumanFoot);
+ // Only an existing SOURCE Recast path may nominate an elevated
+ // combat standoff. The caller still re-audits native route+Rapier
+ // support from the actual CPU foot; no Actor/contact is generated here.
+ const p=b421RealEnemyStandoff(path,realHumanFoot,-1);
  if(!p||p.z> -33||p.y<2.7||p.y>5.25||
     realHumanFoot.z> -33||
-    Math.abs(p.y-realHumanFoot.y)>.30)return null;
+    Math.abs(p.y-realHumanFoot.y)>1.75)return null;
  return p;
 }

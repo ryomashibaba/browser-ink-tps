@@ -97,7 +97,13 @@ export function sourceNativeEligibleOpponentForCombat(
    actualSelfFoot.x,actualSelfFoot.y,actualSelfFoot.z]
    .every(Number.isFinite)&&
   other.position.z*originalSide>=33&&
-  Math.abs(other.position.y-actualSelfFoot.y)<=.30;
+  // REAL original 3m/4.5m source terraces and existing ramps can have
+  // different elevations. Do not veto them before the SAME source-foot,
+  // full Recast path, Rapier 30cm support, actor and standoff gates run.
+  // Still forbid out-of-source levels or speculative F4 crossing.
+  actualSelfFoot.y>=2.7&&actualSelfFoot.y<=5.25&&
+  other.position.y>=2.7&&other.position.y<=5.25&&
+  Math.abs(other.position.y-actualSelfFoot.y)<=1.75;
 }
 
 /** B445 read-only per-CPU audit for existing B441 original SOURCE goals.

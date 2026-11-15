@@ -49,6 +49,14 @@ describe('source-licensed real-weapon engagement positions',()=>{
    ...weapon,originalStageRayBlocked:()=>true
   })).toEqual(p(10));
  });
+ it('offers existing rising Recast path standoff without inventing actor motion',()=>{
+  const live={x:4,y:4.5,z:-40};
+  const path=[{x:0,y:3,z:-40},{x:2,y:3.5,z:-40},live];
+  expect(b421RealEnemyStandoff(path,live,-1)).toEqual(path[1]);
+  expect(b421RealEnemyStandoff(path,{x:4,y:7,z:-40},-1)).toBeNull();
+  expect(b421RealEnemyStandoff(path.map(q=>({...q,z:40})),
+    {...live,z:40},-1)).toBeNull();
+ });
  it('preserves the strict 2m melee and legacy behavior',()=>{
   expect(b421RealEnemyStandoff(path,p(12),1)).toEqual(p(10));
   expect(b421RealEnemyStandoff(path,p(12),1,{
