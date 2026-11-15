@@ -12,7 +12,7 @@ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
-import {rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
+import {B34_GROUNDED_STALL_TICKS,rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
 import {eligibleB137OriginalAllyRally} from './UndertowF3OriginalAllyRally';
 import {rankB169OriginalAdvanceGuardGoals} from './B169OriginalAllyAdvanceGuard';
 import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollisionRelief';
@@ -1034,7 +1034,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // veto too; never reject a route from an optical proximity alone.
   if(!this.enableB441SourceFrontline||
      (id!=='B2'&&id!=='B3'&&id!=='B4')||
-     (this.realKccRejectedSteps.get(id)??0)<90)return false;
+     (this.realKccRejectedSteps.get(id)??0)<B34_GROUNDED_STALL_TICKS)return false;
   const witness=this.realKccLastActorBlocker?.get(id);
   if(!witness||!Number.isSafeInteger(this.b137NativeTick)||
      this.b137NativeTick<witness.nativeTick||
@@ -2282,10 +2282,25 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b137NativeTick-b1Drought.nativeTick<=40&&
    realFoot.distance(b1Drought.foot)<=.22&&
    this.hasSourceFootSupport(realFoot);
+  // Genuine B207 Chrome: B2/B3 accumulated 42/44 physical KCC vetoes
+  // against real teammate capsules within the first 12s. This only
+  // accelerates a request to ALREADY REGISTERED source patrol feet.
+  // Uncertain stage collision keeps the 90-denial gate; every alternative
+  // still requires the full native Recast and Rapier route audit.
+  const actorVeto=this.realKccLastActorBlocker?.get(id);
+  const actualTeammateBlocked=!!actorVeto&&
+   this.enableB441SourceFrontline&&
+   (id==='B2'||id==='B3'||id==='B4')&&
+   (this.realKccRejectedSteps.get(id)??0)>=B34_GROUNDED_STALL_TICKS&&
+   this.b137NativeTick>=actorVeto.nativeTick&&
+   this.b137NativeTick-actorVeto.nativeTick<=B34_GROUNDED_STALL_TICKS&&
+   this.bots.some(other=>other.id===actorVeto.ownerId&&
+    other.team===bot.team&&
+    sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined));
   const kccBlockedAlternative=
    active>=0&&candidates.length>1&&
    ((this.realKccRejectedSteps.get(id)??0)>=90||
-    b1StalledResearchPatrol)&&
+    actualTeammateBlocked||b1StalledResearchPatrol)&&
    bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
    this.physicallyRejoined.has(id)&&
    this.hasSourceFootSupport(realFoot);
