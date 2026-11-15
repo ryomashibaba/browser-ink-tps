@@ -54,7 +54,8 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.sourceInk={sampleWorld:()=>({
    surface,owner,flags:SurfaceFlags.Paintable,u:1,v:1
   })};
-  const cast=vi.fn(()=>null);
+  const cast=vi.fn((_from:Vec3,_to:Vec3,_kind:string):
+   {solidId:string;point:Vec3}|null=>null);
   traffic.physics={castStageSegment:cast};
   const bot={team:Team.B,weaponId:'pulse-sprayer'};
   const goal=new Vec3(0,3,0);
