@@ -35,6 +35,10 @@ test('no unintended LAN/production/GitHub/actor permissions in launcher',()=>{
  assert.doesNotMatch(batch,/\b(?:setx|powershell|reg\.exe|schtasks)\b/i);
  assert.match(batch,/--strictPort/);
  assert.match(batch,/if not exist "node_modules\\\.bin\\vite\.cmd"/);
- assert.match(batch,/npm\.cmd install --no-audit --no-fund --no-package-lock/);
+ assert.match(batch,/call npm\.cmd ls --depth=0 --offline >nul 2>nul/);
+ assert.match(batch,/if errorlevel 1 goto :INSTALL_SOURCE_DEPS/);
+ assert.match(batch,/:INSTALL_SOURCE_DEPS/);
+ assert.match(batch,/call npm\.cmd install --no-audit --no-fund --no-package-lock/);
+ assert.match(batch,/:DEPS_READY/);
  assert.match(batch,/if errorlevel 1 goto :FAIL/g);
 });

@@ -45,13 +45,22 @@ echo Source checkout HEAD is NOT a checksum of the built files.
 echo No source checkout or Git state was changed.
 echo.
 echo [1/3] SOURCE research dependencies
-if not exist "node_modules\.bin\vite.cmd" (
-  echo First launch: installing the repository's existing npm dependencies.
-  call npm.cmd install --no-audit --no-fund --no-package-lock
-  if errorlevel 1 goto :FAIL
-) else (
-  echo Existing local dependencies found.
-)
+if not exist "node_modules\.bin\vite.cmd" goto :INSTALL_SOURCE_DEPS
+REM An old checkout may retain vite.cmd but miss newly required plugins.
+REM npm ls reads the installed dependency tree only; no network fetch and
+REM no git mutation. Repair once only when it is actually inconsistent.
+call npm.cmd ls --depth=0 --offline >nul 2>nul
+if errorlevel 1 goto :INSTALL_SOURCE_DEPS
+echo Existing local dependencies verified.
+goto :DEPS_READY
+:INSTALL_SOURCE_DEPS
+echo Preparing missing or stale SOURCE dependencies once.
+call npm.cmd install --no-audit --no-fund --no-package-lock
+if errorlevel 1 goto :FAIL
+REM Abort if repair was incomplete rather than launch a broken game.
+call npm.cmd ls --depth=0 --offline >nul 2>nul
+if errorlevel 1 goto :FAIL
+:DEPS_READY
 
 REM Explicit opt-in review launcher ONLY: verified original F3G/F3L data.
 REM Normal SOURCE play never downloads or promotes original assets.
