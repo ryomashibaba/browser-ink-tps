@@ -423,6 +423,36 @@ async function runApprovedCombatTwinReplay(){
     last.originalImpactChangedEvents-first.originalImpactChangedEvents
   }];
  }));
+ // Compare genuine 90s-to-TIME_UP B-team physical activity and real ink.
+ // These are OBSERVATIONS, not made-up path grants or proof of combat hits.
+ // Accepted KCC moving steps can be tiny, so report real feet separately.
+ const bTeamAfter90=Object.fromEntries(['B1','B2','B3','B4'].map(id=>{
+  const samples=[mid,ink120,ink150,end].map(n=>({
+   tick:n.tick,elapsedNativeSeconds:180-n.remaining,
+   actualFoot:n.cpuActualPhysicalFootByActor?.[id]??null,
+   inkRequests:n.cpuSourceTurfRequestsByActor?.[id]??null,
+   changedCells:n.cpuActualByActor?.[id]?.changedCells??null,
+   approvedPaintAims:n.cpuPaintDecisionByActor?.[id]?.approvedPaintAimChecks??null,
+   noApprovedPaintAims:n.cpuPaintDecisionByActor?.[id]?.noApprovedPaintAimChecks??null,
+   acceptedMovingKcc:n.cpuGroundStepEvidenceByActor?.[id]?.rapierAcceptedMoving??null
+  }));
+  const first=samples[0],last=samples.at(-1);
+  const delta=(key)=>
+   Number.isSafeInteger(first[key])&&Number.isSafeInteger(last[key])?
+    last[key]-first[key]:null;
+  return [id,{samples,
+   actualInkCellsAdded90ToTimeUp:delta('changedCells'),
+   realInkRequests90ToTimeUp:delta('inkRequests'),
+   approvedPaintAims90ToTimeUp:delta('approvedPaintAims'),
+   noApprovedPaintAims90ToTimeUp:delta('noApprovedPaintAims'),
+   acceptedMovingKccSteps90ToTimeUp:delta('acceptedMovingKcc'),
+   physicalFootStartToEndMeters:
+    Array.isArray(first.actualFoot)&&Array.isArray(last.actualFoot)&&
+    first.actualFoot.length===3&&last.actualFoot.length===3&&
+    [...first.actualFoot,...last.actualFoot].every(Number.isFinite)?
+     Math.hypot(...first.actualFoot.map((v,i)=>last.actualFoot[i]-v)):null,
+   interpretation:'POST_RAPIER_SOURCE_ONLY_NOT_ROUTE_OR_HIT_CERTIFICATION'}];
+ }));
  const genuineInkComparison={
   source:'25/17/26/0',realBrowser:'Chromium CDP WebGL2',
   nativeFirstTick:ink80.tick,nativeEndTick:end.tick,
@@ -436,6 +466,7 @@ async function runApprovedCombatTwinReplay(){
   actualCpuCellChangesAfter80:
    end.cpuActualChangedCells-ink80.cpuActualChangedCells,
   originalSourceCpuByActor:byActor,
+  realBTeam90ToTimeUp:bTeamAfter90,
   realCpuShotRequestsAt80:ink80.cpuShots,
   realCpuShotRequestsAtTimeUp:end.cpuShots,
   actualPhysicalCpuTravelMetersAt80:ink80.cpuRealPatrolTravel,
