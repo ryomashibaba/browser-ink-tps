@@ -372,6 +372,7 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
  let strict=true;
  Object.assign(source,{
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
   stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
   enableB441SourceFrontline:true,physics:{},
   physicallyRejoined:new Set(['B1']),respawnOriginalDrops:new Set(),
@@ -547,6 +548,7 @@ it('B1 real KCC veto prefers a different original same-ramp goal, never a new fo
  const bot={id:'B1',team:Team.B,position:foot,agent:{},
   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
  Object.assign(source,{
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
   stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
   enableB441SourceFrontline:true,
   physics:{castCharacterFootSupport:()=>({})},
@@ -586,6 +588,7 @@ it('B4 genuine 90s stalled ramp prefers a distinct existing SAME-SOLID original 
   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
  let safe=true;
  Object.assign(source,{
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
   stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
   enableB441SourceFrontline:true,
   physics:{castCharacterFootSupport:()=>({})},
@@ -747,6 +750,7 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
  let strict=true;
  Object.assign(source,{
+  p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
   stage:undertowT21dConnectivityQaStage(),bots:[bot],freeCombat:true,
   enableB441SourceFrontline:true,
   physics:{castCharacterFootSupport:()=>({})},
