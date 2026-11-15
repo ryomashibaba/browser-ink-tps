@@ -363,7 +363,7 @@ describe('original source paint-drought retarget must respect shot authority',()
    g.distance(other)<.01);
   const route=vi.fn((_a:Vec3,_b:Vec3)=>({
    reachedTarget:false,startSnapDistanceMeters:0,
-   endSnapDistanceMeters:0,pointCount:0,nativePathPoints:[]
+   endSnapDistanceMeters:0,pointCount:0,nativePathPoints:[] as Vec3[]
   }));
   traffic.nav={auditPath:route};
   const result=new Vec3(90,90,90);
