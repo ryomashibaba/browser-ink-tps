@@ -1057,6 +1057,26 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const cross=Math.abs(ox*dz-oz*dx)/len;
   return ahead>0&&cross<.70;
  }
+ /** Only genuine recent Rapier same-team collision can advance the
+  * request for ANOTHER existing certified original SOURCE goal.
+  * This is not a static-stage refusal or path authority. */
+ private recentRealTeammateKccBlock(id:string):boolean{
+  if(!this.enableB441SourceFrontline||
+     (id!=='B2'&&id!=='B3'&&id!=='B4')||
+     (this.realKccRejectedSteps.get(id)??0)<B34_GROUNDED_STALL_TICKS)
+   return false;
+  const witness=this.realKccLastActorBlocker?.get(id);
+  if(!witness||!Number.isSafeInteger(this.b137NativeTick)||
+     witness.nativeTick>this.b137NativeTick||
+     this.b137NativeTick-witness.nativeTick>B34_GROUNDED_STALL_TICKS)
+   return false;
+  const bot=this.bots.find(x=>x.id===id);
+  const other=this.bots.find(x=>x.id===witness.ownerId);
+  return !!bot&&!!other&&bot.team===other.team&&
+   sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)&&
+   sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined)&&
+   Math.abs(other.position.y-bot.position.y)<1;
+ }
  /** Clear the block streak ONLY after actual Rapier-authorized movement;
   * a successful zero-speed check does not prove the CPU became unstuck. */
  noteRealSourceKccApprovedStep(
@@ -2085,10 +2105,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    let completed:Vec3|null=null;
    // Only genuine B-team 90+ physical KCC rejects can override a still
    // moving FRONT lock, and only with a distinct vetted original target.
+   const realTeammateBlock=this.recentRealTeammateKccBlock(id);
    const trueKccStalledFront=!!lock&&this.enableB441SourceFrontline&&
     bot.team===Team.B&&bot.lifeState==='ACTIVE'&&
     bot.mobilityState==='GROUND'&&this.physicallyRejoined.has(id)&&
-    fronts.length>=2&&(this.realKccRejectedSteps.get(id)??0)>=90;
+    fronts.length>=2&&
+    ((this.realKccRejectedSteps.get(id)??0)>=90||realTeammateBlock);
    let releasedTrueKccFront:Vec3|null=null;
    // B443: B442 real Chromium showed 8-13 target switches in 30 polls
    // when CPU feet came within 1.5m of the first verified SOURCE goal.
@@ -2101,7 +2123,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b137NativeTick,lock.firstApprovedTick,
      lock.arrivedSinceTick,distance,fronts.length,
      Math.abs(lock.target.y-realFoot.y),
-     trueKccStalledFront?(this.realKccRejectedSteps.get(id)??0):0);
+     trueKccStalledFront?(this.realKccRejectedSteps.get(id)??0):0,
+     trueKccStalledFront&&realTeammateBlock);
     if(trueKccStalledFront&&
        decision.decision==='RELEASE_STALLED_OR_INVALID'&&
        distance>1.5)
@@ -2282,21 +2305,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b137NativeTick-b1Drought.nativeTick<=40&&
    realFoot.distance(b1Drought.foot)<=.22&&
    this.hasSourceFootSupport(realFoot);
-  // Genuine B207 Chrome: B2/B3 accumulated 42/44 physical KCC vetoes
-  // against real teammate capsules within the first 12s. This only
-  // accelerates a request to ALREADY REGISTERED source patrol feet.
-  // Uncertain stage collision keeps the 90-denial gate; every alternative
-  // still requires the full native Recast and Rapier route audit.
-  const actorVeto=this.realKccLastActorBlocker?.get(id);
-  const actualTeammateBlocked=!!actorVeto&&
-   this.enableB441SourceFrontline&&
-   (id==='B2'||id==='B3'||id==='B4')&&
-   (this.realKccRejectedSteps.get(id)??0)>=B34_GROUNDED_STALL_TICKS&&
-   this.b137NativeTick>=actorVeto.nativeTick&&
-   this.b137NativeTick-actorVeto.nativeTick<=B34_GROUNDED_STALL_TICKS&&
-   this.bots.some(other=>other.id===actorVeto.ownerId&&
-    other.team===bot.team&&
-    sourceNativeLiveRejoinedCpu(other,this.physicallyRejoined));
+  // Use the SAME real-capsule witness for both original front-lock
+  // release and legacy registered-source patrol fallback.
+  const actualTeammateBlocked=this.recentRealTeammateKccBlock(id);
   const kccBlockedAlternative=
    active>=0&&candidates.length>1&&
    ((this.realKccRejectedSteps.get(id)??0)>=90||

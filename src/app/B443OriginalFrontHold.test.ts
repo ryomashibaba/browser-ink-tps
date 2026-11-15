@@ -38,6 +38,14 @@ describe('B443 actual SOURCE front-goal hysteresis (no new stage authority)',()=
   expect(choose(181,100,null,5,2,.1,-1).decision)
    .toBe('RELEASE_STALLED_OR_INVALID');
  });
+ it('releases blocked ORIGINAL front early only with genuine live teammate witness and another goal',()=>{
+  expect(choose(181,100,null,5,2,.1,36).decision).toBe('KEEP_APPROACH');
+  expect(choose(181,100,null,5,2,.1,36,true).decision)
+   .toBe('RELEASE_STALLED_OR_INVALID');
+  expect(choose(181,100,null,5,1,.1,36,true).decision).toBe('KEEP_APPROACH');
+  expect(choose(181,100,null,1.4,2,.1,36,true).decision).toBe('KEEP_DWELL');
+  expect(choose(181,100,null,5,2,.1,36,false).decision).toBe('KEEP_APPROACH');
+ });
  it('never pins an unreachable far-away approved SOURCE goal indefinitely',()=>{
   expect(choose(399,100,null,12,2,.1).decision).toBe('KEEP_APPROACH');
   expect(choose(400,100,null,12,2,.1).decision)

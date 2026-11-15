@@ -13,7 +13,8 @@ export function decideB443OriginalFrontHold(
  arrivedSinceTick:number|null,physicalGoalXZDistance:number,
  originalVerifiedGoalCount:number,
  physicalFootToOriginalGoalVerticalMeters:number,
- genuineOriginalKccDeniedSteps=0
+ genuineOriginalKccDeniedSteps=0,
+ witnessedLiveTeammateKccBlock=false
 ):B443OriginalHoldResult{
  const release={decision:'RELEASE_STALLED_OR_INVALID' as const,
   arrivedSinceTick:null};
@@ -37,10 +38,13 @@ export function decideB443OriginalFrontHold(
  // in addition to the original same-side XZ arrival radius.
  const originalFootSameElevation=
   physicalFootToOriginalGoalVerticalMeters<=.30;
- // A true 90+ Rapier rejection can release an unreachable APPROACH
- // before the default 300-tick hold, only if a distinct certified
- // SOURCE frontline goal already exists. New route is not authorized here.
- if(originalVerifiedGoalCount>=2&&genuineOriginalKccDeniedSteps>=90&&
+ // A true 90+ Rapier veto OR a separately confirmed LIVE same-team
+ // collision can release an unreachable APPROACH before 300 ticks,
+ // only if a distinct original verified goal already exists.
+ // The witness and full path are independently checked by the caller.
+ if(originalVerifiedGoalCount>=2&&
+    (genuineOriginalKccDeniedSteps>=90||
+     witnessedLiveTeammateKccBlock===true)&&
     physicalGoalXZDistance>1.5)return release;
  const near=originalFootSameElevation&&physicalGoalXZDistance<=1.5;
  const arrival=!originalFootSameElevation?null:
