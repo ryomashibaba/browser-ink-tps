@@ -266,8 +266,8 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
   expect(ramp.triangleMesh).toEqual(record.mesh);
   const v=record.mesh.vertices;
   const xyz=(u:number,w:number)=>new Vec3(...([0,1,2].map(k=>
-   (1-u)*(1-w)*v[0]![k]+u*(1-w)*v[1]![k]+
-   (1-u)*w*v[2]![k]+u*w*v[3]![k]) as [number,number,number]));
+   (1-u)*(1-w)*v[0]![k]!+u*(1-w)*v[1]![k]!+
+   (1-u)*w*v[2]![k]!+u*w*v[3]![k]!) as [number,number,number]));
   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const hit=(p:Readonly<{x:number;y:number;z:number}>)=>{
    const h=physics.castCharacterFootSupport(
@@ -288,6 +288,15 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
    return [id,pts.map(({u,w,goal})=>{
     const route=nav.auditPath(from,goal);
     const denied=b450FirstSourceDenial(route.nativePathPoints,-1,hit);
+    // Existing F2 logic already permits <=5cm REAL CPU first-foot
+    // correction after genuine blocked KCC steps; 0.25m gap and
+    // every 0.30m Rapier step remain EXACTLY unchanged.
+    const originalStart=route.nativePathPoints[0];
+    const actualStartSnap=originalStart?from.distance(
+     new Vec3(originalStart.x,originalStart.y,originalStart.z)):Infinity;
+    const replayFromActualFirstFoot=actualStartSnap<=.05?
+     b450FirstSourceDenial([from,...route.nativePathPoints.slice(1)],-1,hit):
+     null;
     return {u,w,goal:[goal.x,goal.y,goal.z],
      footSupport:hit(from),goalSupport:hit(goal),
      reachedTarget:route.reachedTarget,
@@ -296,6 +305,13 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
      firstDenied:denied.cause,
      denialSolid:denied.hitSolidId,
      heightGap:denied.verticalGapMeters,
+     realFirstFootSnapMeters:Number(actualStartSnap.toFixed(4)),
+     realFirstFootRecheck:replayFromActualFirstFoot?.cause??null,
+     strictWithRealFirstFoot:route.reachedTarget&&
+      route.startSnapDistanceMeters<=.20&&
+      route.endSnapDistanceMeters<=.20&&
+      actualStartSnap<=.05&&replayFromActualFirstFoot?.cause==='NONE'&&
+      hit(from).supported&&hit(goal).supported,
      strictApproved:route.reachedTarget&&
       route.startSnapDistanceMeters<=.20&&
       route.endSnapDistanceMeters<=.20&&
@@ -304,11 +320,14 @@ describe('F4 real B207 B2/B4 foot -> EXISTING source ramp local route',()=>{
   }));
   const realGoals=Object.fromEntries(Object.entries(rows).map(
    ([id,arr])=>[id,arr.filter(x=>x.strictApproved).length]));
+  const realFootRechecked=Object.fromEntries(Object.entries(rows).map(
+   ([id,arr])=>[id,arr.filter(x=>x.strictWithRealFirstFoot).length]));
   console.log('F4_B207_RAMP_LOCAL_ORIGINAL_NATIVE_ROUTE_DIAG',
    JSON.stringify({source:'25/17/26/0',realB207Witness:true,
     authority:'STRICT_0_30M_RAPIER_RECAST_DIAG_ONLY',
     originalRapierSolids:25,scoreable:0,
-    strictCandidateCounts:realGoals,rows}));
+    strictCandidateCounts:realGoals,
+    strictWithExistingRealStartCorrection:realFootRechecked,rows}));
   expect(stage.solids).toHaveLength(25);
   expect(stage.paintSurfaces).toHaveLength(17);
   expect(stage.navigationLinks).toHaveLength(26);
