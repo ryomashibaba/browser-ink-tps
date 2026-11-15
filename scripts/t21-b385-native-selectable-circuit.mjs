@@ -567,9 +567,11 @@ async function runApprovedCombatTwinReplay(){
 /** One bounded REAL ordinary B207 SOURCE combat observation.
  * Never simulate actors, ticks, paint, paths, HP or scoring. */
 async function runShortNormalSourceCombat(){
+ const fullNormal=process.env.T21_P2_NORMAL_COMBAT_180_ONCE==='1';
  if(process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux')
   fail('NORMAL_REAL_NATIVE_RUN_REQUIRES_PUBLIC_CI');
- report.schema='T21_V28_NORMAL_B207_7CPU_NATIVE_SHORT';
+ report.schema=fullNormal?'T21_V28_NORMAL_B207_180S_TRUE_NATIVE':
+  'T21_V28_NORMAL_B207_7CPU_NATIVE_SHORT';
  report.outcome='HOLD_REAL_NORMAL_COMBAT_NOT_YET_OBSERVED';persist();
  await cmd('Page.navigate',{url:ROOT+'play-source.html'});
  await until(async()=>{
@@ -645,9 +647,113 @@ async function runShortNormalSourceCombat(){
   sourceScoreable:0,officialWinner:'NONE',
   originalOpponentRoutesCertified:false,full180sCertified:false};
  await picture('v28-real-normal-combat-7cpu');
- report.outcome='PASS_REAL_NORMAL_7CPU_SHORT_OBSERVATION';
+ report.outcome=fullNormal?'HOLD_FULL_NORMAL_180S_IN_PROGRESS':
+  'PASS_REAL_NORMAL_7CPU_SHORT_OBSERVATION';
  persist();
  console.log('T21_V28_REAL_NORMAL_B207_SOURCE_COMBAT',JSON.stringify(report.oneRunEvidence));
+ if(!fullNormal)return;
+ // Continue THE SAME original 7-CPU physical world, with genuine native
+ // clock and raster, rather than entering the old B441 research URL.
+ // Strictly observational: never mutate native tick, pose, paint or score.
+ const sample=async(elapsed)=>{
+  const result=await until(async()=>{
+   const n=await state();
+   if(n?.stopReason)fail('FULL_180_SOURCE_STOP_'+elapsed,{
+    stop:n.stopReason,tick:n.tick});
+   return n?.matchState==='PLAYING'&&!n.paused&&
+    n.timeRemainingSeconds<=180-elapsed?n:false;
+  },3600000);
+  if(!sourceOk(result)||result.cpu.physicalRejoins.length!==7)
+   fail('FULL_180_ORIGINAL_GROUND_AUTHORITY_'+elapsed,{
+    tick:result.tick,source:result.originalSourceSolids,
+    joins:result.cpu.physicalRejoins.length});
+  return result;
+ };
+ const s60=await sample(60),s90=await sample(90),
+  s120=await sample(120),s150=await sample(150);
+ const end=await until(async()=>{
+  const n=await state();
+  if(n?.stopReason)fail('FULL_180_NATIVE_STOP_AT_TERMINAL',{
+   stop:n.stopReason,tick:n.tick});
+  return n?.matchState==='TIME_UP'&&n.timeRemainingSeconds===0&&
+   n.paused?n:false;
+ },3600000);
+ if(!sourceOk(end)||end.cpu.physicalRejoins.length!==7)
+  fail('FULL_180_TERMINAL_SOURCE_AUTHORITY',{
+   tick:end.tick,joins:end.cpu.physicalRejoins.length});
+ const snapshots=[first,last,s60,s90,s120,s150,end];
+ const ids=['A1','A2','A3','B1','B2','B3','B4'];
+ const cumulative=(n,id,k)=>n.b154NativeSevenCpuInk?.byActor?.[id]?.[k];
+ const kcc=(n,id,k)=>n.cpuSourceNativeGroundMotion?.byActor?.[id]?.[k];
+ const rows=Object.fromEntries(ids.map(id=>{
+  const metrics=(a,b)=>({
+   realOriginalPaintCellChanges:
+    cumulative(b,id,'changedCells')-cumulative(a,id,'changedCells'),
+   realImpactCellChanges:
+    cumulative(b,id,'impactChangedCells')-
+    cumulative(a,id,'impactChangedCells'),
+   noApprovedPaintAimDelta:
+    (b.b215RealBattleAimPacing?.byActor?.[id]?.noApprovedPaintAimChecks??0)-
+    (a.b215RealBattleAimPacing?.byActor?.[id]?.noApprovedPaintAimChecks??0),
+   acceptedMovingKccDelta:
+    (kcc(b,id,'rapierAcceptedMoving')??0)-
+    (kcc(a,id,'rapierAcceptedMoving')??0),
+   deniedKccDelta:
+    (kcc(b,id,'rapierRejected')??0)-
+    (kcc(a,id,'rapierRejected')??0),
+   lastRealFoot:b.cpu.cpu.find(z=>z.id===id)?.physicalFoot??null
+  });
+  return [id,{first12to90:metrics(last,s90),
+   late90to180:metrics(s90,end),
+   late120to180:metrics(s120,end),
+   lastKccRejectedReason:
+    end.cpuSourceNativeGroundMotion?.byActor?.[id]?.lastRejectCause??null}];
+ }));
+ if(ids.some(id=>snapshots.some(n=>
+   !Number.isSafeInteger(cumulative(n,id,'changedCells'))))||
+   end.tick<10800||end.tick>10815||
+   snapshots.some((n,i)=>i>0&&n.tick<snapshots[i-1].tick))
+  fail('FULL_180_NATIVE_PAINT_OR_CLOCK_EVIDENCE_INVALID',{
+   ticks:snapshots.map(n=>n.tick),
+   changedCells:rows});
+ const finish=await evalPage('(()=>{const x=document.querySelector("#t21-f3-b59-session-finished"),r=document.querySelector("#t21-f3-b59-restart");return {visible:!!x&&!x.hidden&&x.style.display!=="none",state:x?.dataset.t21B59State,replayVisible:!!r&&!r.hidden&&!r.disabled};})()');
+ if(!finish?.visible||finish.state!=='FINISHED'||!finish.replayVisible)
+  fail('FULL_180_REAL_FINISH_REPLAY_UI_NOT_AVAILABLE',finish);
+ report.fullNormal180={
+  realSource:'25/17/26/0',nativeTicks:snapshots.map(n=>n.tick),
+  realElapsedSeconds:snapshots.map(n=>180-n.timeRemainingSeconds),
+  realSevenCpuAtEnd:end.cpu.physicalRejoins.length,
+  realCpuInkRequestsAtEnd:end.cpuSourceTurfShots,
+  realCpuSplatsAtEnd:end.cpuSplats,realCpuRespawnsAtEnd:end.cpuRespawns,
+  p2RealFootPaintSearchesAtEnd:
+   end.b216RealNativePaintBackfill?.p2DenseRealFootSearches??null,
+  originalCpuByActor:rows,realFinishUi:finish,
+  officialWinner:'NONE',sourceScoreable:0,
+  nativeScoreWrites:0,nativeActorWrites:0,
+  originalOpponentRoutesProven:false,
+  formal4v4Certified:false,gameplayQualityCertified:false};
+ report.outcome='PASS_REAL_NORMAL_COMBAT_180S_TIME_UP';
+ persist();
+ console.log('T21_V28_TRUE_NORMAL_COMBAT_180S',
+  JSON.stringify(report.fullNormal180));
+ await picture('v28-normal-180s-real-timeup');
+ // Only a real finished-session USER replay click can create the fresh
+ // physical SOURCE world. This is never an in-world reset/teleport.
+ await clickButton('#t21-f3-b59-restart');
+ const replay=await until(async()=>{
+  const n=await state();
+  return n?.matchState==='STAGING'&&n.tick===0&&
+   n.timeRemainingSeconds===180&&n.cpu?.physicalRejoins?.length===0&&
+   n.originalSourceSolids===25&&n.originalPaintSurfaces===17&&
+   n.originalSourceNavigationLinks===26&&
+   n.sourceScoreablePromotions===0?n:false;
+ },120000);
+ report.fullNormal180.genuineUserReplayNewWorld=true;
+ report.fullNormal180.replayNativeTick=replay.tick;
+ report.outcome='PASS_REAL_NORMAL_180S_AND_NATIVE_FRESH_REPLAY';
+ persist();
+ console.log('T21_V28_REAL_NORMAL_COMBAT_REPLAY_PASS',{
+  freshNativeWorld:true,firstRoundActualTimeUp:true,scoreable:0});
 }
 
 async function run(){
@@ -690,7 +796,8 @@ async function run(){
  });
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
- if(process.env.T21_P2_SHORT_CANONICAL_COMBAT_ONCE==='1'){
+ if(process.env.T21_P2_SHORT_CANONICAL_COMBAT_ONCE==='1'||
+    process.env.T21_P2_NORMAL_COMBAT_180_ONCE==='1'){
   await runShortNormalSourceCombat();return;
  }
  if(process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE==='1'||

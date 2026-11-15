@@ -52,15 +52,17 @@ jobs:
           T21_P2_COMBAT_TWIN_180_REPLAY_ONCE: ${{ contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && '1' || '0' }}
           T21_F2_GROUND_STALL_ONCE: ${{ contains(github.event.head_commit.message, '[f2-ground-stall-once]') && '1' || '0' }}
           T21_P2_SHORT_CANONICAL_COMBAT_ONCE: ${{ contains(github.event.head_commit.message, '[p2-short-combat-once]') && '1' || '0' }}
+          T21_P2_NORMAL_COMBAT_180_ONCE: ${{ contains(github.event.head_commit.message, '[p2-normal-180-once]') && '1' || '0' }}
         run: node scripts/t21-b385-native-selectable-circuit.mjs
       # One user-approved public ubuntu-latest P2 run. Keep real native
       # JSON and screenshot SHA-256 only: no uploaded artifacts and no
       # framebuffer/base64 image payload copied into public CI logs.
       - name: Preserve P2 native JSON and screenshot checksums without artifact upload
-        if: ${{ always() && (contains(github.event.head_commit.message, '[p2-canonical-combat-once]') || contains(github.event.head_commit.message, '[f2-ground-stall-once]') || contains(github.event.head_commit.message, '[p2-short-combat-once]')) }}
+        if: ${{ always() && (contains(github.event.head_commit.message, '[p2-canonical-combat-once]') || contains(github.event.head_commit.message, '[f2-ground-stall-once]') || contains(github.event.head_commit.message, '[p2-short-combat-once]') || contains(github.event.head_commit.message, '[p2-normal-180-once]')) }}
         env:
           T21_F2_GROUND_STALL_ONCE: ${{ contains(github.event.head_commit.message, '[f2-ground-stall-once]') && '1' || '0' }}
           T21_P2_SHORT_CANONICAL_COMBAT_ONCE: ${{ contains(github.event.head_commit.message, '[p2-short-combat-once]') && '1' || '0' }}
+          T21_P2_NORMAL_COMBAT_180_ONCE: ${{ contains(github.event.head_commit.message, '[p2-normal-180-once]') && '1' || '0' }}
         run: |
           node --input-type=module <<'P2RAW'
           import {readFileSync,existsSync} from 'node:fs';
@@ -69,6 +71,7 @@ jobs:
           const raw=dir+'b385-native-source.json';
           if(existsSync(raw)){
            const prefix=process.env.T21_F2_GROUND_STALL_ONCE==='1'?'T21_F2_REAL_NATIVE_JSON':
+             process.env.T21_P2_NORMAL_COMBAT_180_ONCE==='1'?'T21_V28_NORMAL_COMBAT_180_JSON':
              process.env.T21_P2_SHORT_CANONICAL_COMBAT_ONCE==='1'?'T21_V28_NORMAL_COMBAT_REAL_JSON':'T21_P2_GENUINE_NATIVE_JSON';
            console.log(prefix+'_BEGIN');
            console.log(readFileSync(raw,'utf8'));
@@ -83,7 +86,7 @@ jobs:
           }
           P2RAW
       - name: Preserve actual screenshots, native ticks and honest HOLD evidence
-        if: ${{ always() && !contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && !contains(github.event.head_commit.message, '[f2-ground-stall-once]') && !contains(github.event.head_commit.message, '[p2-short-combat-once]') }}
+        if: ${{ always() && !contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && !contains(github.event.head_commit.message, '[f2-ground-stall-once]') && !contains(github.event.head_commit.message, '[p2-short-combat-once]') && !contains(github.event.head_commit.message, '[p2-normal-180-once]') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ contains(github.event.head_commit.message, '[b415-short]') && 'b415-genuine-short-canonical-circuit' || 'b390-genuine-selected-180s-source-round' }}
