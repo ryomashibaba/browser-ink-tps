@@ -45,6 +45,8 @@ on:
       - 'src/app/B441OriginalSourceFrontline.ts'
       - 'src/app/B441OriginalSourceFrontline.test.ts'
       - 'src/app/UndertowF3SourceTraffic.ts'
+      - 'src/app/UndertowF3OriginalAllySupportInk.ts'
+      - 'src/app/UndertowF3OriginalAllySupportInk.test.ts'
       - 'src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts'
       - 'src/app/UndertowF3SourceTraffic.test.ts'
       - 'src/app/UndertowF3NativeHumanCrowd.ts'
