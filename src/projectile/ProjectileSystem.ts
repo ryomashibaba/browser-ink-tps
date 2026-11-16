@@ -780,7 +780,7 @@ export class ProjectileSystem {
              slot.sourceKind==='CPU'?slot.sourceId:undefined);
           this.recordB367RealCpuDamage(
            resolved,slot.weaponId,cpuHit.botId,slot.sourceKind);
-          if(resolved?.realHpLoss>0&&!resolved.shieldAbsorbed&&
+          if(resolved!==null&&resolved.realHpLoss>0&&!resolved.shieldAbsorbed&&
              resolved.botId===cpuHit.botId&&
              b351RealCpuDamageCue(this.b351CueOn,slot.sourceKind,
               slot.weaponId,beforeHit,this.stats.humanCpuDirectHits,
@@ -1466,7 +1466,7 @@ export class ProjectileSystem {
         this.recordB367RealCpuDamage(resolved,
          this.currentPlayerWeapon.id,cpuHit.botId,'HUMAN');
         // Confirmed physical HP reduction, not a ray overlap, owns the cue.
-        if(resolved?.realHpLoss>0&&!resolved.shieldAbsorbed&&
+        if(resolved!==null&&resolved.realHpLoss>0&&!resolved.shieldAbsorbed&&
            resolved.botId===cpuHit.botId&&
            b351RealCpuDamageCue(this.b351CueOn,'HUMAN',
             this.currentPlayerWeapon.id,beforeHit,
