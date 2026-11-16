@@ -5,6 +5,7 @@
  * Authorized B1 true Rapier foot vs Recast start correction: one scoped 180s real witness.
  * V28 owner-requested single 180s SOURCE gameplay validation at previous game SHA 52c0218b; no gameplay or physics change.
  * V28 follow-up: validate real B-team 90-180s SOURCE KCC and late ink after source-grid aim fix; one native round.
+ * One retry after TYPECHECK-only failure (no prior Chrome started); game source SHA unchanged.
  * camera, projectiles, ink, HP or native step injection.
  * V28 B2/B4 genuine registered-ramp KCC height-drift fix: single 90s physical-foot witness. No change to gameplay or proof gates.
  * V28 after fe91f5d: one owner-requested B2 real-blocker + B4 same-original-ramp 90s physical-foot verification. No gameplay edit.
