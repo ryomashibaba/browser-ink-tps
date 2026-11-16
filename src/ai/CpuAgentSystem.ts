@@ -325,6 +325,11 @@ export class CpuAgentSystem {
   // goals and original gameplay authority stay unchanged by default.
   private b64InkAngleSweepEnabled = false;
   private b178RealSourceInkRecovery=false;
+  // A real SOURCE CPU, like the human, must cross enemy-painted ORIGINAL
+  // floor at enemy-ink speed. Recast Crowd speed and the final Rapier KCC
+  // per-tick envelope share this one same-foot, ownerGrid-derived value.
+  // No Recast teleport, route, terrain or new ink is ever authorized.
+  private readonly b178NativeCpuMovementSpeed=new Map<string,number>();
   private b180OriginalPatchAimEnabled=false;
   // Opt-in source-only real collider visibility, never original route authority.
   private b181OriginalCombatStageRay:
@@ -912,6 +917,7 @@ export class CpuAgentSystem {
     this.b64Samples=0;
     this.b64CandidatesUnowned=0;
     this.b64CandidatesChosen=0;
+    this.b178NativeCpuMovementSpeed.clear();
     this.b178OwnNativeTicks=0;
     this.b178EnemyNativeTicks=0;
     this.b178NeutralNativeTicks=0;
@@ -1404,7 +1410,14 @@ export class CpuAgentSystem {
         const dx=p.x-bot.position.x,dy=p.y-bot.position.y,
           dz=p.z-bot.position.z;
         const d=Math.hypot(dx,dy,dz);
-        const limit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt;
+        // The true SOURCE ownerGrid can lower Crowd maxSpeed at a live
+        // enemy-painted physical foot. The SAME rate must cap accepted
+        // physical movement; merely slowing the proxy leaves KCC fast.
+        const sourceSpeed=this.b178RealSourceInkRecovery&&
+          this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'
+          ?this.b178NativeCpuMovementSpeed.get(bot.id):undefined;
+        const limit=Math.min(GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+          sourceSpeed??GAME_CONFIG.cpu.maxSpeedMetersPerSecond)*dt;
         if(d>limit+1e-5&&Math.abs(dy)<=.11){
           const k=limit/d;
           accepted={x:bot.position.x+dx*k,
@@ -2428,6 +2441,23 @@ export class CpuAgentSystem {
       if(relation==='OWN')this.b178OwnNativeTicks++;
       else if(relation==='ENEMY')this.b178EnemyNativeTicks++;
       else this.b178NeutralNativeTicks++;
+    }
+    // SOURCE only: the identical *registered Rapier-backed ownerGrid*
+    // sample driving enemy HP now also slows a real, grounded CPU.
+    // Updating native Crowd speed BEFORE its 60Hz step avoids moving
+    // the steering proxy 4.4m/s while accepting only 1.35m/s in KCC.
+    // A missing/unsupported painted floor never implies enemy ink.
+    if(this.b178RealSourceInkRecovery&&this.phase14qF2RecoverableSteps&&
+       this.f3dSourceGoals!==null&&
+       this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+       bot.agent){
+      const speed=relation==='ENEMY'?
+        GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond:
+        GAME_CONFIG.cpu.maxSpeedMetersPerSecond;
+      if(this.b178NativeCpuMovementSpeed.get(bot.id)!==speed){
+        bot.agent.updateParameters({maxSpeed:speed});
+        this.b178NativeCpuMovementSpeed.set(bot.id,speed);
+      }
     }
 
     if (bot.inkRecoveryLockSeconds <= 0) {
@@ -4186,6 +4216,7 @@ export class CpuAgentSystem {
     this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
+    this.b178NativeCpuMovementSpeed.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
     // that were queued before a genuine same-tick lethal hit. Keep every
     // surviving teammate's paid real shots/kit actions intact.
@@ -4243,6 +4274,7 @@ export class CpuAgentSystem {
     this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
+    this.b178NativeCpuMovementSpeed.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
     // CPU fixedUpdate runs all seven actors before traffic.observe.
     // A newborn HIGH-spawn actor cannot inherit the old lower-floor

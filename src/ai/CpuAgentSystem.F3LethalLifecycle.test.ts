@@ -790,6 +790,72 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuSubUses).toBe(0);
     expect(bot.ink).toBeCloseTo(charged);
   });
+  it('slows native Recast steering at the SAME real enemy-ink foot and restores original speed',()=>{
+    const {system,bot}=fixture(true);
+    const changed=vi.fn();
+    bot.agent.updateParameters=changed;
+    bot.hp=GAME_CONFIG.combat.playerMaxHp;
+    bot.ink=50;
+    bot.inkRecoveryLockSeconds=0;
+    bot.hpRecoveryDelaySeconds=0;
+    system.samplePoint=new Vec3();
+    system.b178RealSourceInkRecovery=true;
+    system.phase14qF2RecoverableSteps=true;
+    system.b178NativeCpuMovementSpeed=new Map();
+    system.b178OwnNativeTicks=0;
+    system.b178EnemyNativeTicks=0;
+    system.b178NeutralNativeTicks=0;
+    system.b179ActualEnemyHpLost=0;
+    system.b179ActualOwnInkRecovered=0;
+    system.b179ActualOwnRecoverTicks=0;
+    const surface={isScoreable:false,
+      baseFlags:SurfaceFlags.Paintable|SurfaceFlags.Floor};
+    let owner:Team|null=Team.A;
+    system.sampleRegisteredSourceFoot=()=>owner===null?null:
+      ({owner,surface});
+    system.updateResources(bot,1/60);
+    expect(changed).toHaveBeenCalledWith({
+      maxSpeed:GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond});
+    expect(bot.hp).toBeLessThan(GAME_CONFIG.combat.playerMaxHp);
+    expect(system.b178NativeCpuMovementSpeed.get(bot.id))
+      .toBe(GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond);
+    system.updateResources(bot,1/60);
+    expect(changed).toHaveBeenCalledTimes(1); // not 60Hz WASM updates
+    owner=Team.B;
+    system.updateResources(bot,1/60);
+    expect(changed).toHaveBeenLastCalledWith({
+      maxSpeed:GAME_CONFIG.cpu.maxSpeedMetersPerSecond});
+    expect(changed).toHaveBeenCalledTimes(2);
+    owner=null; // no original registered Rapier-backed foot evidence
+    system.updateResources(bot,1/60);
+    expect(changed).toHaveBeenCalledTimes(2);
+    owner=Team.A;
+    system.updateResources(bot,1/60);
+    expect(changed).toHaveBeenCalledTimes(3);
+    // A physical splat must not carry a stale slow into a future life.
+    system.b178NativeCpuMovementSpeed.delete(bot.id);
+    expect(system.b178NativeCpuMovementSpeed.has(bot.id)).toBe(false);
+  });
+  it('does not change legacy CPU Crowd speed outside the actual SOURCE F2 world',()=>{
+    const {system,bot}=fixture(true);
+    bot.agent.updateParameters=vi.fn();
+    system.samplePoint=new Vec3();
+    system.b178RealSourceInkRecovery=true;
+    system.phase14qF2RecoverableSteps=false;
+    system.b178NativeCpuMovementSpeed=new Map();
+    system.b178OwnNativeTicks=0;
+    system.b178EnemyNativeTicks=0;
+    system.b178NeutralNativeTicks=0;
+    system.b179ActualEnemyHpLost=0;
+    system.b179ActualOwnInkRecovered=0;
+    system.b179ActualOwnRecoverTicks=0;
+    system.sampleRegisteredSourceFoot=()=>({
+      owner:Team.A,surface:{isScoreable:false,
+        baseFlags:SurfaceFlags.Paintable|SurfaceFlags.Floor}});
+    system.updateResources(bot,1/60);
+    expect(bot.agent.updateParameters).not.toHaveBeenCalled();
+    expect(system.b178NativeCpuMovementSpeed.size).toBe(0);
+  });
   it('keeps a live CPU at the enemy-ink HP floor until it leaves enemy paint', () => {
     const { system, bot } = fixture(true);
     const minimum = GAME_CONFIG.combat.enemyInkMinimumHp;
