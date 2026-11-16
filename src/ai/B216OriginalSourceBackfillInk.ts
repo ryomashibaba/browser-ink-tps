@@ -175,15 +175,19 @@ export function b216OriginalUnpaintedGridCandidates(
    new Vec3(foot.x,foot.y,foot.z));
   // Basis projection is used ONLY to limit the iteration region.
   // It grants no floor/support. Leave room for true sloped surfaces.
-  const reach=radius+2,step=Math.max(1,Math.round(.5/surface.cellSize));
+  // Never skip odd raster cells: the earlier 0.5m stride skipped a
+  // single 0.25m neutral cell even when it was physically reachable.
+  // This expensive complete scan is called only after the existing
+  // 120 real no-aim decisions, then at most once per 30 ready checks.
+  const reach=radius+2;
   const lowX=Math.max(0,Math.floor((projected.u-reach)/surface.cellSize));
   const highX=Math.min(surface.widthCells-1,
    Math.ceil((projected.u+reach)/surface.cellSize));
   const lowY=Math.max(0,Math.floor((projected.v-reach)/surface.cellSize));
   const highY=Math.min(surface.heightCells-1,
    Math.ceil((projected.v+reach)/surface.cellSize));
-  for(let y=lowY;y<=highY;y+=step){
-   for(let x=lowX;x<=highX;x+=step){
+  for(let y=lowY;y<=highY;y++){
+   for(let x=lowX;x<=highX;x++){
     if(!surface.isCellActive(x,y))continue;
     const idx=surface.index(x,y),flags=surface.flagsGrid[idx]??0;
     if(surface.ownerGrid[idx]===team||

@@ -460,6 +460,20 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   floor.ownerGrid.fill(Team.B);
   expect(gridCandidates([floor],{x:0,y:3,z:0},Team.B,10)).toEqual([]);
  });
+ it('does not silently skip a single original quarter-meter raster cell',()=>{
+  const floor=make();
+  floor.ownerGrid.fill(Team.B);
+  // x=51,y=33 would be invisible to the old stride-2 search.
+  const x=51,y=33;
+  floor.ownerGrid[floor.index(x,y)]=Team.Neutral;
+  const before=Array.from(floor.ownerGrid);
+  const spots=gridCandidates([floor],{x:0,y:3,z:0},Team.B,10);
+  expect(spots).toHaveLength(1);
+  const projection=floor.projectWorldPoint(spots[0]);
+  expect(Math.floor(projection.u/floor.cellSize)).toBe(x);
+  expect(Math.floor(projection.v/floor.cellSize)).toBe(y);
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+ });
  it('rejects unofficial surfaces, score, wall, inactive cells and far geometry',()=>{
   const floor=make();
   const foot={x:0,y:3,z:0};
