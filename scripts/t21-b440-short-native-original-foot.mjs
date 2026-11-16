@@ -35,6 +35,9 @@ const k3IntegratedSource180=process.env.T21_K3_ONE_REAL_180S==='1';
 // Reuse the K3 real input/ink path, ending after reshoot, never 180s/replay.
 const p1InkLoopOnce=process.env.T21_P1_REGISTERED_INK_LOOP_ONCE==='1';
 const b491PaidCpuOnce=process.env.T21_B491_CPU_PAID_OWN_ONCE==='1';
+// One genuine READ-ONLY 360-tick native observation of the real CPU speed
+// on the original registered ownerGrid. No injected enemy ink or actor.
+const b178EnemyNativeOnce=process.env.T21_B178_NATIVE_ENEMY_INK_ONCE==='1';
 if(b491PaidCpuOnce&&(!b441Experiment||p0NormalHuman||
    k3IntegratedSource180||process.env.GITHUB_ACTIONS!=='true'||
    process.platform!=='linux'))
@@ -81,6 +84,10 @@ const nativeFrontObservationTicks=b441Experiment?
 if(!Number.isSafeInteger(nativeFrontObservationTicks)||
  nativeFrontObservationTicks<240||nativeFrontObservationTicks>900)
  throw Error('B442_UNSAFE_NATIVE_OBSERVATION_WINDOW');
+if(b178EnemyNativeOnce&&(!b441Experiment||p0NormalHuman||
+   nativeFrontObservationTicks!==360||k3IntegratedSource180||
+   process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux'))
+ throw Error('B178_NATIVE_ENEMY_INK_ONLY_ONE_UNMODIFIED_REAL_SOURCE_WORLD');
 if(b490LocalCompare){
  const localOut=process.env.T21_B440_OUT;
  if(process.env.GITHUB_ACTIONS==='true'||process.env.CI==='true'||
@@ -3179,7 +3186,13 @@ async function main(){
     b442RealApprovedOriginalGoals:approvedGoals,
     // Read-only native 60Hz SOURCE CPU blocked-foot action evidence.
     // Requests are NOT physical bullets, hits or official scoring.
-    blockedSourceActionEvidence:n.blockedSourceActionEvidence};
+    blockedSourceActionEvidence:n.blockedSourceActionEvidence,
+    // Observe the ACTUAL same-native-frame source-foot policy.
+    // Do not mistake these registered Crowd PARAMETERS for KCC travel.
+    actualSourceEnemyInkFootTicks:
+     n.b178SourceInkRecovery?.actualEnemyPaintFootTicks??null,
+    nativeCpuMaxSpeedByActor:
+     n.b178SourceInkRecovery?.nativeCpuMaxSpeedByActor??null};
    if(proof.b441NativeEvidence.realFrames.length<40&&
      (!proof.b441NativeEvidence.realFrames.length||
       n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=24)){
@@ -3194,6 +3207,72 @@ async function main(){
   // The existing >=600-tick K2/B491 evidence standard below stays intact.
   // Never certify a real projectile, impact, natural encounter or 4v4 here.
   if(nativeFrontObservationTicks===360){
+   if(b178EnemyNativeOnce){
+    const ids=['A1','A2','A3','B1','B2','B3','B4'];
+    const readRealSpeed=n=>{
+     const ink=n.b178SourceInkRecovery;
+     if(!ink?.enabled||!Number.isSafeInteger(
+        ink.actualEnemyPaintFootTicks)||
+        !ink.nativeCpuMaxSpeedByActor||
+        ids.some(id=>!(id in ink.nativeCpuMaxSpeedByActor))||
+        ids.some(id=>{
+         const v=ink.nativeCpuMaxSpeedByActor[id];
+         return v!==null&&(!Number.isFinite(v)||v<=0||v>4.4);
+        }))
+      fail('B178_ACTUAL_SOURCE_SPEED_PROVENANCE_MISSING');
+     return {tick:n.tick,
+      enemyFootTicks:ink.actualEnemyPaintFootTicks,
+      enemyInkHpLoss:ink.b179ActuallyLostHpOnEnemySourceInk,
+      actualCpuSpeedParameters:ink.nativeCpuMaxSpeedByActor};
+    };
+    const beforeInk=readRealSpeed(after),lastInk=readRealSpeed(actual);
+    if(lastInk.tick-beforeInk.tick<360||
+       lastInk.enemyFootTicks<beforeInk.enemyFootTicks||
+       proof.actorWrites!==0||proof.sourceGeometryWrites!==0||
+       actual.cpu.physicalRejoins.length!==7||
+       actual.cpu.physicalFootRelocations!==0||
+       await origin()!==proof.browserOrigin)
+      fail('B178_NOT_ONE_GENUINE_ORIGINAL_SOURCE_CPU_ROUND');
+    const frames=proof.b441NativeEvidence.realFrames.map(row=>({
+     tick:row.tick,enemyFootTicks:row.actualSourceEnemyInkFootTicks,
+     nativeCpuMaxSpeedByActor:row.nativeCpuMaxSpeedByActor,
+     realCpuPhysicalFeet:row.physicalFeet
+    }));
+    const realSlowFrames=frames.filter(row=>ids.some(id=>
+     Math.abs((row.nativeCpuMaxSpeedByActor?.[id]??-1)-1.35)<1e-6));
+    const enemyDelta=lastInk.enemyFootTicks-beforeInk.enemyFootTicks;
+    // A real hostile-foot transition may occur between read-only CDP
+    // samples. Do NOT certify a slow KCC without actually observing it.
+    const verdict=enemyDelta===0?
+      'HOLD_NO_GENUINE_ENEMY_INK_CPU_FOOT_IN_ORIGINAL_SOURCE_WINDOW':
+      realSlowFrames.length===0?
+      'HOLD_ACTUAL_ENEMY_FOOT_BUT_NO_SAMPLED_SLOW_CPU_PARAMETER':
+      'PASS_REAL_ENEMY_FOOT_AND_NATIVE_CROWD_SLOW_PARAMETER_OBSERVED_KCC_UNVERIFIED';
+    proof.b178EnemyNativeInk={
+     schema:'B178_ONE_REAL_CHROMIUM_SOURCE_ENEMY_INK_READONLY_V1',
+     verdict,source:'25/17/26/0',
+     nativeTickWindow:lastInk.tick-beforeInk.tick,
+     realNativeSevenCpuJoined:true,
+     startingCounters:beforeInk,endingCounters:lastInk,
+     genuineEnemyFootTicksInWindow:enemyDelta,
+     realSampledSlowCpuFrames:realSlowFrames.length,
+     realFrameSamples:frames,
+     noInjectedEnemyInk:true,noActorRelocations:true,
+     noSourceGeometryEdits:true,scoreable:0,
+     realPhysicalSpeedCapCertified:false,
+     naturalCrossTeamEncounterCertified:false,officialWinner:'NONE'};
+    proof.testKind='B178_NATIVE_REAL_SEVEN_CPU_ENEMY_INK_READ_ONLY';
+    proof.stage='B178_REAL_SOURCE_ENEMY_INK_OBSERVED_OR_HOLD';
+    proof.verdict=verdict;save();
+    console.log('B178_REAL_CHROMIUM_ENEMY_INK_OUTCOME',
+     JSON.stringify({verdict,actualSource:'25/17/26/0',
+      nativeTicks:proof.b178EnemyNativeInk.nativeTickWindow,
+      enemyFootTicks:enemyDelta,
+      sampledSlowParameterFrames:realSlowFrames.length,
+      physicalKccSpeedNotCertified:true,7:ids.length,
+      noGameplayStateInjection:true}));
+    return;
+   }
    const ids=['A1','A2','A3','B1','B2','B3','B4'];
    const readBlocked=(n)=>{
     const e=n?.blockedSourceActionEvidence;

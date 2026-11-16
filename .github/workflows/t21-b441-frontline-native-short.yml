@@ -642,6 +642,7 @@ jobs:
           (github.event_name == 'workflow_dispatch' ||
           contains(github.event.head_commit.message, '[a3-native-once]') ||
           contains(github.event.head_commit.message, '[b491-paid-cpu-once]') ||
+          contains(github.event.head_commit.message, '[b178-enemy-native-once]') ||
           contains(github.event.head_commit.message, '[k3-one-world]') ||
           contains(github.event.head_commit.message, '[p0-normal-once]') ||
           contains(github.event.head_commit.message, '[p0-v23-original-face-once]') ||
@@ -672,10 +673,11 @@ jobs:
           T21_B441_REAL_SWEEP_CLEAR: ${{ contains(github.event.head_commit.message, '[real-sweep-clear]') && '1' || '0' }}
           T21_B441_REAL_CHARGER_ONCE: ${{ contains(github.event.head_commit.message, '[real-charger-once]') && '1' || '0' }}
           T21_B491_CPU_PAID_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[b491-paid-cpu-once]') && '1' || '0' }}
+          T21_B178_NATIVE_ENEMY_INK_ONCE: ${{ contains(github.event.head_commit.message, '[b178-enemy-native-once]') && '1' || '0' }}
           # Existing B440 validates bounds 240..900 and records start/end
           # true native ticks. The 360 variant is post-rejoin observation;
           # start-up, drop and 7-CPU joining consume additional native ticks.
-          T21_B441_NATIVE_OBSERVE_TICKS: ${{ contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') && '360' || '720' }}
+          T21_B441_NATIVE_OBSERVE_TICKS: ${{ (contains(github.event.head_commit.message, '[p1-360-blocked-foot-once]') || contains(github.event.head_commit.message, '[b178-enemy-native-once]')) && '360' || '720' }}
           # Enabled only for one deliberate source-expiry proof commit.
           T21_B441_PROVE_60S_EXPIRY: ${{ contains(github.event.head_commit.message, '[true-expiry]') && '1' || '0' }}
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
