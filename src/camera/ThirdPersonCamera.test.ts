@@ -228,8 +228,8 @@ describe('SOURCE third-person center crosshair finite original ray',()=>{
   vi.stubGlobal('document',{addEventListener:vi.fn(),
     pointerLockElement:null});
   const canvas={addEventListener:vi.fn(),
-    getBoundingClientRect:()=>({width:960,height:540})}
-     as unknown as HTMLCanvasElement;
+    getBoundingClientRect:()=>({width:960,height:540})
+   } as unknown as HTMLCanvasElement;
   const eye={camera:{
     nearClip:.1,farClip:200,
     screenToWorld:(_x:number,_y:number,z:number)=>new Vec3(0,0,z)
