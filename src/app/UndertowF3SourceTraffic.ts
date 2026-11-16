@@ -19,7 +19,8 @@ import {b199ActualAllyCollisionReliefCandidates} from './B199ActualAllyCollision
 import {chooseB142OriginalAllyStandoff,mayRetainB143OriginalAllyStandoff}
  from './UndertowF3OriginalAllyStandoff';
 import {eligibleB150OriginalAllyInk,b150OriginalAllyInkCandidates,
- diversifyB153OriginalAllyInkCandidates,b150OriginalAllyNativeShotReachable}
+ diversifyB153OriginalAllyInkCandidates,b150OriginalAllyNativeShotReachable,
+ b150ActualUnownedAllyPaintAim}
  from './UndertowF3OriginalAllySupportInk';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
@@ -934,9 +935,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const sample=this.sourceInk.sampleWorld(
     new Vec3(samplePoint.x,samplePoint.y+.10,samplePoint.z),
     .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-   if(!sample||sample.owner===Team.A||sample.surface.isScoreable)continue;
-   const target=sample.surface.localToWorld(sample.u,sample.v);
-   if(![target.x,target.y,target.z].every(Number.isFinite)||
+   if(!sample||sample.surface.isScoreable)continue;
+   // A1's first genuine impact paints the sampled ownerGrid CENTER.
+   // Continue cooperating at a distinct genuinely unpainted cell on
+   // the SAME already registered original surface; never shoot OWN.
+   const target=b150ActualUnownedAllyPaintAim(sample,bot.team);
+   if(!target||![target.x,target.y,target.z].every(Number.isFinite)||
       Math.hypot(target.x-human.x,target.z-human.z)<=2.6)continue;
    const targetHit=hit(target);
    if(!targetHit||targetHit.solidId!==source.solidId||

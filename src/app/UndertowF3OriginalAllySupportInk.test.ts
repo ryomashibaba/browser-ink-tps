@@ -1,8 +1,13 @@
 import {describe,it,expect} from 'vitest';
+import {Vec3} from 'playcanvas';
+import {PaintSurface} from '../ink/PaintSurface';
+import {GameplayInkSystem} from '../ink/GameplayInkSystem';
+import {SurfaceFlags,Team,PaintEventType,PaintSource} from '../ink/types';
 import {eligibleB150OriginalAllyInk as eligible,
  b150OriginalAllyInkCandidates as candidates,
  diversifyB153OriginalAllyInkCandidates as diversify,
  b150OriginalAllyNativeShotReachable as canShoot,
+ b150ActualUnownedAllyPaintAim as liveAim,
  type B150Foot}
  from './UndertowF3OriginalAllySupportInk';
 describe('B150 opt-in real station must precede any source ink aim',()=>{
@@ -85,5 +90,61 @@ describe('original A1 ally shot opportunity is real native reach, not just a pai
   expect(canShoot(cpu,target,4,solid,{
    solidId:solid,point:{x:NaN,y:3,z:48}
   })).toBe(false);
+ });
+});
+
+describe('real A1 co-op continues painting true unowned cells after first impact',()=>{
+ const source=()=>{
+  const floor=new PaintSurface('UndertowT21D:right-low-team-a-ally',
+   new Vec3(0,3,48),new Vec3(1,0,0),new Vec3(0,0,1),
+   4,4,.2,SurfaceFlags.Paintable|SurfaceFlags.Floor,4);
+  const ink=new GameplayInkSystem();
+  ink.registerSurface(floor);
+  floor.ownerGrid.fill(Team.A);
+  floor.ownerGrid[floor.index(12,12)]=Team.Neutral;
+  const position=floor.localToWorld(2.1,2.1);
+  const sample=ink.sampleWorld(position.clone().add(new Vec3(0,.06,0)),
+   .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+  return {floor,ink,sample};
+ };
+ it('re-aims only to an existing, non-scoreable, unpainted ORIGINAL ownerGrid cell',()=>{
+  const {floor,ink,sample}=source();
+  expect(sample?.owner).toBe(Team.A);
+  const before=Array.from(floor.ownerGrid);
+  const aim=liveAim(sample!,Team.A);
+  expect(aim).not.toBeNull();
+  const projection=floor.projectWorldPoint(aim!);
+  expect(projection.inside).toBe(true);
+  expect(projection.u).toBeCloseTo(2.5);
+  expect(projection.v).toBeCloseTo(2.5);
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+  // The unchanged real PaintCoordinator / owner grid still owns impact.
+  const impact=(u:number,v:number)=>ink.apply({
+   tick:1,source:PaintSource.Cpu,team:Team.A,
+   surfaceId:floor.id,centerU:u,centerV:v,
+   radiusU:.38,radiusV:.34,angle:0,type:PaintEventType.Impact,strength:1
+  });
+  expect(impact(2.1,2.1).changedCells).toBe(0);
+  expect(impact(projection.u,projection.v).changedCells).toBeGreaterThan(0);
+  expect(floor.ownerGrid[floor.index(12,12)]).toBe(Team.A);
+  expect(ink.snapshot().percentA).toBe(0);
+ });
+ it('does not re-fire into wholly OWN, inactive, opposing or unregistered source',()=>{
+  const {floor,sample}=source();
+  expect(liveAim(sample!,Team.B)).toBeNull();
+  floor.ownerGrid[floor.index(12,12)]=Team.A;
+  expect(liveAim(sample!,Team.A)).toBeNull();
+  floor.ownerGrid[floor.index(12,12)]=Team.Neutral;
+  floor.flagsGrid[floor.index(12,12)]=0;
+  expect(liveAim(sample!,Team.A)).toBeNull();
+  floor.flagsGrid[floor.index(12,12)]=floor.baseFlags;
+  const ignored=new PaintSurface('not-an-original-floor',new Vec3(),
+   new Vec3(1,0,0),new Vec3(0,0,1),4,4,.2,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor,4);
+  expect(liveAim({...sample!,surface:ignored},Team.A)).toBeNull();
+  const score=new PaintSurface('UndertowT21D:original-score',
+   new Vec3(),new Vec3(1,0,0),new Vec3(0,0,1),4,4,.2,
+   SurfaceFlags.Paintable|SurfaceFlags.Scoreable,4);
+  expect(liveAim({...sample!,surface:score},Team.A)).toBeNull();
  });
 });

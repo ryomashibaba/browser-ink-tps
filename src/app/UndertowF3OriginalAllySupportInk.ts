@@ -1,6 +1,13 @@
 /** B150: source-only A1 ink aim proposals. This never moves actors,
  * creates terrain, authorizes scoreable turf, or proves actual paint.
  */
+import type {Vec3} from 'playcanvas';
+import type {GameplayInkSample} from '../ink/GameplayInkSystem';
+import {Team} from '../ink/types';
+import {b180OriginalSourcePatchOpportunity,
+ b180OriginalSourceUnownedNeighborAim}
+ from '../ai/B180OriginalSourcePaintOpportunity';
+
 export type B150Foot=Readonly<{x:number;y:number;z:number}>;
 export function eligibleB150OriginalAllyInk(x:{
  nativeTick:number;approvedTick:number;cpu:B150Foot;human:B150Foot;
@@ -62,6 +69,23 @@ export function diversifyB153OriginalAllyInkCandidates(
  if(points.length<=1)return [...points];
  const start=completedApprovals%points.length;
  return [...points.slice(start),...points.slice(0,start)];
+}
+
+/** A1 must paint the actual unowned SOURCE grid, not repeatedly aim at a
+ * freshly OWN center while real unpainted neighbors remain. Reuse B180's
+ * already source-gated, non-scoreable same-surface neighbor resolution.
+ * This is ONLY a suggested aim; SourceTraffic independently checks the
+ * true Rapier floor, inset, live human clearance and native projectile ray
+ * before any paid shot. It never edits cells or supplies a stage path. */
+export function b150ActualUnownedAllyPaintAim(
+ sample:GameplayInkSample,team:Team.A|Team.B
+):Vec3|null{
+ if(!sample.surface.id.startsWith('UndertowT21D:')||
+    sample.surface.isScoreable||
+    b180OriginalSourcePatchOpportunity(sample,team)<=0)return null;
+ return sample.owner===team?
+   b180OriginalSourceUnownedNeighborAim(sample,team):
+   sample.surface.localToWorld(sample.u,sample.v);
 }
 
 /** Keep A1 co-op paint suggestions inside the REAL native weapon lane.
