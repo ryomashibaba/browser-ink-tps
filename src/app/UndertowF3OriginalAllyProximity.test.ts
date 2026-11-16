@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {describeB141RealOriginalAlly as inspect,type B141AllyNativeView}
+import {describeB141RealOriginalAlly as inspect,b141PlayerAllyHudLine,type B141AllyNativeView}
  from './UndertowF3OriginalAllyProximity';
 function sample():B141AllyNativeView{
  return {
@@ -46,5 +46,28 @@ describe('B141 source practice teammate real physical orientation',()=>{
   expect(view(n).physicalMeetingCertified).toBe(false);
   n.player.position=[7,5.27,52];
   expect(view(n).code).toBe('CLOSE_XZ');
+ });
+});
+
+describe('B141 PLAYER compact visibility without false original routes',()=>{
+ it('shows real native A1 horizontal and vertical separation, not fictional contact',()=>{
+  const info=inspect(sample(),.8);
+  expect(b141PlayerAllyHudLine(info,false,'',false))
+   .toBe('A1 ALLY · 15.2m · 3.1m BELOW · ROUTE UNVERIFIED');
+  expect(b141PlayerAllyHudLine(info,true,'MOVING',false))
+   .toContain('C ORDER · MOVING · WAIT');
+  expect(b141PlayerAllyHudLine(info,true,'READY',true))
+   .toContain('C ORDER · RETRY READY');
+  expect(info.currentRouteCertified).toBe(false);
+  expect(info.physicalMeetingCertified).toBe(false);
+ });
+ it('refuses to format a disabled ally and never converts missing feet to a distance',()=>{
+  const off=sample();off.cpu.sourcePatrol.b137AllyRallyOptIn=false;
+  expect(b141PlayerAllyHudLine(inspect(off,.8),false,'',false)).toBe('');
+  const missing=sample();missing.cpu.cpu[0]!.physicalFoot=null;
+  const line=b141PlayerAllyHudLine(inspect(missing,.8),true,'HOLD',false);
+  expect(line).toContain('actual Rapier/KCC foot not available');
+  expect(line).toContain('ROUTE UNVERIFIED');
+  expect(line).not.toContain('15.2m');
  });
 });

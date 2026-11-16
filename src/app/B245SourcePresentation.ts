@@ -102,6 +102,12 @@ export function b245PlayerSightlineCss(search:string):string{
   'padding:5px 9px!important;overflow:hidden!important;'+
   'white-space:nowrap!important;text-overflow:ellipsis!important;'+
   'font-size:9px!important;line-height:1.4!important;}',
+  // Compact actual A1 ally bearings only in normal PLAYER. The full
+  // original physical/Crowd provenance text remains in F8 QA.
+  on+'#t21-f3-b141-real-ally',
+  '{max-width:min(270px,calc(100vw - 28px))!important;'+
+  'padding:6px 9px!important;line-height:1.35!important;'+
+  'font-size:10px!important;white-space:pre-line!important;}',
   // Keep the genuine B25 progress visible and interactive in source play.
   on+'#t21-f3-b25-paint-run[data-t21-b476-compact="true"]',
   '{width:min(222px,calc(100vw - 24px))!important;'+

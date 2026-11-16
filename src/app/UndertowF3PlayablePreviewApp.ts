@@ -144,7 +144,8 @@ import {createF3SourceRadar} from './UndertowF3SourceRadar';
 import {createF3PlayableHud,sourceF3RealAimLineCue} from './UndertowF3PlayableHud';
 import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVolleyBudget';
 import {installB245SourcePresentation} from './B245SourcePresentation';
-import {describeB141RealOriginalAlly} from './UndertowF3OriginalAllyProximity';
+import {describeB141RealOriginalAlly,b141PlayerAllyHudLine}
+ from './UndertowF3OriginalAllyProximity';
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd,
  nativeSourceCpuKitRuntimeAuthorized,
@@ -8305,7 +8306,9 @@ export class UndertowF3PlayablePreviewApp{
     this.b25Run.snapshot().practiceVariant==='CLASSIC'&&
     this.b25Run.snapshot().status==='TIME_UP'&&
     state.matchState==='PLAYING';
-   this.b141RealAllyIndicator.textContent=info.text+
+   const isHumanPlayerView=document.querySelector<HTMLElement>('#ui-root')?.
+    dataset.t21B245Presentation==='PLAYER';
+   const fullAllyQaText=info.text+
     (cEnabled?'\nC：A1に原作未塗装床を移動指示 · '+order.status+
      (order.b485RepeatReady?' · Cで安全な再指示':
       order.status==='MOVING'?' · 移動中の上書き禁止':''):'')+
@@ -8317,6 +8320,9 @@ export class UndertowF3PlayablePreviewApp{
       ' · ROUTE APPROVAL ONLY · UNSCORED':'')+
     (practiceTimedOutWithLiveMatch?
      '\n60s PRACTICE TIME UP · 180s SOURCE MATCH CONTINUES · C WHEN SAFE':'');
+   this.b141RealAllyIndicator.textContent=isHumanPlayerView?
+    b141PlayerAllyHudLine(info,cEnabled,order.status,
+     realFeedback?.canRepeatNow??false):fullAllyQaText;
    this.b141RealAllyIndicator.style.whiteSpace='pre-line';
    this.b141RealAllyIndicator.dataset.t21B471RealPlayerOrder=
     order.status;

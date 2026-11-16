@@ -59,3 +59,30 @@ export function describeB141RealOriginalAlly(n:B141AllyNativeView,footOffset:num
  return make('SAME_LEVEL_UNPROVEN',caption+
   'similar height; Recast/Rapier route not yet verified',range,vertical);
 }
+
+/** Real PLAYER sightline only. The original B141 verbose source witness
+ * remains unchanged for F8 QA and snapshot consumers. No route, contact,
+ * goal, actor, source geometry, or official scoring is ever certified. */
+export function b141PlayerAllyHudLine(
+ info:ReturnType<typeof describeB141RealOriginalAlly>,
+ cEnabled:boolean,orderStatus:string,repeatReady:boolean
+):string{
+ if(info.code==='OFF')return '';
+ const range=info.actualHorizontalSeparationMeters;
+ const gap=info.actualVerticalFootGapMeters;
+ const valid=range!==null&&gap!==null&&
+  Number.isFinite(range)&&range>=0&&Number.isFinite(gap);
+ const orientation=valid?
+   (gap!>.30?gap!.toFixed(1)+'m BELOW':
+    gap!<-.30?(-gap!).toFixed(1)+'m ABOVE':'SAME HEIGHT'):
+   'NO LIVE FOOT';
+ const headline=valid?
+  'A1 ALLY · '+range!.toFixed(1)+'m · '+orientation:
+  info.text;
+ const route=' · ROUTE UNVERIFIED';
+ const command=cEnabled?
+  '\nC ORDER · '+(repeatReady?'RETRY READY':
+   orderStatus==='MOVING'?'MOVING · WAIT':'STATUS '+orderStatus):
+  '';
+ return headline+route+command;
+}
