@@ -319,6 +319,7 @@ export class CpuAgentSystem {
   private readonly sourceGroundStepEvidence=new Map<string,{
    crowdNoStep:number;crowdProposals:number;rapierRejected:number;
    rapierAcceptedMoving:number;rapierAcceptedStationary:number;
+   rapierActualTeammateSlides:number;
    offmeshDeferred:number;overspeedRejected:number;crowdReanchors:number;
    rejectionCauses:Record<string,number>;
    lastRejectCause:string|null;lastRejectOwners:readonly string[];
@@ -867,7 +868,7 @@ export class CpuAgentSystem {
 
   private observeSourceGroundStep(
    bot:CpuBot,event:'CROWD'|'KCC_REJECTED'|'KCC_APPROVED'|
-    'CROWD_REANCHOR'|'OFFMESH_DEFER'|'OVERSPEED',
+    'KCC_TEAMMATE_SLIDE'|'CROWD_REANCHOR'|'OFFMESH_DEFER'|'OVERSPEED',
    candidate:Readonly<{x:number;y:number;z:number}>,
    cause?:string,owners:readonly string[]=[]
   ):void{
@@ -879,6 +880,7 @@ export class CpuAgentSystem {
    if(!row){
     row={crowdNoStep:0,crowdProposals:0,rapierRejected:0,
      rapierAcceptedMoving:0,rapierAcceptedStationary:0,
+     rapierActualTeammateSlides:0,
      offmeshDeferred:0,overspeedRejected:0,crowdReanchors:0,
      rejectionCauses:{},lastRejectCause:null,lastRejectOwners:[],
      lastRealFoot:[bot.position.x,bot.position.y,bot.position.z],
@@ -893,6 +895,8 @@ export class CpuAgentSystem {
    }else if(event==='KCC_APPROVED'){
     if(d>.015)row.rapierAcceptedMoving++;
     else row.rapierAcceptedStationary++;
+   }else if(event==='KCC_TEAMMATE_SLIDE'){
+    row.rapierActualTeammateSlides++;
    }else if(event==='KCC_REJECTED'){
     row.rapierRejected++;
     const reason=cause??'UNSPECIFIED';
@@ -1438,6 +1442,9 @@ export class CpuAgentSystem {
           bot.position,accepted,dt,GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
           sourceSpeed);
       }
+      // A teammate KCC slide counts only after its true physical foot
+      // is committed, not when the Recast Crowd merely proposes a step.
+      let realTeammateSlide=false;
       if(this.phase14qGroundCollision){
         let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
         try{
@@ -1484,7 +1491,6 @@ export class CpuAgentSystem {
         // Do not use the original rejected Crowd endpoint. A separately
         // source-floor-backed Rapier KCC slide may proceed around an
         // ACTUAL teammate contact, without bypassing collision.
-        let realTeammateSlide=false;
         if(!shared.approved&&this.phase14qF2RecoverableSteps&&
            shared.cause==='DYNAMIC_ACTOR_OR_STAGE_BLOCKER'&&
            bot.team===Team.B&&
@@ -1525,6 +1531,8 @@ export class CpuAgentSystem {
         bot.id,bot.position,accepted);
       bot.position.set(accepted.x,accepted.y,accepted.z);
       this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
+      if(realTeammateSlide)this.observeSourceGroundStep(
+        bot,'KCC_TEAMMATE_SLIDE',accepted);
 
       bot.paintRemaining -= dt;
       if (bot.paintRemaining <= 0 && canStartNewCombatActions) {

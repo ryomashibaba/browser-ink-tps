@@ -3255,6 +3255,36 @@ async function main(){
      delta.cpuSubUses>0?
      'HOLD_PAID_SOURCE_SUB_BUT_NO_VERIFIED_EXPLOSION_IN_WINDOW':
      'HOLD_NO_REAL_PAID_SOURCE_SUB_IN_720_NATIVE_TICKS';
+   // Actual B2/B3/B4 60Hz Rapier teammate slides, not Crowd proposals.
+   // Preserve genuine original seven CPU feet with no testing injections.
+   const beforeMotion=after.cpuSourceNativeGroundMotion;
+   const afterMotion=actual.cpuSourceNativeGroundMotion;
+   if(beforeMotion?.source!=='REAL_SOURCE_RECAST_PROPOSAL_AND_RAPIER_KCC'||
+      afterMotion?.source!==beforeMotion.source||
+      beforeMotion.syntheticFootMoves!==0||
+      afterMotion.syntheticFootMoves!==0)
+    fail('REAL_SOURCE_TEAMMATE_SLIDE_PROVENANCE_MISSING');
+   const slideIds=['B2','B3','B4'];
+   const realTeammateKccSlideDelta=Object.fromEntries(slideIds.map(id=>{
+    const a=beforeMotion.byActor?.[id]?.rapierActualTeammateSlides??0;
+    const b=afterMotion.byActor?.[id]?.rapierActualTeammateSlides??0;
+    if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||a<0||b<a)
+     fail('REAL_SOURCE_TEAMMATE_SLIDE_COUNTER_INVALID_'+id);
+    return [id,b-a];
+   }));
+   const beforeFeet=Object.fromEntries(after.cpu.cpu.map(v=>[
+    v.id,v.physicalFoot]));
+   const afterFeet=Object.fromEntries(actual.cpu.cpu.map(v=>[
+    v.id,v.physicalFoot]));
+   const realTeamPhysicalFootTravelMeters=Object.fromEntries(
+    slideIds.map(id=>{
+     const a=beforeFeet[id],b=afterFeet[id];
+     const d=Array.isArray(a)&&Array.isArray(b)&&
+      a.length===3&&b.length===3&&
+      [...a,...b].every(Number.isFinite)?
+      Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]):null;
+     return [id,d===null?null:Number(d.toFixed(4))];
+    }));
    proof.nativeTurfSub={
     schema:'TRUE_SOURCE_SEVEN_CPU_PAID_TURF_SUB_ONE_WINDOW',
     source:'25/17/26/0',nativeTicks:actual.tick-after.tick,
@@ -3262,6 +3292,9 @@ async function main(){
     actualNativeSubAfter:Object.fromEntries(required.map(k=>[k,q[k]])),
     actualSubDelta:delta,actualSevenCpuChangedCells:changed,
     originalSourceSubSearchTelemetry:subSearchDelta,
+    realTeammateKccSlideDelta,realTeamPhysicalFootTravelMeters,
+    physicalCollisionEscapeInNativeBattleCertified:
+     Object.values(realTeammateKccSlideDelta).some(x=>x>0),
     noBotPlacementOrInputInjections:true,
     originalStageAndScoreUnchanged:true,
     bombSpecificPaintCellAttributionCertified:false,
