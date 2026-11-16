@@ -129,9 +129,13 @@ describe('real A1 co-op continues painting true unowned cells after first impact
   expect(floor.ownerGrid[floor.index(12,12)]).toBe(Team.A);
   expect(ink.snapshot().percentA).toBe(0);
  });
- it('does not re-fire into wholly OWN, inactive, opposing or unregistered source',()=>{
+ it('does not re-fire into wholly OWN, inactive or unregistered source',()=>{
   const {floor,sample}=source();
-  expect(liveAim(sample!,Team.B)).toBeNull();
+  // A REAL enemy-owned center is legitimately paintable for Team.B.
+  // A1/Team.A must instead seek a genuinely unpainted neighboring cell.
+  const enemyAim=liveAim(sample!,Team.B);
+  expect(enemyAim).not.toBeNull();
+  expect(floor.projectWorldPoint(enemyAim!).u).toBeCloseTo(2.1);
   floor.ownerGrid[floor.index(12,12)]=Team.A;
   expect(liveAim(sample!,Team.A)).toBeNull();
   floor.ownerGrid[floor.index(12,12)]=Team.Neutral;
