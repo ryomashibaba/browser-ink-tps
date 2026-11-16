@@ -2270,7 +2270,8 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
   system.qaTurfShotsByActor=new Map();
   const oldPatrolAim=new Vec3(3,3,0),newFootAim=new Vec3(0,3,1.7);
   system.chooseB64SourceLateralInkTarget=vi.fn(()=>oldPatrolAim);
-  system.chooseB216ActualOriginalPaintBackfill=vi.fn(()=>newFootAim);
+  system.chooseB216ActualOriginalPaintBackfill=vi.fn(
+   ():Vec3|null=>newFootAim);
   system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
   system.chooseCombatTarget=vi.fn(()=>null);
   system.updateCpuWeaponFacing=vi.fn();
@@ -2308,6 +2309,17 @@ describe('selected SOURCE 180s impact-feedback patrol ink continuation',()=>{
    .toHaveBeenCalledWith(bot,true);
   expect(system.queueCpuWeaponRequest.mock.calls[0][1])
    .toEqual(newFootAim);
+  // When the original-foot angular backfill misses, the LIVE eight-
+  // impact saturation (not a synthetic shot) now also checks ACTUAL
+  // unpainted grid cells before repeating an already-OWN paint aim.
+  const gridCellAim=new Vec3(2.3,3,-1.1);
+  system.chooseB216ActualOriginalPaintBackfill.mockReturnValue(null);
+  system.chooseB216OriginalUnpaintedGridAim=vi.fn(()=>gridCellAim);
+  fire();
+  expect(system.chooseB216OriginalUnpaintedGridAim)
+   .toHaveBeenCalledWith(bot);
+  expect(system.queueCpuWeaponRequest.mock.calls[0][1])
+   .toEqual(gridCellAim);
   // Changed ink or actual 1.5m+ CPU travel clears only this actor's
   // plateau bias, without changing movement or inserting an ink event.
   system.observeSelectedSourceOriginalCpuImpact('B1','CHANGED');

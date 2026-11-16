@@ -2804,14 +2804,27 @@ export class CpuAgentSystem {
     // location zero-change CPU impact rasters, try the existing 360-degree
     // original-foot B216 search FIRST. Otherwise retain the proven fixed
     // patrol/aim order, and always fall back if no safe fresh aim exists.
+    const realSaturatedImpacts=
+      this.selectedSourcePaintSaturation.get(bot.id)?.unchangedImpacts??0;
     const realImpactSaturation=this.b215SelectedBattlePaintPacing&&
-      (this.selectedSourcePaintSaturation.get(bot.id)?.unchangedImpacts??0)>=8&&
+      realSaturatedImpacts>=8&&
       this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
     let turfTarget = canTurfPaint && !hasCombatInRange &&
       b215QueryPaint&&(cooldown <= 0 || finishTurfBurst)
       ? allyInk ?? (this.b64InkAngleSweepEnabled?
          (realImpactSaturation?
-           this.chooseB216ActualOriginalPaintBackfill(bot,true):null) ??
+           this.chooseB216ActualOriginalPaintBackfill(bot,true)??
+           // Previous genuine P2 B2/B3: paid shots kept repeating on
+           // already-OWN floor, with zero late painted-cell change.
+           // Unlike the NO-AIM drought (B1/B4), this live saturation
+           // has valid aims but useless impacts. Once every eight REAL
+           // no-change impact rasters try the same registered-source
+           // exact-cell fallback instead of the same prior own aim.
+           // Real SRC support, main weapon range, paid shot and full
+           // original Rapier ray are independently re-checked.
+           (realSaturatedImpacts%8===0?
+             this.chooseB216OriginalUnpaintedGridAim(bot):null)
+           :null) ??
          this.chooseB64SourceLateralInkTarget(bot,dt) ??
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
