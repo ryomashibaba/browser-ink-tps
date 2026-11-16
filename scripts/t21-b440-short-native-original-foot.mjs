@@ -59,11 +59,16 @@ if(p1InkLoopOnce&&(p1InputDiagnosticOnce||p0FallROnlyOnce))
  throw Error('P1_INK_LOOP_CANNOT_COMBINE_DIAGNOSTIC_OR_FALL_R');
 if(k3IntegratedSource180&&(!p0NormalHuman||!p1RampOnce||p1InputDiagnosticOnce||
    b441Experiment))throw Error('K3_REQUIRES_NORMAL_P0_AND_TRUE_P1_RAMP');
- // One-shot full replay uses the EXACT real frontline portal mode, which
-// includes B448. The ordinary B441 short trial remains unchanged.
+ // User-selectable FRONTLINE always contains BOTH B441 and B448.
+// B441-only diagnostic URLs intentionally do NOT get CpuKitSystem: the
+// canonical 25/17/26/0 source game has stricter real SUB authorization.
+// The native SUB witness must use the ACTUAL selectable FRONTLINE portal,
+// otherwise it can approve 132 Rapier/ownerGrid aims but refunds every
+// physical bomb request because the kit runtime is absent.
 const b448Experiment=b441Experiment&&(
  process.env.T21_B448_A3_REAL_ORIGINAL_FRONT==='1'||
- process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1');
+ process.env.T21_B441_PROVE_FULL_180S_REPLAY==='1'||
+ nativeTurfSubOnce);
 // An explicitly selected ONE-SHOT, genuine >3600-tick browser case.
 // Ordinary pushes keep the original short real-Chromium smoke.
 const proveSourcePracticeExpiry=b441Experiment&&
