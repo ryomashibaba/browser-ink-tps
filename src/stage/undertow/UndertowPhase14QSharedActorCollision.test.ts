@@ -250,6 +250,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   // physically grounded fixture, not a new stage or a forced goal.
   const traffic=Object.create(UndertowF3SourceTraffic.prototype) as {
    physics:RapierStagePhysics;stage:typeof w.stage;
+   nav:RecastStageNavigation;
    enableB441SourceFrontline:boolean;
    sourceEndpointProbes:number;nativeRouteChecks:number;
    nativeRouteRayProbes:number;realGoalRequests:number;
@@ -266,7 +267,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
     side:number,start?:Vec3,actualBlock?:boolean,rampBias?:boolean)=>boolean;
    tryOriginalRampLocalRecovery:(id:string,foot:Vec3,out:Vec3)=>boolean;
   };
-  traffic.physics=w.physics;traffic.stage=w.stage;
+  traffic.physics=w.physics;traffic.stage=w.stage;traffic.nav=nav;
   traffic.enableB441SourceFrontline=true;
   traffic.sourceEndpointProbes=0;traffic.nativeRouteChecks=0;
   traffic.nativeRouteRayProbes=0;traffic.realGoalRequests=0;
