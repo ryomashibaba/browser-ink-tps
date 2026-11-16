@@ -3194,6 +3194,7 @@ async function main(){
    const data={tick:n.tick,available:n.cpu.sourcePatrol?.b441StrictGoalsAvailable,
     requested:n.cpu.sourcePatrol?.b441ActualGoalRequests,
     frontZ:n.cpu.sourcePatrol?.b441ClosestApprovedFrontAbsZ,
+    originalRampLocal:n.cpu.sourcePatrol?.originalRampLocal??null,
     physicalFeet:n.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot,
      rejoined:c.rejoined})),
     b442RealApprovedOriginalGoals:approvedGoals,
@@ -3285,6 +3286,17 @@ async function main(){
       Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]):null;
      return [id,d===null?null:Number(d.toFixed(4))];
     }));
+   // Native SOURCE B2 replan: 120tick stationary original-ramp
+   // attempt is an actual in-game GOAL decision, not capsule travel.
+   const sourceRampBefore=after.cpu.sourcePatrol?.originalRampLocal;
+   const sourceRampAfter=actual.cpu.sourcePatrol?.originalRampLocal;
+   const rampCountBefore=sourceRampBefore?.approved;
+   const rampCountAfter=sourceRampAfter?.approved;
+   if(!Number.isSafeInteger(rampCountBefore)||
+      !Number.isSafeInteger(rampCountAfter)||
+      rampCountAfter<rampCountBefore)
+    fail('NATIVE_ORIGINAL_RAMP_APPROVAL_COUNTER_UNTRUSTED');
+   const realRampApprovalsDelta=rampCountAfter-rampCountBefore;
    proof.nativeTurfSub={
     schema:'TRUE_SOURCE_SEVEN_CPU_PAID_TURF_SUB_ONE_WINDOW',
     source:'25/17/26/0',nativeTicks:actual.tick-after.tick,
@@ -3293,6 +3305,10 @@ async function main(){
     actualSubDelta:delta,actualSevenCpuChangedCells:changed,
     originalSourceSubSearchTelemetry:subSearchDelta,
     realTeammateKccSlideDelta,realTeamPhysicalFootTravelMeters,
+    realRampApprovalsDelta,
+    actualOriginalRampGoalsAtEnd:sourceRampAfter?.active??[],
+    realOriginalRampGoalCertified:realRampApprovalsDelta>0,
+    b2FullOriginalCapsuleWalkCertified:false,
     physicalCollisionEscapeInNativeBattleCertified:
      Object.values(realTeammateKccSlideDelta).some(x=>x>0),
     noBotPlacementOrInputInjections:true,
