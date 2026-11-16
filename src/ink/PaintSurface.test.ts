@@ -1,7 +1,8 @@
 import { Vec3 } from 'playcanvas';
 import { describe, expect, it } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
-import { PaintSurface } from './PaintSurface';
+import { PaintSurface,sourceRegisteredPaintHitActive } from './PaintSurface';
+import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {
   PaintEventType,
   PaintSource,
@@ -153,4 +154,42 @@ describe('PaintSurface footprint authority', () => {
     expect(gameplay.snapshot().areaA).toBe(0);
     expect(gameplay.snapshot().areaB).toBe(0);
   });
+});
+
+describe('original SOURCE projectile physical hit ignores inactive paint cells',()=>{
+ const from=new Vec3(0,3,0),to=new Vec3(0,-5,0);
+ const make=(id:string,y:number)=>new PaintSurface(id,
+  new Vec3(0,y,0),new Vec3(1,0,0),new Vec3(0,0,1),
+  4,4,1,SurfaceFlags.Paintable|SurfaceFlags.Swimmable|SurfaceFlags.Floor,2);
+ const hit=(sourceMode:boolean,surfaces:PaintSurface[])=>{
+  // Exercise the real ProjectileSystem nearest-plane method. No fake
+  // projectile damage, teleport, stage, score or actor is instantiated.
+  const receiver=Object.create(ProjectileSystem.prototype) as {
+    surfaces:PaintSurface[];
+    nativeSourceHumanPhysicalMode:(()=>string)|null
+  };
+  receiver.surfaces=surfaces;
+  receiver.nativeSourceHumanPhysicalMode=sourceMode?()=>'HUMAN':null;
+  const pick=(ProjectileSystem.prototype as unknown as {
+   findNearestSurfaceHit:(from:Vec3,to:Vec3)=>ReturnType<PaintSurface['intersectSegment']>;
+  }).findNearestSurfaceHit;
+  return pick.call(receiver as unknown as ProjectileSystem,from,to);
+ };
+ it('allows an actual SOURCE shot to pass inactive raster and hit the farther registered floor',()=>{
+  const near=make('original-hole',0);
+  const behind=make('registered-floor-below',-2);
+  const index=near.index(2,2);
+  near.flagsGrid[index]=0;
+  expect(sourceRegisteredPaintHitActive(near,near.intersectSegment(from,to)!))
+   .toBe(false);
+  expect(hit(true,[near,behind])?.surface.id).toBe(behind.id);
+  expect(hit(false,[near,behind])?.surface.id).toBe(near.id);
+ });
+ it('requires active paintable flags, keeps solid original cover independent',()=>{
+  const near=make('original-raster',0);
+  expect(hit(true,[near])?.surface.id).toBe(near.id);
+  near.flagsGrid[near.index(2,2)]=SurfaceFlags.Swimmable|SurfaceFlags.Floor;
+  expect(hit(true,[near])).toBeNull();
+  expect(hit(false,[near])?.surface.id).toBe(near.id);
+ });
 });

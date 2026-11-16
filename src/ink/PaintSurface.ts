@@ -23,6 +23,23 @@ export interface SurfaceProjection {
   inside: boolean;
 }
 
+/** SOURCE-only paint contact: the actual owner-grid/paint raster is
+ * authoritative. An intersection with an inactive original-floor cell is
+ * not a paint impact and must not intercept a real bullet or crosshair.
+ * No change to physics colliders, CPU routing, score or frozen T20. */
+export function sourceRegisteredPaintHitActive(
+ surface:PaintSurface,hit:SurfaceRayHit
+):boolean{
+ if(!Number.isFinite(hit.u)||!Number.isFinite(hit.v)||
+    !Number.isFinite(hit.distance)||hit.distance<0)return false;
+ const x=Math.min(surface.widthCells-1,Math.max(0,
+  Math.floor(hit.u/surface.cellSize)));
+ const y=Math.min(surface.heightCells-1,Math.max(0,
+  Math.floor(hit.v/surface.cellSize)));
+ return surface.isCellActive(x,y)&&
+  ((surface.flagsGrid[surface.index(x,y)]??0)&SurfaceFlags.Paintable)!==0;
+}
+
 export class PaintSurface {
   public readonly ownerGrid: Int8Array;
   public readonly flagsGrid: Uint16Array;

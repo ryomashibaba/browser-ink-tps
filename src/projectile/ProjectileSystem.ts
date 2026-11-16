@@ -15,7 +15,8 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
-import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+import {sourceRegisteredPaintHitActive,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import {
   DEFAULT_WEAPON_ID,
@@ -2698,7 +2699,14 @@ export class ProjectileSystem {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
       const hit = surface.intersectSegment(from, to);
-      if (hit && (!best || hit.distance < best.distance)) best = hit;
+      // Genuine SOURCE bullets and CHARGER rays may hit only an ACTIVE
+      // paint cell. Otherwise a ghost paint-plane stops live physical
+      // shots even though gameplay ink cannot be changed there.
+      // Still resolve the independent original Rapier solid afterwards.
+      // Frozen T20's original plane-first behavior is unchanged.
+      if(hit&&(!this.nativeSourceHumanPhysicalMode||
+          sourceRegisteredPaintHitActive(surface,hit))&&
+          (!best||hit.distance<best.distance))best=hit;
     }
     return best;
   }

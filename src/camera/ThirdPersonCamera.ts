@@ -7,8 +7,9 @@ import {readSourceCameraPreferences,writeSourceCameraPreferences,
 import {b258Pose,type B258CameraProfile}
  from '../app/B258OriginalCameraComposition';
 import { GAME_CONFIG } from '../config/game/gameConfig';
-import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
-import {SurfaceFlags} from '../ink/types';
+import {sourceRegisteredPaintHitActive,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
+export {sourceRegisteredPaintHitActive} from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 
 export interface DebugInkClick {
@@ -35,23 +36,6 @@ export function sourceCameraPhysicalClearanceMeters(
  if(!Number.isFinite(blockerMeters)||blockerMeters<0)return 0;
  return Math.max(0,Math.min(desiredMeters,
   blockerMeters-GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters));
-}
-
-/** The SOURCE crosshair must use the same *active raster cell* as actual
- * GameplayInkSystem sampling/painting. A geometric plane hit inside an
- * inactive footprint cell is not a live paintable floor. No geometry, KCC,
- * actor, ink, scoring or legacy T20 behavior is changed. */
-export function sourceRegisteredPaintHitActive(
- surface:PaintSurface,hit:SurfaceRayHit
-):boolean{
- if(!Number.isFinite(hit.u)||!Number.isFinite(hit.v)||
-    !Number.isFinite(hit.distance)||hit.distance<0)return false;
- const x=Math.min(surface.widthCells-1,Math.max(0,
-  Math.floor(hit.u/surface.cellSize)));
- const y=Math.min(surface.heightCells-1,Math.max(0,
-  Math.floor(hit.v/surface.cellSize)));
- return surface.isCellActive(x,y)&&
-  ((surface.flagsGrid[surface.index(x,y)]??0)&SurfaceFlags.Paintable)!==0;
 }
 
 export class ThirdPersonCamera {
