@@ -1,4 +1,5 @@
 import {Vec3} from 'playcanvas';
+import {Team} from '../ink/types';
 import {UndertowF3SourceTraffic} from './UndertowF3SourceTraffic';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {describe,it,expect} from 'vitest';
@@ -81,6 +82,7 @@ describe('SOURCE CPU pursuit uses physical SQUID height, no imaginary torso',()=
  it('consults native original cover at human current hit sphere, never CPU SQUID',()=>{
   const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
   traffic.enableB192HumanCombat=true;traffic.freeCombat=true;
+  traffic.b192NativeHumanFoot=new Vec3();
   const rays:Array<{from:Vec3;to:Vec3}>=[];
   traffic.physics={castStageSegment:(from:Vec3,to:Vec3)=>{
    rays.push({from:from.clone(),to:to.clone()});
@@ -107,6 +109,7 @@ describe('SOURCE CPU pursuit uses physical SQUID height, no imaginary torso',()=
  it('does not retain an invalid SQUID state after the native input ends',()=>{
   const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
   traffic.enableB192HumanCombat=true;traffic.freeCombat=true;
+  traffic.b192NativeHumanFoot=new Vec3();
   traffic.prepare(120,{x:0,y:4,z:-40,active:true,grounded:true,mode:'SQUID'});
   expect(traffic.b192HumanAliveGrounded).toBe(true);
   expect(traffic.b192NativeHumanMode).toBe('SQUID');
