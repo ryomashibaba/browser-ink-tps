@@ -86,6 +86,52 @@ class SyntheticPhiveProbeTests(unittest.TestCase):
             self.assertTrue(c['allFourInteriorSamplesOnThisMaterial'])
             self.assertFalse(x['runtimePromotionAuthorized'])
 
+    def test_real_phive_navmesh_exclusion_is_not_collision_or_route_permission(self):
+        with tempfile.TemporaryDirectory() as d:
+            mats={'Stone00': {'mat_name':'Stone',
+                'mat_flags':['IgnoredByNavMesh'],
+                'col_disable_flags':[]}}
+            x=probe.run(*write_files(Path(d),material=mats))
+            row=x['comparisonCoordinateFrames']['stageProject']['POSITIVE_Z'][0]
+            self.assertEqual(row['coveredSamplePoints'],4)
+            self.assertTrue(row['materialCandidates'][0]['explicitIgnoredByNavMesh'])
+            self.assertFalse(x['cpuCapsuleContinuousKccAndNativeRecastCertified'])
+            self.assertFalse(x['runtimePromotionAuthorized'])
+
+    def test_eight_seam_collision_triangle_can_be_explicitly_navmesh_ignored(self):
+        # Synthetic small seam: match geometrically, but nav-mesh exclusion
+        # must be carried all the way into each seam endcap risk summary.
+        a=((0.,3.,45.),(2.,3.,45.),(0.,3.,46.))
+        b=((0.,3.,47.),(2.,3.,47.),(0.,3.,48.))
+        rows=[dict(side='POSITIVE_Z',component=cid,material='Floor',
+                   faceLocalIndex=0,tri=tri)
+              for cid,tri in (('A',a),('B',b))]
+        seams=[{'side':'POSITIVE_Z','sourceFaceFrom':'A',
+                'sourceFaceTo':'B'}]
+        excluded={'Stone00':{'mat_flags':['IgnoredByNavMesh'],
+                   'col_disable_flags':[]}}
+        result=probe.scan_eight_seam_phive_candidate_coverage(
+            rows,seams,[('Stone00',a),('Stone00',b)],excluded)
+        frame=result['possibleCoordinateFramesOnly']['stageProject']
+        self.assertTrue(all(f['allFourInteriorSamplesCoveredByAnyCandidate']
+                            for f in frame['faces']))
+        self.assertTrue(all(f['allFourInteriorSamplesOnlyNavmeshIgnoredCandidates']
+                            for f in frame['faces']))
+        for endpoint in ('upstream','downstream'):
+            self.assertEqual(frame['eightSeams'][0][endpoint][
+                'trianglesCoveredOnlyByNavmeshIgnoredCandidates'],1)
+        self.assertFalse(frame['sourceCollisionAuthorityGranted'])
+        self.assertFalse(result['originalCrossTeamTraversalAuthorized'])
+        # With no explicit flag, the result remains UNVERIFIED, not WALKABLE.
+        unflagged={'Stone00':{'mat_flags':[],'col_disable_flags':[]}}
+        other=probe.scan_eight_seam_phive_candidate_coverage(
+            rows,seams,[('Stone00',a),('Stone00',b)],unflagged)
+        self.assertFalse(other['possibleCoordinateFramesOnly']['stageProject']
+                         ['faces'][0]['allFourInteriorSamplesOnlyNavmeshIgnoredCandidates'])
+        self.assertFalse(other['sourceCollisionAuthorityGranted'] if
+                         'sourceCollisionAuthorityGranted' in other else
+                         other['originalCrossTeamTraversalAuthorized'])
+
     def test_reject_b239_vertex_id_forgery(self):
         with tempfile.TemporaryDirectory() as d:
             data=fixture();data['sides']['POSITIVE_Z']['triangles'][0]['originalOBJVertexIDs'][0]+=1

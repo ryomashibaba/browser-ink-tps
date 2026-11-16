@@ -41,6 +41,11 @@ HUMAN_COLLISION_DISABLED = frozenset({
     "SplPlayerSquid_Invisible", "SplPlayerSquid_NoThroughFence",
 })
 UNRIDABLE_MATERIAL = frozenset({"Unridable", "GameUnridable"})
+# PhiveConverter's actual Splatoon 3 fxconfig.json declares this distinct
+# navigation-behavior flag. A triangle matching the render model but carrying
+# this explicit flag cannot be taken as a walkable Recast corridor. Absence
+# of the flag does NOT certify positive 7.2.0 Turf walkability.
+NAVMESH_IGNORED_MATERIAL = "IgnoredByNavMesh"
 
 
 def digest(path: Path) -> str:
@@ -326,7 +331,9 @@ def scan_eight_seam_phive_candidate_coverage(
                     HUMAN_COLLISION_DISABLED.intersection(
                         materials[m].get("col_disable_flags",[]))),
                 "explicitUnridable":bool(UNRIDABLE_MATERIAL.intersection(
-                    materials[m].get("mat_flags",[])))
+                    materials[m].get("mat_flags",[]))),
+                "explicitIgnoredByNavMesh":NAVMESH_IGNORED_MATERIAL in
+                    materials[m].get("mat_flags",[])
             } for m,v in sorted(hits.items())]
             all_covered=len(set().union(*hits.values()))==4 if hits else False
             observed.append({
@@ -335,6 +342,13 @@ def scan_eight_seam_phive_candidate_coverage(
                 "sourceMaterial":row["material"],"interiorSamples":4,
                 "candidateCoveredSamples":len(set().union(*hits.values())) if hits else 0,
                 "allFourInteriorSamplesCoveredByAnyCandidate":all_covered,
+                # Explicitly nav-ignored material is evidence AGAINST a
+                # physical path, even when all four render-mesh samples
+                # coincide with a candidate collision triangle. Mixed
+                # materials remain ambiguous; never infer positive travel.
+                "allFourInteriorSamplesOnlyNavmeshIgnoredCandidates":
+                    all_covered and all(c["explicitIgnoredByNavMesh"]
+                                        for c in candidates),
                 "candidateMaterials":candidates,
                 "originalPlayerColliderAuthorized":False
             })
@@ -346,7 +360,10 @@ def scan_eight_seam_phive_candidate_coverage(
                        x["sourceComponentId"]==component]
                 return {"originalTriangles":len(group),
                         "trianglesWithCandidateCollisionInterior":
-                            sum(x["allFourInteriorSamplesCoveredByAnyCandidate"] for x in group)}
+                            sum(x["allFourInteriorSamplesCoveredByAnyCandidate"] for x in group),
+                        "trianglesCoveredOnlyByNavmeshIgnoredCandidates":
+                            sum(x["allFourInteriorSamplesOnlyNavmeshIgnoredCandidates"]
+                                for x in group)}
             links.append({
                 "side":side,
                 "from":seam["sourceFaceFrom"],"to":seam["sourceFaceTo"],
@@ -426,6 +443,8 @@ def run(b239: Path | None, collision_obj: Path, materials_json: Path,
                 "explicitUnridableMaterial": bool(
                     UNRIDABLE_MATERIAL.intersection(
                         materials[name].get("mat_flags", []))),
+                "explicitIgnoredByNavMesh": NAVMESH_IGNORED_MATERIAL in
+                    materials[name].get("mat_flags", []),
                 # Four inner probes are not continuous contact, so this
                 # flag must never be named a confirmed walkable surface.
                 "allFourInteriorSamplesOnThisMaterial": len(indices) == 4,
