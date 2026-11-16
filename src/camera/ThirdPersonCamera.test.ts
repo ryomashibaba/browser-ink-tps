@@ -1,5 +1,7 @@
 import {afterEach,beforeAll,describe,expect,it,vi} from 'vitest';
-import {ThirdPersonCamera,sourceCameraPhysicalClearanceMeters} from './ThirdPersonCamera';
+import {ThirdPersonCamera,sourceCameraPhysicalClearanceMeters,
+ sourceRegisteredPaintHitActive} from './ThirdPersonCamera';
+import {SurfaceFlags} from '../ink/types';
 import RAPIER from '@dimforge/rapier3d-compat';
 import {Vec3,type Entity} from 'playcanvas';
 import type {PaintSurface} from '../ink/PaintSurface';
@@ -234,15 +236,20 @@ describe('SOURCE third-person center crosshair finite original ray',()=>{
     nearClip:.1,farClip:200,
     screenToWorld:(_x:number,_y:number,z:number)=>new Vec3(0,0,z)
    },getPosition:()=>new Vec3()} as unknown as Entity;
-  const paint={intersectRay:(_from:Vec3,_dir:Vec3)=>({
-    surface:null as unknown as PaintSurface,distance,worldPoint:new Vec3(0,0,.1+distance),
-    u:0,v:0})} as unknown as PaintSurface;
+  const paint={
+    widthCells:1,heightCells:1,cellSize:2,
+    flagsGrid:new Uint16Array([SurfaceFlags.Paintable]),
+    isCellActive:()=>true,index:()=>0,
+    intersectRay:(_from:Vec3,_dir:Vec3)=>({
+      surface:paint as PaintSurface,distance,
+      worldPoint:new Vec3(0,0,.1+distance),u:0,v:0})
+  } as unknown as PaintSurface;
   const physics={castStageSegment:vi.fn((_from:Vec3,_to:Vec3)=>{
    return blockerDistance===null?null:{
     distance:blockerDistance,point:new Vec3(0,0,.1+blockerDistance)};
   })} as unknown as RapierStagePhysics;
   return {camera:new ThirdPersonCamera(canvas,eye,[paint],physics),
-    physics};
+    physics,paint};
  };
  it('rejects beyond-endpoint SOURCE paint but preserves frozen T20 original target',()=>{
   const source=makeAim(120);
@@ -253,6 +260,31 @@ describe('SOURCE third-person center crosshair finite original ray',()=>{
   const frozen=makeAim(120);
   expect(frozen.camera.getAimTarget(new Vec3(),80).z)
     .toBeCloseTo(120.1,5);
+ });
+ it('rejects nonpaintable and inactive original SOURCE raster holes without altering T20',()=>{
+  const inactive=makeAim(35);
+  inactive.camera.enableSourcePracticeControls();
+  inactive.paint.flagsGrid[0]=0;
+  expect(inactive.camera.getAimTarget(new Vec3(),80).z)
+   .toBeCloseTo(80.1,5);
+  const masked=makeAim(35);
+  masked.camera.enableSourcePracticeControls();
+  vi.spyOn(masked.paint,'isCellActive').mockReturnValue(false);
+  expect(masked.camera.getAimTarget(new Vec3(),80).z)
+   .toBeCloseTo(80.1,5);
+  const original=makeAim(35);
+  original.paint.flagsGrid[0]=0;
+  expect(original.camera.getAimTarget(new Vec3(),80).z)
+   .toBeCloseTo(35.1,5);
+ });
+ it('shares the same SOURCE cell proof with the live muzzle-line readout',()=>{
+  const h=makeAim(35);
+  const hit=h.paint.intersectRay(new Vec3(),new Vec3(0,0,1))!;
+  expect(sourceRegisteredPaintHitActive(h.paint,hit)).toBe(true);
+  h.paint.flagsGrid[0]=0;
+  expect(sourceRegisteredPaintHitActive(h.paint,hit)).toBe(false);
+  expect(sourceRegisteredPaintHitActive(h.paint,{...hit,u:Number.NaN}))
+   .toBe(false);
  });
  it('uses registered paint inside the native ray and prefers closer Rapier obstruction',()=>{
   const clear=makeAim(35);

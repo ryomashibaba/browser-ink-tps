@@ -16,7 +16,7 @@ import {CpuAgentSystem} from '../ai/CpuAgentSystem';
 import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {CombatTargetSystem} from '../combat/CombatTargetSystem';
 import {PlayerResources} from '../combat/PlayerResources';
-import {ThirdPersonCamera} from '../camera/ThirdPersonCamera';
+import {ThirdPersonCamera,sourceRegisteredPaintHitActive} from '../camera/ThirdPersonCamera';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {FixedStepClock} from '../core/FixedStepClock';
 import {PerformanceStats} from '../core/PerformanceStats';
@@ -8429,7 +8429,8 @@ export class UndertowF3PlayablePreviewApp{
    let paintHit:ReturnType<PaintSurface['intersectSegment']>=null;
    for(const surface of this.b45SourceSurfaces){
     const hit=surface.intersectSegment(muzzle,cameraTarget);
-    if(hit&&(!paintHit||hit.distance<paintHit.distance))paintHit=hit;
+    if(hit&&sourceRegisteredPaintHitActive(surface,hit)&&
+       (!paintHit||hit.distance<paintHit.distance))paintHit=hit;
    }
    const registeredSolid=this.physics.castStageSegment(
     muzzle,cameraTarget,'ink-projectile');
