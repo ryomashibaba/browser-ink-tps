@@ -162,7 +162,8 @@ import {W10B112HumanGroundLedger,
  b112NativeHumanKeysEvidenceAllowed} from './W10B112HumanGroundLedger';
 import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
-import {sourceNativeInputProjection} from './SourceNativeInputProjection';
+import {sourceNativeInputProjection,sourceNativeEditingHotkeyTarget}
+ from './SourceNativeInputProjection';
 import {inspectB124ActualRaisedSourceBoundary}
  from './W10B124OriginalRaisedSourceBoundary';
 import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus}
@@ -2509,7 +2510,7 @@ export class UndertowF3PlayablePreviewApp{
   // listeners; when Q is not eligible, the usual shoulder toggle remains.
   window.addEventListener('keydown',ev=>{
    if(ev.code!=='KeyQ'||ev.repeat||ev.shiftKey||ev.altKey||
-      ev.ctrlKey||ev.metaKey)return;
+      ev.ctrlKey||ev.metaKey||sourceNativeEditingHotkeyTarget(ev.target))return;
    // F3/F5 actual Q restarts only the native 60s local challenge.
    // Do not reset live 180s clock, ink, CPU, Player, stage or score.
    if(ev.code==='KeyQ'&&!ev.shiftKey){
@@ -2549,7 +2550,8 @@ export class UndertowF3PlayablePreviewApp{
    }
   },true);
   window.addEventListener('keydown',ev=>{
-   if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey)return;
+   if(ev.repeat||ev.altKey||ev.ctrlKey||ev.metaKey||
+      sourceNativeEditingHotkeyTarget(ev.target))return;
    if(ev.code==='KeyP')this.togglePause();
    if(ev.code==='Escape'&&document.pointerLockElement===this.canvas&&
       (this.b203FullRound&&this.matchState!=='TIME_UP'||

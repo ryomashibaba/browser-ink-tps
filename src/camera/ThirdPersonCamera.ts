@@ -1,4 +1,6 @@
 import { Entity, Vec3 } from 'playcanvas';
+import {sourceNativeEditingHotkeyTarget,sourceNativePointerLockClickAllowed}
+ from '../app/SourceNativeInputProjection';
 import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
 import {readSourceCameraPreferences,writeSourceCameraPreferences,
  type SourceCameraPreferences} from './SourceCameraPreferences';
@@ -470,6 +472,7 @@ export class ThirdPersonCamera {
     window.addEventListener('keydown', event=>{
       if(!this.sourcePracticeControls||
          event.repeat||event.altKey||event.ctrlKey||event.metaKey||
+         sourceNativeEditingHotkeyTarget(event.target)||
          document.pointerLockElement!==this.canvas)return;
       // Source-player camera settings are bounded and kept in this browser.
       if(event.code==='BracketLeft'||event.code==='BracketRight'){
@@ -516,7 +519,8 @@ export class ThirdPersonCamera {
         return;
       }
 
-      if (document.pointerLockElement !== this.canvas) {
+      if (document.pointerLockElement !== this.canvas &&
+          sourceNativePointerLockClickAllowed(this.sourcePracticeControls,event.button)) {
         void this.canvas.requestPointerLock().catch(() => {
           // Pointer lock can be denied by browser/user policy; keep normal UI usable.
         });

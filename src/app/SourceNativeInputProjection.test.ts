@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {sourceNativeInputProjection} from './SourceNativeInputProjection';
+import {sourceNativeInputProjection,sourceNativePointerLockClickAllowed,sourceNativeEditingHotkeyTarget} from './SourceNativeInputProjection';
 describe('T21 actual native D input projection',()=>{
  it('yaw=0 maps D to +X and W to -Z using existing player movement basis',()=>{
   const d=sourceNativeInputProjection({nativeTick:1304,axes:[1,0],
@@ -30,5 +30,17 @@ describe('T21 actual native D input projection',()=>{
   expect(Math.hypot(...f.projectedWorldIntent)).toBeCloseTo(1,9);
   expect(()=>sourceNativeInputProjection({nativeTick:1340,axes:[2,0],
    yawDegrees:0,pointerLocked:true})).toThrow('SOURCE_NATIVE_INPUT_PROJECTION_INVALID');
+ });
+});
+
+describe('SOURCE player input ownership during actual menu and camera play',()=>{
+ it('only source primary click acquires pointer lock, keeping non-SOURCE behavior',()=>{
+  expect(sourceNativePointerLockClickAllowed(true,0)).toBe(true);
+  expect(sourceNativePointerLockClickAllowed(true,1)).toBe(false);
+  expect(sourceNativePointerLockClickAllowed(true,2)).toBe(false);
+  expect(sourceNativePointerLockClickAllowed(false,2)).toBe(true);
+ });
+ it('does not classify an absent keyboard event target as editing',()=>{
+  expect(sourceNativeEditingHotkeyTarget(null)).toBe(false);
  });
 });

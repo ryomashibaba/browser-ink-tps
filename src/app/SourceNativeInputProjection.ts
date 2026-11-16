@@ -28,3 +28,20 @@ export function sourceNativeInputProjection(f:{
   underlyingStageOrCameraWritten:false as const
  };
 }
+
+/** SOURCE player controls must never take hotkeys from a focused edit field.
+ * UI focus only: no changes to physics, gameplay ink or scoring. */
+export function sourceNativeEditingHotkeyTarget(target:EventTarget|null):boolean{
+ if(!target)return false;
+ return target instanceof HTMLElement&&
+  (target.isContentEditable||
+   target.closest('input,textarea,select,[contenteditable]')!==null);
+}
+
+/** SOURCE mouse ownership: primary click enters play, secondary/middle do
+ * not capture unexpectedly. The frozen non-SOURCE camera is unchanged. */
+export function sourceNativePointerLockClickAllowed(
+ sourcePracticeControls:boolean,button:number
+):boolean{
+ return !sourcePracticeControls||button===0;
+}
