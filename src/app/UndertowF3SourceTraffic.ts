@@ -1077,6 +1077,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   side:1|-1,bot:F3TrafficCpu,enemyIsActualHuman=false
  ){
   const physics=this.physics;
+  // A B-side SOURCE pursuit target must still be the living, grounded
+  // human measured THIS native tick. A previously cached SQUID mode or
+  // stale body is not an original-geometry destination or LOS witness.
+  if(enemyIsActualHuman&&
+     (!this.b192HumanAliveGrounded||
+      this.b192HumanTick!==this.b137NativeTick))return null;
   if(!this.enableB192HumanCombat||!physics||!bot.weaponId)
    return b421RealEnemyStandoff(path,enemyFoot,side);
   const profile=weaponProfile(bot.weaponId);

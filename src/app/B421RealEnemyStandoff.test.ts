@@ -120,3 +120,26 @@ describe('SOURCE CPU pursuit uses physical SQUID height, no imaginary torso',()=
   expect(traffic.b192NativeHumanMode).toBe('HUMAN');
  });
 });
+
+describe('SOURCE human pursuit refuses a previous native-life target',()=>{
+ it('does not propose an old standoff after real human loses grounded/alive proof',()=>{
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  traffic.enableB192HumanCombat=true;traffic.freeCombat=true;
+  traffic.b192NativeHumanFoot=new Vec3();
+  traffic.physics={castStageSegment:()=>null};
+  const path=[new Vec3(0,4,-40),new Vec3(4,4,-40),
+   new Vec3(8,4,-40),new Vec3(12,4,-40)];
+  const bot:any={id:'B1',team:Team.B,weaponId:'pulse-sprayer'};
+  const goal=()=>traffic.chooseActualSourceCombatGoal(
+   path,path[3],-1,bot,true);
+  traffic.prepare(300,{x:12,y:4,z:-40,active:true,grounded:true,
+   mode:'SQUID'});
+  expect(goal()).not.toBeNull();
+  traffic.prepare(301,{x:12,y:4,z:-40,active:false,grounded:false,
+   mode:'SQUID'});
+  expect(goal()).toBeNull();
+  traffic.prepare(302,{x:12,y:4,z:-40,active:true,grounded:true,
+   mode:'HUMAN'});
+  expect(goal()).not.toBeNull();
+ });
+});
