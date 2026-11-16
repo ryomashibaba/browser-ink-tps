@@ -379,7 +379,13 @@ export class ThirdPersonCamera {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
       const hit = surface.intersectRay(from, direction);
-      if (hit && (!best || hit.distance < best.distance)) best = hit;
+      // SOURCE crosshair and actual original Rapier cover use the SAME
+      // finite ray. An unbounded paint plane beyond its 80m endpoint
+      // must not steal aim from the current visible original stage.
+      // Frozen T20 keeps its previous unbounded paint pick exactly.
+      if (hit && (!this.sourcePracticeControls ||
+          (Number.isFinite(hit.distance) && hit.distance <= fallbackDistance)) &&
+          (!best || hit.distance < best.distance)) best = hit;
     }
 
     const blockerEnd=this.rayEnd.set(

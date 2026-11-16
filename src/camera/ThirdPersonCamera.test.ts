@@ -2,6 +2,7 @@ import {afterEach,beforeAll,describe,expect,it,vi} from 'vitest';
 import {ThirdPersonCamera,sourceCameraPhysicalClearanceMeters} from './ThirdPersonCamera';
 import RAPIER from '@dimforge/rapier3d-compat';
 import {Vec3,type Entity} from 'playcanvas';
+import type {PaintSurface} from '../ink/PaintSurface';
 import {RapierStagePhysics,initializeRapier}
  from '../physics/RapierStagePhysics';
 import {PLAYER_CHARACTER_PHYSICS,createConfiguredPlayerCharacterController}
@@ -214,6 +215,53 @@ describe('real SOURCE player camera against already registered Rapier blockers',
    sourceNavigationModified:false
   });
   expect(castStageSegment).toHaveBeenCalledTimes(2);
+ });
+});
+
+/** SOURCE-only ray length is shared by visual floor aim and registered
+ * Rapier cover. These mock the camera projection and paint intersections;
+ * they do NOT certify native Chrome, original Phive, or player shots. */
+describe('SOURCE third-person center crosshair finite original ray',()=>{
+ const makeAim=(distance:number,blockerDistance:number|null=null)=>{
+  vi.stubGlobal('window',{addEventListener:vi.fn(),
+    location:{search:''}});
+  vi.stubGlobal('document',{addEventListener:vi.fn(),
+    pointerLockElement:null});
+  const canvas={addEventListener:vi.fn(),
+    getBoundingClientRect:()=>({width:960,height:540})}
+     as unknown as HTMLCanvasElement;
+  const eye={camera:{
+    nearClip:.1,farClip:200,
+    screenToWorld:(_x:number,_y:number,z:number)=>new Vec3(0,0,z)
+   },getPosition:()=>new Vec3()} as unknown as Entity;
+  const paint={intersectRay:(_from:Vec3,_dir:Vec3)=>({
+    surface:null as unknown as PaintSurface,distance,worldPoint:new Vec3(0,0,.1+distance),
+    u:0,v:0})} as unknown as PaintSurface;
+  const physics={castStageSegment:vi.fn((_from:Vec3,_to:Vec3)=>{
+   return blockerDistance===null?null:{
+    distance:blockerDistance,point:new Vec3(0,0,.1+blockerDistance)};
+  })} as unknown as RapierStagePhysics;
+  return {camera:new ThirdPersonCamera(canvas,eye,[paint],physics),
+    physics};
+ };
+ it('rejects beyond-endpoint SOURCE paint but preserves frozen T20 original target',()=>{
+  const source=makeAim(120);
+  source.camera.enableSourcePracticeControls();
+  const limited=source.camera.getAimTarget(new Vec3(),80);
+  expect(limited.z).toBeCloseTo(80.1,5);
+  expect(source.physics.castStageSegment).toHaveBeenCalledOnce();
+  const frozen=makeAim(120);
+  expect(frozen.camera.getAimTarget(new Vec3(),80).z)
+    .toBeCloseTo(120.1,5);
+ });
+ it('uses registered paint inside the native ray and prefers closer Rapier obstruction',()=>{
+  const clear=makeAim(35);
+  clear.camera.enableSourcePracticeControls();
+  expect(clear.camera.getAimTarget(new Vec3(),80).z).toBeCloseTo(35.1,5);
+  const blocked=makeAim(35,18);
+  blocked.camera.enableSourcePracticeControls();
+  expect(blocked.camera.getAimTarget(new Vec3(),80).z)
+   .toBeCloseTo(18.1,5);
  });
 });
 
