@@ -25,7 +25,8 @@ import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
 import {b420MayLegacyMeleeChase} from './B420SourceMeleePursuitAuthority';
 import {b216OriginalFootBackfillCandidates,
- b216OriginalRegisteredVerticalFloorAim} from './B216OriginalSourceBackfillInk';
+ b216OriginalRegisteredVerticalFloorAim,
+ b216OriginalUnpaintedGridCandidates} from './B216OriginalSourceBackfillInk';
 import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot,b178BoundOriginalCpuPhysicalStep} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -2846,7 +2847,7 @@ export class CpuAgentSystem {
         if(misses>=120&&misses%30===0){
           this.selectedSourceDenseSearches++;
           turfTarget=this.chooseB216ActualOriginalPaintBackfill(
-           bot,true,true);
+           bot,true,true)??this.chooseB216OriginalUnpaintedGridAim(bot);
           if(turfTarget){
             this.selectedSourceEmptyAimStreak.delete(bot.id);
             this.f3dSourceGoals?.noteRealSourcePaintAimDrought?.(
@@ -3467,6 +3468,35 @@ export class CpuAgentSystem {
        this.qaMotionGoals.has(bot.id))
       return this.chooseB216ActualOriginalPaintBackfill(bot,true);
     return best;
+  }
+
+  /** Last P2 drought fallback: exact already-registered source cells,
+   * never a new floor, goal or shot. A real LIVE Rapier-supported CPU foot
+   * and the existing full native projectile ray must both validate.
+   * The 120 misses / every 30 weapon-ready attempts gate lives in
+   * updateCpuWeapon; no extra scan on the regular 60Hz hot path. */
+  private chooseB216OriginalUnpaintedGridAim(bot:CpuBot):Vec3|null{
+    if(!this.p2OuterOriginalBackfill||
+       !this.b216SourceStageAimValidated||
+       bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
+       !bot.agent||
+       this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)!==true)
+      return null;
+    const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+      bot.id,bot.position);
+    if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
+       Math.abs(support.point.y-bot.position.y)>.22)
+      return null;
+    const profile=weaponProfile(bot.weaponId);
+    const possible=b216OriginalUnpaintedGridCandidates(
+      this.gameplayInk.getSurfaces(),bot.position,bot.team,
+      cpuWeaponRangeMeters(profile));
+    for(const candidate of possible){
+      if(this.cpuTargetInRange(bot,candidate,profile)&&
+         this.b216OriginalSourceTurfSightClear(bot,candidate))
+       return candidate;
+    }
+    return null;
   }
 
   private chooseOriginalSourceTurfTarget(bot: CpuBot): Vec3 | null {

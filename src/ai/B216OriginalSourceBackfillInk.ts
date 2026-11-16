@@ -6,7 +6,7 @@
  */
 import {Vec3} from 'playcanvas';
 import type {PaintSurface} from '../ink/PaintSurface';
-import {SurfaceFlags} from '../ink/types';
+import {SurfaceFlags,Team} from '../ink/types';
 export interface B216SourcePoint{readonly x:number;readonly y:number;readonly z:number}
 export interface B216OriginalCandidate extends B216SourcePoint{
  readonly radiusMeters:number;readonly angleRadians:number;
@@ -145,4 +145,69 @@ export function b216RealSourcePaintShotLineClear(x:{
       b.point.x-x.actualTarget.x,
       b.point.y-x.actualTarget.y,
       b.point.z-x.actualTarget.z)<.22);
+}
+
+/**
+ * SOURCE P2: when real weapon-ready attempts keep finding NO AIM, look
+ * through a bounded sample of ACTUAL registered, active, unowned source
+ * ownerGrid cells. The old fixed-angle scan can miss small uncovered
+ * patches between its 16 rays. These are untrusted *proposals*, not
+ * projectiles, score, actor movement or new stage geometry.
+ *
+ * One nearest candidate per 16 physical directions and two distance
+ * bands bounds downstream genuine Rapier shot-line checks to <=32.
+ */
+export function b216OriginalUnpaintedGridCandidates(
+ surfaces:readonly PaintSurface[],foot:B216SourcePoint,team:Team.A|Team.B,
+ weaponRangeMeters:number
+):readonly Vec3[]{
+ if(![foot.x,foot.y,foot.z,weaponRangeMeters].every(Number.isFinite)||
+    weaponRangeMeters<1.3)return [];
+ const radius=Math.min(12,weaponRangeMeters);
+ const picked=new Map<number,{distanceSq:number;point:Vec3}>();
+ for(const surface of surfaces){
+  if(!surface.id.startsWith('UndertowT21D:')||
+     surface.isScoreable||
+     (surface.baseFlags&SurfaceFlags.Paintable)===0||
+     (surface.baseFlags&SurfaceFlags.Floor)===0||
+     (surface.baseFlags&SurfaceFlags.Wall)!==0)continue;
+  const projected=surface.projectWorldPoint(
+   new Vec3(foot.x,foot.y,foot.z));
+  // Basis projection is used ONLY to limit the iteration region.
+  // It grants no floor/support. Leave room for true sloped surfaces.
+  const reach=radius+2,step=Math.max(1,Math.round(.5/surface.cellSize));
+  const lowX=Math.max(0,Math.floor((projected.u-reach)/surface.cellSize));
+  const highX=Math.min(surface.widthCells-1,
+   Math.ceil((projected.u+reach)/surface.cellSize));
+  const lowY=Math.max(0,Math.floor((projected.v-reach)/surface.cellSize));
+  const highY=Math.min(surface.heightCells-1,
+   Math.ceil((projected.v+reach)/surface.cellSize));
+  for(let y=lowY;y<=highY;y+=step){
+   for(let x=lowX;x<=highX;x+=step){
+    if(!surface.isCellActive(x,y))continue;
+    const idx=surface.index(x,y),flags=surface.flagsGrid[idx]??0;
+    if(surface.ownerGrid[idx]===team||
+       (flags&SurfaceFlags.Paintable)===0||
+       (flags&(SurfaceFlags.Wall|SurfaceFlags.Scoreable))!==0)
+     continue;
+    const point=surface.localToWorld(
+     Math.min(surface.widthMeters,(x+.5)*surface.cellSize),
+     Math.min(surface.heightMeters,(y+.5)*surface.cellSize));
+    if(!surface.projectWorldPoint(point).inside||
+       Math.abs(point.y-foot.y)>2)continue;
+    const dx=point.x-foot.x,dz=point.z-foot.z;
+    const distanceSq=dx*dx+dz*dz;
+    if(distanceSq<1||distanceSq>radius*radius)continue;
+    const angle=(Math.atan2(dz,dx)+Math.PI)/(2*Math.PI);
+    const sector=Math.min(15,Math.floor(angle*16));
+    const key=sector+(distanceSq>25?16:0);
+    const previous=picked.get(key);
+    if(!previous||distanceSq<previous.distanceSq)
+     picked.set(key,{distanceSq,point});
+   }
+  }
+ }
+ return [...picked.values()]
+  .sort((x,y)=>x.distanceSq-y.distanceSq)
+  .map(x=>x.point);
 }

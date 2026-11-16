@@ -11,7 +11,8 @@ import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {SurfaceFlags,Team} from '../ink/types';
 import {b216OriginalFootBackfillCandidates as candidates,
  b216RealSourcePaintShotLineClear as safeShot,
- b216OriginalRegisteredVerticalFloorAim as verticalAim}
+ b216OriginalRegisteredVerticalFloorAim as verticalAim,
+ b216OriginalUnpaintedGridCandidates as gridCandidates}
  from './B216OriginalSourceBackfillInk';
 const foot={x:0,y:3.1,z:48};
 const goal={x:0,y:3.1,z:52};
@@ -428,5 +429,80 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
   bot.weaponFacing.set(0,0,1);bot.mobilityState='FIRST_DROP_FALL';
   expect(system.chooseB216ActualOriginalPaintBackfill(bot)).toBeNull();
+ });
+});
+
+describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
+ const make=()=>{
+  const floor=new PaintSurface('UndertowT21D:registered-source-grid',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   20,20,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  floor.ownerGrid.fill(Team.B);
+  // A small genuine registered patch between the old 16 radial rays.
+  for(let y=31;y<=37;y++)for(let x=50;x<=55;x++)
+   floor.ownerGrid[floor.index(x,y)]=Team.Neutral;
+  return floor;
+ };
+ it('finds a true active unpainted cell without modifying ownerGrid or CPU',()=>{
+  const floor=make(),before=Array.from(floor.ownerGrid);
+  const spots=gridCandidates([floor],{x:0,y:3,z:0},Team.B,10);
+  expect(spots.length).toBeGreaterThan(0);
+  expect(spots.length).toBeLessThanOrEqual(32);
+  for(const point of spots){
+   const sampled=floor.projectWorldPoint(point);
+   expect(sampled.inside).toBe(true);
+   const x=Math.floor(sampled.u/floor.cellSize),
+    y=Math.floor(sampled.v/floor.cellSize);
+   expect(floor.ownerGrid[floor.index(x,y)]).toBe(Team.Neutral);
+   expect(Math.hypot(point.x,point.z)).toBeLessThanOrEqual(10);
+  }
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+  floor.ownerGrid.fill(Team.B);
+  expect(gridCandidates([floor],{x:0,y:3,z:0},Team.B,10)).toEqual([]);
+ });
+ it('rejects unofficial surfaces, score, wall, inactive cells and far geometry',()=>{
+  const floor=make();
+  const foot={x:0,y:3,z:0};
+  expect(gridCandidates([floor],foot,Team.B,1.3)).toEqual([]);
+  expect(gridCandidates([floor],{...foot,y:20},Team.B,10)).toEqual([]);
+  const wrongId=new PaintSurface('unregistered',
+   floor.center,floor.uAxis,floor.vAxis,
+   20,20,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  expect(gridCandidates([wrongId],foot,Team.B,10)).toEqual([]);
+  const score=new PaintSurface('UndertowT21D:official-score',
+   floor.center,floor.uAxis,floor.vAxis,20,20,.25,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor|SurfaceFlags.Scoreable,8);
+  expect(gridCandidates([score],foot,Team.B,10)).toEqual([]);
+  for(let y=31;y<=37;y++)for(let x=50;x<=55;x++)
+   floor.flagsGrid[floor.index(x,y)]=0;
+  expect(gridCandidates([floor],foot,Team.B,10)).toEqual([]);
+ });
+ it('actual CPU fallback still requires live source support and native shot-ray',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const floor=make(),ink=new GameplayInkSystem();
+  ink.registerSurface(floor);
+  const bot={id:'B1',team:Team.B,position:new Vec3(0,3,0),
+   weaponId:'pulse-sprayer',agent:{},lifeState:'ACTIVE',
+   mobilityState:'GROUND'};
+  const system=Object.create(CpuAgentSystem.prototype) as any;
+  system.stage=stage;system.gameplayInk=ink;
+  system.p2OuterOriginalBackfill=true;
+  system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+  system.phase14qGroundCollision={sourceFootSupport:()=>({
+   solidId:stage.solids[0]!.id,point:bot.position.clone()})};
+  system.b216SourceStageAimValidated=()=>false;
+  system.b216OriginalTurfSightChecks=0;
+  system.b216OriginalTurfCoverVetoes=0;
+  system.b215SelectedBattlePaintPacing=false;
+  const source=Array.from(floor.ownerGrid);
+  expect(system.chooseB216OriginalUnpaintedGridAim(bot)).toBeNull();
+  system.b216SourceStageAimValidated=()=>true;
+  const aim=system.chooseB216OriginalUnpaintedGridAim(bot);
+  expect(aim).not.toBeNull();
+  expect(aim!.distance(bot.position)).toBeGreaterThan(0);
+  expect(Array.from(floor.ownerGrid)).toEqual(source);
+  expect(bot.position).toEqual(new Vec3(0,3,0));
+  system.phase14qGroundCollision.sourceFootSupport=()=>null;
+  expect(system.chooseB216OriginalUnpaintedGridAim(bot)).toBeNull();
  });
 });
