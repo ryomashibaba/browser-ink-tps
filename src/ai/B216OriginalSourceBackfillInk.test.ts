@@ -491,6 +491,24 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
    floor.flagsGrid[floor.index(x,y)]=0;
   expect(gridCandidates([floor],foot,Team.B,10)).toEqual([]);
  });
+ it('genuine previous B1 late foot remains within the registered original Rapier 0.25m support',async()=>{
+  // Exact physical CPU foot previously observed in genuine P2
+  // Chromium #43576839316 (80s and 180s). Not a test-only teleport.
+  await initializeRapier();
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  try{
+   const realFoot=new Vec3(-5.897308208,4.619208171,-48.422490004);
+   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   const hit=physics.castCharacterFootSupport(
+    realFoot.clone().add(new Vec3(0,offset,0)),offset,'HUMAN');
+   expect(hit).not.toBeNull();
+   expect(stage.solids.some(s=>s.id===hit?.solidId)).toBe(true);
+   const difference=Math.abs(hit!.point.y-realFoot.y);
+   expect(difference).toBeGreaterThan(.22);
+   expect(difference).toBeLessThanOrEqual(.25);
+  }finally{physics.world.free();}
+ });
  it('actual CPU fallback still requires live source support and native shot-ray',()=>{
   const stage=undertowT21dConnectivityQaStage();
   const floor=make(),ink=new GameplayInkSystem();
@@ -513,6 +531,15 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   system.b216SourceStageAimValidated=()=>true;
   const aim=system.chooseB216OriginalUnpaintedGridAim(bot);
   expect(aim).not.toBeNull();
+  // Synthetic boundary unit fixture only: production uses actual
+  // sourceFootSupport's independent ORIGINAL Rapier <=0.25m validator.
+  let supportGap=.24;
+  system.phase14qGroundCollision.sourceFootSupport=()=>({
+   solidId:stage.solids[0]!.id,
+   point:bot.position.clone().sub(new Vec3(0,supportGap,0))});
+  expect(system.chooseB216OriginalUnpaintedGridAim(bot)).not.toBeNull();
+  supportGap=.251;
+  expect(system.chooseB216OriginalUnpaintedGridAim(bot)).toBeNull();
   expect(aim!.distance(bot.position)).toBeGreaterThan(0);
   expect(Array.from(floor.ownerGrid)).toEqual(source);
   expect(bot.position).toEqual(new Vec3(0,3,0));

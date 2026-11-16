@@ -3333,11 +3333,15 @@ export class CpuAgentSystem {
       undefined:this.qaMotionGoals.get(bot.id);
     if(!goal){
       const rejoined=this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
+      // SourceFootSupport already uses the real ORIGINAL Rapier
+      // 0.25m band. The previously duplicated 0.22m aim guard
+      // rejected the documented stationary B1 foot despite valid
+      // original support. Never widen the physical SOURCE authority.
       const support=rejoined?
         this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position):null;
       if(!support||!support.solidId.startsWith('UndertowT21D:')||
          !Number.isFinite(support.point.y)||
-         Math.abs(support.point.y-bot.position.y)>.22||
+         Math.abs(support.point.y-bot.position.y)>.25||
          !this.stage.solids.some(s=>s.id===support.solidId))return null;
       goal=bot.position; // ONLY ink direction; never a Crowd/nav request
     }
@@ -3485,7 +3489,7 @@ export class CpuAgentSystem {
     const support=this.phase14qGroundCollision?.sourceFootSupport?.(
       bot.id,bot.position);
     if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
-       Math.abs(support.point.y-bot.position.y)>.22)
+       Math.abs(support.point.y-bot.position.y)>.25)
       return null;
     const profile=weaponProfile(bot.weaponId);
     const possible=b216OriginalUnpaintedGridCandidates(
