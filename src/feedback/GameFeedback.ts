@@ -209,6 +209,19 @@ export class GameFeedback {
     this.playTone(660*profile.audioPitch,0.024,0.06,'sine',1.05);
   }
 
+  /** SOURCE: physical enemy hit response only, no fake damage or HUD.
+   * Reuses the existing capped FX pool and audio channel. */
+  public confirmedNativeHumanDamage(
+    attacker:Team.A|Team.B,contact:Vec3,actualHpLoss:number
+  ):void{
+    if(!Number.isFinite(actualHpLoss)||actualHpLoss<=0)return;
+    const intensity=Math.min(1,actualHpLoss/65);
+    this.spawnFx(attacker,contact,0.15+intensity*0.09,0.18);
+    this.spawnFx(attacker,contact.clone().add(new Vec3(0,0.26,0)),
+      0.07+intensity*0.06,0.13);
+    this.playTone(260-intensity*75,0.024,0.075,'triangle',0.88);
+  }
+
   public stringerFuse(
     team: Team.A | Team.B,
     position: Vec3,

@@ -5676,6 +5676,10 @@ export class UndertowF3PlayablePreviewApp{
      if(this.respawnFrames>=150){
       this.resources.reset();
       this.player.teleport(this.humanSpawn);
+      // The genuine 150-native-tick SOURCE return already happened.
+      // Existing pooled visual/audio feedback, never a new Actor or spawn.
+      if(this.nativeLiveSourcePrestart)
+       this.feedback.respawn(Team.A,this.humanSpawn);
       this.b112GroundLedger.resetOnRespawn(); // retain the real pre-fall witness
       // B186: the previous human life must never satisfy a new
       // physical original descent after genuine 150-tick respawn.

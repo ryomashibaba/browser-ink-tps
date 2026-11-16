@@ -148,6 +148,7 @@ export class ProjectileSystem {
   // Exact real PlayerController mode; immutable SOURCE 180s only.
   // Default null preserves every T20 and historical opt-in QA hit rule.
   private nativeSourceHumanPhysicalMode:(()=>PlayerMode)|null=null;
+  private nativeHumanDamageCueFrame=-1;
   private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
@@ -211,6 +212,16 @@ export class ProjectileSystem {
     this.app.root.addChild(this.guardEntity);
 
     this.syncWeaponStats();
+  }
+
+  /** A true CPU-to-human HP reduction is the only authority for SOURCE
+   * damage feedback. Rate-limit only pooled FX/audio, never damage. */
+  private confirmNativeHumanDamage(applied:number,contact:Vec3,attacker:Team.A|Team.B):void{
+    if(this.nativeSourceHumanPhysicalMode===null||
+       !Number.isFinite(applied)||applied<=0||
+       this.b367NativeFrame===this.nativeHumanDamageCueFrame)return;
+    this.nativeHumanDamageCueFrame=this.b367NativeFrame;
+    this.feedback.confirmedNativeHumanDamage(attacker,contact,applied);
   }
 
   public get currentPlayerWeapon(): WeaponProfile {
@@ -801,7 +812,8 @@ export class ProjectileSystem {
               this.stats.playerWeaponAction = 'GUARD_BREAK';
             }
           } else {
-            this.resources.applyDamage(slot.damage);
+            const hpLoss=this.resources.applyDamage(slot.damage);
+            this.confirmNativeHumanDamage(hpLoss,combatPoint,slot.team);
             this.stats.cpuPlayerHits += 1;
           }
         }
@@ -2156,7 +2168,8 @@ export class ProjectileSystem {
             this.stats.playerWeaponAction = 'GUARD_BREAK';
           }
         } else {
-          this.resources.applyDamage(damage);
+          const hpLoss=this.resources.applyDamage(damage);
+          this.confirmNativeHumanDamage(hpLoss,endPoint,request.team);
           this.stats.cpuPlayerHits += 1;
         }
       }
@@ -2435,7 +2448,8 @@ export class ProjectileSystem {
       return;
     }
 
-    this.resources.applyDamage(damage);
+    const hpLoss=this.resources.applyDamage(damage);
+    this.confirmNativeHumanDamage(hpLoss,point,team);
     this.stats.cpuPlayerHits += 1;
   }
 
