@@ -38,6 +38,9 @@ function fixture(originalF3: boolean) {
   system.pendingShots = [];
   system.pendingKitRequests = [];
   system.sourceCommittedPaintAims = new Map();
+  // Object.create bypasses real constructor fields, including native
+  // SOURCE enemy-ink movement speed state and splat/respawn cleanup.
+  system.b178NativeCpuMovementSpeed = new Map();
   system.selectedSourcePaintSaturation = new Map();
   system.selectedSourceEmptyAimStreak = new Map();
   system.b215NativeInkDecisionsByActor = new Map();
