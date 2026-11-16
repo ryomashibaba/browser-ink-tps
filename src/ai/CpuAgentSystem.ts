@@ -330,6 +330,9 @@ export class CpuAgentSystem {
   private b181OriginalCombatStageRay:
     ((from:B181SightPoint,to:B181SightPoint)=>boolean)|null=null;
   private b181NativeFrame=0;
+  // The real human KCC body's hit shape changes between HUMAN and SQUID.
+  // Sight targets must follow the same physical mode as projectile hits.
+  private b181NativeHumanColliderMode:'HUMAN'|'SQUID'='HUMAN';
   private readonly b181CachedCombat=new Map<string,{
     frame:number;actorId:string|null;origin:B181SightPoint;target:B181SightPoint|null
   }>();
@@ -939,6 +942,7 @@ export class CpuAgentSystem {
     this.b216ApprovedReachedGoalShortRadiusAims=0;
     this.b216OriginalTurfSightChecks=0;
     this.b216OriginalTurfCoverVetoes=0;
+    this.b181NativeHumanColliderMode='HUMAN';
     this.b181ActualStageRays=0;
     this.b181ActualSourceOcclusions=0;
     this.b181VisibleSelections=0;
@@ -1040,6 +1044,11 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+    // The same actual 60Hz player collider mode is passed to the shared
+    // Rapier actor registration and the SOURCE-only enemy sight query.
+    // Legacy T20/QA sight without B181 keeps its old HUMAN aim baseline.
+    this.b181NativeHumanColliderMode=this.b181OriginalCombatStageRay?
+      humanPhysicalColliderMode:'HUMAN';
     if(this.b181OriginalCombatStageRay)this.b181NativeFrame++;
     this.b212PriorHuman=this.b212PreviousHuman;
     this.b212PreviousHuman=this.b212NativeLeadEnabled&&humanActive?
@@ -3600,15 +3609,23 @@ export class CpuAgentSystem {
     // CPU projectile origin. Original Rapier cover still owns every ray.
     // Only explicit B181 source QA takes this path; T20/default is frozen.
     if(this.b181OriginalCombatStageRay){
+      // In SQUID mode the same real Rapier body is lowered into a .34m
+      // sphere; the HUMAN torso center was NOT an actual squid hit.
+      // Aim only at the current native physical capsule/sphere interior.
+      const squid=this.b181NativeHumanColliderMode==='SQUID';
+      const humanHitY=humanPosition.y+
+        (squid?PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters:0);
+      const humanHitHalfSample=squid?
+        Math.min(.2,PLAYER_CHARACTER_PHYSICS.squidRadiusMeters*.6):.25;
       const candidates=[
         ...(humanActive&&humanTeam!==bot.team?
           [{id:'HUMAN',body:{x:humanPosition.x,
-            y:humanPosition.y,z:humanPosition.z},
-            // Existing native player-hit sphere is centered on the real
-            // Rapier body (radius .42m). Both samples stay INSIDE it.
+            y:humanHitY,z:humanPosition.z},
+            // Both SOURCE hit samples stay INSIDE the actual Rapier
+            // collider (a HUMAN capsule or lowered SQUID sphere).
             alternateHitPoints:[
-              {x:humanPosition.x,y:humanPosition.y+.25,z:humanPosition.z},
-              {x:humanPosition.x,y:humanPosition.y-.25,z:humanPosition.z}
+              {x:humanPosition.x,y:humanHitY+humanHitHalfSample,z:humanPosition.z},
+              {x:humanPosition.x,y:humanHitY-humanHitHalfSample,z:humanPosition.z}
             ]}]:[]),
         ...this.bots.filter(enemy=>
           enemy.id!==bot.id&&enemy.team!==bot.team&&

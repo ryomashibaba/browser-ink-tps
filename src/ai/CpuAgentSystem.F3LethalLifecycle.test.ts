@@ -2327,3 +2327,52 @@ describe('F3 native registered-source turf weapon coverage',()=>{
     }
   });
 });
+
+describe('genuine SOURCE CPU sight follows the real human collider mode',()=>{
+ function nativeSight(){
+  const {system,bot}=fixture(true);
+  bot.position.set(0,3,0);
+  bot.role='SKIRMISHER';bot.weaponId='pulse-sprayer';
+  const rays=vi.fn((_:unknown,to:{y:number})=>to.y>=3.9);
+  system.b181OriginalCombatStageRay=rays;
+  system.b181CachedCombat=new Map();
+  system.b181NativeFrame=10;
+  system.b181ActualStageRays=0;
+  system.b181ActualSourceOcclusions=0;
+  system.b181VisibleSelections=0;
+  system.b212NativeLeadEnabled=false;
+  system.b213SourceCounterfireEnabled=false;
+  system.b181NativeHumanColliderMode='HUMAN';
+  const body=new Vec3(5,4.2,0);
+  const target=()=>system.chooseCombatTarget(
+   bot,Team.A,body,true,1/60,true) as Vec3|null;
+  return {system,bot,body,rays,target};
+ }
+ it('cannot target a covered HUMAN torso but can shoot the authentic lower SQUID hit sphere',()=>{
+  const {system,body,rays,target}=nativeSight();
+  expect(target()).toBeNull();
+  expect(rays).toHaveBeenCalledTimes(3);
+  system.b181NativeHumanColliderMode='SQUID';
+  system.b181NativeFrame++;
+  const aim=target();
+  expect(aim).not.toBeNull();
+  expect(aim!.x).toBe(body.x);
+  expect(aim!.y).toBeCloseTo(
+   body.y-(GAME_CONFIG.player.humanColliderHalfHeightMeters+
+    GAME_CONFIG.player.humanColliderRadiusMeters-
+    GAME_CONFIG.player.squidColliderRadiusMeters),6);
+  expect(aim!.y).toBeLessThan(3.9);
+  // This is only a real visible aiming point; not a fabricated HP hit.
+  expect(system.stats.humanCpuDirectHits).toBe(0);
+  expect(system.stats.cpuCombatHits).toBe(0);
+ });
+ it('drops cached SQUID sight when native collider returns to HUMAN behind cover',()=>{
+  const {system,body,target}=nativeSight();
+  system.b181NativeHumanColliderMode='SQUID';
+  expect(target()?.y).toBeLessThan(3.9);
+  system.b181NativeHumanColliderMode='HUMAN';
+  system.b181NativeFrame++;
+  expect(target()).toBeNull();
+  expect(body.y).toBe(4.2);
+ });
+});
