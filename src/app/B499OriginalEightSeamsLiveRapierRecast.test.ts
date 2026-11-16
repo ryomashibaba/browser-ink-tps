@@ -5,7 +5,7 @@ import {PLAYER_CHARACTER_PHYSICS,createConfiguredPlayerCharacterController}
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {beforeAll,describe,expect,it} from 'vitest';
 // @ts-ignore Node fixture I/O for isolated CI-only diagnostic
-import {writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 declare const process:{env:Record<string,string|undefined>};
 import {PerformanceStats} from '../core/PerformanceStats';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
@@ -463,6 +463,31 @@ describe('B499 genuine CURRENT 25-solid original Recast/Rapier for all 8 CI688 s
   expect(original.solids).toHaveLength(25);
   expect(original.paintSurfaces).toHaveLength(17);
   expect(original.navigationLinks).toHaveLength(26);
+  // Existing B499 artifact is produced by the first genuine-source
+  // test. Add the ISOLATED 60Hz KCC measurements to that same report
+  // rather than claiming the baseline original stage gained colliders.
+  if(process.env.T21_B499_REPORT_PATH){
+   const path=process.env.T21_B499_REPORT_PATH;
+   const prior=JSON.parse(readFileSync(path,'utf8')) as
+    {schema:string;originalSource:string;originalSourceTriangles:number;
+     newFloorOrNavLinkAdded:number;nativeCrossTeamTraversalCertified:boolean};
+   if(prior.schema!=='B499_REAL_8_CI688_FACE_SEAMS_CURRENT_RECAST_RAPIER_V1'||
+      prior.originalSource!=='25/17/26/0'||
+      prior.originalSourceTriangles!==42||
+      prior.newFloorOrNavLinkAdded!==0||
+      prior.nativeCrossTeamTraversalCertified!==false)
+    throw Error('F4_ISOLATED_KCC_REPORT_BASELINE_DRIFT');
+   writeFileSync(path,JSON.stringify({...prior,
+    isolatedOriginalFaceHumanKcc:{
+     sampleKind:'STRAIGHT_CENTROID_PAIRS_NOT_GLOBAL_NAVIGATION',
+     geometry:'EXACT_CI688_10_TRIMESH_FACES_ISOLATED_ONLY',
+     testHz:60,sourceTriangles:42,sourceSeams:8,
+     formalOriginalStageChanged:false,
+     originalTurfCollisionCertified:false,
+     humanNaturalCrossingCertified:false,
+     results
+    }},null,2)+'\n');
+  }
   console.log('F4_EXACT_CI688_EIGHT_SEAM_GENUINE_CAPSULE_KCC_ISOLATED',
    JSON.stringify({
     stage:'ISOLATED_35_SOLIDS_17_PAINT_26_NAVLINKS_ZERO_SCOREABLE',
