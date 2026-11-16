@@ -687,6 +687,38 @@ jobs:
           T21_B441_PROVE_FULL_180S_REPLAY: ${{ contains(github.event.head_commit.message, '[true-full-replay]') && '1' || '0' }}
           T21_B440_OUT: /tmp/t21-b441-short-native-frontline
         run: node scripts/t21-b440-short-native-original-foot.mjs
+      # One real 720-tick seven-CPU outcome for the previously modified
+      # combat-vs-turf SUB priority; never manufacture a successful bomb.
+      - name: Confirm real selected-battle CPU SUB outcome without false PASS
+        if: ${{ contains(github.event.head_commit.message, '[native-turf-sub-once]') && steps.native_browser.outcome == 'success' }}
+        run: |
+          node --input-type=module <<'REAL_SUB'
+          import {readFileSync} from 'node:fs';
+          const d=JSON.parse(readFileSync(
+            '/tmp/t21-b441-short-native-frontline/b440-short-real-original-human-foot.json',
+            'utf8'));
+          const x=d.nativeTurfSub;
+          const keys=['cpuSubUses','subProjectilesLaunched','subExplosions'];
+          if(!x||x.source!=='25/17/26/0'||x.nativeTicks<720||
+             x.noBotPlacementOrInputInjections!==true||
+             x.originalStageAndScoreUnchanged!==true||
+             x.bombSpecificPaintCellAttributionCertified!==false||
+             x.naturalOpposingTeamCombatCertified!==false||
+             !keys.every(k=>Number.isSafeInteger(x.actualSubDelta?.[k])&&
+               x.actualSubDelta[k]>=0))
+            throw Error('TRUE_720_TICK_REAL_CPU_SUB_PROVENANCE_MISSING');
+          const delta=x.actualSubDelta;
+          const demonstrated=delta.cpuSubUses>0&&
+            delta.subProjectilesLaunched>0&&delta.subExplosions>0;
+          console.log('REAL_SOURCE_SUB_720_VERDICT',JSON.stringify({
+            verdict:x.verdict,demonstrated,actualSubDelta:delta,
+            sourceAimSearch:x.originalSourceSubSearchTelemetry,
+            actualSevenCpuChangedCells:x.actualSevenCpuChangedCells,
+            fakeActors:0,fakeScore:0,formal4v4:false
+          }));
+          if(!demonstrated)
+            console.warn('HOLD: Real CPU bomb/launch/explosion is not proven; no PASS claimed.');
+          REAL_SUB
       # B491 independent proof of genuine CPU impacts and OWN recovery,
       # after the one already-running B441 Chromium world, not a rerun.
       - name: Independently audit one true 7CPU paid SOURCE ink and OWN recovery
