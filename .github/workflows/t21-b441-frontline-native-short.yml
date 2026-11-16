@@ -3,6 +3,9 @@ on:
   push:
     branches: [research/t21-b406-single-session-real-enemy-range-audit-20261103, research/t21-integrated-a1-c-patrol-four-mode-20261105]
     paths:
+      - '.github/workflows/t21-b441-frontline-native-short.yml'
+      - 'scripts/f4_phive_original_collision_probe.py'
+      - 'scripts/test_f4_phive_original_collision_probe.py'
       - 'scripts/t21-b440-short-native-original-foot.mjs'
       - 'scripts/t21-b492-source-height-isolation.mjs'
       - 'scripts/t21-b492-source-height-isolation.test.mjs'
