@@ -2491,6 +2491,43 @@ export class CpuAgentSystem {
     }
   }
 
+  /** SOURCE turf-only SUB target for an otherwise idle real CPU.
+   * The cost, cooldown, and ballistic hit/paint are owned by the existing
+   * updateCpuKit and CpuKitSystem; this is ONLY an untrusted aim proposal.
+   * A valid original Rapier-backed current foot and independently
+   * registered target support plus stage first-blocker are mandatory.
+   * Never draw target points outside the 17 original source surfaces. */
+  private chooseB216OriginalSourceSubPaintAim(bot:CpuBot):Vec3|null{
+    if(!this.b215SelectedBattlePaintPacing||
+       !this.p2OuterOriginalBackfill||
+       !this.phase14qF2RecoverableSteps||
+       !this.b216SourceStageAimValidated||
+       !this.f3dSourceGoals||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+       !bot.agent||bot.lifeState!=='ACTIVE'||
+       bot.mobilityState!=='GROUND'||
+       this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)!==true)
+      return null;
+    const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+      bot.id,bot.position);
+    if(!support||
+       !this.stage.solids.some(s=>s.id===support.solidId)||
+       Math.abs(support.point.y-bot.position.y)>.25)
+      return null;
+    const candidates=b216OriginalUnpaintedGridCandidates(
+      this.gameplayInk.getSurfaces(),bot.position,bot.team,
+      GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters);
+    for(const target of candidates){
+      const distance=Math.sqrt(horizontalDistanceSq(bot.position,target));
+      if(distance<GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters||
+         distance>GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters)
+        continue;
+      if(this.b216OriginalSourceTurfSightClear(bot,target))
+       return target;
+    }
+    return null;
+  }
+
   private updateCpuKit(
     bot: CpuBot,
     humanTeam: Team.A | Team.B,
@@ -2517,18 +2554,26 @@ export class CpuAgentSystem {
       return;
     }
 
-    // Tactical SUB/SPECIAL target must remain the actual current enemy
-    // position: B212 is only for physical main-weapon projectile velocity.
-    const target = this.chooseCombatTarget(
+    // Enemy engagement always outranks turf. In ordinary SOURCE-only
+    // battle with NO living visible enemy, a physically grounded CPU
+    // may instead spend one real paid SUB on already registered unowned
+    // ORIGINAL floor. This is a real thrown Rapier projectile, not a
+    // fabricated hit, source actor, free ink or official score.
+    // Legacy T20 and SOURCE staging/rejoin paths remain unchanged.
+    const combatTarget = this.chooseCombatTarget(
       bot,
       humanTeam,
       humanPosition,
       humanActive,
       0
     );
-    if (!target) return;
-
     const kit = weaponKit(bot.weaponId);
+    const actualSourceSubPaintAim=!combatTarget&&
+      bot.subCooldownSeconds<=0&&
+      bot.ink+1e-6>=subWeaponProfile(kit.sub).inkCost?
+      this.chooseB216OriginalSourceSubPaintAim(bot):null;
+    const target=combatTarget??actualSourceSubPaintAim;
+    if (!target) return;
     const distance = Math.sqrt(horizontalDistanceSq(bot.position, target));
     const direction = target.clone().sub(bot.position);
     if (direction.lengthSq() <= 1e-8) return;
@@ -2539,7 +2584,7 @@ export class CpuAgentSystem {
       bot.specialPoints + 1e-6 >= specialProfile.requiredPoints;
 
     if (
-      specialReady &&
+      specialReady && !actualSourceSubPaintAim &&
       bot.specialDecisionCooldownSeconds <= 0 &&
       this.shouldUseCpuSpecial(bot, kit.special, distance)
     ) {

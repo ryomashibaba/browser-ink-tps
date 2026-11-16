@@ -116,6 +116,106 @@ describe('SOURCE real projectile damage rechecks the CURRENT physical life',()=>
  });
 });
 
+describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
+ const setup=(source=true)=>{
+  const {system,bot}=fixture(source);
+  bot.hp=100;bot.ink=100;bot.fireRemaining=0;
+  bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=0;
+  bot.weaponGuarding=false;bot.specialPoints=0;
+  bot.role='SKIRMISHER';bot.subCooldownSeconds=0;
+  bot.position.set(0,3,0);
+  const floor=new PaintSurface('UndertowT21D:real-registered-floor',
+   new Vec3(0,3,0),new Vec3(1,0,0),
+   new Vec3(0,0,1),20,20,.25,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  floor.ownerGrid.fill(Team.B);
+  floor.ownerGrid[floor.index(50,40)]=Team.Neutral;
+  const ink=new GameplayInkSystem();ink.registerSurface(floor);
+  system.gameplayInk=ink;system.b215SelectedBattlePaintPacing=true;
+  system.p2OuterOriginalBackfill=true;
+  system.phase14qF2RecoverableSteps=true;
+  system.stage.solids=[{id:'UndertowT21D:real-registered-solid'}];
+  system.f3dSourceGoals=source?
+   {isLiveRejoinedSourceCpu:()=>true}:null;
+  system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+   solidId:'UndertowT21D:real-registered-solid',
+   point:bot.position.clone()}));
+  system.b216SourceStageAimValidated=vi.fn(()=>true);
+  system.b216OriginalTurfSightChecks=0;
+  system.b216OriginalTurfCoverVetoes=0;
+  system.chooseCombatTarget=vi.fn(()=>null);
+  system.stats.cpuSubUses=0;system.stats.cpuKitLast='';
+  return {system,bot,floor};
+ };
+ it('queues ONE paid real SUB at an actual unowned SOURCE grid cell and retains real cooldown',()=>{
+  const {system,bot,floor}=setup();
+  const before=Array.from(floor.ownerGrid);
+  system.updateCpuKit(bot,Team.A,new Vec3(0,3,55),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  const req=system.pendingKitRequests[0];
+  expect(req.kind).toBe('SUB');
+  const hit=floor.projectWorldPoint(req.target);
+  expect(hit.inside).toBe(true);
+  const x=Math.floor(hit.u/floor.cellSize);
+  const y=Math.floor(hit.v/floor.cellSize);
+  expect(floor.ownerGrid[floor.index(x,y)]).toBe(Team.Neutral);
+  expect(req.sourceId).toBe('B1');
+  expect(req.subId).toBe(weaponKit(bot.weaponId).sub);
+  expect(bot.ink).toBe(100-subWeaponProfile(req.subId).inkCost);
+  expect(bot.subCooldownSeconds).toBeGreaterThan(0);
+  expect(system.stats.cpuSubUses).toBe(1);
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+  system.updateCpuKit(bot,Team.A,new Vec3(),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  // Projectile flight, actual floor contact and ink are NOT synthesized
+  // in this unit fixture: CpuKitSystem must dispatch/resolve the request.
+ });
+ it('does not queue a free or covered sub or convert floor paint to a special',()=>{
+  const {system,bot,floor}=setup();
+  bot.specialPoints=999;
+  system.b216SourceStageAimValidated=vi.fn(()=>false);
+  system.updateCpuKit(bot,Team.A,new Vec3(),true);
+  expect(system.pendingKitRequests).toHaveLength(0);
+  expect(bot.ink).toBe(100);
+  system.b216SourceStageAimValidated=vi.fn(()=>true);
+  system.updateCpuKit(bot,Team.A,new Vec3(),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  expect(system.pendingKitRequests[0].kind).toBe('SUB');
+  expect(bot.specialPoints).toBe(999);
+  expect(floor.ownerGrid[floor.index(50,40)]).toBe(Team.Neutral);
+ });
+ it('fails closed without true SOURCE rejoin, registered foot, turf or affordability',()=>{
+  const {system,bot,floor}=setup();
+  const tryShot=()=>{system.updateCpuKit(bot,Team.A,new Vec3(),true);
+   expect(system.pendingKitRequests).toHaveLength(0);};
+  bot.ink=69;tryShot();bot.ink=100;
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;tryShot();
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.phase14qGroundCollision.sourceFootSupport=()=>null;tryShot();
+  system.phase14qGroundCollision.sourceFootSupport=()=>({
+   solidId:'fake',point:bot.position.clone()});tryShot();
+  system.phase14qGroundCollision.sourceFootSupport=()=>({
+   solidId:'UndertowT21D:real-registered-solid',
+   point:bot.position.clone()});
+  floor.ownerGrid.fill(Team.B);tryShot();
+  system.b215SelectedBattlePaintPacing=false;
+  floor.ownerGrid[floor.index(50,40)]=Team.Neutral;tryShot();
+  const old=setup(false);old.system.updateCpuKit(
+   old.bot,Team.A,new Vec3(),true);
+  expect(old.system.pendingKitRequests).toHaveLength(0);
+ });
+ it('preserves actual combat target priority over source floor bomb aim',()=>{
+  const {system,bot}=setup();
+  const enemy=new Vec3(6,3,2);
+  system.chooseCombatTarget=vi.fn(()=>enemy);
+  system.chooseB216OriginalSourceSubPaintAim=vi.fn(()=>new Vec3(4,3,0));
+  system.updateCpuKit(bot,Team.A,new Vec3(),true);
+  expect(system.chooseB216OriginalSourceSubPaintAim).not.toHaveBeenCalled();
+  expect(system.pendingKitRequests).toHaveLength(1);
+  expect(system.pendingKitRequests[0].target).toEqual(enemy);
+ });
+});
+
 describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement',()=>{
   it('continues only real supported and rejoined SOURCE actions, never invents movement',()=>{
     const {system,bot}=fixture(true);
