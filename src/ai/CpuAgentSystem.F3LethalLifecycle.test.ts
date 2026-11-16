@@ -43,6 +43,10 @@ function fixture(originalF3: boolean) {
   system.b178NativeCpuMovementSpeed = new Map();
   system.selectedSourcePaintSaturation = new Map();
   system.selectedSourceEmptyAimStreak = new Map();
+  system.nativeSourceSubScanByActor=new Map();
+  system.nativeSourceSubGridScans=0;
+  system.nativeSourceSubGridDeferred=0;
+  system.nativeSourceSubValidAims=0;
   system.b215NativeInkDecisionsByActor = new Map();
   system.f3dSourceGoals = originalF3
     ? { chooseSourceGoal: () => false } : null;
@@ -210,6 +214,27 @@ describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
   expect(old.system.updateCpuWeapon).toHaveBeenCalledOnce();
   expect(old.system.updateCpuKit).toHaveBeenCalledOnce();
  });
+ it('limits 60Hz full source-grid SUB scans until an actual new physical foot',()=>{
+  const {system,bot}=setup();
+  system.b181NativeFrame=1000;
+  expect(system.chooseB216OriginalSourceSubPaintAim(bot)).not.toBeNull();
+  expect(system.nativeSourceSubGridScans).toBe(1);
+  expect(system.nativeSourceSubValidAims).toBe(1);
+  for(let i=1;i<45;i++){
+   system.b181NativeFrame=1000+i;
+   expect(system.chooseB216OriginalSourceSubPaintAim(bot)).toBeNull();
+  }
+  expect(system.nativeSourceSubGridDeferred).toBe(44);
+  expect(system.nativeSourceSubGridScans).toBe(1);
+  system.b181NativeFrame=1045;
+  expect(system.chooseB216OriginalSourceSubPaintAim(bot)).not.toBeNull();
+  bot.position.x+=2.1;
+  system.b181NativeFrame=1046;
+  expect(system.chooseB216OriginalSourceSubPaintAim(bot)).toBeNull();
+  expect(system.nativeSourceSubGridScans).toBe(3);
+  expect(system.b216OriginalSourceBackfillSnapshot()
+    .actualNativeSourceSubGridScans).toBe(3);
+ });
  it('queues ONE paid real SUB at an actual unowned SOURCE grid cell and retains real cooldown',()=>{
   const {system,bot,floor}=setup();
   const before=Array.from(floor.ownerGrid);
@@ -241,6 +266,9 @@ describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
   expect(system.pendingKitRequests).toHaveLength(0);
   expect(bot.ink).toBe(100);
   system.b216SourceStageAimValidated=vi.fn(()=>true);
+  // The real native retry occurs only after the 45-tick cell-scan
+  // cooldown, not twice in the same physical frame.
+  system.b181NativeFrame=45;
   system.updateCpuKit(bot,Team.A,new Vec3(),true);
   expect(system.pendingKitRequests).toHaveLength(1);
   expect(system.pendingKitRequests[0].kind).toBe('SUB');

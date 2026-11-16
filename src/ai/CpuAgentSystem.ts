@@ -396,6 +396,11 @@ export class CpuAgentSystem {
       actualFoot:B181SightPoint)=>boolean)|null=null;
   // P2: separately selected B441 SOURCE only; normal SOURCE stays fixed.
   private p2OuterOriginalBackfill=false;
+  private readonly nativeSourceSubScanByActor=new Map<string,{
+    nextNativeFrame:number;foot:Vec3}>();
+  private nativeSourceSubGridScans=0;
+  private nativeSourceSubGridDeferred=0;
+  private nativeSourceSubValidAims=0;
   private p2OuterOriginalSearches=0;
   private p2OuterOriginalApprovedAims=0;
   private b216RealOriginalFloorSightChecks=0;
@@ -757,6 +762,9 @@ export class CpuAgentSystem {
        this.b216ApprovedReachedGoalShortRadiusAims,
       verifiedFrontAndAllyPaintSightChecks:this.b216OriginalTurfSightChecks,
       sourceBlockedTurfAimsRejected:this.b216OriginalTurfCoverVetoes,
+      actualNativeSourceSubGridScans:this.nativeSourceSubGridScans,
+      sourceSubGridScansDeferred:this.nativeSourceSubGridDeferred,
+      sourceSubOriginalSightApprovedAims:this.nativeSourceSubValidAims,
       actorFootWrites:0 as const,newNavLinks:0 as const,
       fakeShots:0 as const,scoreableSourcePaint:0 as const,
       certifiedOpponentRoutes:0 as const,productionAuthorized:false as const
@@ -940,6 +948,10 @@ export class CpuAgentSystem {
     this.b215NativeInkDecisionsByActor.clear();
     this.selectedSourcePaintSaturation.clear();
     this.selectedSourceEmptyAimStreak.clear();
+    this.nativeSourceSubScanByActor.clear();
+    this.nativeSourceSubGridScans=0;
+    this.nativeSourceSubGridDeferred=0;
+    this.nativeSourceSubValidAims=0;
     this.selectedSourceDenseSearches=0;
     this.selectedSourceDenseApprovedAims=0;
     this.selectedSourceVerticalAimSearches=0;
@@ -2503,6 +2515,22 @@ export class CpuAgentSystem {
        !this.stage.solids.some(s=>s.id===support.solidId)||
        Math.abs(support.point.y-bot.position.y)>.25)
       return null;
+    // Full raster reads across 17 original paint surfaces are costly.
+    // Retry the genuine unpainted-cell search only after 45 native ticks
+    // or >=2m of ACTUAL physical movement. No actor/ink mutation here.
+    const now=Number.isSafeInteger(this.b181NativeFrame)?
+      this.b181NativeFrame:0;
+    const last=this.nativeSourceSubScanByActor.get(bot.id);
+    if(last&&now<last.nextNativeFrame&&
+       Math.hypot(bot.position.x-last.foot.x,
+        bot.position.z-last.foot.z)<2){
+      this.nativeSourceSubGridDeferred++;
+      return null;
+    }
+    this.nativeSourceSubScanByActor.set(bot.id,{
+      nextNativeFrame:now+45,foot:bot.position.clone()
+    });
+    this.nativeSourceSubGridScans++;
     const candidates=b216OriginalUnpaintedGridCandidates(
       this.gameplayInk.getSurfaces(),bot.position,bot.team,
       GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters,
@@ -2512,8 +2540,10 @@ export class CpuAgentSystem {
       if(distance<GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters||
          distance>GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters)
         continue;
-      if(this.b216OriginalSourceTurfSightClear(bot,target))
+      if(this.b216OriginalSourceTurfSightClear(bot,target)){
+       this.nativeSourceSubValidAims++;
        return target;
+      }
     }
     return null;
   }
@@ -4349,6 +4379,7 @@ export class CpuAgentSystem {
     if (bot.lifeState === 'SPLATTED') return;
     this.selectedSourcePaintSaturation.delete(bot.id);
     this.selectedSourceEmptyAimStreak.delete(bot.id);
+    this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
@@ -4407,6 +4438,7 @@ export class CpuAgentSystem {
   private respawnBot(bot: CpuBot): void {
     this.selectedSourcePaintSaturation.delete(bot.id);
     this.selectedSourceEmptyAimStreak.delete(bot.id);
+    this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);

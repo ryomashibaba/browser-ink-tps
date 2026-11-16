@@ -3239,6 +3239,11 @@ async function main(){
      b>=a?b-a:null];
    }));
    const actualPaint=Object.values(changed).every(Number.isSafeInteger);
+   const keys=['actualNativeSourceSubGridScans',
+    'sourceSubGridScansDeferred','sourceSubOriginalSightApprovedAims'];
+   const subSearchDelta=Object.fromEntries(keys.map(k=>[k,
+    (actual.b216RealNativePaintBackfill?.[k]??0)-
+    (after.b216RealNativePaintBackfill?.[k]??0)]));
    const verdict=delta.subProjectilesLaunched>0&&
        delta.subExplosions>0&&actualPaint?
      'PASS_REAL_PAID_SOURCE_SUB_LAUNCH_AND_PHYSICAL_EXPLOSION_WITH_ACTUAL_TEAM_PAINT':
@@ -3251,6 +3256,7 @@ async function main(){
     actualNativeSubBefore:Object.fromEntries(required.map(k=>[k,p[k]])),
     actualNativeSubAfter:Object.fromEntries(required.map(k=>[k,q[k]])),
     actualSubDelta:delta,actualSevenCpuChangedCells:changed,
+    originalSourceSubSearchTelemetry:subSearchDelta,
     noBotPlacementOrInputInjections:true,
     originalStageAndScoreUnchanged:true,
     bombSpecificPaintCellAttributionCertified:false,
