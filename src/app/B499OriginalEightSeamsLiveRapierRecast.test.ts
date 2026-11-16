@@ -1,4 +1,8 @@
 import {Vec3} from 'playcanvas';
+import RAPIER from '@dimforge/rapier3d-compat';
+import {PLAYER_CHARACTER_PHYSICS,createConfiguredPlayerCharacterController}
+ from '../player/PlayerCharacterPhysics';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import {beforeAll,describe,expect,it} from 'vitest';
 // @ts-ignore Node fixture I/O for isolated CI-only diagnostic
 import {writeFileSync} from 'node:fs';
@@ -16,7 +20,8 @@ import {stageSolidCollisionEnabled,stageSolidNavigationEnabled,
 import {b220SourceTriangleCentroidWitness}
  from './B220OriginalNativeRecastSeamProbe';
 import {UNDERTOW_UNDERPASS_ROUTE_COMPONENTS as FACES,
- UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT as SOURCE}
+ UNDERTOW_UNDERPASS_ROUTE_COMPONENT_AUDIT as SOURCE,
+ undertowUnderpassRouteStageSolids}
  from '../stage/undertow/UndertowSpillwayUnderpassRouteGeometry';
 import {UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT as ARCHIVE,
  undertowT21dConnectivityQaStage}
@@ -312,4 +317,162 @@ describe('B499 genuine CURRENT 25-solid original Recast/Rapier for all 8 CI688 s
    JSON.stringify(evidence));
   expect(stage.solids).toHaveLength(25);
  });
+
+/** F4: real Rapier/production-size HUMAN KCC, eight original CI688
+ * triangle seam pairs. This ISOLATED world is deliberately 35 = 25+10
+ * solids and is never used as the playable original stage. The ten extra
+ * collider faces are unverified for 7.2.0 Turf, and no result can promote
+ * runtime collision, nav, paint, scoring, teleport, or formal 4v4.
+ * Each route is a fresh 60Hz capsule that starts once at a true source
+ * triangle centroid and advances only by bounded KCC translation.
+ * A straight centroid-to-centroid trial is not a global path search;
+ * failure cannot prove every possible traversable route is impossible. */
+ it('actually walks 8 source-exact seams in isolated 60Hz HUMAN capsule and reports first lost support',()=>{
+  const original=undertowT21dConnectivityQaStage();
+  expect([original.solids.length,original.paintSurfaces.length,
+    original.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(original.paintSurfaces.every(x=>!x.flags||
+    (x.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  const sourceFaces=undertowUnderpassRouteStageSolids().map(face=>({
+   ...face,render:false,navigationEnabled:false
+  }));
+  expect(sourceFaces).toHaveLength(10);
+  expect(sourceFaces.reduce((n,f)=>n+(f.triangleMesh?.indices.length??0)/3,0))
+   .toBe(42);
+  const isolated={...original,solids:[...original.solids,...sourceFaces]};
+  const physics=new RapierStagePhysics(1/60,isolated);
+  physics.step();
+  const p=PLAYER_CHARACTER_PHYSICS;
+  const footSupport=(body:{x:number;y:number;z:number})=>{
+   const at=new Vec3(body.x,body.y,body.z);
+   const hit=physics.castCharacterFootSupport(at,p.humanFootOffsetMeters,'HUMAN');
+   const gap=hit?body.y-p.humanFootOffsetMeters-hit.point.y:null;
+   return {id:hit?.solidId??null,gap,
+    valid:!!hit&&gap!==null&&Math.abs(gap)<=.12};
+  };
+  const results:Array<Record<string,unknown>>=[];
+  const seams=b218OriginalRouteFaceChainSeams().seams;
+  for(const seam of seams){
+   const a=FACES.find(face=>face.id===seam.from)!;
+   const b=FACES.find(face=>face.id===seam.to)!;
+   const witness=b220SourceTriangleCentroidWitness(a.mesh,b.mesh);
+   // One initial setup only; do not reseed to target or closest Recast poly.
+   const source=witness.from,target=witness.to;
+   const body=physics.world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+     source[0],source[1]+p.humanFootOffsetMeters+.05,source[2]));
+   const collider=physics.world.createCollider(
+    RAPIER.ColliderDesc.capsule(p.humanHalfHeightMeters,p.humanRadiusMeters),
+    body);
+   const kcc=createConfiguredPlayerCharacterController(physics.world);
+   physics.step();
+   const initial=footSupport(body.translation());
+   const firstSupported=initial.valid;
+   let verticalVelocity=0,steps=0,unsupported=0,unsupportedRun=0,
+    maxUnsupportedRun=0,maxActualFallMeters=0,stageContacts=0,
+    reached=false,lastFootSolid=initial.id;
+   let firstMissing:null|{step:number;x:number;y:number;z:number;
+    supportId:string|null;gap:number|null}=null;
+   let firstSupportSwitch:null|{step:number;from:string|null;to:string|null}=null;
+   for(let tick=0;tick<240;tick++){
+    const now=body.translation();
+    const footY=now.y-p.humanFootOffsetMeters;
+    const dx=target[0]-now.x,dz=target[2]-now.z;
+    const remaining=Math.hypot(dx,dz);
+    const dt=1/60;
+    // Same actual player HUMAN speed / gravity / KCC, with a fixed
+    // straight-line input. No synthetic up-force, jump, snapping actor
+    // to an imagined surface, or automatic recovery after falling.
+    const length=Math.min(
+     remaining,GAME_CONFIG.player.humanSpeedMetersPerSecond*dt);
+    verticalVelocity=Math.max(
+     -GAME_CONFIG.player.maxFallSpeedMetersPerSecond,
+     verticalVelocity-GAME_CONFIG.player.gravityMetersPerSecond2*dt);
+    kcc.computeColliderMovement(collider,{
+      x:remaining>1e-8?dx/remaining*length:0,
+      y:verticalVelocity*dt,
+      z:remaining>1e-8?dz/remaining*length:0
+     },undefined,undefined,(other:RAPIER.Collider)=>
+      other.handle!==collider.handle&&
+      physics.shouldCharacterCollide(other,'HUMAN'));
+    const displacement=kcc.computedMovement();
+    if(kcc.numComputedCollisions()>0)stageContacts++;
+    if(kcc.computedGrounded()&&verticalVelocity<0)
+     verticalVelocity=-.5;
+    body.setNextKinematicTranslation({
+     x:now.x+displacement.x,
+     y:now.y+displacement.y,
+     z:now.z+displacement.z
+    });
+    physics.step();
+    const moved=body.translation();
+    const support=footSupport(moved);
+    steps++;
+    if(support.id!==lastFootSolid&&!firstSupportSwitch)
+     firstSupportSwitch={step:steps,from:lastFootSolid,to:support.id};
+    lastFootSolid=support.id;
+    if(!support.valid){
+     unsupported++;unsupportedRun++;
+     maxUnsupportedRun=Math.max(maxUnsupportedRun,unsupportedRun);
+     if(!firstMissing)firstMissing={
+      step:steps,x:Number(moved.x.toFixed(3)),
+      y:Number((moved.y-p.humanFootOffsetMeters).toFixed(3)),
+      z:Number(moved.z.toFixed(3)),supportId:support.id,
+      gap:support.gap===null?null:Number(support.gap.toFixed(3))
+     };
+    }else unsupportedRun=0;
+    maxActualFallMeters=Math.max(maxActualFallMeters,source[1]-(
+     moved.y-p.humanFootOffsetMeters));
+    const horizontalRemaining=Math.hypot(target[0]-moved.x,target[2]-moved.z);
+    if(horizontalRemaining<=.30&&support.valid&&
+       Math.abs((moved.y-p.humanFootOffsetMeters)-target[1])<=.25){
+     reached=true;break;
+    }
+    // A lost footing already >4m below the source is not a recoverable
+    // continuous walk by this no-jump player trial.
+    if(moved.y-p.humanFootOffsetMeters<Math.min(source[1],target[1])-4)
+     break;
+   }
+   const end=body.translation();
+   results.push({side:seam.side,from:seam.from,to:seam.to,
+    exactOriginalSourceSeparationMeters:seam.gapMeters,
+    centroidSeparationMeters:Number(witness.distanceMeters.toFixed(3)),
+    initialRegisteredSupport:initial.id,initialSupportValid:firstSupported,
+    bounded60HzSteps:steps,
+    originalStageCollisionContacts:stageContacts,
+    unsupportedSteps:unsupported,
+    maximumUnsupportedConsecutiveSteps:maxUnsupportedRun,
+    maxFootFallBelowStartMeters:Number(maxActualFallMeters.toFixed(3)),
+    firstLostPhysicalFloor:firstMissing,
+    firstPhysicalSupportChange:firstSupportSwitch,
+    reachedEndWithRealFootSupport:reached,
+    endHorizontalErrorMeters:Number(Math.hypot(
+     target[0]-end.x,target[2]-end.z).toFixed(3)),
+    originalTurfCollisionCertified:false,
+    naturalOpponentRouteCertified:false
+   });
+   physics.world.removeCharacterController(kcc);
+   physics.world.removeRigidBody(body);
+   physics.step();
+  }
+  expect(results).toHaveLength(8);
+  expect(results.filter(r=>r.side==='POSITIVE_Z')).toHaveLength(4);
+  expect(results.filter(r=>r.side==='NEGATIVE_Z')).toHaveLength(4);
+  expect(results.every(r=>Number.isFinite(r.endHorizontalErrorMeters)))
+   .toBe(true);
+  expect(original.solids).toHaveLength(25);
+  expect(original.paintSurfaces).toHaveLength(17);
+  expect(original.navigationLinks).toHaveLength(26);
+  console.log('F4_EXACT_CI688_EIGHT_SEAM_GENUINE_CAPSULE_KCC_ISOLATED',
+   JSON.stringify({
+    stage:'ISOLATED_35_SOLIDS_17_PAINT_26_NAVLINKS_ZERO_SCOREABLE',
+    originalPlayableSource:'25/17/26/0',
+    measuredSourceTriangles:42,simulatedRoutes:results.length,
+    testsAreStraightLineNotVerifiedGlobalRoutes:true,
+    gameplaySourceWrites:0,additionalRuntimeColliders:0,
+    productionPermission:false,originalTurfCollisionCertified:false,
+    original4v4Certified:false,rows:results
+   }));
+ },20000);
+
 });
