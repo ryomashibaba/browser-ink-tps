@@ -2687,8 +2687,8 @@ describe('genuine B-side defender reacts to actual close HUMAN source sight',()=
   system.b212NativeLeadEnabled=false;
   system.b213SourceCounterfireEnabled=false;
   const human=new Vec3(5,3.68,-40);
-  const target=()=>system.chooseCombatTarget(bot,Team.A,human,true,1/60,true)
-   as Vec3|null;
+  const target=()=>system.chooseCombatTarget(
+   bot,Team.A,human,true,1/60,true) as Vec3|null;
   return {system,bot,enemy,human,target};
  };
  it('prioritizes in-reach visible player and never fabricates HP, shot or movement',()=>{
