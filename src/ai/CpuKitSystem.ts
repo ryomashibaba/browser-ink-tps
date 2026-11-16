@@ -10,7 +10,8 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
-import {sourceRegisteredPaintHitActive, type PaintSurface, type SurfaceRayHit} from '../ink/PaintSurface';
+import {sourceRegisteredPaintCellActive,
+ sourceRegisteredPaintHitActive,type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import {
   PaintEventType,
   PaintSource,
@@ -621,7 +622,9 @@ export class CpuKitSystem {
       const projected = surface.projectWorldPoint(worldPoint);
       if (
         !projected.inside ||
-        projected.planeDistance > maxPlaneDistance
+        projected.planeDistance > maxPlaneDistance ||
+        (this.nativeOriginalSourceCombatantSubContactEnabled &&
+         !sourceRegisteredPaintCellActive(surface,projected.u,projected.v))
       ) {
         continue;
       }

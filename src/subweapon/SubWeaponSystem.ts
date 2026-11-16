@@ -6,7 +6,8 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
-import {sourceRegisteredPaintHitActive, type PaintSurface, type SurfaceRayHit} from '../ink/PaintSurface';
+import {sourceRegisteredPaintCellActive,
+ sourceRegisteredPaintHitActive,type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import {
@@ -431,7 +432,10 @@ export class SubWeaponSystem {
     for (const surface of this.surfaces) {
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
-      if (!projected.inside || projected.planeDistance > maxPlaneDistance) continue;
+      if (!projected.inside || projected.planeDistance > maxPlaneDistance ||
+          (this.nativeSourceHumanSubBodyContactEnabled &&
+           !sourceRegisteredPaintCellActive(surface,projected.u,projected.v)))
+        continue;
       if (!best || projected.planeDistance < best.planeDistance) {
         best = {
           surface,

@@ -1,7 +1,7 @@
 import { Vec3 } from 'playcanvas';
 import { describe, expect, it } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
-import { PaintSurface,sourceRegisteredPaintHitActive } from './PaintSurface';
+import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
@@ -241,5 +241,64 @@ describe('true SOURCE human/CPU thrown SUB follows registered paint cells',()=>{
   expect(humanPick(false,[near,far])?.surface.id).toBe(near.id);
   expect(humanPick(true,[near])?.surface.id).toBeUndefined();
   expect(humanPick(true,[far])?.surface.id).toBe(far.id);
+ });
+});
+
+describe('genuine SOURCE bomb stamps use a real paintable grid center',()=>{
+ const make=(id:string,height:number)=>new PaintSurface(
+  id,new Vec3(0,height,0),new Vec3(1,0,0),new Vec3(0,0,1),
+  4,4,1,SurfaceFlags.Paintable|SurfaceFlags.Floor,2);
+ const point=new Vec3(0,.06,0);
+ it('CPU explosion selects a farther active floor rather than the near inactive raster',()=>{
+  const near=make('near-inactive',.05),far=make('real-original-ink',0);
+  near.flagsGrid[near.index(2,2)]=0;
+  expect(sourceRegisteredPaintCellActive(near,2,2)).toBe(false);
+  expect(sourceRegisteredPaintCellActive(far,2,2)).toBe(true);
+  expect(sourceRegisteredPaintCellActive(far,NaN,2)).toBe(false);
+  const stamps:{surfaceId:string}[]=[];
+  const receiver=Object.create(CpuKitSystem.prototype) as {
+   surfaces:PaintSurface[];nativeOriginalSourceCombatantSubContactEnabled:boolean;
+   coordinator:{enqueue:(v:{surfaceId:string})=>void};
+   stats:{cpuSpecialPaintRequestsEnqueued:number}
+  };
+  receiver.surfaces=[near,far];receiver.nativeOriginalSourceCombatantSubContactEnabled=true;
+  receiver.coordinator={enqueue:v=>stamps.push(v)};
+  receiver.stats={cpuSpecialPaintRequestsEnqueued:0};
+  const fn=(CpuKitSystem.prototype as unknown as {
+   paintWorldStamp:(actorId:string,team:Team.A|Team.B,worldPoint:Vec3,
+    radius:number,maxPlaneDistance:number,type:PaintEventType,
+    gaugeEligible:boolean)=>boolean
+  }).paintWorldStamp;
+  const fire=()=>fn.call(receiver as unknown as CpuKitSystem,'B1',Team.B,
+   point,1,.3,PaintEventType.Bomb,true);
+  expect(fire()).toBe(true);
+  expect(stamps.map(s=>s.surfaceId)).toEqual(['real-original-ink']);
+  receiver.nativeOriginalSourceCombatantSubContactEnabled=false;
+  expect(fire()).toBe(true);
+  expect(stamps.at(-1)?.surfaceId).toBe('near-inactive');
+ });
+ it('HUMAN bomb chooses an active raster, preserving frozen legacy behavior',()=>{
+  const near=make('near-empty-cell',.05),far=make('real-human-floor',0);
+  near.flagsGrid[near.index(2,2)]=0;
+  const stamps:{surfaceId:string}[]=[];
+  const receiver=Object.create(SubWeaponSystem.prototype) as {
+   surfaces:PaintSurface[];nativeSourceHumanSubBodyContactEnabled:boolean;
+   coordinator:{enqueue:(v:{surfaceId:string})=>void};
+   currentEnqueuedStampSurfaceIds:string[]|null
+  };
+  receiver.surfaces=[near,far];receiver.nativeSourceHumanSubBodyContactEnabled=true;
+  receiver.coordinator={enqueue:v=>stamps.push(v)};
+  receiver.currentEnqueuedStampSurfaceIds=[];
+  const fn=(SubWeaponSystem.prototype as unknown as {
+   paintWorldStamp:(team:Team.A|Team.B,worldPoint:Vec3,
+    radius:number,maxPlaneDistance:number)=>boolean
+  }).paintWorldStamp;
+  const fire=()=>fn.call(receiver as unknown as SubWeaponSystem,Team.A,point,1,.3);
+  expect(fire()).toBe(true);
+  expect(stamps.map(s=>s.surfaceId)).toEqual(['real-human-floor']);
+  expect(receiver.currentEnqueuedStampSurfaceIds).toEqual(['real-human-floor']);
+  receiver.nativeSourceHumanSubBodyContactEnabled=false;
+  expect(fire()).toBe(true);
+  expect(stamps.at(-1)?.surfaceId).toBe('near-empty-cell');
  });
 });
