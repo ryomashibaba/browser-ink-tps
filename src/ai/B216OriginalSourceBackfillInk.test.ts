@@ -469,7 +469,7 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   const before=Array.from(floor.ownerGrid);
   const spots=gridCandidates([floor],{x:0,y:3,z:0},Team.B,10);
   expect(spots).toHaveLength(1);
-  const projection=floor.projectWorldPoint(spots[0]);
+  const projection=floor.projectWorldPoint(spots[0]!);
   expect(Math.floor(projection.u/floor.cellSize)).toBe(x);
   expect(Math.floor(projection.v/floor.cellSize)).toBe(y);
   expect(Array.from(floor.ownerGrid)).toEqual(before);
