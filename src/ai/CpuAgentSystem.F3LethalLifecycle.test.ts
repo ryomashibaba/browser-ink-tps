@@ -184,6 +184,32 @@ describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
   expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
   expect(system.updateCpuKit).toHaveBeenCalledOnce();
  });
+ it('never preempts a real charge, guard, active burst or unavailable SOURCE rejoin',()=>{
+  for(const state of [
+    {weaponGuarding:true},{weaponChargeSeconds:.5},
+    {weaponBurstShotsRemaining:2},{subCooldownSeconds:3},
+    {ink:69},{mobilityState:'FIRST_DROP_REJOIN'},
+    {lifeState:'SPLATTED'}
+  ]){
+   const {system,bot}=setup();
+   bot.weaponGuardHp=100;
+   Object.assign(bot,state);
+   system.updateCpuWeapon=vi.fn();
+   system.updateCpuKit=vi.fn();
+   system.updateCpuWeaponsAndKit(bot,1/60,Team.A,new Vec3(),true);
+   expect(system.pendingKitRequests).toHaveLength(0);
+   expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
+   expect(system.updateCpuKit).toHaveBeenCalledOnce();
+  }
+  const old=setup(false);
+  old.system.updateCpuWeapon=vi.fn();
+  old.system.updateCpuKit=vi.fn();
+  old.system.updateCpuWeaponsAndKit(
+   old.bot,1/60,Team.A,new Vec3(),true);
+  expect(old.system.pendingKitRequests).toHaveLength(0);
+  expect(old.system.updateCpuWeapon).toHaveBeenCalledOnce();
+  expect(old.system.updateCpuKit).toHaveBeenCalledOnce();
+ });
  it('queues ONE paid real SUB at an actual unowned SOURCE grid cell and retains real cooldown',()=>{
   const {system,bot,floor}=setup();
   const before=Array.from(floor.ownerGrid);
