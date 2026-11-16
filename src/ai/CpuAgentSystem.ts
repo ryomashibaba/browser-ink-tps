@@ -2548,6 +2548,30 @@ export class CpuAgentSystem {
     return null;
   }
 
+  /** A visible enemy is not an actionable target when every CURRENT
+   * real weapon option is out of range or unpaid. In the selected
+   * original-source turf round only, let that CPU work on authentic
+   * unowned nearby paint rather than reserving its kit aim indefinitely
+   * for an opponent beyond the unfinished F4 connection.
+   * No invented path, enemy, shot, resource or score is authorized. */
+  private sourceTurfHasActionableEnemy(
+    bot:CpuBot,target:Vec3
+  ):boolean{
+    if(this.cpuTargetInRange(bot,target,weaponProfile(bot.weaponId)))
+      return true;
+    const distance=Math.sqrt(horizontalDistanceSq(bot.position,target));
+    const kit=weaponKit(bot.weaponId);
+    const sub=subWeaponProfile(kit.sub);
+    if(bot.subCooldownSeconds<=0&&bot.ink+1e-6>=sub.inkCost&&
+       distance>=GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters&&
+       distance<=GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters)
+      return true;
+    const special=specialWeaponProfile(kit.special);
+    return bot.specialPoints+1e-6>=special.requiredPoints&&
+      bot.specialDecisionCooldownSeconds<=0&&
+      this.shouldUseCpuSpecial(bot,kit.special,distance);
+  }
+
   /** The ORIGINAL source selected battle may choose a real paid bomb
    * instead of one main-weapon shot when actual unpainted floor is
    * reachable. This runs BEFORE the regular main-weapon fire decision:
@@ -2569,8 +2593,9 @@ export class CpuAgentSystem {
       return false;
     // This checks ACTUAL original-stage human/CPU sight, not a fake
     // opponent or a future/unauthorized cross-team route.
-    if(this.chooseCombatTarget(
-      bot,humanTeam,humanPosition,humanActive,0)!==null)
+    const visibleEnemy=this.chooseCombatTarget(
+      bot,humanTeam,humanPosition,humanActive,0);
+    if(visibleEnemy&&this.sourceTurfHasActionableEnemy(bot,visibleEnemy))
       return false;
     const target=this.chooseB216OriginalSourceSubPaintAim(bot);
     if(!target)return false;
@@ -2659,13 +2684,24 @@ export class CpuAgentSystem {
     // ORIGINAL floor. This is a real thrown Rapier projectile, not a
     // fabricated hit, source actor, free ink or official score.
     // Legacy T20 and SOURCE staging/rejoin paths remain unchanged.
-    const combatTarget = this.chooseCombatTarget(
+    const visibleEnemy = this.chooseCombatTarget(
       bot,
       humanTeam,
       humanPosition,
       humanActive,
       0
     );
+    // Only the selected genuine original-source turf cycle ignores a
+    // visible but currently unreachable opponent. Every other mode,
+    // including frozen T20 and ordinary kit QA, keeps its old priority.
+    const selectedTurfFallback=this.b215SelectedBattlePaintPacing&&
+      this.p2OuterOriginalBackfill&&
+      this.f3dSourceGoals!==null&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa';
+    const combatTarget=visibleEnemy&&
+      (!selectedTurfFallback||
+       this.sourceTurfHasActionableEnemy(bot,visibleEnemy))?
+      visibleEnemy:null;
     const kit = weaponKit(bot.weaponId);
     const actualSourceSubPaintAim=!combatTarget&&
       bot.subCooldownSeconds<=0&&
