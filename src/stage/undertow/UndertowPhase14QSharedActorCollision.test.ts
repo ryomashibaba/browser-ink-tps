@@ -5,6 +5,8 @@ import {PLAYER_CHARACTER_PHYSICS} from '../../player/PlayerCharacterPhysics';
 import type {PlayerInput} from '../../input/PlayerInput';
 import type {ThirdPersonCamera} from '../../camera/ThirdPersonCamera';
 import {PerformanceStats} from '../../core/PerformanceStats';
+import {initializeRecastNavigation,RecastStageNavigation} from '../../navigation/RecastStageNavigation';
+import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot} from '../../app/B441OriginalSourceFrontline';
 import {GameplayInkSystem} from '../../ink/GameplayInkSystem';
 import {SurfaceFlags} from '../../ink/types';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
@@ -20,7 +22,7 @@ import {UndertowPhase14QSharedActorCollision}
 import {proposeB441OriginalFrontline} from '../../app/B441OriginalSourceFrontline';
 
 const DT=1/60;
-beforeAll(async()=>{await initializeRapier();});
+beforeAll(async()=>{await Promise.all([initializeRapier(),initializeRecastNavigation()]);});
 afterEach(()=>vi.restoreAllMocks());
 
 function world(){
@@ -220,6 +222,80 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.stage.solids).toHaveLength(25);
   expect(w.stage.paintSurfaces).toHaveLength(17);
   expect(w.stage.navigationLinks).toHaveLength(26);
+  w.actors.dispose();
+ });
+ it('reads true B2 stopped foot on original SOURCE collision and checks every existing native front path',()=>{
+  // Exact observed B2 physical foot in genuine native #43882733229,
+  // not an artificial relocated live actor or fabricated floor.
+  const w=world();
+  const foot={x:-5.8623,y:4.599999904632568,z:-48.252};
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const support=(p:{x:number;y:number;z:number})=>{
+   const hit=w.physics.castCharacterFootSupport(
+     new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+   const gap=hit?Math.abs(hit.point.y-p.y):Infinity;
+   return {hit:hit??null,gap,registered:!!hit&&gap<=.25&&
+     w.stage.solids.some(s=>s.id===hit.solidId)};
+  };
+  w.actors.syncRealCpuFoot('B2',foot);
+  const physical=support(foot);
+  const eligible=b467MayRetryOriginalBFrontFromRealFoot(w.stage,{
+   id:'B2',nativeTick:1765,firstDeniedNativeTick:1062,
+   lastRetryNativeTick:null,actualOriginalSolidId:physical.hit?.solidId??null,
+   foot:[foot.x,foot.y,foot.z],rejoined:true,active:true,grounded:true
+  });
+  const nav=new RecastStageNavigation(w.stage,new PerformanceStats());
+  const goals=proposeB441OriginalFrontline(w.stage,'B');
+  let nativeReach=0,validEndpoints=0,originallySupported=0;
+  const rejected:{goal:[number,number,number];reason:string;gap?:number}[]=[];
+  for(const candidate of goals){
+   const dest=new Vec3(...candidate.point);
+   const route=nav.auditPath(new Vec3(foot.x,foot.y,foot.z),dest);
+   if(!route.reachedTarget){rejected.push({goal:[...candidate.point],reason:'RECAST_UNREACHED'});continue;}
+   nativeReach++;
+   if(route.startSnapDistanceMeters>.20||route.endSnapDistanceMeters>.20){
+    rejected.push({goal:[...candidate.point],reason:'RECAST_ENDPOINT_SNAP'});continue;
+   }
+   validEndpoints++;
+   const coords=route.nativePathPoints;
+   let fail='';let firstGap:number|undefined;
+   const check=(p:{x:number;y:number;z:number})=>{
+    const r=support(p);
+    if(p.z> -33||p.y<2.5||p.y>5.5||
+       !r.registered){fail='UNSUPPORTED_ORIGINAL_RAPIER';firstGap=r.gap;return false;}
+    return true;
+   };
+   if(coords.length===0){fail='MISSING_NATIVE_PATH';}
+   for(let i=0;i+1<coords.length&&!fail;i++){
+    const a=coords[i]!,b=coords[i+1]!;
+    const distance=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+    const n=Math.max(1,Math.ceil(distance/.30));
+    for(let k=i===0?0:1;k<=n;k++){
+     const f=k/n;
+     if(!check({x:a.x+(b.x-a.x)*f,
+        y:a.y+(b.y-a.y)*f,z:a.z+(b.z-a.z)*f}))break;
+    }
+   }
+   if(!fail){originallySupported++;continue;}
+   if(rejected.length<8)rejected.push({
+    goal:[...candidate.point],reason:fail,gap:firstGap});
+  }
+  console.log('T21_V28_B2_GENUINE_STOP_FOOT_ORIGINAL_SOURCE',JSON.stringify({
+   fromRun:43882733229,foot,sourceSolidId:physical.hit?.solidId,
+   originalPhysicalFloorGap:physical.gap,
+   originalRegisteredFoot:physical.registered,
+   b467MayRetryFromRealB2Foot:eligible,sourceProposals:goals.length,
+   trueRecastReached:nativeReach,nativeEndpointsUnder20cm:validEndpoints,
+   fullyOriginalRapierRouteSupported:originallySupported,
+   firstRejected:rejected.slice(0,5),source:'25/17/26/0',
+   originalActorGoalWrites:0,originalStageWrites:0,
+   crossingCertified:false
+  }));
+  expect(w.stage.solids).toHaveLength(25);
+  expect(w.stage.paintSurfaces).toHaveLength(17);
+  expect(w.stage.navigationLinks).toHaveLength(26);
+  expect(physical.registered).toBe(true);
+  expect(goals.length).toBeGreaterThan(0);
   w.actors.dispose();
  });
  it('real HUMAN production PlayerController KCC must not walk through a stationary CPU collider in its own Rapier stage world',()=>{
