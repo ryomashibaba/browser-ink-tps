@@ -711,7 +711,39 @@ async function runShortNormalSourceCombat(){
    rampGoals36:frontlineReadout(later).existingOriginalRampLocal,
    BTeam,syntheticTicksActorInkScoreOrLinks:0,
    formal4v4Certified:false};
+  // Pure observation: compare selected original-height paint *aims*
+  // and the independently authoritative post-raster real changed cells.
+  // An approved aim is not by itself evidence of a paid projectile/hit.
+  const originalVertical=(n)=>n.b216RealNativePaintBackfill??{};
+  const oldVertical=originalVertical(last),newVertical=originalVertical(later);
+  const verticalDelta=(key)=>
+   Number.isSafeInteger(oldVertical[key])&&
+   Number.isSafeInteger(newVertical[key])?
+    newVertical[key]-oldVertical[key]:null;
+  const perActorVertical=Object.fromEntries(
+   ['A1','A2','A3','B1','B2','B3','B4'].map(id=>[id,{
+    actualOriginalVerticalAimGrants:
+     (newVertical.verticalApprovedByActor?.[id]??0)-
+     (oldVertical.verticalApprovedByActor?.[id]??0),
+    realSourceChangedCells:
+     (later.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells??0)-
+     (last.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells??0)
+   }]));
+  extended.verticalOriginalSourceInk={
+   genuineNativeObservationTicks:[last.tick,later.tick],
+   sameOriginalSource:'25/17/26/0',
+   originalDifferentHeightSearches:verticalDelta('verticalSourceAimSearches'),
+   originalRegisteredSampleMatches:verticalDelta('verticalRegisteredCandidateMatches'),
+   originalRapierSightVetoes:verticalDelta('verticalOriginalSightVetoes'),
+   originalVerifiedAimSelections:verticalDelta('verticalOriginalSightApprovedAims'),
+   perActor:perActorVertical,
+   paidShotsCausedByVerticalAimsCertified:false,
+   formalScoringOrCombatCertified:false,
+   syntheticGameWrites:0
+  };
   report.oneRunEvidence.extended36=extended;
+  console.log('T21_V28_REAL_36S_ORIGINAL_HEIGHT_AIM',JSON.stringify(
+   extended.verticalOriginalSourceInk));
   const held=['B2','B4'].filter(id=>
    !(BTeam[id]?.realDisplacement12to36Meters>.25));
   report.outcome=held.length===0?'PASS_B207_36S_REAL_B2_B4_MOTION':

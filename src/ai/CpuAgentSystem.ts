@@ -373,6 +373,12 @@ export class CpuAgentSystem {
   private readonly selectedSourceEmptyAimStreak=new Map<string,number>();
   private selectedSourceDenseSearches=0;
   private selectedSourceDenseApprovedAims=0;
+  // Read-only: successful proposals do not certify a paid projectile/ink.
+  private selectedSourceVerticalAimSearches=0;
+  private selectedSourceVerticalCandidateMatches=0;
+  private selectedSourceVerticalSightVetoes=0;
+  private selectedSourceVerticalApprovedAims=0;
+  private readonly selectedSourceVerticalApprovedByActor=new Map<string,number>();
   private readonly selectedSourcePaintSaturation=new Map<string,{
     unchangedImpacts:number;actualFootAtStart:Vec3
   }>();
@@ -725,6 +731,13 @@ export class CpuAgentSystem {
       p2OriginalOuterSearches:this.p2OuterOriginalSearches,
       p2DenseRealFootSearches:this.selectedSourceDenseSearches,
       p2DenseRealFootApprovedAims:this.selectedSourceDenseApprovedAims,
+      verticalSourceAimSearches:this.selectedSourceVerticalAimSearches,
+      verticalRegisteredCandidateMatches:this.selectedSourceVerticalCandidateMatches,
+      verticalOriginalSightVetoes:this.selectedSourceVerticalSightVetoes,
+      verticalOriginalSightApprovedAims:this.selectedSourceVerticalApprovedAims,
+      verticalApprovedByActor:Object.fromEntries(
+       this.selectedSourceVerticalApprovedByActor??[]),
+      verticalPaidShotOrImpactCertified:false as const,
       p2NativeSightApprovedOuterAims:this.p2OuterOriginalApprovedAims,
       p2ActualShotOrInkIncreaseCertified:false as const,
       realRapierStageAimChecks:this.b216RealOriginalFloorSightChecks,
@@ -916,6 +929,11 @@ export class CpuAgentSystem {
     this.selectedSourceEmptyAimStreak.clear();
     this.selectedSourceDenseSearches=0;
     this.selectedSourceDenseApprovedAims=0;
+    this.selectedSourceVerticalAimSearches=0;
+    this.selectedSourceVerticalCandidateMatches=0;
+    this.selectedSourceVerticalSightVetoes=0;
+    this.selectedSourceVerticalApprovedAims=0;
+    this.selectedSourceVerticalApprovedByActor.clear();
     this.b216RealOriginalFloorSightChecks=0;
     this.b216ApprovedPhysicalSourceAimTargets=0;
     this.b216ApprovedReachedGoalShortRadiusAims=0;
@@ -3297,6 +3315,7 @@ export class CpuAgentSystem {
     let best:Vec3|null=null,opportunity=0;
     let bestReachedGoalShortRadius=false;
     let bestCenterAlreadyOwned=false;
+    let bestWasRegisteredDifferentHeight=false;
     // Only AFTER the pre-existing, locally validated 1.7–3.5m ink
     // search finds no target, inspect bounded 4.5–5.5m ORIGINAL floor
     // paint proposals. All the same native weapon range, ownerGrid,
@@ -3343,6 +3362,8 @@ export class CpuAgentSystem {
      // B207 180s RAW: B1 moved 286m late but had 4,022 no-aim checks.
      // No nav, Actor movement, shot/ink injection or score granted.
      if(pass===2&&!best){
+      this.selectedSourceVerticalAimSearches=
+       (this.selectedSourceVerticalAimSearches??0)+1;
       const registeredFloors=this.gameplayInk.getSurfaces();
       for(const proposed of current){
        for(const floor of registeredFloors){
@@ -3353,6 +3374,8 @@ export class CpuAgentSystem {
          new Vec3(vertical.x,vertical.y,vertical.z),.28,
          SurfaceFlags.Paintable,SurfaceFlags.Wall,s=>s===floor);
         if(!sample||sample.surface.isScoreable)continue;
+        this.selectedSourceVerticalCandidateMatches=
+         (this.selectedSourceVerticalCandidateMatches??0)+1;
         const neighbor=sample.owner===bot.team?
          b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
         if(sample.owner===bot.team&&!neighbor)continue;
@@ -3366,18 +3389,29 @@ export class CpuAgentSystem {
         if(value<=opportunity)continue;
         this.b216RealOriginalFloorSightChecks++;
         if(!this.b216SourceStageAimValidated(muzzle,candidate,bot.position)){
+         this.selectedSourceVerticalSightVetoes=
+          (this.selectedSourceVerticalSightVetoes??0)+1;
          if(this.b215SelectedBattlePaintPacing)
           this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
          continue;
         }
         best=candidate;opportunity=value;
+        bestWasRegisteredDifferentHeight=true;
         bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
         bestCenterAlreadyOwned=sample.owner===bot.team;
        }
       }
      }
      if(pass===1&&best)this.p2OuterOriginalApprovedAims++;
-     if(pass===2&&best)this.selectedSourceDenseApprovedAims++;
+     if(pass===2&&best){
+      this.selectedSourceDenseApprovedAims++;
+      if(bestWasRegisteredDifferentHeight){
+       this.selectedSourceVerticalApprovedAims=
+        (this.selectedSourceVerticalApprovedAims??0)+1;
+       this.selectedSourceVerticalApprovedByActor?.set(bot.id,
+        (this.selectedSourceVerticalApprovedByActor.get(bot.id)??0)+1);
+      }
+     }
      if(best)break;
     }
     if(best){
