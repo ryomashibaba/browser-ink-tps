@@ -236,6 +236,40 @@ describe('B216 real registered SOURCE floors at different elevation',()=>{
 
 describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
  beforeAll(async()=>{await initializeRapier();});
+ it('finds a bomb-distance unowned REAL original B-side floor with Rapier-authorized shot line',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const ink=new GameplayInkSystem();defineTestSurfaces(ink,stage);
+  const foot=new Vec3(.1,3,-51);
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const supported=(p:Vec3)=>physics.castCharacterFootSupport(
+    new Vec3(p.x,p.y+offset,p.z),offset,'HUMAN');
+  try{
+   expect(supported(foot)?.solidId)
+    .toBe('UndertowT21D:first-drop-landing-negative-z');
+   const candidates=gridCandidates(ink.getSurfaces(),foot,Team.B,11.5,2.6);
+   expect(candidates.length).toBeGreaterThan(0);
+   const chosen=candidates.find(target=>{
+    const f=supported(foot),t=supported(target);
+    if(!f||!t)return false;
+    const muzzle=new Vec3(foot.x,
+     foot.y+GAME_CONFIG.cpu.muzzleHeightMeters,foot.z);
+    const first=physics.castStageSegment(muzzle,
+     target.clone().add(new Vec3(0,.07,0)),'ink-projectile');
+    return safeShot({actualFoot:foot,actualTarget:target,
+     footSupport:f,targetSupport:t,firstStageBlock:first});
+   });
+   // One genuine original geometry projectile ray, not an injected
+   // bomb, artificial terrain, paid shot or guaranteed floor stamp.
+   expect(chosen).toBeDefined();
+   expect(Math.hypot(chosen!.x-foot.x,chosen!.z-foot.z)).toBeGreaterThanOrEqual(2.6);
+   expect(Math.hypot(chosen!.x-foot.x,chosen!.z-foot.z)).toBeLessThanOrEqual(11.5);
+   expect(ink.sampleWorld(chosen!, .28,SurfaceFlags.Paintable)?.owner)
+    .toBe(Team.Neutral);
+   expect([stage.solids.length,stage.paintSurfaces.length,
+    stage.navigationLinks?.length]).toEqual([25,17,26]);
+  }finally{physics.world.free();}
+ });
  it('P2 opposite B-side original landing offers only source-physical shooter aim',()=>{
   const stage=undertowT21dConnectivityQaStage();
   const physics=new RapierStagePhysics(1/60,stage);physics.step();
