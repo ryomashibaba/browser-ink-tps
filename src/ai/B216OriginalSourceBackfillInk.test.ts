@@ -1,5 +1,6 @@
 import {beforeAll,describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
+import {GAME_CONFIG} from '../config/game/gameConfig';
 import {CpuAgentSystem} from './CpuAgentSystem';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
