@@ -2595,8 +2595,40 @@ export class CpuAgentSystem {
     // opponent or a future/unauthorized cross-team route.
     const visibleEnemy=this.chooseCombatTarget(
       bot,humanTeam,humanPosition,humanActive,0);
-    if(visibleEnemy&&this.sourceTurfHasActionableEnemy(bot,visibleEnemy))
-      return false;
+    if(visibleEnemy){
+      // A real visible combatant may be outside this MAIN's range but
+      // inside its paid physical SUB range. Launch the existing bomb
+      // BEFORE this tick's floor main shot blocks the kit cooldown.
+      // Preserve an already-earned SPECIAL and any reachable MAIN.
+      const distance=Math.sqrt(horizontalDistanceSq(
+        bot.position,visibleEnemy));
+      const kit=weaponKit(bot.weaponId);
+      const special=specialWeaponProfile(kit.special);
+      const specialPreferred=bot.specialPoints+1e-6>=
+          special.requiredPoints&&bot.specialDecisionCooldownSeconds<=0&&
+          this.shouldUseCpuSpecial(bot,kit.special,distance);
+      const genuineSourceEnemy=this.f3dSourceGoals!==null&&
+        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+        !!this.b181OriginalCombatStageRay&&
+        this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true;
+      if(genuineSourceEnemy&&!specialPreferred&&
+         !this.cpuTargetInRange(bot,visibleEnemy,weaponProfile(bot.weaponId))&&
+         distance>=GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters&&
+         distance<=GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters){
+        const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+          bot.id,bot.position);
+        if(support&&this.stage.solids.some(s=>s.id===support.solidId)&&
+           Math.abs(support.point.y-bot.position.y)<=.25){
+          const direction=visibleEnemy.clone().sub(bot.position);
+          if(direction.lengthSq()>1e-8){
+            direction.normalize();
+            return this.queueCpuPaidSub(bot,subId,visibleEnemy,direction);
+          }
+        }
+      }
+      if(this.sourceTurfHasActionableEnemy(bot,visibleEnemy))
+        return false;
+    }
     const target=this.chooseB216OriginalSourceSubPaintAim(bot);
     if(!target)return false;
     const direction=target.clone().sub(bot.position);

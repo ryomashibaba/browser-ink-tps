@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Vec3 } from 'playcanvas';
 import { GAME_CONFIG } from '../config/game/gameConfig';
-import {subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
+import {specialWeaponProfile,subWeaponProfile,weaponKit} from '../weapons/WeaponKitCatalog';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuAgentSystem, type CpuCombatHit, type CpuFireRequest } from './CpuAgentSystem';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
@@ -176,6 +176,75 @@ describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
   expect(system.pendingKitRequests).toHaveLength(1);
   expect(ordinaryMain).toHaveBeenCalledTimes(1);
   expect(ordinaryKit).toHaveBeenCalledTimes(1);
+ });
+ it('real SOURCE visible enemy within SUB but outside MAIN gets one paid physical bomb ahead of floor main',()=>{
+  const {system,bot}=setup();
+  // Isolated unit sight is injected; this does NOT certify natural enemy
+  // encounters, genuine projectile contact or stage connectivity.
+  const enemy=new Vec3(10.5,3,0);
+  system.b181OriginalCombatStageRay=vi.fn(()=>false);
+  system.chooseCombatTarget=vi.fn(()=>enemy.clone());
+  system.chooseB216OriginalSourceSubPaintAim=vi.fn(()=>new Vec3(4,3,0));
+  system.updateCpuWeapon=vi.fn();
+  system.updateCpuKit=vi.fn();
+  system.updateCpuWeaponsAndKit(
+    bot,1/60,Team.A,new Vec3(0,3,55),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  expect(system.pendingKitRequests[0].kind).toBe('SUB');
+  expect(system.pendingKitRequests[0].target).toEqual(enemy);
+  expect(system.pendingKitRequests[0].sourceId).toBe(bot.id);
+  expect(bot.ink).toBe(30);
+  expect(system.stats.cpuSubUses).toBe(1);
+  expect(system.updateCpuWeapon).not.toHaveBeenCalled();
+  expect(system.updateCpuKit).not.toHaveBeenCalled();
+  expect(system.chooseB216OriginalSourceSubPaintAim)
+    .not.toHaveBeenCalled();
+ });
+ it('SOURCE does not preempt a main-reachable enemy or earned defensive special for an early SUB',()=>{
+  for(const setupMode of ['MAIN','SPECIAL'] as const){
+   const {system,bot}=setup();
+   bot.hp=setupMode==='SPECIAL'?50:100;
+   const enemy=new Vec3(setupMode==='MAIN'?5:10.5,3,0);
+   system.b181OriginalCombatStageRay=vi.fn(()=>false);
+   system.chooseCombatTarget=vi.fn(()=>enemy.clone());
+   system.chooseB216OriginalSourceSubPaintAim=vi.fn(()=>new Vec3(4,3,0));
+   if(setupMode==='SPECIAL'){
+    bot.specialPoints=specialWeaponProfile(
+      weaponKit(bot.weaponId).special).requiredPoints;
+    bot.specialDecisionCooldownSeconds=0;
+   }
+   system.updateCpuWeapon=vi.fn();
+   system.updateCpuKit=vi.fn();
+   system.updateCpuWeaponsAndKit(
+     bot,1/60,Team.A,new Vec3(0,3,55),true);
+   expect(system.pendingKitRequests).toHaveLength(0);
+   expect(bot.ink).toBe(100);
+   expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
+   expect(system.updateCpuKit).toHaveBeenCalledOnce();
+  }
+ });
+ it('never grants enemy SUB preemption from a fake original foot or non-native sight',()=>{
+  for(const invalid of ['NO_FOOT','FAKE_SOLID','NO_NATIVE_SIGHT']){
+   const {system,bot}=setup();
+   const enemy=new Vec3(10.5,3,0);
+   system.b181OriginalCombatStageRay=invalid==='NO_NATIVE_SIGHT'?
+      null:vi.fn(()=>false);
+   system.chooseCombatTarget=vi.fn(()=>enemy.clone());
+   system.chooseB216OriginalSourceSubPaintAim=vi.fn(()=>null);
+   if(invalid==='NO_FOOT')
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>null);
+   if(invalid==='FAKE_SOLID')
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+      solidId:'UNREGISTERED',point:bot.position.clone()}));
+   system.updateCpuWeapon=vi.fn();
+   system.updateCpuKit=vi.fn();
+   system.updateCpuWeaponsAndKit(
+     bot,1/60,Team.A,new Vec3(0,3,55),true);
+   expect(system.pendingKitRequests).toHaveLength(0);
+   expect(bot.ink).toBe(100);
+   expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
+   expect(system.updateCpuKit).toHaveBeenCalledOnce();
+  }
  });
  it('real visible enemy keeps the old main-weapon-first behavior',()=>{
   const {system,bot}=setup();
