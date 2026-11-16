@@ -7,7 +7,7 @@ import {UndertowPhase14QSharedActorCollision} from '../stage/undertow/UndertowPh
 import {beforeAll,describe,it,expect} from 'vitest';
 import {rasterizeStageFootprint} from '../stage/StageFootprint';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
-import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
+import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot,b178BoundOriginalCpuPhysicalStep} from './B178OriginalSourceInkResources';
 import {CpuAgentSystem} from './CpuAgentSystem';
 import {originalSourceRegisteredOwnFoot} from '../app/OriginalSourceCombatRetreat';
 import {PaintSource,PaintEventType,SurfaceFlags,Team} from '../ink/types';
@@ -188,4 +188,36 @@ describe('B178 actual original non-scoring ink resource policy',()=>{
    }finally{physics.world.free();}
   });
 
+});
+
+describe('real SOURCE enemy-ink speed bounds native 3D CPU steps',()=>{
+ const from={x:0,y:3,z:48},steep={x:.18,y:3.17,z:48.06};
+ const normal=4.4,enemy=1.35,dt=1/60;
+ it('caps even a steep Crowd ramp step while preserving its native direction',()=>{
+  const accepted=b178BoundOriginalCpuPhysicalStep(
+   from,steep,dt,normal,enemy);
+  const delta=new Vec3(accepted.x-from.x,
+   accepted.y-from.y,accepted.z-from.z);
+  expect(delta.length()).toBeCloseTo(enemy*dt,7);
+  expect(delta.y).toBeGreaterThan(0);
+  expect(delta.x/delta.y).toBeCloseTo(.18/.17,7);
+  expect(delta.z/delta.y).toBeCloseTo(.06/.17,7);
+  expect(accepted.y).toBeLessThan(steep.y);
+ });
+ it('keeps the existing steep non-enemy F2 path unchanged',()=>{
+  expect(b178BoundOriginalCpuPhysicalStep(
+   from,steep,dt,normal)).toEqual(steep);
+  expect(b178BoundOriginalCpuPhysicalStep(
+   from,steep,dt,normal,normal)).toEqual(steep);
+ });
+ it('caps horizontal and vertical gentle native SOURCE steps together',()=>{
+  const gentle={x:.2,y:3.04,z:48};
+  const ordinary=b178BoundOriginalCpuPhysicalStep(from,gentle,dt,normal);
+  const slowed=b178BoundOriginalCpuPhysicalStep(
+   from,gentle,dt,normal,enemy);
+  expect(Math.hypot(ordinary.x-from.x,ordinary.y-from.y,
+   ordinary.z-from.z)).toBeCloseTo(normal*dt,7);
+  expect(Math.hypot(slowed.x-from.x,slowed.y-from.y,
+   slowed.z-from.z)).toBeCloseTo(enemy*dt,7);
+ });
 });

@@ -34,3 +34,29 @@ export function b178SampleRegisteredSourceFoot(
   surface=>paint.some(p=>p.id===surface.id&&
    p.backingSolidId===support.solidId));
 }
+
+
+/** Bound an already native-authorized CPU Crowd step to the same
+ * physically registered enemy-ink speed used by real Recast steering.
+ * Steep original ramps cannot bypass the slow rate by |dy| > .11m.
+ * The actual SOURCE Rapier KCC retains independent final authority. */
+export function b178BoundOriginalCpuPhysicalStep(
+ from:Readonly<{x:number;y:number;z:number}>,
+ proposed:Readonly<{x:number;y:number;z:number}>,
+ dt:number,normalMaxSpeed:number,registeredSourceSpeed?:number
+):{x:number;y:number;z:number}{
+ const dx=proposed.x-from.x,dy=proposed.y-from.y,
+  dz=proposed.z-from.z;
+ const distance=Math.hypot(dx,dy,dz);
+ const enemySlow=registeredSourceSpeed!==undefined&&
+  Number.isFinite(registeredSourceSpeed)&&registeredSourceSpeed>0&&
+  registeredSourceSpeed<normalMaxSpeed;
+ const limit=(enemySlow?registeredSourceSpeed!:normalMaxSpeed)*dt;
+ // The old F2 non-enemy path keeps its exact .11m vertical exception.
+ if(distance>limit+1e-5&&(enemySlow||Math.abs(dy)<=.11)){
+  const fraction=limit/distance;
+  return {x:from.x+dx*fraction,
+   y:from.y+dy*fraction,z:from.z+dz*fraction};
+ }
+ return {x:proposed.x,y:proposed.y,z:proposed.z};
+}

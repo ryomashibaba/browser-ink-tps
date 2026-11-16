@@ -26,7 +26,7 @@ import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintA
 import {b420MayLegacyMeleeChase} from './B420SourceMeleePursuitAuthority';
 import {b216OriginalFootBackfillCandidates,
  b216OriginalRegisteredVerticalFloorAim} from './B216OriginalSourceBackfillInk';
-import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
+import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot,b178BoundOriginalCpuPhysicalStep} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
 import { weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
@@ -791,6 +791,9 @@ export class CpuAgentSystem {
       b179ActuallyRecoveredOwnSourceInk:Number(this.b179ActualOwnInkRecovered.toFixed(6)),
       b179OwnInkNativeRecoveryTicks:this.b179ActualOwnRecoverTicks,
       b179ActuallyLostHpOnEnemySourceInk:Number(this.b179ActualEnemyHpLost.toFixed(6)),
+      // Read-only current Recast speed PARAMETERS, not measured motion.
+      nativeCpuMaxSpeedByActor:Object.fromEntries(this.bots.map(bot=>
+       [bot.id,this.b178NativeCpuMovementSpeed.get(bot.id)??null])),
       zeroSourceScoreable:true as const,productionAuthorized:false as const};
   }
   public b64NativeSourceInkSweepSnapshot(){
@@ -1407,22 +1410,15 @@ export class CpuAgentSystem {
       // original-source Rapier fall bridge, never by this horizontal clamp.
       let accepted={x:p.x,y:p.y,z:p.z};
       if(this.phase14qF2RecoverableSteps){
-        const dx=p.x-bot.position.x,dy=p.y-bot.position.y,
-          dz=p.z-bot.position.z;
-        const d=Math.hypot(dx,dy,dz);
-        // The true SOURCE ownerGrid can lower Crowd maxSpeed at a live
-        // enemy-painted physical foot. The SAME rate must cap accepted
-        // physical movement; merely slowing the proxy leaves KCC fast.
+        // A physically supported original SOURCE enemy-ink foot supplies
+        // one speed for BOTH the live Recast agent and Rapier-bound motion.
+        // The unchanged KCC still vetoes every unsupported destination.
         const sourceSpeed=this.b178RealSourceInkRecovery&&
           this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'
           ?this.b178NativeCpuMovementSpeed.get(bot.id):undefined;
-        const limit=Math.min(GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
-          sourceSpeed??GAME_CONFIG.cpu.maxSpeedMetersPerSecond)*dt;
-        if(d>limit+1e-5&&Math.abs(dy)<=.11){
-          const k=limit/d;
-          accepted={x:bot.position.x+dx*k,
-            y:bot.position.y+dy*k,z:bot.position.z+dz*k};
-        }
+        accepted=b178BoundOriginalCpuPhysicalStep(
+          bot.position,accepted,dt,GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+          sourceSpeed);
       }
       if(this.phase14qGroundCollision){
         let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
