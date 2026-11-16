@@ -7997,6 +7997,7 @@ export class UndertowF3PlayablePreviewApp{
     activeSubEffects:this.stats.cpuActiveSubs,
     activeSpecialEffects:this.stats.cpuActiveSpecialEffects,
     subProjectilesLaunched:this.stats.cpuSubProjectilesLaunched,
+    subExplosions:this.stats.cpuSubExplosions,
     specialEffectsExecuted:this.stats.cpuSpecialEffectsExecuted,
     specialPaintRequestsEnqueued:this.stats.cpuSpecialPaintRequestsEnqueued,
     manualSubRequests:this.cpuKitManualSubQa,

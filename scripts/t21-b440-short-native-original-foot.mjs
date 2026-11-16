@@ -38,6 +38,10 @@ const b491PaidCpuOnce=process.env.T21_B491_CPU_PAID_OWN_ONCE==='1';
 // One genuine READ-ONLY 360-tick native observation of the real CPU speed
 // on the original registered ownerGrid. No injected enemy ink or actor.
 const b178EnemyNativeOnce=process.env.T21_B178_NATIVE_ENEMY_INK_ONCE==='1';
+// One actual SOURCE full 7-CPU, 720-tick browser observation of newly
+// PAID native CPU SUBs and physical bomb explosions. No actor, ink,
+// clock, target, CPU gauge or stage mutation by this observer.
+const nativeTurfSubOnce=process.env.T21_NATIVE_TURF_SUB_ONCE==='1';
 if(b491PaidCpuOnce&&(!b441Experiment||p0NormalHuman||
    k3IntegratedSource180||process.env.GITHUB_ACTIONS!=='true'||
    process.platform!=='linux'))
@@ -88,6 +92,10 @@ if(b178EnemyNativeOnce&&(!b441Experiment||p0NormalHuman||
    nativeFrontObservationTicks!==360||k3IntegratedSource180||
    process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux'))
  throw Error('B178_NATIVE_ENEMY_INK_ONLY_ONE_UNMODIFIED_REAL_SOURCE_WORLD');
+if(nativeTurfSubOnce&&(!b441Experiment||p0NormalHuman||
+   nativeFrontObservationTicks!==720||k3IntegratedSource180||
+   process.env.GITHUB_ACTIONS!=='true'||process.platform!=='linux'))
+ throw Error('NATIVE_TURF_SUB_REQUIRES_ONE_REAL_SEVEN_CPU_SOURCE_WORLD');
 if(b490LocalCompare){
  const localOut=process.env.T21_B440_OUT;
  if(process.env.GITHUB_ACTIONS==='true'||process.env.CI==='true'||
@@ -3203,6 +3211,58 @@ async function main(){
    }
    return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
   },600000,500);
+  // One read-only actual native SOURCE kit witness. All launches,
+  // explosions, and ink cells are existing gameplay counters, not
+  // scripted kit requests. No claim that every new ink cell was bomb ink.
+  if(nativeTurfSubOnce){
+   const p=after.cpuKitQa,q=actual.cpuKitQa;
+   const required=['cpuSubUses','subProjectilesLaunched','subExplosions'];
+   if(!p||!q||required.some(key=>
+      !Number.isSafeInteger(p[key])||
+      !Number.isSafeInteger(q[key])||q[key]<p[key])||
+      actual.tick-after.tick<720||
+      actual.cpu?.physicalRejoins?.length!==7||
+      actual.cpu?.physicalFootRelocations!==0||
+      actual.originalSourceSolids!==25||
+      actual.originalPaintSurfaces!==17||
+      actual.originalSourceNavigationLinks!==26||
+      actual.sourceScoreablePromotions!==0||
+      proof.actorWrites!==0||proof.sourceGeometryWrites!==0||
+      await origin()!==proof.browserOrigin)
+    fail('REAL_TURF_SUB_NATIVE_PROVENANCE_INVALID');
+   const delta=Object.fromEntries(required.map(k=>[k,q[k]-p[k]]));
+   const ids=['A1','A2','A3','B1','B2','B3','B4'];
+   const changed=Object.fromEntries(ids.map(id=>{
+    const a=after.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells;
+    const b=actual.b154NativeSevenCpuInk?.byActor?.[id]?.changedCells;
+    return [id,Number.isSafeInteger(a)&&Number.isSafeInteger(b)&&
+     b>=a?b-a:null];
+   }));
+   const actualPaint=Object.values(changed).every(Number.isSafeInteger);
+   const verdict=delta.subProjectilesLaunched>0&&
+       delta.subExplosions>0&&actualPaint?
+     'PASS_REAL_PAID_SOURCE_SUB_LAUNCH_AND_PHYSICAL_EXPLOSION_WITH_ACTUAL_TEAM_PAINT':
+     delta.cpuSubUses>0?
+     'HOLD_PAID_SOURCE_SUB_BUT_NO_VERIFIED_EXPLOSION_IN_WINDOW':
+     'HOLD_NO_REAL_PAID_SOURCE_SUB_IN_720_NATIVE_TICKS';
+   proof.nativeTurfSub={
+    schema:'TRUE_SOURCE_SEVEN_CPU_PAID_TURF_SUB_ONE_WINDOW',
+    source:'25/17/26/0',nativeTicks:actual.tick-after.tick,
+    actualNativeSubBefore:Object.fromEntries(required.map(k=>[k,p[k]])),
+    actualNativeSubAfter:Object.fromEntries(required.map(k=>[k,q[k]])),
+    actualSubDelta:delta,actualSevenCpuChangedCells:changed,
+    noBotPlacementOrInputInjections:true,
+    originalStageAndScoreUnchanged:true,
+    bombSpecificPaintCellAttributionCertified:false,
+    naturalOpposingTeamCombatCertified:false,verdict
+   };
+   proof.testKind='NATIVE_SOURCE_TURF_SUB_PHYSICAL_WITNESS';
+   proof.stage='SEVEN_CPU_REAL_SUB_NATIVE_OBSERVED';
+   proof.verdict=verdict;save();
+   console.log('TRUE_SOURCE_NATIVE_TURF_SUB_OUTCOME',
+    JSON.stringify(proof.nativeTurfSub));
+   return;
+  }
   // 360 is a distinct read-only POST-REJOIN witness, not a shorter K2.
   // The existing >=600-tick K2/B491 evidence standard below stays intact.
   // Never certify a real projectile, impact, natural encounter or 4v4 here.
