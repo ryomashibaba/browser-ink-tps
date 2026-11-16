@@ -17,6 +17,7 @@ import {nearestT21SourceSupportedLanding}
  from './UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
  from './UndertowPhase14QSharedActorCollision';
+import {proposeB441OriginalFrontline} from '../../app/B441OriginalSourceFrontline';
 
 const DT=1/60;
 beforeAll(async()=>{await initializeRapier();});
@@ -126,6 +127,100 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   w.actors.dispose();
   expect(w.actors.cpuColliderCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
+ });
+ it('native real B-side CPU can consume a genuine Rapier teammate-contact slide on the original registered floor',()=>{
+  const w=world(),proposals=proposeB441OriginalFrontline(w.stage,'B');
+  expect(proposals.length).toBeGreaterThan(0);
+  // ORIGINAL 25-solid, paint-backed, interior proposals only. The
+  // actual swept CPU KCC must produce a slide: never inject movement.
+  let witness:null|{
+   from:{x:number;y:number;z:number};
+   other:{x:number;y:number;z:number};
+   requested:{x:number;y:number;z:number};
+   physical:{x:number;y:number;z:number};
+   sourceId:string
+  }=null;
+  const native=(p:{x:number;y:number;z:number})=>
+    w.physics.castCharacterFootSupport(
+      new Vec3(p.x,p.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,p.z),
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+  for(const proposal of proposals){
+   if(witness)break;
+   const [x,y,z]=proposal.point;
+   const from={x,y,z};
+   if(Math.hypot(x-w.humanFoot.x,z-w.humanFoot.z)<2.0)continue;
+   const a=native(from);
+   if(!a||a.solidId!==proposal.sourceSolidId||
+      Math.abs(a.point.y-y)>.20)continue;
+   for(const [ux,uz] of [[1,0],[-1,0],[0,1],[0,-1]] as const){
+    if(witness)break;
+    const other={x:x+ux*.61,y,z:z+uz*.61};
+    const b=native(other);
+    if(!b||b.solidId!==a.solidId||Math.abs(b.point.y-y)>.20)
+     continue;
+    w.actors.syncRealCpuFoot('B2',from);
+    w.actors.syncRealCpuFoot('B3',other);
+    w.physics.step();
+    for(const sign of [-1,1]){
+     const request={x:x+ux*.055-uz*sign*.040,y,
+      z:z+uz*.055+ux*sign*.040};
+     const original=w.actors.auditGroundStep(
+      'B2',from,request,DT,true);
+     const computed=w.actors.tryOriginalTeammateKccSlideStep(
+      'B2',from,request,DT);
+     if(!original.approved&&
+        original.colliderOwnerIds.includes('B3')&&computed){
+      witness={from,other,requested:request,
+       physical:{...computed},sourceId:a.solidId};
+      break;
+     }
+    }
+    if(!witness)w.actors.removeRealCpuFoot('B3');
+   }
+  }
+  expect(witness,'at least one genuine original-floor Rapier teammate slide')
+   .not.toBeNull();
+  if(witness){
+   const foot=native(witness.physical);
+   expect(foot?.solidId).toBe(witness.sourceId);
+   expect(Math.abs(foot!.point.y-witness.physical.y)).toBeLessThan(.25);
+   const moved=Math.hypot(witness.physical.x-witness.from.x,
+    witness.physical.y-witness.from.y,
+    witness.physical.z-witness.from.z);
+   expect(moved).toBeGreaterThan(.01);
+   expect(moved).toBeLessThan(.080);
+   expect(Math.hypot(witness.physical.x-witness.other.x,
+    witness.physical.z-witness.other.z)).toBeGreaterThanOrEqual(.57);
+   // The KCC probe did NOT move the actor. The real CPU simulation
+   // commits only this physically returned foot during its native tick.
+   expect(w.actors.qaRegisteredRealCpuCapsule('B2')?.foot)
+    .toEqual(witness.from);
+   console.log('T21_NATIVE_GENUINE_TEAMMATE_RAPIER_SLIDE',
+    JSON.stringify({witness,physicalTravelMeters:moved,
+     originalStage:[25,17,26,0],
+     bodyTeleportPerformed:false,originalPathAuthorizationChanged:false}));
+  }
+  w.actors.dispose();
+ });
+ it('never slides into the live human or permits an overspeed KCC shortcut',()=>{
+  const w=world(),from={x:w.humanFoot.x+.655,y:w.humanFoot.y,
+   z:w.humanFoot.z};
+  w.actors.syncRealCpuFoot('B2',from);
+  const towardHuman={x:from.x-.055,y:from.y,
+   z:from.z+.040};
+  expect(w.actors.tryOriginalTeammateKccSlideStep(
+   'B2',from,towardHuman,DT)).toBeNull();
+  w.actors.syncRealCpuFoot('B3',{x:from.x+.61,y:from.y,z:from.z});
+  expect(w.actors.tryOriginalTeammateKccSlideStep('B2',from,
+   {x:from.x+2,y:from.y,z:from.z},DT)).toBeNull();
+  expect(w.actors.tryOriginalTeammateKccSlideStep(
+   'B2',from,towardHuman,2*DT)).toBeNull();
+  expect(w.actors.tryOriginalTeammateKccSlideStep(
+   'A1',from,towardHuman,DT)).toBeNull();
+  expect(w.stage.solids).toHaveLength(25);
+  expect(w.stage.paintSurfaces).toHaveLength(17);
+  expect(w.stage.navigationLinks).toHaveLength(26);
+  w.actors.dispose();
  });
  it('real HUMAN production PlayerController KCC must not walk through a stationary CPU collider in its own Rapier stage world',()=>{
   // Proven original masked location, not an imaginary obstacle. No manual

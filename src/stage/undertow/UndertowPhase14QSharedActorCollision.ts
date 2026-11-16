@@ -316,6 +316,61 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
+  /** B-side crowded movement: use ACTUAL Rapier KCC sliding, not the
+   * blocked Crowd endpoint. Keeps the SAME registered floor and real live
+   * human/CPU colliders, with no added route or actor relocation. */
+  public tryOriginalTeammateKccSlideStep(
+    id:string,from:T21QFoot,to:T21QFoot,dt:number
+  ):T21QFoot|null{
+    if(!['B2','B3','B4'].includes(id)||!Number.isFinite(dt)||
+       Math.abs(dt-1/60)>1e-8||!this.humanSourceFoot||
+       ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite))
+      return null;
+    const actor=this.actors.get(id);
+    if(!actor||Math.hypot(
+      actor.sourceFoot.x-from.x,actor.sourceFoot.y-from.y,
+      actor.sourceFoot.z-from.z)>.025||
+      this.hasApproximateSameLayerOverlap(id,from))return null;
+    const x=to.x-from.x,y=to.y-from.y,z=to.z-from.z;
+    const requested=Math.hypot(x,y,z);
+    const sourceFloor=this.registeredOriginalSourceFootSupport(from);
+    if(!sourceFloor||requested<.025||
+       requested>GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt+1e-5)
+      return null;
+    const body=actor.body.translation();
+    if(Math.hypot(body.x-from.x,body.y-this.cpuCenterOffset-from.y,
+       body.z-from.z)>.025)return null;
+    this.kcc.computeColliderMovement(actor.collider,{x,y,z},
+      undefined,undefined,(collider:Collider)=>
+        collider.handle!==actor.collider.handle&&
+        this.physics.shouldCharacterCollide(collider,'HUMAN'));
+    let teammate=false,otherActor=false;
+    for(let i=0;i<this.kcc.numComputedCollisions();i++){
+      const collider=this.kcc.computedCollision(i)?.collider;
+      if(!collider)continue;
+      const owner=this.ownerByHandle.get(collider.handle);
+      if(owner&&owner!==id){
+        if(owner[0]===id[0])teammate=true;
+        else otherActor=true;
+      }else if(!owner&&!this.physics.sourceSolidIdForCollider(collider))
+        otherActor=true;
+    }
+    if(!teammate||otherActor)return null;
+    const move=this.kcc.computedMovement();
+    const distance=Math.hypot(move.x,move.y,move.z);
+    const horizontal=Math.hypot(x,z);
+    if(![move.x,move.y,move.z].every(Number.isFinite)||
+       horizontal<.012||distance<.010||
+       distance>requested+.001||
+       distance>GAME_CONFIG.cpu.maxSpeedMetersPerSecond*dt+1e-5||
+       (move.x*x+move.z*z)/horizontal<.005)return null;
+    const actual={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
+    if(Math.abs(actual.y-from.y)>.065||
+       this.hasApproximateSameLayerOverlap(id,actual))return null;
+    const destination=this.registeredOriginalSourceFootSupport(actual);
+    return destination?.solidId===sourceFloor.solidId?actual:null;
+  }
+
   /** SOURCE registered ramp only: shorten a real Crowd downhill proposal to <=2cm
    * and add a Rapier-measured descent, preserving unchanged 0.25m
    * floor support, native KCC, actor collision and speed authority.

@@ -127,6 +127,11 @@ export interface CpuSharedGroundStepAuthority {
     dt:number,
     physicallyRejoinedOriginalGround?:boolean
   ):Readonly<{approved:boolean;cause:string;colliderOwnerIds:readonly string[]}>;
+  /** Same ORIGINAL floor, genuine Rapier KCC teammate contact only. */
+  tryOriginalTeammateKccSlideStep?(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,dt:number
+  ):Readonly<{x:number;y:number;z:number}>|null;
   tryOriginalDownhillKccStep?(
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,dt:number
@@ -1476,7 +1481,23 @@ export class CpuAgentSystem {
             }
           }
         }
-        if(!shared.approved){
+        // Do not use the original rejected Crowd endpoint. A separately
+        // source-floor-backed Rapier KCC slide may proceed around an
+        // ACTUAL teammate contact, without bypassing collision.
+        let realTeammateSlide=false;
+        if(!shared.approved&&this.phase14qF2RecoverableSteps&&
+           shared.cause==='DYNAMIC_ACTOR_OR_STAGE_BLOCKER'&&
+           bot.team===Team.B&&
+           this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true){
+          const moved=this.phase14qGroundCollision
+           .tryOriginalTeammateKccSlideStep?.(
+            bot.id,bot.position,accepted,dt);
+          if(moved){
+            accepted={x:moved.x,y:moved.y,z:moved.z};
+            realTeammateSlide=true;
+          }
+        }
+        if(!shared.approved&&!realTeammateSlide){
           if(this.phase14qF2RecoverableSteps){
             this.observeSourceGroundStep(bot,'KCC_REJECTED',accepted,
              shared.cause,shared.colliderOwnerIds);
