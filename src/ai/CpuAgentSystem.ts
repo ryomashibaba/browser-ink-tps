@@ -1505,19 +1505,8 @@ export class CpuAgentSystem {
       // and cooldown are charged inside these calls, so dropping their
       // requests later would create phantom shots and wasted ink.
       if (canStartNewCombatActions&&this.sourceCpuMayStartActions(bot)) {
-        this.updateCpuWeapon(
-          bot,
-          dt,
-          humanTeam,
-          humanPosition,
-          humanActive
-        );
-        this.updateCpuKit(
-          bot,
-          humanTeam,
-          humanPosition,
-          humanActive
-        );
+        this.updateCpuWeaponsAndKit(
+          bot,dt,humanTeam,humanPosition,humanActive);
       }
     }
 
@@ -1573,8 +1562,8 @@ export class CpuAgentSystem {
        Math.abs(support.point.y-bot.position.y)>.25)return;
     const shotBefore=this.pendingShots.length;
     const kitBefore=this.pendingKitRequests.length;
-    this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive);
-    this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
+    this.updateCpuWeaponsAndKit(
+      bot,dt,humanTeam,humanPosition,humanActive);
     const previous=this.blockedSourceActionRows.get(bot.id)??{
       supportedWindows:0,mainRequests:0,kitRequests:0};
     previous.supportedWindows++;
@@ -2528,6 +2517,85 @@ export class CpuAgentSystem {
     return null;
   }
 
+  /** The ORIGINAL source selected battle may choose a real paid bomb
+   * instead of one main-weapon shot when actual unpainted floor is
+   * reachable. This runs BEFORE the regular main-weapon fire decision:
+   * no same-tick main+sub, no invented target, and no more than the
+   * existing paid sub cooldown allows. Real enemies always win. */
+  private trySourceTurfSubBeforeMain(
+    bot:CpuBot,humanTeam:Team.A|Team.B,
+    humanPosition:Vec3,humanActive:boolean
+  ):boolean{
+    if(!this.b215SelectedBattlePaintPacing||
+       !this.p2OuterOriginalBackfill||
+       !this.phase14qF2RecoverableSteps||
+       !this.sourceCpuMayStartActions(bot)||
+       bot.weaponGuarding||bot.weaponChargeSeconds>0||
+       bot.weaponBurstShotsRemaining>0||
+       bot.subCooldownSeconds>0)return false;
+    const subId=weaponKit(bot.weaponId).sub;
+    if(bot.ink+1e-6<subWeaponProfile(subId).inkCost)
+      return false;
+    // This checks ACTUAL original-stage human/CPU sight, not a fake
+    // opponent or a future/unauthorized cross-team route.
+    if(this.chooseCombatTarget(
+      bot,humanTeam,humanPosition,humanActive,0)!==null)
+      return false;
+    const target=this.chooseB216OriginalSourceSubPaintAim(bot);
+    if(!target)return false;
+    const direction=target.clone().sub(bot.position);
+    if(direction.lengthSq()<=1e-8)return false;
+    direction.normalize();
+    return this.queueCpuPaidSub(bot,subId,target,direction);
+  }
+
+  /** Preserve exactly the former T20/ordinary SOURCE main->kit order
+   * unless one existing ORIGINAL foot, actual unowned cell and paid kit
+   * all validate. Even blocked Crowd paths remain at real Rapier feet. */
+  private updateCpuWeaponsAndKit(
+    bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,
+    humanPosition:Vec3,humanActive:boolean
+  ):void{
+    if(this.trySourceTurfSubBeforeMain(
+      bot,humanTeam,humanPosition,humanActive)){
+      // A genuine bomb replaces this tick's main shot. Update all the
+      // ordinary weapon timers exactly once, not a free extra main shot.
+      this.advanceCpuWeaponTimers(bot,dt);
+      return;
+    }
+    this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive);
+    this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
+  }
+
+  /** Shared SUB charge transaction: physical bomb pool, ink, cooldown,
+   * real collision and rejected-request refund remain unchanged. */
+  private queueCpuPaidSub(bot:CpuBot,subId:SubWeaponId,
+    target:Vec3,direction:Vec3):boolean{
+    const profile=subWeaponProfile(subId);
+    if(bot.subCooldownSeconds>0||
+       bot.ink+1e-6<profile.inkCost||
+       ![target.x,target.y,target.z,
+         direction.x,direction.y,direction.z].every(Number.isFinite)||
+       direction.lengthSq()<=1e-8)return false;
+    const priorRecoveryLock=bot.inkRecoveryLockSeconds;
+    bot.ink=Math.max(0,bot.ink-profile.inkCost);
+    bot.inkRecoveryLockSeconds=GAME_CONFIG.inkEconomy.recoveryLockSeconds;
+    bot.subCooldownSeconds=cpuSubCooldownSeconds(subId,bot.role);
+    this.pendingKitRequests.push({
+      kind:'SUB',sourceId:bot.id,team:bot.team,
+      position:bot.position.clone(),target:target.clone(),
+      direction:direction.clone(),subId,
+      sourceSubRecovery:this.f3dSourceGoals&&
+        this.phase14qF2RecoverableSteps&&
+        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'?{
+          lockBefore:priorRecoveryLock,expectedInkAfterCharge:bot.ink
+        }:undefined
+    });
+    this.stats.cpuSubUses++;
+    this.stats.cpuKitLast=`${bot.id}:SUB:${profile.shortName}`;
+    return true;
+  }
+
   private updateCpuKit(
     bot: CpuBot,
     humanTeam: Team.A | Team.B,
@@ -2624,31 +2692,7 @@ export class CpuAgentSystem {
       return;
     }
 
-    const subProfile = subWeaponProfile(kit.sub);
-    if (bot.ink + 1e-6 < subProfile.inkCost) return;
-
-    const priorRecoveryLock=bot.inkRecoveryLockSeconds;
-    bot.ink = Math.max(0, bot.ink - subProfile.inkCost);
-    bot.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
-    bot.subCooldownSeconds = cpuSubCooldownSeconds(kit.sub, bot.role);
-
-    this.pendingKitRequests.push({
-      kind: 'SUB',
-      sourceId: bot.id,
-      team: bot.team,
-      position: bot.position.clone(),
-      target: target.clone(),
-      direction,
-      subId: kit.sub,
-      sourceSubRecovery:this.f3dSourceGoals&&
-        this.phase14qF2RecoverableSteps&&
-        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'?{
-          lockBefore:priorRecoveryLock,expectedInkAfterCharge:bot.ink
-        }:undefined
-    });
-    this.stats.cpuSubUses += 1;
-    this.stats.cpuKitLast =
-      `${bot.id}:SUB:${subProfile.shortName}`;
+    this.queueCpuPaidSub(bot,kit.sub,target,direction);
   }
 
   private rollbackRejectedKitRequest(
@@ -2765,6 +2809,15 @@ export class CpuAgentSystem {
     return aim.target;
   }
 
+  private advanceCpuWeaponTimers(bot:CpuBot,dt:number):void{
+    bot.fireRemaining=Math.max(0,bot.fireRemaining-dt);
+    bot.weaponBurstCooldown=Math.max(0,bot.weaponBurstCooldown-dt);
+    bot.weaponRollPaintCooldown=Math.max(0,bot.weaponRollPaintCooldown-dt);
+    bot.weaponGuardBreakSeconds=Math.max(0,bot.weaponGuardBreakSeconds-dt);
+    if(!bot.weaponGuarding&&bot.weaponGuardBreakSeconds<=0)
+      bot.weaponGuardHp=Math.min(100,bot.weaponGuardHp+28*dt);
+  }
+
   private updateCpuWeapon(
     bot: CpuBot,
     dt: number,
@@ -2773,14 +2826,7 @@ export class CpuAgentSystem {
     humanActive: boolean
   ): void {
     const profile = weaponProfile(bot.weaponId);
-    bot.fireRemaining = Math.max(0, bot.fireRemaining - dt);
-    bot.weaponBurstCooldown = Math.max(0, bot.weaponBurstCooldown - dt);
-    bot.weaponRollPaintCooldown = Math.max(0, bot.weaponRollPaintCooldown - dt);
-    bot.weaponGuardBreakSeconds = Math.max(0, bot.weaponGuardBreakSeconds - dt);
-
-    if (!bot.weaponGuarding && bot.weaponGuardBreakSeconds <= 0) {
-      bot.weaponGuardHp = Math.min(100, bot.weaponGuardHp + 28 * dt);
-    }
+    this.advanceCpuWeaponTimers(bot,dt);
 
     // Combat takes priority. F3 source-lab patrols are separated by the
     // original unbound underpass: without a target in weapon range, paint

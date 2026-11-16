@@ -147,6 +147,43 @@ describe('real SOURCE-only CPU sub bomb painting without invented enemies',()=>{
   system.stats.cpuSubUses=0;system.stats.cpuKitLast='';
   return {system,bot,floor};
  };
+ it('genuine SOURCE native action order chooses a paid bomb instead of a simultaneous main shot',()=>{
+  const {system,bot}=setup();
+  bot.fireRemaining=weaponProfile(bot.weaponId).fireIntervalSeconds;
+  bot.weaponGuardHp=100;bot.weaponBurstCooldown=0;
+  bot.weaponRollPaintCooldown=0;bot.weaponGuardBreakSeconds=0;
+  const ordinaryMain=vi.fn(),ordinaryKit=vi.fn();
+  system.updateCpuWeapon=ordinaryMain;
+  system.updateCpuKit=ordinaryKit;
+  const previousFire=bot.fireRemaining;
+  const before=Array.from(system.gameplayInk.getSurfaces()[0].ownerGrid);
+  system.updateCpuWeaponsAndKit(bot,1/60,Team.A,new Vec3(0,3,55),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  expect(system.pendingKitRequests[0].kind).toBe('SUB');
+  expect(ordinaryMain).not.toHaveBeenCalled();
+  expect(ordinaryKit).not.toHaveBeenCalled();
+  expect(bot.fireRemaining).toBeCloseTo(previousFire-1/60);
+  expect(bot.ink).toBe(30);
+  expect(Array.from(system.gameplayInk.getSurfaces()[0].ownerGrid))
+   .toEqual(before);
+  // Cooldown now prevents another sub; normal CPU weapon/kit cadence
+  // resumes the next native physical tick without extra ink spending.
+  system.updateCpuWeaponsAndKit(bot,1/60,Team.A,new Vec3(0,3,55),true);
+  expect(system.pendingKitRequests).toHaveLength(1);
+  expect(ordinaryMain).toHaveBeenCalledTimes(1);
+  expect(ordinaryKit).toHaveBeenCalledTimes(1);
+ });
+ it('real visible enemy keeps the old main-weapon-first behavior',()=>{
+  const {system,bot}=setup();
+  bot.weaponGuardHp=100;
+  system.chooseCombatTarget=vi.fn(()=>new Vec3(5,3,1));
+  system.updateCpuWeapon=vi.fn();
+  system.updateCpuKit=vi.fn();
+  system.updateCpuWeaponsAndKit(bot,1/60,Team.A,new Vec3(5,3,1),true);
+  expect(system.pendingKitRequests).toHaveLength(0);
+  expect(system.updateCpuWeapon).toHaveBeenCalledOnce();
+  expect(system.updateCpuKit).toHaveBeenCalledOnce();
+ });
  it('queues ONE paid real SUB at an actual unowned SOURCE grid cell and retains real cooldown',()=>{
   const {system,bot,floor}=setup();
   const before=Array.from(floor.ownerGrid);
