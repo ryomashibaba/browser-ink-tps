@@ -159,10 +159,12 @@ export function b216RealSourcePaintShotLineClear(x:{
  */
 export function b216OriginalUnpaintedGridCandidates(
  surfaces:readonly PaintSurface[],foot:B216SourcePoint,team:Team.A|Team.B,
- weaponRangeMeters:number
+ weaponRangeMeters:number,minimumTargetMeters=1
 ):readonly Vec3[]{
- if(![foot.x,foot.y,foot.z,weaponRangeMeters].every(Number.isFinite)||
-    weaponRangeMeters<1.3)return [];
+ if(![foot.x,foot.y,foot.z,weaponRangeMeters,minimumTargetMeters]
+      .every(Number.isFinite)||
+    weaponRangeMeters<1.3||minimumTargetMeters<1||
+    minimumTargetMeters>weaponRangeMeters)return [];
  const radius=Math.min(12,weaponRangeMeters);
  const picked=new Map<number,{distanceSq:number;point:Vec3}>();
  for(const surface of surfaces){
@@ -201,7 +203,11 @@ export function b216OriginalUnpaintedGridCandidates(
        Math.abs(point.y-foot.y)>2)continue;
     const dx=point.x-foot.x,dz=point.z-foot.z;
     const distanceSq=dx*dx+dz*dz;
-    if(distanceSq<1||distanceSq>radius*radius)continue;
+    // Filter actual weapon throw-range BEFORE the nearest-in-sector
+    // reduction. Otherwise 1.0m neutral ink hides a real reachable
+    // 3.0m target in the same direction; SUB is >=2.6m by design.
+    if(distanceSq<minimumTargetMeters*minimumTargetMeters||
+       distanceSq>radius*radius)continue;
     const angle=(Math.atan2(dz,dx)+Math.PI)/(2*Math.PI);
     const sector=Math.min(15,Math.floor(angle*16));
     const key=sector+(distanceSq>25?16:0);

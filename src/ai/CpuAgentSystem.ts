@@ -2505,7 +2505,8 @@ export class CpuAgentSystem {
       return null;
     const candidates=b216OriginalUnpaintedGridCandidates(
       this.gameplayInk.getSurfaces(),bot.position,bot.team,
-      GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters);
+      GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters,
+      GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters);
     for(const target of candidates){
       const distance=Math.sqrt(horizontalDistanceSq(bot.position,target));
       if(distance<GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters||

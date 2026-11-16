@@ -474,6 +474,29 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   expect(Math.floor(projection.v/floor.cellSize)).toBe(y);
   expect(Array.from(floor.ownerGrid)).toEqual(before);
  });
+ it('preserves throwable unpainted cells behind too-close same-sector ink',()=>{
+  const floor=make();floor.ownerGrid.fill(Team.B);
+  // Both cells are genuine original registered ownerGrid entries and
+  // share one 22.5-degree sector. The nearest is too close for SUB.
+  const near=[44,40] as const,far=[52,40] as const;
+  floor.ownerGrid[floor.index(...near)]=Team.Neutral;
+  floor.ownerGrid[floor.index(...far)]=Team.Neutral;
+  const foot={x:0,y:3,z:0};
+  const unrestricted=gridCandidates([floor],foot,Team.B,10);
+  expect(unrestricted.length).toBeGreaterThan(0);
+  const candidates=gridCandidates([floor],foot,Team.B,10,2.6);
+  expect(candidates).toHaveLength(1);
+  const projection=floor.projectWorldPoint(candidates[0]!);
+  expect(Math.floor(projection.u/floor.cellSize)).toBe(far[0]);
+  expect(Math.floor(projection.v/floor.cellSize)).toBe(far[1]);
+  expect(Math.hypot(candidates[0]!.x,candidates[0]!.z))
+   .toBeGreaterThanOrEqual(2.6);
+  // The main-weapon helper remains entirely backward compatible.
+  expect(gridCandidates([floor],foot,Team.B,10,1))
+   .toEqual(unrestricted);
+  expect(gridCandidates([floor],foot,Team.B,10,11))
+   .toEqual([]);
+ });
  it('rejects unofficial surfaces, score, wall, inactive cells and far geometry',()=>{
   const floor=make();
   const foot={x:0,y:3,z:0};
