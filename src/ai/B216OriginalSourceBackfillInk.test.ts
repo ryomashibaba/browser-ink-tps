@@ -3,13 +3,15 @@ import {Vec3} from 'playcanvas';
 import {CpuAgentSystem} from './CpuAgentSystem';
 import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
+import {PaintSurface} from '../ink/PaintSurface';
 import {defineTestSurfaces} from '../stage/TestStage';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {SurfaceFlags,Team} from '../ink/types';
 import {b216OriginalFootBackfillCandidates as candidates,
- b216RealSourcePaintShotLineClear as safeShot}
+ b216RealSourcePaintShotLineClear as safeShot,
+ b216OriginalRegisteredVerticalFloorAim as verticalAim}
  from './B216OriginalSourceBackfillInk';
 const foot={x:0,y:3.1,z:48};
 const goal={x:0,y:3.1,z:52};
@@ -173,6 +175,63 @@ describe('P2 outer source-ink aim proposals stay untrusted and opt-in',()=>{
  });
 });
 
+
+describe('B216 real registered SOURCE floors at different elevation',()=>{
+ const floor=(id:string,flags:SurfaceFlags=
+  SurfaceFlags.Paintable|SurfaceFlags.Floor,y=2)=>
+  new PaintSurface(id,new Vec3(0,y,0),
+   new Vec3(1,0,0),new Vec3(0,0,1),20,20,.25,flags,8);
+ it('proposes only exact active original floor plane, no invented Y',()=>{
+  const src=floor('UndertowT21D:real-floor');
+  const p={x:1,y:3.5,z:1};
+  expect(verticalAim(src,p)).toEqual({x:1,y:2,z:1});
+  expect(verticalAim(src,{...p,x:15})).toBeNull();
+  expect(verticalAim(src,{...p,y:2.1})).toBeNull();
+  expect(verticalAim(src,{...p,y:5})).toBeNull();
+  expect(verticalAim(src,{...p,x:NaN})).toBeNull();
+  expect(verticalAim(floor('unregistered:floor'),p)).toBeNull();
+  expect(verticalAim(floor('UndertowT21D:official',
+   SurfaceFlags.Paintable|SurfaceFlags.Floor|SurfaceFlags.Scoreable),p))
+   .toBeNull();
+  expect(verticalAim(floor('UndertowT21D:wall',
+   SurfaceFlags.Paintable|SurfaceFlags.Wall),p)).toBeNull();
+ });
+ it('requires live source shot-ray approval and genuine unowned ink',()=>{
+  const src=floor('UndertowT21D:lower');
+  const ink=new GameplayInkSystem();ink.registerSurface(src);
+  const stage=undertowT21dConnectivityQaStage();
+  const system=Object.create(CpuAgentSystem.prototype) as any;
+  const bot={id:'B1',team:Team.B,position:new Vec3(0,3.5,0),
+   weaponId:'pulse-sprayer',agent:{},lifeState:'ACTIVE',
+   mobilityState:'GROUND',weaponFacing:new Vec3(1,0,0)};
+  system.stage=stage;system.qaMotionGoals=new Map();
+  system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+  system.phase14qGroundCollision={sourceFootSupport:()=>({
+   solidId:stage.solids[0]!.id,point:bot.position.clone()})};
+  system.samplePoint=new Vec3();system.gameplayInk=ink;
+  system.p2OuterOriginalBackfill=true;
+  system.b216RealOriginalFloorSightChecks=0;
+  system.b216ApprovedPhysicalSourceAimTargets=0;
+  system.b216ApprovedReachedGoalShortRadiusAims=0;
+  system.b216OwnedCenterSourceBackfillAims=0;
+  system.selectedSourceDenseApprovedAims=0;
+  // Isolated mock sight: not a real Rapier or browser certification.
+  system.b216SourceStageAimValidated=()=>false;
+  expect(system.chooseB216ActualOriginalPaintBackfill(
+   bot,true,true)).toBeNull();
+  system.b216SourceStageAimValidated=()=>true;
+  const aim=system.chooseB216ActualOriginalPaintBackfill(
+   bot,true,true);
+  expect(aim).not.toBeNull();
+  expect(aim!.y).toBe(2);
+  expect(aim!.distance(bot.position)).toBeLessThan(10);
+  expect(system.selectedSourceDenseApprovedAims).toBe(1);
+  expect(bot.position).toEqual(new Vec3(0,3.5,0));
+  src.ownerGrid.fill(Team.B);
+  expect(system.chooseB216ActualOriginalPaintBackfill(
+   bot,true,true)).toBeNull();
+ });
+});
 
 describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
  beforeAll(async()=>{await initializeRapier();});

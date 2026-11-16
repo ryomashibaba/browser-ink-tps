@@ -4,9 +4,41 @@
  * is never a playable floor, projectile hit or path; Rapier validates
  * the actual physical floor and projectile sight in the calling app.
  */
+import {Vec3} from 'playcanvas';
+import type {PaintSurface} from '../ink/PaintSurface';
+import {SurfaceFlags} from '../ink/types';
 export interface B216SourcePoint{readonly x:number;readonly y:number;readonly z:number}
 export interface B216OriginalCandidate extends B216SourcePoint{
  readonly radiusMeters:number;readonly angleRadians:number;
+}
+/** Registered original paint FLOOR at a distinct vertical height, not
+ * a collision floor, shot authorization or original route. SOURCE dense
+ * fallback only; caller must verify Rapier foot+target and shot ray. */
+export function b216OriginalRegisteredVerticalFloorAim(
+ surface:PaintSurface,point:B216SourcePoint
+):B216SourcePoint|null{
+ const n=surface.normal,c=surface.center;
+ if(!surface.id.startsWith('UndertowT21D:')||surface.isScoreable||
+    (surface.baseFlags&SurfaceFlags.Paintable)===0||
+    (surface.baseFlags&SurfaceFlags.Floor)===0||
+    (surface.baseFlags&SurfaceFlags.Wall)!==0||
+    ![point.x,point.y,point.z,c.x,c.y,c.z,n.x,n.y,n.z]
+      .every(Number.isFinite)||Math.abs(n.y)<.8)return null;
+ // Exact intersection with the EXISTING registered paint plane.
+ const y=c.y-(n.x*(point.x-c.x)+n.z*(point.z-c.z))/n.y;
+ const heightDelta=Math.abs(y-point.y);
+ if(!Number.isFinite(y)||heightDelta<=.35||heightDelta>2)return null;
+ const p=surface.projectWorldPoint(new Vec3(point.x,y,point.z));
+ if(!p.inside||p.planeDistance>.005)return null;
+ const u=Math.min(surface.widthCells-1,Math.floor(
+   Math.max(0,p.u)/surface.cellSize));
+ const v=Math.min(surface.heightCells-1,Math.floor(
+   Math.max(0,p.v)/surface.cellSize));
+ if(!surface.isCellActive(u,v))return null;
+ const flags=surface.flagsGrid[surface.index(u,v)]??0;
+ if((flags&SurfaceFlags.Paintable)===0||
+    (flags&(SurfaceFlags.Wall|SurfaceFlags.Scoreable))!==0)return null;
+ return {x:point.x,y,z:point.z};
 }
 export function b216OriginalFootBackfillCandidates(
  foot:B216SourcePoint,realAuditedGoal:B216SourcePoint,

@@ -24,7 +24,8 @@ import {b212NativeLead} from './B212MovingNativeProjectileAim';
 import {b213RealAttackerPreference} from './B213NativeCounterfire';
 import {b215ShouldQueryNativePaintCandidate} from './B215SourceWeaponReadyPaintAim';
 import {b420MayLegacyMeleeChase} from './B420SourceMeleePursuitAuthority';
-import {b216OriginalFootBackfillCandidates} from './B216OriginalSourceBackfillInk';
+import {b216OriginalFootBackfillCandidates,
+ b216OriginalRegisteredVerticalFloorAim} from './B216OriginalSourceBackfillInk';
 import {b178FootMask,b178FootRelation,b178SampleRegisteredSourceFoot} from './B178OriginalSourceInkResources';
 import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
 import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
@@ -3336,6 +3337,44 @@ export class CpuAgentSystem {
       best=candidate;opportunity=value;
       bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
       bestCenterAlreadyOwned=sample.owner===bot.team;
+     }
+     // After the SAME-height 128 dense proposals have failed, inspect
+     // only ACTUAL existing SOURCE floor planes within a 2m vertical step.
+     // B207 180s RAW: B1 moved 286m late but had 4,022 no-aim checks.
+     // No nav, Actor movement, shot/ink injection or score granted.
+     if(pass===2&&!best){
+      const registeredFloors=this.gameplayInk.getSurfaces();
+      for(const proposed of current){
+       for(const floor of registeredFloors){
+        const vertical=b216OriginalRegisteredVerticalFloorAim(
+         floor,{x:proposed.x,y:bot.position.y,z:proposed.z});
+        if(!vertical)continue;
+        const sample=this.gameplayInk.sampleWorld(
+         new Vec3(vertical.x,vertical.y,vertical.z),.28,
+         SurfaceFlags.Paintable,SurfaceFlags.Wall,s=>s===floor);
+        if(!sample||sample.surface.isScoreable)continue;
+        const neighbor=sample.owner===bot.team?
+         b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+        if(sample.owner===bot.team&&!neighbor)continue;
+        const candidate=neighbor??floor.localToWorld(sample.u,sample.v);
+        if(![candidate.x,candidate.y,candidate.z]
+             .every(Number.isFinite)||
+           Math.abs(candidate.y-bot.position.y)>2||
+           !this.cpuTargetInRange(bot,candidate,
+             weaponProfile(bot.weaponId)))continue;
+        const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
+        if(value<=opportunity)continue;
+        this.b216RealOriginalFloorSightChecks++;
+        if(!this.b216SourceStageAimValidated(muzzle,candidate,bot.position)){
+         if(this.b215SelectedBattlePaintPacing)
+          this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
+         continue;
+        }
+        best=candidate;opportunity=value;
+        bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
+        bestCenterAlreadyOwned=sample.owner===bot.team;
+       }
+      }
      }
      if(pass===1&&best)this.p2OuterOriginalApprovedAims++;
      if(pass===2&&best)this.selectedSourceDenseApprovedAims++;
