@@ -10,7 +10,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
-import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+import {sourceRegisteredPaintHitActive, type PaintSurface, type SurfaceRayHit} from '../ink/PaintSurface';
 import {
   PaintEventType,
   PaintSource,
@@ -665,7 +665,12 @@ export class CpuKitSystem {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
       const hit = surface.intersectSegment(from, to);
-      if (hit && (!best || hit.distance < best.distance)) best = hit;
+      // Actual original SOURCE bomb flight respects the same live
+      // paint raster as MAIN/CHARGER. Registered Rapier cover still wins.
+      // T20 and legacy CPU kit QA retain their historical ray.
+      if(hit&&(!this.nativeOriginalSourceCombatantSubContactEnabled||
+         sourceRegisteredPaintHitActive(surface,hit))&&
+         (!best||hit.distance<best.distance))best=hit;
     }
     return best;
   }

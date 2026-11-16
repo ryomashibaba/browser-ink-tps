@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
-import type { PaintSurface, SurfaceRayHit } from '../ink/PaintSurface';
+import {sourceRegisteredPaintHitActive, type PaintSurface, type SurfaceRayHit} from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import {
@@ -464,7 +464,12 @@ export class SubWeaponSystem {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
       const hit = surface.intersectSegment(from, to);
-      if (hit && (!best || hit.distance < best.distance)) best = hit;
+      // Native SOURCE human SUB must not detonate on a raster hole
+      // that its paid ink cannot paint; original solid collision still
+      // happens independently. Frozen T20 behavior remains unchanged.
+      if(hit&&(!this.nativeSourceHumanSubBodyContactEnabled||
+         sourceRegisteredPaintHitActive(surface,hit))&&
+         (!best||hit.distance<best.distance))best=hit;
     }
     return best;
   }

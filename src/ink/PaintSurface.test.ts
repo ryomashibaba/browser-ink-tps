@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
 import { PaintSurface,sourceRegisteredPaintHitActive } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
+import {CpuKitSystem} from '../ai/CpuKitSystem';
+import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
+import type {SurfaceRayHit} from './PaintSurface';
 import {
   PaintEventType,
   PaintSource,
@@ -191,5 +194,52 @@ describe('original SOURCE projectile physical hit ignores inactive paint cells',
   near.flagsGrid[near.index(2,2)]=SurfaceFlags.Swimmable|SurfaceFlags.Floor;
   expect(hit(true,[near])).toBeNull();
   expect(hit(false,[near])?.surface.id).toBe(near.id);
+ });
+});
+
+describe('true SOURCE human/CPU thrown SUB follows registered paint cells',()=>{
+ const make=(id:string,y:number)=>new PaintSurface(id,
+   new Vec3(0,y,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   4,4,1,SurfaceFlags.Paintable|SurfaceFlags.Swimmable|SurfaceFlags.Floor,2);
+ const from=new Vec3(0,3,0),to=new Vec3(0,-5,0);
+ function cpuPick(native:boolean,planes:PaintSurface[]):SurfaceRayHit|null{
+  const receiver=Object.create(CpuKitSystem.prototype) as {
+   surfaces:PaintSurface[];
+   nativeOriginalSourceCombatantSubContactEnabled:boolean;
+  };
+  receiver.surfaces=planes;
+  receiver.nativeOriginalSourceCombatantSubContactEnabled=native;
+  const f=(CpuKitSystem.prototype as unknown as {
+   findNearestSurfaceHit:(a:Vec3,b:Vec3)=>SurfaceRayHit|null
+  }).findNearestSurfaceHit;
+  return f.call(receiver as unknown as CpuKitSystem,from,to);
+ }
+ function humanPick(native:boolean,planes:PaintSurface[]):SurfaceRayHit|null{
+  const receiver=Object.create(SubWeaponSystem.prototype) as {
+   surfaces:PaintSurface[];
+   nativeSourceHumanSubBodyContactEnabled:boolean;
+  };
+  receiver.surfaces=planes;
+  receiver.nativeSourceHumanSubBodyContactEnabled=native;
+  const f=(SubWeaponSystem.prototype as unknown as {
+   findNearestSurfaceHit:(a:Vec3,b:Vec3)=>SurfaceRayHit|null
+  }).findNearestSurfaceHit;
+  return f.call(receiver as unknown as SubWeaponSystem,from,to);
+ }
+ it('CPU bomb ignores nonpaintable nearby source raster and reaches real deeper paint',()=>{
+  const near=make('unpaintable',0),far=make('paintable',-2);
+  near.flagsGrid[near.index(2,2)]=0;
+  expect(cpuPick(true,[near,far])?.surface.id).toBe(far.id);
+  expect(cpuPick(false,[near,far])?.surface.id).toBe(near.id);
+  expect(cpuPick(true,[near])?.surface.id).toBeUndefined();
+  expect(cpuPick(true,[far])?.surface.id).toBe(far.id);
+ });
+ it('human bomb uses same SOURCE raster while preserving legacy T20 contact',()=>{
+  const near=make('not-inkable',0),far=make('original-floor',-2);
+  near.flagsGrid[near.index(2,2)]=SurfaceFlags.Swimmable;
+  expect(humanPick(true,[near,far])?.surface.id).toBe(far.id);
+  expect(humanPick(false,[near,far])?.surface.id).toBe(near.id);
+  expect(humanPick(true,[near])?.surface.id).toBeUndefined();
+  expect(humanPick(true,[far])?.surface.id).toBe(far.id);
  });
 });
