@@ -488,6 +488,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b137HumanFootValid=false;
  private readonly b192NativeHumanFoot=new Vec3();
  private b192HumanAliveGrounded=false;
+ // Real grounded player KCC mode for current SOURCE tactical tick.
+ private b192NativeHumanMode:'HUMAN'|'SQUID'='HUMAN';
  private b192HumanTick=-1;
  private b192ApprovedHumanCombatGoals=0;
  private b192RejectedHumanCombatGoals=0;
@@ -1072,7 +1074,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private chooseActualSourceCombatGoal(
   path:Parameters<typeof b421RealEnemyStandoff>[0],
   enemyFoot:Parameters<typeof b421RealEnemyStandoff>[1],
-  side:1|-1,bot:F3TrafficCpu
+  side:1|-1,bot:F3TrafficCpu,enemyIsActualHuman=false
  ){
   const physics=this.physics;
   if(!this.enableB192HumanCombat||!physics||!bot.weaponId)
@@ -1085,7 +1087,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const lane:B421OriginalWeaponLane={
    nativeWeaponRangeMeters:cpuWeaponRangeMeters(profile),
    nativeMuzzleHeightMeters:GAME_CONFIG.cpu.muzzleHeightMeters,
-   enemyHitHeightMeters:.68,
+   // Only HUMAN opponent goal selection varies with the REAL current
+   // lower SQUID sphere. Enemy CPUs and non-B192 modes retain .68m.
+   enemyHitHeightMeters:enemyIsActualHuman&&
+    this.b192NativeHumanMode==='SQUID'?
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+
+    PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters:.68,
    originalStageRayBlocked:(from,to)=>!!physics.castStageSegment(
     new Vec3(from.x,from.y,from.z),
     new Vec3(to.x,to.y,to.z),'ink-projectile')
@@ -1413,6 +1420,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     // Human is never manufactured as a bot. Only its SAME-TICK real KCC
     // grounded foot is evaluated in the existing 32m combat sight envelope.
     if(bot.team===Team.B&&this.b192HumanAliveGrounded&&
+       this.b192NativeHumanMode==='HUMAN'&&
        this.b192HumanTick===this.b137NativeTick&&
        Math.hypot(foot.x-this.b192NativeHumanFoot.x,
         foot.z-this.b192NativeHumanFoot.z)<=32){
@@ -1610,7 +1618,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      // collide head-on with the genuine HUMAN capsule. Not a new stage
      // node, offmesh link, human warp, or guaranteed weapon hit.
      const proposed=this.chooseActualSourceCombatGoal(
-      route.nativePathPoints,h,-1,bot);
+      route.nativePathPoints,h,-1,bot,true);
      if(proposed&&this.hasSourceFootSupport(proposed)){
       const combatGoal=new Vec3(proposed.x,proposed.y,proposed.z);
       const toGoal=this.nav.auditPath(realFoot,combatGoal);
@@ -2895,7 +2903,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  }
  prepare(frame:number,humanFoot?:Readonly<{
   x:number;y:number;z:number;grounded?:boolean;active?:boolean;
-  allySyncPracticeRunning?:boolean
+  mode?:'HUMAN'|'SQUID';allySyncPracticeRunning?:boolean
  }>):void{
   // Cache only the ACTUAL native input for this fixed step. No foot
   // relocation and no synthetic actor position. Even when all CPUs are
@@ -2903,11 +2911,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b137NativeTick=frame;
   this.b137HumanFootValid=false;
   this.b192HumanAliveGrounded=false;
+  this.b192NativeHumanMode='HUMAN';
   this.b192HumanTick=-1;
   if(this.enableB192HumanCombat&&
      humanFoot?.active===true&&humanFoot.grounded===true&&
      [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)){
    this.b192NativeHumanFoot.set(humanFoot.x,humanFoot.y,humanFoot.z);
+   this.b192NativeHumanMode=humanFoot.mode==='SQUID'?'SQUID':'HUMAN';
    this.b192HumanTick=frame;
    this.b192HumanAliveGrounded=true;
   }

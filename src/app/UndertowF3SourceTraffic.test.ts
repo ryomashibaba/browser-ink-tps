@@ -874,3 +874,44 @@ describe('F3B playable 8-actor original source runtime',()=>{
  });
 
 });
+
+describe('SOURCE CPU pursuit uses physical SQUID height, no imaginary torso',()=>{
+ it('consults native original cover at human current hit sphere, never CPU SQUID',()=>{
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  traffic.enableB192HumanCombat=true;traffic.freeCombat=true;
+  const rays:Array<{from:Vec3;to:Vec3}>=[];
+  traffic.physics={castStageSegment:(from:Vec3,to:Vec3)=>{
+   rays.push({from:from.clone(),to:to.clone()});
+   return to.y>=4.6?{distance:2.5}:null;
+  }};
+  const path=[new Vec3(0,4,-40),new Vec3(4,4,-40),
+   new Vec3(8,4,-40),new Vec3(12,4,-40)];
+  const actor:any={id:'B1',team:Team.B,weaponId:'pulse-sprayer'};
+  traffic.prepare(110,{x:12,y:4,z:-40,grounded:true,active:true,mode:'HUMAN'});
+  traffic.chooseActualSourceCombatGoal(path,path[3],-1,actor,true);
+  expect(rays.some(row=>row.to.y===4.68)).toBe(true);
+  rays.length=0;
+  traffic.prepare(111,{x:12,y:4,z:-40,grounded:true,active:true,mode:'SQUID'});
+  const valid=traffic.chooseActualSourceCombatGoal(path,path[3],-1,actor,true);
+  expect(valid).not.toBeNull();
+  expect(rays.some(row=>Math.abs(row.to.y-
+   (4+PLAYER_CHARACTER_PHYSICS.squidRadiusMeters))<1e-6)).toBe(true);
+  expect(rays.every(row=>row.to.y<4.6)).toBe(true);
+  // The same SOURCE CPU-vs-CPU target does not inherit human shape.
+  rays.length=0;
+  traffic.chooseActualSourceCombatGoal(path,path[3],-1,actor,false);
+  expect(rays.some(row=>row.to.y===4.68)).toBe(true);
+ });
+ it('does not retain an invalid SQUID state after the native input ends',()=>{
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  traffic.enableB192HumanCombat=true;traffic.freeCombat=true;
+  traffic.prepare(120,{x:0,y:4,z:-40,active:true,grounded:true,mode:'SQUID'});
+  expect(traffic.b192HumanAliveGrounded).toBe(true);
+  expect(traffic.b192NativeHumanMode).toBe('SQUID');
+  traffic.prepare(121,{x:0,y:4,z:-40,active:false,grounded:false,mode:'SQUID'});
+  expect(traffic.b192HumanAliveGrounded).toBe(false);
+  expect(traffic.b192NativeHumanMode).toBe('HUMAN');
+  traffic.prepare(122,{x:0,y:4,z:-40,active:true,grounded:true});
+  expect(traffic.b192NativeHumanMode).toBe('HUMAN');
+ });
+});

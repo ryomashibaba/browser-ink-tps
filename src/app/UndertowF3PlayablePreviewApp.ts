@@ -5451,6 +5451,7 @@ export class UndertowF3PlayablePreviewApp{
      this.traffic.prepare(frame,{
       x:foot.x,y:foot.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
       z:foot.z,grounded:this.stats.playerGrounded,active:alive,
+      mode:this.player.currentMode,
       allySyncPracticeRunning:
        // The separately selected B193 ALLY_SYNC never runs after CLEAR.
        (actualPractice.practiceVariant==='ALLY_SYNC'&&
