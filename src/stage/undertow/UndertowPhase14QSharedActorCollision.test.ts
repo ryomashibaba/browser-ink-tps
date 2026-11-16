@@ -8,7 +8,8 @@ import {PerformanceStats} from '../../core/PerformanceStats';
 import {initializeRecastNavigation,RecastStageNavigation} from '../../navigation/RecastStageNavigation';
 import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals,b467MayRetryOriginalBFrontFromRealFoot} from '../../app/B441OriginalSourceFrontline';
 import {GameplayInkSystem} from '../../ink/GameplayInkSystem';
-import {SurfaceFlags} from '../../ink/types';
+import {SurfaceFlags,Team} from '../../ink/types';
+import {UndertowF3SourceTraffic} from '../../app/UndertowF3SourceTraffic';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
 import {defineTestSurfaces} from '../TestStage';
 import {undertowT21dConnectivityQaStage}
@@ -244,6 +245,41 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    foot:[foot.x,foot.y,foot.z],rejoined:true,active:true,grounded:true
   });
   const nav=new RecastStageNavigation(w.stage,new PerformanceStats());
+  // Call the REAL production SOURCE route probe through its prototype;
+  // the recorded native B2 actor foot remains unchanged. This is a
+  // physically grounded fixture, not a new stage or a forced goal.
+  const traffic=Object.create(UndertowF3SourceTraffic.prototype) as {
+   physics:RapierStagePhysics;stage:typeof w.stage;
+   enableB441SourceFrontline:boolean;
+   sourceEndpointProbes:number;nativeRouteChecks:number;
+   nativeRouteRayProbes:number;realGoalRequests:number;
+   b137NativeTick:number;b441OriginalRampApprovals:number;
+   b441OriginalRampRejected:number;
+   b441FrontGoals:Map<string,Vec3[]>;
+   physicallyRejoined:Set<string>;
+   realKccRejectedSteps:Map<string,number>;
+   lastMoved:Map<string,number>;
+   b441OriginalRampGoal:Map<string,Vec3>;
+   b441OriginalRampLastAuditTick:Map<string,number>;
+   bots:unknown[];
+   hasSourceSupportedRoute:(r:ReturnType<RecastStageNavigation['auditPath']>,
+    side:number,start?:Vec3,actualBlock?:boolean,rampBias?:boolean)=>boolean;
+   tryOriginalRampLocalRecovery:(id:string,foot:Vec3,out:Vec3)=>boolean;
+  };
+  traffic.physics=w.physics;traffic.stage=w.stage;
+  traffic.enableB441SourceFrontline=true;
+  traffic.sourceEndpointProbes=0;traffic.nativeRouteChecks=0;
+  traffic.nativeRouteRayProbes=0;traffic.realGoalRequests=0;
+  traffic.b137NativeTick=1765;
+  traffic.b441OriginalRampApprovals=0;traffic.b441OriginalRampRejected=0;
+  traffic.b441FrontGoals=new Map([['B2',[]]]);
+  traffic.physicallyRejoined=new Set(['B2']);
+  traffic.realKccRejectedSteps=new Map([['B2',0]]);
+  traffic.lastMoved=new Map([['B2',1500]]);
+  traffic.b441OriginalRampGoal=new Map();
+  traffic.b441OriginalRampLastAuditTick=new Map();
+  traffic.bots=[{id:'B2',team:Team.B,position:new Vec3(
+   foot.x,foot.y,foot.z),hp:100,lifeState:'ACTIVE',mobilityState:'GROUND'}];
   const goals=proposeB441OriginalFrontline(w.stage,'B');
   let nativeReach=0,validEndpoints=0,originallySupported=0;
   const rejected:{goal:[number,number,number];reason:string;gap?:number}[]=[];
@@ -284,6 +320,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   // considering any threshold change or new source goal.
   const rampGoals=proposeB441OriginalRampLocalGoals(w.stage,'B');
   let rampReached=0,rampEndpoints=0,rampSupported=0;
+  let rampActualSourceBiasSupported=0;
   const rampFirstDenied:unknown[]=[];
   for(const candidate of rampGoals){
    const goal=new Vec3(...candidate.point);
@@ -292,6 +329,9 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    rampReached++;
    if(r.startSnapDistanceMeters>.20||r.endSnapDistanceMeters>.20)continue;
    rampEndpoints++;
+   if(traffic.hasSourceSupportedRoute(r,-1,
+     new Vec3(foot.x,foot.y,foot.z),true,true))
+    rampActualSourceBiasSupported++;
    let approved=r.nativePathPoints.length>0,firstGap:null|number=null;
    for(let leg=0;leg+1<r.nativePathPoints.length;leg++){
     if(!approved)break;
@@ -311,6 +351,10 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
     rampFirstDenied.push({goal:[...candidate.point],gap:firstGap,
      nativePathPoints:r.nativePathPoints.length});
   }
+  const originalFoot=(traffic.bots[0] as {position:Vec3}).position.clone();
+  const rampRecovered=traffic.tryOriginalRampLocalRecovery('B2',
+   originalFoot,new Vec3());
+  expect((traffic.bots[0] as {position:Vec3}).position).toEqual(originalFoot);
   console.log('T21_V28_B2_GENUINE_STOP_FOOT_ORIGINAL_SOURCE',JSON.stringify({
    fromRun:43882733229,foot,sourceSolidId:physical.hit?.solidId,
    originalPhysicalFloorGap:physical.gap,
@@ -319,6 +363,9 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    originalRampCandidates:rampGoals.length,
    rampRecastReached:rampReached,rampEndpointsUnder20cm:rampEndpoints,
    rampFullOriginalRapierRouteSupported:rampSupported,
+   rampHeightCorrectedPhysicallySupportedRoutes:rampActualSourceBiasSupported,
+   rampGoalApprovedAfterTrue120TickStationary:rampRecovered,
+   firstRealSourceRampGoal:traffic.b441OriginalRampGoal.get('B2')??null,
    rampFirstDenied,
    trueRecastReached:nativeReach,nativeEndpointsUnder20cm:validEndpoints,
    fullyOriginalRapierRouteSupported:originallySupported,
@@ -331,6 +378,9 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.stage.navigationLinks).toHaveLength(26);
   expect(physical.registered).toBe(true);
   expect(goals.length).toBeGreaterThan(0);
+  expect(rampActualSourceBiasSupported).toBeGreaterThan(0);
+  expect(rampRecovered).toBe(true);
+  expect(traffic.b441OriginalRampApprovals).toBe(1);
   w.actors.dispose();
  });
  it('real HUMAN production PlayerController KCC must not walk through a stationary CPU collider in its own Rapier stage world',()=>{

@@ -725,7 +725,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private hasSourceSupportedRoute(
   audit:ReturnType<RecastStageNavigation['auditPath']>,sideSign:number,
   actualNativeStart?:Readonly<{x:number;y:number;z:number}>,
-  realKccBlockedRecovery=false
+  realKccBlockedRecovery=false,
+  originalRampHeightBiasOnly=false
  ):boolean{
   this.nativeRouteChecks++;
   const original=audit.nativePathPoints;
@@ -751,9 +752,33 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
   const probe=(point:Readonly<{x:number;y:number;z:number}>):boolean=>{
    this.nativeRouteRayProbes++;
-   return [point.x,point.y,point.z].every(Number.isFinite)&&
-    point.z*sideSign>=33&&point.y>=2.5&&point.y<=5.5&&
-    this.hasSourceFootSupport(point);
+   if(![point.x,point.y,point.z].every(Number.isFinite)||
+      point.z*sideSign<33||point.y<2.5||point.y>5.5)return false;
+   if(this.hasSourceFootSupport(point))return true;
+   // A real B2 Ramp KCC foot remains supported, but Recast can float
+   // 25.897cm above original registered ramp collision. Never promote
+   // that NAV height as a CPU foot or relax the actual 25cm PHYSICAL
+   // support gate. Only one live B2 ramp-local GOAL may use the
+   // 3cm-bounded original Rapier height projection for read-only route
+   // evaluation. Actual 60Hz shared Rapier KCC still vetoes every step.
+   if(!originalRampHeightBiasOnly||!actualNativeStart||
+      !realKccBlockedRecovery||!this.enableB441SourceFrontline||
+      sideSign!==-1||!this.physics||
+      this.sourceNativeCharacterFootHit(actualNativeStart)?.solidId!==
+       'UndertowT21D:right-low-route-ramp-negative-z')
+     return false;
+   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   const hit=this.physics.castCharacterFootSupport(
+    new Vec3(point.x,point.y+offset,point.z),offset,'HUMAN');
+   const gap=hit?point.y-hit.point.y:Infinity;
+   if(!hit||
+      hit.solidId!=='UndertowT21D:right-low-route-ramp-negative-z'||
+      gap<=.25||gap>.27)return false;
+   const physicalProbe={x:point.x,y:hit.point.y+.24,z:point.z};
+   if(point.y-physicalProbe.y<=0||point.y-physicalProbe.y>.03)
+    return false;
+   return this.sourceNativeCharacterFootHit(physicalProbe)?.solidId===
+     hit.solidId;
   };
   if(points.length===1)return probe(points[0]!);
   for(let leg=0;leg+1<points.length;leg++){
@@ -812,6 +837,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const unfinishedB3Front=id!=='B3'||!b3InFlightFront||
    Math.hypot(b3InFlightFront.x-realFoot.x,
     b3InFlightFront.y-realFoot.y,b3InFlightFront.z-realFoot.z)>=1.5;
+  // In true #43882733229, B2 stayed physically stationary on the
+  // ORIGINAL ramp for 5+ seconds even after B3/B4 moved away. A REAL
+  // 120-tick still foot can TRY an existing ramp-local Recast goal
+  // without needing an imaginary new actor contact or floor.
+  const trulyStationaryB2Ramp=id==='B2'&&
+   (this.b441FrontGoals.get(id)?.length??0)===0&&
+   !inFlight&&Number.isSafeInteger(lastRealTravel)&&
+   lastRealTravel!==undefined&&lastRealTravel>0&&
+   this.b137NativeTick-lastRealTravel>=120&&
+   this.physicallyRejoined.has(id)&&
+   this.hasSourceFootSupport(realFoot);
   const crowdedStationaryOriginalFoot=
    (id==='B2'||id==='B3'||id==='B4')&&unfinishedB3Front&&
    Number.isSafeInteger(lastRealTravel)&&lastRealTravel!==undefined&&
@@ -837,8 +873,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(!trueUnsupported&&!crowdedStationaryOriginalFoot)return false;
   }
   if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
-      B34_GROUNDED_STALL_TICKS&&!crowdedStationaryOriginalFoot)
-   return false;
+      B34_GROUNDED_STALL_TICKS&&!crowdedStationaryOriginalFoot&&
+      !trulyStationaryB2Ramp)return false;
   if(!inFlight){
    const previous=this.b441OriginalRampLastAuditTick?.get(id)??-999999;
    if(this.b137NativeTick-previous<60)return false;
@@ -858,7 +894,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const route=this.nav.auditPath(realFoot,goal);
    if(!route.reachedTarget||route.startSnapDistanceMeters>.20||
       route.endSnapDistanceMeters>.20||
-      !this.hasSourceSupportedRoute(route,-1,realFoot,true)||
+      !this.hasSourceSupportedRoute(route,-1,realFoot,true,
+       id==='B2'&&(trulyStationaryB2Ramp||!!inFlight))||
       this.kccActorBlocksOriginalRoute(id,realFoot,route)){
     this.b441OriginalRampRejected=(this.b441OriginalRampRejected??0)+1;
     continue;
