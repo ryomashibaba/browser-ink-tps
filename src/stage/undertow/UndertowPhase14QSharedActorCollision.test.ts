@@ -6,7 +6,7 @@ import type {PlayerInput} from '../../input/PlayerInput';
 import type {ThirdPersonCamera} from '../../camera/ThirdPersonCamera';
 import {PerformanceStats} from '../../core/PerformanceStats';
 import {initializeRecastNavigation,RecastStageNavigation} from '../../navigation/RecastStageNavigation';
-import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot} from '../../app/B441OriginalSourceFrontline';
+import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals,b467MayRetryOriginalBFrontFromRealFoot} from '../../app/B441OriginalSourceFrontline';
 import {GameplayInkSystem} from '../../ink/GameplayInkSystem';
 import {SurfaceFlags} from '../../ink/types';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
@@ -19,7 +19,6 @@ import {nearestT21SourceSupportedLanding}
  from './UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
  from './UndertowPhase14QSharedActorCollision';
-import {proposeB441OriginalFrontline} from '../../app/B441OriginalSourceFrontline';
 
 const DT=1/60;
 beforeAll(async()=>{await Promise.all([initializeRapier(),initializeRecastNavigation()]);});
@@ -280,11 +279,47 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    if(rejected.length<8)rejected.push({
     goal:[...candidate.point],reason:fail,gap:firstGap});
   }
+  // The registered sloped FloorConcrete03 is a DIFFERENT solid from
+  // the flat low floor. Verify actual original-slope candidates before
+  // considering any threshold change or new source goal.
+  const rampGoals=proposeB441OriginalRampLocalGoals(w.stage,'B');
+  let rampReached=0,rampEndpoints=0,rampSupported=0;
+  const rampFirstDenied:unknown[]=[];
+  for(const candidate of rampGoals){
+   const goal=new Vec3(...candidate.point);
+   const r=nav.auditPath(new Vec3(foot.x,foot.y,foot.z),goal);
+   if(!r.reachedTarget)continue;
+   rampReached++;
+   if(r.startSnapDistanceMeters>.20||r.endSnapDistanceMeters>.20)continue;
+   rampEndpoints++;
+   let approved=r.nativePathPoints.length>0,firstGap:null|number=null;
+   for(let leg=0;leg+1<r.nativePathPoints.length;leg++){
+    if(!approved)break;
+    const a=r.nativePathPoints[leg]!,b=r.nativePathPoints[leg+1]!;
+    const n=Math.max(1,Math.ceil(
+     Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)/.30));
+    for(let k=leg===0?0:1;k<=n;k++){
+     const p=k/n,coord={x:a.x+(b.x-a.x)*p,
+      y:a.y+(b.y-a.y)*p,z:a.z+(b.z-a.z)*p};
+     const grounded=support(coord);
+     if(coord.z> -33||coord.y<2.5||coord.y>5.5||
+         !grounded.registered){approved=false;firstGap=grounded.gap;break;}
+    }
+   }
+   if(approved)rampSupported++;
+   else if(rampFirstDenied.length<5)
+    rampFirstDenied.push({goal:[...candidate.point],gap:firstGap,
+     nativePathPoints:r.nativePathPoints.length});
+  }
   console.log('T21_V28_B2_GENUINE_STOP_FOOT_ORIGINAL_SOURCE',JSON.stringify({
    fromRun:43882733229,foot,sourceSolidId:physical.hit?.solidId,
    originalPhysicalFloorGap:physical.gap,
    originalRegisteredFoot:physical.registered,
    b467MayRetryFromRealB2Foot:eligible,sourceProposals:goals.length,
+   originalRampCandidates:rampGoals.length,
+   rampRecastReached:rampReached,rampEndpointsUnder20cm:rampEndpoints,
+   rampFullOriginalRapierRouteSupported:rampSupported,
+   rampFirstDenied,
    trueRecastReached:nativeReach,nativeEndpointsUnder20cm:validEndpoints,
    fullyOriginalRapierRouteSupported:originallySupported,
    firstRejected:rejected.slice(0,5),source:'25/17/26/0',
