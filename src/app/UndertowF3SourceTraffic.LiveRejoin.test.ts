@@ -626,12 +626,19 @@ it('B2/B4 genuine 120-tick teammate congestion tries only EXISTING original ramp
  expect(source.b441OriginalRampApprovals).toBe(1);
  expect(b2.position.equals(foot)).toBe(true);
  expect(b3.position.equals(new Vec3(-5.80,4.45,-48.89))).toBe(true);
- // An unblocked or moving CPU cannot bypass the old 36-veto condition.
+ // Actual B2 that remains on the original ramp for 120+ native
+ // ticks should retry its already registered ORIGINAL ramp goals even
+ // after B3 has moved away. This does NOT authorize an unverified route
+ // or allow a B2 that resumed genuine physical movement to replan.
  source.b441OriginalRampGoal.clear();
  source.realKccRejectedSteps.clear();
  source.b137NativeTick+=60;
  b3.position.set(-15,4.45,-45);
- expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(true);
+ expect(source.b441OriginalRampApprovals).toBe(2);
+ expect(proposeB441OriginalRampLocalGoals(source.stage,'B')
+  .some(p=>new Vec3(...p.point).distance(out)<.001)).toBe(true);
+ source.b441OriginalRampGoal.clear();
  b3.position.set(-5.80,4.45,-48.89);
  source.lastMoved.set('B2',source.b137NativeTick-4);
  expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
