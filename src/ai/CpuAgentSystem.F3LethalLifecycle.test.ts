@@ -2669,6 +2669,59 @@ describe('F3 native registered-source turf weapon coverage',()=>{
   });
 });
 
+describe('genuine B-side defender reacts to actual close HUMAN source sight',()=>{
+ const setup=()=>{
+  const {system,bot}=fixture(true);
+  bot.position.set(0,3,-40);bot.role='PAINTER';
+  bot.weaponId='pulse-sprayer';
+  const enemy:any={id:'A1',team:Team.A,position:new Vec3(2,3,-40),
+   hp:100,lifeState:'ACTIVE',mobilityState:'GROUND'};
+  system.bots.push(enemy);
+  system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  system.b181OriginalCombatStageRay=vi.fn(()=>false);
+  system.b181CachedCombat=new Map();system.b181NativeFrame=100;
+  system.b181NativeHumanColliderMode='HUMAN';
+  system.b181ActualStageRays=0;
+  system.b181ActualSourceOcclusions=0;
+  system.b181VisibleSelections=0;
+  system.b212NativeLeadEnabled=false;
+  system.b213SourceCounterfireEnabled=false;
+  const human=new Vec3(5,3.68,-40);
+  const target=()=>system.chooseCombatTarget(bot,Team.A,human,true,1/60,true)
+   as Vec3|null;
+  return {system,bot,enemy,human,target};
+ };
+ it('prioritizes in-reach visible player and never fabricates HP, shot or movement',()=>{
+  const {system,bot,enemy,human,target}=setup();
+  const pos=bot.position.clone(),opponent=enemy.position.clone();
+  expect(target()?.x).toBe(5);
+  expect(system.b181OriginalCombatStageRay).toHaveBeenCalled();
+  expect(bot.position).toEqual(pos);
+  expect(enemy.position).toEqual(opponent);
+  expect(system.stats.cpuCombatHits).toBe(0);
+  human.x=8;system.b181NativeFrame++;
+  expect(target()?.x).toBe(2);
+  human.x=5;system.b181NativeFrame++;
+  expect(target()?.x).toBe(5);
+ });
+ it('cannot prefer blocked, off-side or far human; frozen behavior stays nearest',()=>{
+  const {system,human,target}=setup();
+  system.b181OriginalCombatStageRay=vi.fn((_:unknown,to:{x:number})=>
+   to.x===5);
+  expect(target()?.x).toBe(2);
+  system.b181CachedCombat.clear();
+  system.b181OriginalCombatStageRay=vi.fn(()=>false);
+  human.z=40;system.b181NativeFrame++;
+  expect(target()?.x).toBe(2);
+  human.z=-40;human.x=11.8;
+  system.b181CachedCombat.clear();system.b181NativeFrame++;
+  expect(target()?.x).toBe(2);
+  human.x=5;system.b181CachedCombat.clear();
+  system.f3dSourceGoals=null;system.b181NativeFrame++;
+  expect(target()?.x).toBe(2);
+ });
+});
+
 describe('genuine SOURCE CPU sight follows the real human collider mode',()=>{
  function nativeSight(){
   const {system,bot}=fixture(true);

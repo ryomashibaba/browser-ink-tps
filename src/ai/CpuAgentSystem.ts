@@ -3923,9 +3923,23 @@ export class CpuAgentSystem {
         attacker:bot.b213ActualAttackerId,
         actualLivingEnemyIds:candidates.map(x=>x.id)
       });
+      // An actual nearby HUMAN on the registered B-side SOURCE floor
+      // becomes a priority for real defenders. The current weapon range,
+      // original Rapier line of sight and actual actor lifecycle still
+      // authorize every aim. No cross-map pursuit or synthetic hit.
+      const nearRealHuman=humanActive&&humanTeam!==bot.team&&
+        bot.team===Team.B&&this.f3dSourceGoals!==null&&
+        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+        bot.position.z<=-33&&humanPosition.z<=-33&&
+        [humanPosition.x,humanPosition.y,humanPosition.z,
+         bot.position.x,bot.position.y,bot.position.z].every(Number.isFinite)&&
+        Math.abs(humanPosition.y-bot.position.y)<=2.4&&
+        horizontalDistanceSq(bot.position,humanPosition)<=36;
+      const preferredVisibleEnemy=hitAttacker??
+        (nearRealHuman||bot.role==='SKIRMISHER'?'HUMAN':null);
       const old=this.b181CachedCombat.get(bot.id);
       if(old&&this.b181NativeFrame-old.frame<8&&
-         (!hitAttacker||old.actorId===hitAttacker)){
+         (!preferredVisibleEnemy||old.actorId===preferredVisibleEnemy)){
         if(old.actorId!==null){
           // Current candidates require real living grounded native actors.
           const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,
@@ -3952,8 +3966,7 @@ export class CpuAgentSystem {
       }
       const result=chooseB181OriginalSourceSight(
         origin,candidates,this.b181OriginalCombatStageRay,
-        hitAttacker??(bot.role==='SKIRMISHER'?'HUMAN':null),
-        maxMainRange);
+        preferredVisibleEnemy,maxMainRange);
       this.b181ActualStageRays+=result.rays;
       this.b181ActualSourceOcclusions+=result.coverRejects;
       if(result.target)this.b181VisibleSelections++;
