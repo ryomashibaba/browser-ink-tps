@@ -45,6 +45,11 @@ function qaWorld(rampId?:string){
     get moveY(){return move;},
     get squidHeld(){return squid;},
     get jumpHeld(){return false;},
+    get sourceLiveInputAvailable(){return true;},
+    // Real SOURCE KCC consumes one physical 60Hz input frame, not T20
+    // live getters. Restore both native methods to this legacy fixture.
+    consumeMoveAxesForPlayerTick(){return {x:0,y:move};},
+    consumeSquidHeldForPlayerTick(){return squid;},
     consumeJump(){return false;}
   } as PlayerInput;
   const camera={getFlatForward:(out:Vec3)=>out.set(0,0,1)} as ThirdPersonCamera;
