@@ -304,7 +304,7 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Only previously SOURCE-authorized native destinations may be retained. */
   private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
-  /** A genuine 5-second real-foot stall can refresh the passive Recast
+  /** A genuine source 1.2-second real-foot stall can refresh passive Recast
    * steering proxy ONCE per native CPU life, never its Rapier capsule. */
   private readonly sourceCrowdRefreshedThisLife=new Set<string>();
   private readonly sourceLastPhysicalBlockedTick=new Map<string,number>();
@@ -1733,7 +1733,7 @@ export class CpuAgentSystem {
     for(const actual of report.actors){
       // This is earlier than the unchanged five-second read-only QA
       // warning; the standalone SOURCE gate still requires true foot,
-      // a long actual stop and a 300-tick window without any KCC veto.
+      // >=1.2s actual stop and a 300-tick window without a KCC veto.
       if(actual.stationarySeconds<SOURCE_CROWD_STALL_SECONDS)continue;
       const bot=this.bots.find(b=>b.id===actual.id);
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
