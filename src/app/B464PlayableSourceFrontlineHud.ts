@@ -8,6 +8,7 @@ type NativePatrol={
  b443FirstActualFrontlineArrivals:number;
  b448A3FreshLiveOriginalGoalsAuthorized:number;
  b448A3RealNativeGoalRequests:number;
+ realGroundTravelMetersByActor?:Partial<Record<'A1'|'A2'|'A3'|'B1'|'B2'|'B3'|'B4',number>>;
 };
 type NativeSnapshot={
  originalSourceSolids:number;originalPaintSurfaces:number;
@@ -33,6 +34,7 @@ export interface B464FrontlineView {
  readonly originalOfficialScoreable:0;
  readonly officialWinner:'NONE';
  readonly productionAuthorized:false;
+ readonly sourceGroundTravelB2B4:readonly [number,number]|null;
  readonly lines:string;
 }
 export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|null{
@@ -67,6 +69,13 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
   'HOLD':n.matchState==='TIME_UP'?'TIME_UP':
   n.matchState==='PLAYING'?'LIVE':'READY';
  const count=p.b441ActualGoalRequests;
+ const footTravel=p.realGroundTravelMetersByActor;
+ // Physical travel comes ONLY from the real native 60Hz KCC ledger,
+ // not a Crowd goal, optical body animation or ACTIVE roster status.
+ const sourceGroundTravelB2B4:readonly [number,number]|null=
+  footTravel&&[footTravel.B2,footTravel.B4].every(v=>
+   typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=2000)?
+   [footTravel.B2!,footTravel.B4!]:null;
  return {
   status,nativeGoalsRequested:count,
   safeOriginalCandidates:p.b441StrictGoalsAvailable,
@@ -78,6 +87,7 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
   source:'25/17/26/0',cpuCount:7,
   originalOpponentRoutesCertified:0,originalOfficialScoreable:0,
   officialWinner:'NONE',productionAuthorized:false,
+  sourceGroundTravelB2B4,
   // Put the actionable native difference (REQUESTED vs ARRIVED) and
   // source-only route HOLDS first. The genuine B487 0/16 cross-team
   // query is a separate read-only QA observation, NOT this B441 metric:
@@ -94,6 +104,20 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
    'REQUEST ≠ ARRIVAL · SOURCE ONLY / UNSCORED'
  };
 }
+/** The PLAYER screen needs actual motion and native arrival, not all
+ * QA route counters. F8 remains authoritative for the full diagnostics.
+ * These are cumulative real KCC meters, never "moving now" or 4v4 proof. */
+export function b464PlayerFacingSourceFrontlineLines(
+ view:B464FrontlineView
+):string{
+ const travel=view.sourceGroundTravelB2B4;
+ return 'ORIGINAL CPU · '+view.status+
+  ' · REAL ARRIVALS '+view.actualOriginalArrivals+'\n'+
+  (travel?'B2 '+travel[0].toFixed(1)+'m · B4 '+
+   travel[1].toFixed(1)+'m TRAVEL':'NATIVE FOOT TRAVEL UNVERIFIED')+
+  ' · OPPONENT ROUTE HOLD';
+}
+
 /** Opt-in ONLY. Reads the existing world at 1 Hz, never drives it. */
 export function mountB464SourceFrontlineHud(
  target:HTMLElement,readNative:()=>unknown
@@ -123,7 +147,12 @@ export function mountB464SourceFrontlineHud(
    root.dataset.t21B464NativeGoalRequests='NOT_VERIFIED';
    return;
   }
-  root.textContent=view.lines;
+  // B245 is the existing user-controlled PLAYER / F8 QA layout.
+  // This switches presentation only, never the source gameplay.
+  const player=target.dataset.t21B245Presentation==='PLAYER';
+  root.textContent=player?
+   b464PlayerFacingSourceFrontlineLines(view):view.lines;
+  root.dataset.t21B464Display=player?'PLAYER':'QA';
   root.dataset.t21B464State=view.status;
   root.dataset.t21B464NativeGoalRequests=String(view.nativeGoalsRequested);
   root.dataset.t21B464OriginalArrivals=String(view.actualOriginalArrivals);

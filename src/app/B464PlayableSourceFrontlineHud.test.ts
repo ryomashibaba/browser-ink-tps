@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {b464RealSourceFrontlineView} from './B464PlayableSourceFrontlineHud';
+import {b464RealSourceFrontlineView,
+ b464PlayerFacingSourceFrontlineLines} from './B464PlayableSourceFrontlineHud';
 const evidence=()=>({
  originalSourceSolids:25,originalPaintSurfaces:17,
  originalSourceNavigationLinks:26,sourceScoreablePromotions:0,
@@ -12,7 +13,8 @@ const evidence=()=>({
    b441ActualGoalRequests:12,b441UnsafeOrUnreachableHolds:125,
    b443FirstActualFrontlineArrivals:3,
    b448A3FreshLiveOriginalGoalsAuthorized:5,
-   b448A3RealNativeGoalRequests:4
+   b448A3RealNativeGoalRequests:4,
+   realGroundTravelMetersByActor:{B2:27.531335,B4:29.340056}
   }}
 });
 describe('B464 real player-visible optional native CPU frontline',()=>{
@@ -89,5 +91,40 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
    const s=evidence();edit(s);
    expect(b464RealSourceFrontlineView(s)).toBeNull();
   }
+ });
+});
+
+describe('B464 real SOURCE native PLAYER uncluttered Rapier motion',()=>{
+ it('shows actual cumulative CPU travel and keeps F8 QA full counters',()=>{
+  const v=b464RealSourceFrontlineView(evidence())!;
+  expect(b464PlayerFacingSourceFrontlineLines(v)).toBe(
+   'ORIGINAL CPU · LIVE · REAL ARRIVALS 3\n'+
+   'B2 27.5m · B4 29.3m TRAVEL · OPPONENT ROUTE HOLD');
+  expect(v.lines).toContain('GOAL REQUESTS 12');
+  expect(v.lines).toContain('UNSAFE / UNREACHABLE HELD 125');
+  expect(b464PlayerFacingSourceFrontlineLines(v)).not.toContain('GOAL REQUESTS');
+ });
+ it('does not infer movement from ACTIVE or fake nonfinite native travel',()=>{
+  const s=evidence();
+  delete s.cpu.sourcePatrol.realGroundTravelMetersByActor;
+  expect(b464PlayerFacingSourceFrontlineLines(
+   b464RealSourceFrontlineView(s)!)).toContain('NATIVE FOOT TRAVEL UNVERIFIED');
+  for(const [B2,B4] of [[NaN,2],[12,Infinity],[-1,5],[2001,7]]){
+   s.cpu.sourcePatrol.realGroundTravelMetersByActor={B2,B4};
+   expect(b464RealSourceFrontlineView(s)?.sourceGroundTravelB2B4)
+    .toBeNull();
+  }
+ });
+ it('preserves true STAGING, TIME_UP and safe STOP classifications',()=>{
+  const s=evidence();
+  s.matchState='STAGING';
+  expect(b464PlayerFacingSourceFrontlineLines(
+   b464RealSourceFrontlineView(s)!)).toContain('ORIGINAL CPU · READY');
+  s.matchState='TIME_UP';
+  expect(b464PlayerFacingSourceFrontlineLines(
+   b464RealSourceFrontlineView(s)!)).toContain('ORIGINAL CPU · TIME_UP');
+  s.stopReason='PHYSICS_STOP';
+  expect(b464PlayerFacingSourceFrontlineLines(
+   b464RealSourceFrontlineView(s)!)).toContain('ORIGINAL CPU · HOLD');
  });
 });
