@@ -5,7 +5,9 @@ import {sourceHumanFullRoundPrestartGuard,sourcePlayPortalDestinations,
  sourcePlayFrontlineResearchUrl} from './SourcePlayPortal';
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
- b245SourceFullRoundA1Choice,b245PlayerSightlineCss,b245NativeStopReason,
+ b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
+ b245RealFrontlineLiveHudDockCss,b480FocusedSourcePracticeCss,
+ b245NativeStopReason,
  b245LocalSourceBuildProvenance,
  b388VisibleNativeDescentWarning,
  b388SuppressDuplicateRampWarning,b245RealSourceLocalRampGuide,
@@ -65,6 +67,53 @@ describe('B245 real source PLAYER weapon guidance not clipped',()=>{
    live+'&t21QaInput=deterministic',live+'&production=true',
    live+'&scoreable=true'
   ])expect(b245PlayerSightlineCss(q)).toBe('');
+ });
+});
+
+describe('Issue #17 genuine B475 PLAYING camera sightline dock',()=>{
+ const url='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B112=humanGround&t21W10B183=firstDropPlay&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline';
+ it('moves ONLY the existing native compact HUD away from center at large viewports',()=>{
+  const css=b245RealFrontlineLiveHudDockCss(url);
+  expect(css).toContain('@media(min-width:1200px) and (min-height:780px)');
+  expect(css).toContain('[data-t21-b245-presentation="PLAYER"]');
+  expect(css).toContain('[data-t21-b338-phase="PLAYING"]');
+  expect(css).toContain(':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])');
+  expect(css).toContain('#t21-f3-practice-hud');
+  expect(css).toContain('left:14px!important');
+  expect(css).toContain('top:clamp(184px,22vh,220px)!important');
+  expect(css).toContain('transform:none!important');
+  // The actual HP/ink/timer, score disclaimer, weapon guidance, danger
+  // and splat must remain attached and continuously updated by native HUD.
+  expect(css).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  expect(css).not.toMatch(/pointer-events\s*:\s*none|overflow\s*:\s*hidden/);
+  expect(css).not.toContain('source-score');
+ });
+ it('does not reintroduce Issue #11 B25 start obstruction or alter READY/QA',()=>{
+  const dock=b245RealFrontlineLiveHudDockCss(url);
+  expect(dock).not.toContain('#t21-f3-b25-start');
+  expect(dock).not.toContain('#t21-f3-b245-view-toggle');
+  expect(dock).not.toContain('z-index:');
+  const f8=b480FocusedSourcePracticeCss(url);
+  expect(f8).toContain('right:14px!important;bottom:200px!important');
+  expect(f8).not.toContain(
+   '[data-t21-b338-phase="PLAYING"] #t21-f3-b245-view-toggle');
+ });
+ it('is fail-closed outside genuine B475 SOURCE user mode',()=>{
+  for(const [key,value] of [
+   ['t21W10B441','none'],['t21W10B192','none'],
+   ['t21W10B203','off'],['t21QaInput','deterministic'],
+   ['t21W10B384','loadoutCircuit'],['t21W10B193','allyCoop'],
+   ['t21Play','production'],['t21QaDrive','lab'],
+   ['production','true'],['scoreable','true'],
+   ['t21Presentation','qa']
+  ] as const){
+   const q=new URLSearchParams(url);
+   q.set(key,value);
+   expect(b245RealFrontlineLiveHudDockCss('?'+q.toString())).toBe('');
+  }
  });
 });
 

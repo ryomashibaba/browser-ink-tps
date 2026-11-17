@@ -144,6 +144,34 @@ export function b245PlayerSightlineCss(search:string):string{
   '}'
  ].join('');
 }
+/**
+ * Issue #17: the genuine B475 Chromium 1600x900 PLAYING capture placed the
+ * 306px-wide native clock/HP/ink/weapon HUD at x≈648..952,y≈14..273,
+ * obscuring the stage's upper central sightline. Keep every native value
+ * and danger/HP notice: dock the SAME read-only card on an unused left
+ * sightline only when the existing B476 physical match is truly compact.
+ *
+ * B476's compact state is already derived from genuine PLAYING + pointer
+ * lock + ARMED/RUNNING/CLEAR, never inferred here. :has() observes it
+ * without a new game-loop write, physics change, camera adjustment, UI
+ * clone, or readiness shortcut. READY/PAUSE, F8 QA, small viewports and
+ * other SOURCE modes keep their existing layouts.
+ */
+export function b245RealFrontlineLiveHudDockCss(search:string):string{
+ const q=new URLSearchParams(search);
+ if(!b475RealFrontlineReadyMode(q)||q.has('production')||
+    q.has('scoreable')||q.get('t21Presentation')==='qa')return '';
+ const live='#ui-root[data-t21-b245-presentation="PLAYER"]'+
+  '[data-t21-b338-phase="PLAYING"]'+
+  ':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])';
+ return [
+  '@media(min-width:1200px) and (min-height:780px){',
+  live+' #t21-f3-practice-hud',
+  '{left:14px!important;top:clamp(184px,22vh,220px)!important;'+
+   'transform:none!important;width:min(306px,calc(100vw - 28px))!important;}',
+  '}'
+ ].join('');
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {
@@ -202,6 +230,9 @@ export function installB245SourcePresentation(
  style.textContent+=b480FocusedSourcePracticeCss(window.location.search);
  // Last source-only style: PLAYER sightline while PLAYING, F8 QA unaltered.
  style.textContent+=b245PlayerSightlineCss(window.location.search);
+ // #17: authentic B475 live compact HUD shifts off center at roomy
+ // viewports; READY START, F8 QA, collision and native values untouched.
+ style.textContent+=b245RealFrontlineLiveHudDockCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
