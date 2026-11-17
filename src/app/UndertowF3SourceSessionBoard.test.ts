@@ -223,12 +223,13 @@ describe('T21 V28 same real 150 native-tick respawn authority for game and round
   f.tick=610;f.alive=false;
   expect(real.observe(f)).toMatchObject({valid:true,lastNativeDeathTick:610,
    real150TickReturns:0});
-  f.tick=759;
-  expect(nativeSourceHumanRespawnElapsedTicks(610,f.tick)).toBe(149);
+  f.tick=758;
+  expect(nativeSourceHumanRespawnElapsedTicks(610,f.tick)).toBe(148);
   expect(real.observe(f).real150TickReturns).toBe(0);
-  // A counter forged one tick early is not an authenticated native return.
-  f.alive=true;f.respawns=1;
-  expect(real.observe({...f,tick:760})).toMatchObject({
+  // A counter forged at native elapsed tick 149 must fail.
+  f.tick=759;f.alive=true;f.respawns=1;
+  expect(nativeSourceHumanRespawnElapsedTicks(610,f.tick)).toBe(149);
+  expect(real.observe(f)).toMatchObject({
    valid:false,real150TickReturns:0
   });
  });
