@@ -49,7 +49,8 @@ try {
       if (dot(p,p) > 1.0) discard;
       if (vAtlasPos.x < vRectMin.x || vAtlasPos.y < vRectMin.y ||
           vAtlasPos.x > vRectMax.x || vAtlasPos.y > vRectMax.y) discard;
-      fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+      // Production Team.A atlas channels: owner=1, coverage=1, wetness=1.
+      fragColor = vec4(1.0, 1.0, 1.0, 1.0);
     }`;
 
   const makeShader = (type, source) => {
@@ -132,7 +133,7 @@ try {
     const y = Math.floor((1 - point.y) * 512);
     gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
     if (gl.getError() !== gl.NO_ERROR) throw new Error('WebGL readPixels error');
-    return pixel[0] > 235 && pixel[1] < 30 && pixel[2] < 30;
+    return pixel[0] > 235 && pixel[1] > 235 && pixel[2] > 235;
   };
   let verifiedBlank = 0;
   for (let v = 1.1; v <= 1.9; v += 0.1) {
