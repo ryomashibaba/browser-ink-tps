@@ -60,6 +60,7 @@ function fixture(originalF3: boolean) {
   system.sourceCrowdRefreshedThisLife = new Set();
   system.sourceLastPhysicalBlockedTick = new Map();
   system.sourceNativeMotionTick = 0;
+  system.b35LastNativeTarget = new Map();
   system.phase14eFirstDrop = { cancel: vi.fn() };
   system.phase14qGroundCollision = {
     removeRealCpuFoot: vi.fn()
