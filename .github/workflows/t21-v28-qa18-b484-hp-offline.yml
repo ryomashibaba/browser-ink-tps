@@ -23,6 +23,7 @@ jobs:
           node --check scripts/t21-b440-short-native-original-foot.mjs
           node --check scripts/t21-v28-qa-b484-hud-gate.mjs
           node --check scripts/t21-v28-qa-real-hp-witness.mjs
+          node --check scripts/t21-v28-qa-real-b2b4-diff.mjs
       - name: Verify real B484 modes and native HP provenance never create synthetic PASS
         run: |
-          node --test scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs
+          node --test scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs
