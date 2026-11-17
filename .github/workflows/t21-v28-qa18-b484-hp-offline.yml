@@ -1,0 +1,29 @@
+name: T21 V28 QA18 native B484 HUD and combat provenance fast
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-b484-native-20261117
+    paths:
+      - '.github/workflows/t21-v28-qa18-b484-hp-offline.yml'
+permissions:
+  contents: read
+jobs:
+  qa18-b484-hp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate actual Chromium SOURCE runner and QA modules syntax
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --check scripts/t21-v28-qa-b484-hud-gate.mjs
+          node --check scripts/t21-v28-qa-real-hp-witness.mjs
+          node --check scripts/t21-v28-qa-real-b2b4-diff.mjs
+      - name: Verify real B484 modes and native HP provenance never create synthetic PASS
+        run: |
+          node --test scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs

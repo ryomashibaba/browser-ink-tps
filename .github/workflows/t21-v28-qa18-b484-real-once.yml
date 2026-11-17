@@ -1,0 +1,68 @@
+name: T21 V28 QA18 one genuine post CPU-fix B484 to HP gate
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-b484-native-20261117
+    paths:
+      - '.github/workflows/t21-v28-qa18-b484-real-once.yml'
+permissions:
+  contents: read
+concurrency:
+  group: t21-v28-qa18-post-cpu-real-once-20261117
+  cancel-in-progress: false
+jobs:
+  genuine-original-720:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Strict SOURCE HEAD and QA-only file ownership guard
+        env:
+          PINNED_SOURCE: 5edbc2d07d40d812e3b92fb5122d8f9b4ca5ca2c
+        run: |
+          git cat-file -e "$PINNED_SOURCE^{commit}"
+          git diff --name-only "$PINNED_SOURCE" HEAD | while IFS= read -r f; do
+            case "$f" in
+              scripts/t21-b440-short-native-original-foot.mjs|scripts/t21-v28-qa-b484-hud-gate.mjs|scripts/t21-v28-qa-b484-hud-gate.test.mjs|scripts/t21-v28-qa-real-hp-witness.mjs|scripts/t21-v28-qa-real-hp-witness.test.mjs|.github/workflows/t21-v28-qa18-b484-hp-offline.yml|.github/workflows/t21-v28-qa18-b484-real-once.yml) ;;
+              *) echo "HOLD_OTHER_OWNER_CHANGED $f"; exit 1 ;;
+            esac
+          done
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+      - name: One-time scoped B484 and actual HP provenance regression
+        run: node --test scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs
+      - name: Install original pinned runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build same original SOURCE game
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: One ACTUAL Chromium 7CPU 720 native ticks after CPU PR36
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          T21_B440_OUT: /tmp/t21-v28-qa18-b484-after-cpu
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Independent real RAW first blocker and original grounded mobility witness
+        if: always()
+        run: |
+          DIR=/tmp/t21-v28-qa18-b484-after-cpu
+          if test -f "$DIR/b440-short-real-original-human-foot.json"; then
+            node scripts/t21-v28-qa-real-source-acceptance.mjs "$DIR/b440-short-real-original-human-foot.json" "$DIR/qa-real-source-acceptance.json"
+            if test -f "$DIR/b454-native-b2-b4-physical-60hz.json" && test -f "$DIR/b484-real-source-a1-foot-60hz.json"; then
+              node scripts/t21-v28-qa-native-foot-a1.mjs "$DIR/b440-short-real-original-human-foot.json" "$DIR/b454-native-b2-b4-physical-60hz.json" "$DIR/b484-real-source-a1-foot-60hz.json" "$DIR/qa-real-cpu-foot-and-a1.json"
+            fi
+          else
+            echo "HOLD: no genuine native SOURCE RAW; no gameplay PASS"
+          fi
+      - name: Upload all genuine visual RAW, CPU 60Hz feet, HP and real HUD DOM on HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-v28-qa18-post-cpu-b484-original-once
+          path: /tmp/t21-v28-qa18-b484-after-cpu/
+          if-no-files-found: warn
+          retention-days: 14
