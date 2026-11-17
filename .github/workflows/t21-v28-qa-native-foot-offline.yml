@@ -1,0 +1,27 @@
+name: T21 V28 QA native foot A1 independent offline regression
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-realplay-lot2-20261117
+    paths:
+      - .github/workflows/t21-v28-qa-native-foot-offline.yml
+permissions:
+  contents: read
+jobs:
+  qa-native-read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify read-only 60Hz native witness parsers are syntax valid
+        run: |
+          node --check scripts/t21-v28-qa-native-foot-a1.mjs
+          node --check scripts/t21-v28-qa-real-source-acceptance.mjs
+      - name: Regression - native CPU ground stalls and A1 ordered follow-through
+        run: |
+          node --test scripts/t21-v28-qa-native-foot-a1.test.mjs scripts/t21-v28-qa-real-source-acceptance.test.mjs
