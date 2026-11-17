@@ -54,6 +54,10 @@ export class ThirdPersonCamera {
   private sourcePreferencesEnabled = false;
   private sourceControlToast:HTMLDivElement|null=null;
   private sourceControlToastUntilMs=0;
+  // A rejected Pointer Lock toast must remain visible while unlocked;
+  // otherwise update() immediately hid the human-facing retry advice.
+  private sourceToastVisibleWhileUnlocked=false;
+  private sourceLockRequestPending=false;
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
@@ -220,8 +224,9 @@ export class ThirdPersonCamera {
 
   public update(playerPosition: Vec3, recoveryDtSeconds = 0): void {
     if(this.sourceControlToast&&
-       (document.pointerLockElement!==this.canvas||
-        performance.now()>=this.sourceControlToastUntilMs))
+       (performance.now()>=this.sourceControlToastUntilMs||
+        (!this.sourceToastVisibleWhileUnlocked&&
+         document.pointerLockElement!==this.canvas)))
       this.sourceControlToast.hidden=true;
     const pitchRadians = this.pitch * Math.PI / 180;
     const yawRadians = this.yaw * Math.PI / 180;
@@ -443,8 +448,11 @@ export class ThirdPersonCamera {
   }
 
   /** Temporary in-game feedback for REAL user settings, not match events. */
-  private showSourceControlToast(message:string):void{
+  private showSourceControlToast(
+    message:string,visibleWhileUnlocked=false
+  ):void{
     if(!this.sourcePracticeControls)return;
+    this.sourceToastVisibleWhileUnlocked=visibleWhileUnlocked;
     if(!this.sourceControlToast){
       const toast=document.createElement('div');
       toast.id='t21-f3-source-camera-controls';
@@ -471,10 +479,21 @@ export class ThirdPersonCamera {
   private bind(): void {
     document.addEventListener('pointerlockchange',()=>{
       if(this.sourcePracticeControls&&
-         document.pointerLockElement===this.canvas)
+         document.pointerLockElement===this.canvas){
+        this.sourceLockRequestPending=false;
         this.showSourceControlToast(
          'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · SHIFT SQUID · SPACE JUMP');
-      else if(this.sourceControlToast)this.sourceControlToast.hidden=true;
+      }else if(this.sourceControlToast&&!this.sourceToastVisibleWhileUnlocked)
+        this.sourceControlToast.hidden=true;
+    });
+    document.addEventListener('pointerlockerror',()=>{
+      // Browsers with void-returning requestPointerLock signal denial as
+      // this event instead of a Promise rejection. Our request only.
+      if(this.sourcePracticeControls&&this.sourceLockRequestPending){
+        this.sourceLockRequestPending=false;
+        this.showSourceControlToast(
+         'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+      }
     });
     // The Q shoulder button is a VIEW option, never a movement, aim-assist
     // or collision bypass. It is disabled for all non-F3 routes.
@@ -534,15 +553,21 @@ export class ThirdPersonCamera {
           // Some browsers still return void for requestPointerLock(), rather
           // than a Promise. Calling .catch on void raised after the click and
           // made SOURCE camera re-entry seem broken. Both APIs are supported.
+          this.sourceLockRequestPending=true;
           try{
             const lock=this.canvas.requestPointerLock();
             if(lock&&typeof lock.catch==='function')
               void lock.catch(()=>{
-                if(document.pointerLockElement!==this.canvas)
-                  this.showSourceControlToast('MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN');
+                if(document.pointerLockElement!==this.canvas){
+                  this.sourceLockRequestPending=false;
+                  this.showSourceControlToast(
+                   'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+                }
               });
           }catch{
-            this.showSourceControlToast('MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN');
+            this.sourceLockRequestPending=false;
+            this.showSourceControlToast(
+             'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
           }
         }else{
           // Frozen T20/default pointer-lock semantics stay unchanged.
