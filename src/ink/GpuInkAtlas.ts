@@ -23,7 +23,7 @@ import {
   Texture
 } from 'playcanvas';
 import { drainInkBrushBatch, indexInkBrushSurfaces } from '../core/InkBrushHotPath';
-import { packInkBrushRasterRuns, type InkStreamGroup } from '../core/InkBrushRasterStream';
+import { packInkBrushRasterRuns, InkBrushRasterScratch, type InkStreamGroup } from '../core/InkBrushRasterStream';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
 import type { PaintRasterRun } from './GameplayInkSystem';
 import type { PaintSurface } from './PaintSurface';
@@ -121,6 +121,8 @@ export class GpuInkAtlas {
 
   private readonly pending: PendingInkEvent[] = [];
   private readonly brushSurfaceIndex: ReadonlyMap<string, PaintSurface>;
+  // Only this atlas uses this scratch; pack->mesh.update is synchronous.
+  private readonly rasterScratch = new InkBrushRasterScratch();
   private readonly cameraEntity: Entity;
   private readonly batchEntity: Entity;
   private readonly mesh: Mesh;
@@ -288,7 +290,7 @@ export class GpuInkAtlas {
       groups.push({ surface, event, paintableRuns });
     }
 
-    const buffers = packInkBrushRasterRuns(groups);
+    const buffers = packInkBrushRasterRuns(groups, this.rasterScratch);
     if (!buffers) {
       return { events: completedEvents, buildMs: performance.now() - started };
     }
@@ -320,6 +322,7 @@ export class GpuInkAtlas {
   }
 
   public destroy(): void {
+    this.rasterScratch.release();
     this.texture.destroy();
     this.renderTarget.destroy();
     this.batchEntity.destroy();

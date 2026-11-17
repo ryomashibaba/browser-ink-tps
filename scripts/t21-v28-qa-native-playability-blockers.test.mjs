@@ -164,3 +164,62 @@ test('near enemy is not automatically a direct HP hit, respawn or full source 4v
  assert.equal(q.actual150TickRespawnCertified,false);
  assert.equal(q.originalF4Certified,false);
 });
+
+test('QA runner uses the true top-level CPU Rapier/Recast witness, never nested cpu data',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const runner=readFileSync(new URL('./t21-b440-short-native-original-foot.mjs',
+  import.meta.url),'utf8');
+ assert.match(runner,
+  /auditSourceRealGameplayBlockers\(\s*proof,b454Report,actual\.cpuSourceNativeGroundMotion\?\?null,\s*after\.cpuSourceNativeGroundMotion\?\?null\)/);
+ assert.doesNotMatch(runner,/actual\.cpu\?\.cpuSourceNativeGroundMotion/);
+});
+test('real start/end KCC window counters yield native rejection deltas, not fake movement',()=>{
+ const x=make();
+ x.proof.k2WindowProvenance.firstTick=1068;
+ x.proof.k2WindowProvenance.lastTick=1788;
+ const old=structuredClone(x.actualNativeMotion);
+ const latest=structuredClone(old);
+ latest.byActor.B2.rapierRejected=9;
+ latest.byActor.B2.crowdProposals=30;
+ const b2=x.proof.b441NativeEvidence.b445LastOriginalGateByCpu[0];
+ b2.strictlyApprovedGoals=2;
+ b2.runtimeTrueOriginalGoalRequests=12;
+ b2.runtimeNoOriginalFrontGoals=0;
+ const a=auditSourceRealGameplayBlockers(x.proof,x.trace,latest,old);
+ assert.equal(a.byActor.B2.sameRunKccInterval.available,true);
+ assert.equal(a.byActor.B2.sameRunKccInterval.intervalNativeTicks,720);
+ assert.equal(a.byActor.B2.sameRunKccInterval.genuineNativeCounterDeltas.rapierRejected,9);
+ assert.equal(a.byActor.B2.sameRunKccInterval.genuineNativeCounterDeltas.rapierAcceptedMoving,0);
+ assert.equal(a.byActor.B2.observedGate,
+  'HOLD_ACTUAL_RAPIER_KCC_VETO_WITH_APPROVED_SOURCE_GOAL');
+ assert.equal(a.byActor.B2.sameRunKccInterval.actualActorMovementFromCounterAloneCertified,false);
+ assert.equal(a.byActor.B4.observedGate,'HOLD_STRICT_ORIGINAL_GOALS_ALL_DENIED');
+ assert.equal(a.originalF4Certified,false);
+});
+test('admitted real source goal but zero native Crowd proposals is separate from KCC refusal',()=>{
+ const x=make();
+ x.proof.k2WindowProvenance.firstTick=1068;
+ x.proof.k2WindowProvenance.lastTick=1788;
+ const old=structuredClone(x.actualNativeMotion);
+ const newest=structuredClone(old);
+ const b2=x.proof.b441NativeEvidence.b445LastOriginalGateByCpu[0];
+ b2.strictlyApprovedGoals=1;
+ b2.runtimeTrueOriginalGoalRequests=5;b2.runtimeNoOriginalFrontGoals=0;
+ const r=auditSourceRealGameplayBlockers(x.proof,x.trace,newest,old);
+ assert.equal(r.byActor.B2.observedGate,
+  'HOLD_NO_TRUE_CROWD_PROPOSALS_WITH_APPROVED_SOURCE_GOAL');
+ assert.equal(r.formal4v4Certified,false);
+});
+test('unknown previous counters and non-monotonic KCC never pass as real physics evidence',()=>{
+ const x=make();x.proof.k2WindowProvenance.firstTick=1068;
+ x.proof.k2WindowProvenance.lastTick=1788;
+ const old=structuredClone(x.actualNativeMotion);
+ const newest=structuredClone(old);
+ newest.byActor.B2.crowdNoStep=2;
+ const bad=auditSourceRealGameplayBlockers(x.proof,x.trace,newest,old);
+ assert.equal(bad.byActor.B2.sameRunKccInterval.available,false);
+ assert.match(bad.byActor.B2.sameRunKccInterval.reason,/NONMONOTONIC/);
+ const absent=auditSourceRealGameplayBlockers(x.proof,x.trace,newest,null);
+ assert.equal(absent.byActor.B2.sameRunKccInterval.available,false);
+ assert.equal(absent.byActor.B2.movementImprovedAfterNewCpuCodeCertified,false);
+});

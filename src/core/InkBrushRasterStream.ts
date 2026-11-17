@@ -49,7 +49,57 @@ export interface InkStreamGroup {
  * It removes one quad object, one vertex tuple and four vertex objects per
  * accepted run, while retaining the existing 16,383-quad GPU index budget.
  */
-export function packInkBrushRasterRuns(groups: readonly InkStreamGroup[]): InkBrushGpuBuffers | null {
+/**
+ * Bounded CPU submission scratch for one GpuInkAtlas.
+ *
+ * PlayCanvas 2.22.1 Mesh.update() synchronously copies submitted streams into
+ * its VertexBuffer/IndexBuffer (scene/mesh.js: _updateVertexBuffer and
+ * _updateIndexBuffer). Reuse is safe ONLY after that same mesh.update() ends.
+ * Never share one scratch between two live atlases or retain a returned view
+ * across subsequent pack calls. The ordinary no-scratch API stays independent.
+ */
+export class InkBrushRasterScratch {
+  private reserved = 0;
+  private storage: Omit<InkBrushGpuBuffers, 'quadCount'> | null = null;
+
+  public get reservedQuads(): number {
+    return this.reserved;
+  }
+
+  public reserve(requiredQuads: number): Omit<InkBrushGpuBuffers, 'quadCount'> {
+    if (!Number.isInteger(requiredQuads) || requiredQuads < 1 ||
+        requiredQuads > 16_383) {
+      throw new Error('INK_GPU_QUAD_BUDGET_EXCEEDED');
+    }
+    if (this.storage && requiredQuads <= this.reserved) return this.storage;
+
+    // Grow geometrically: no allocation churn when brush sizes vary within
+    // an established workload. 16,383 cap bounds retained bytes to <3 MiB.
+    let next = Math.max(16, this.reserved);
+    while (next < requiredQuads) next = Math.min(16_383, next * 2);
+    this.storage = {
+      positions: new Float32Array(next * 12),
+      uvs: new Float32Array(next * 8),
+      rectMins: new Float32Array(next * 8),
+      rectMaxs: new Float32Array(next * 8),
+      colors: new Uint8Array(next * 16),
+      indices: new Uint16Array(next * 6)
+    };
+    this.reserved = next;
+    return this.storage;
+  }
+
+  /** Release the retained arrays when this atlas is destroyed. */
+  public release(): void {
+    this.storage = null;
+    this.reserved = 0;
+  }
+}
+
+export function packInkBrushRasterRuns(
+  groups: readonly InkStreamGroup[],
+  scratch?: InkBrushRasterScratch
+): InkBrushGpuBuffers | null {
   let capacity = 0;
   for (const group of groups) capacity += group.paintableRuns.length;
   if (capacity === 0) return null;
@@ -58,12 +108,15 @@ export function packInkBrushRasterRuns(groups: readonly InkStreamGroup[]): InkBr
 
   // Accepted row-runs are normally emitted only inside a real brush. Reserve
   // at most one quad per approved run; trim if defensive INK bounds reject it.
-  const positions = new Float32Array(capacity * 12);
-  const uvs = new Float32Array(capacity * 8);
-  const rectMins = new Float32Array(capacity * 8);
-  const rectMaxs = new Float32Array(capacity * 8);
-  const colors = new Uint8Array(capacity * 16);
-  const indices = new Uint16Array(capacity * 6);
+  // Reuse one bounded set of underlying TypedArrays across completed
+  // GPU submissions. Always return exact-length views for Mesh.set*().
+  const saved = scratch?.reserve(capacity);
+  const positions = saved?.positions ?? new Float32Array(capacity * 12);
+  const uvs = saved?.uvs ?? new Float32Array(capacity * 8);
+  const rectMins = saved?.rectMins ?? new Float32Array(capacity * 8);
+  const rectMaxs = saved?.rectMaxs ?? new Float32Array(capacity * 8);
+  const colors = saved?.colors ?? new Uint8Array(capacity * 16);
+  const indices = saved?.indices ?? new Uint16Array(capacity * 6);
   let quadCount = 0;
   let p = 0;
   let uv = 0;

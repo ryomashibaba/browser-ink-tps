@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Vec3 } from 'playcanvas';
 import { GameplayInkSystem } from './GameplayInkSystem';
 import { buildInkBrushRasterQuads, type InkBrushQuad } from './InkBrushRasterGeometry';
+import { allocateSurfaceAtlas } from './AtlasAllocator';
 import { localMetersToBrushAtlas } from './AtlasCoordinates';
 import { PaintSurface } from './PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team, type PaintEvent } from './types';
@@ -152,5 +153,81 @@ describe('T21 V28 GPU brush / CPU cell-authority geometry (#16)', () => {
     expect(buildInkBrushRasterQuads(s, event, second.paintableRuns).length)
       .toBeGreaterThan(0);
     expect(gameplay.snapshot()).toMatchObject({ areaA: 0, areaB: 0 });
+  });
+});
+
+/**
+ * At high density, the persistent ink atlas may need a packing fallback.
+ * 0.125m/cell at the old 108.8 ppm fallback creates 13.6 pixels/cell:
+ * that puts a paintable/forbidden boundary BETWEEN actual texture pixels,
+ * so the material's half-texel LINEAR clamp cannot keep them independent.
+ */
+describe('T21 V28 SOURCE atlas fallback has exact raster-cell pixel borders (#16)', () => {
+  function fineSurface(id: string): PaintSurface {
+    return new PaintSurface(id, new Vec3(), new Vec3(1, 0, 0),
+      new Vec3(0, 0, -1), 4, 4, 0.125,
+      SurfaceFlags.Paintable | SurfaceFlags.Floor, 16);
+  }
+
+  // Models the very same GPU LINEAR sampling kernel at the blocked side,
+  // assuming only texels whose centers are in the left cell contain ink.
+  // This is a pixel-grid proof, not a claim of a separate Chromium run.
+  function forbiddenBorderLeak(cellBorderPx: number): number {
+    const probePx = cellBorderPx + 0.5;
+    const leftCenter = Math.floor(probePx - 0.5) + 0.5;
+    const rightCenter = leftCenter + 1;
+    const leftColor = leftCenter < cellBorderPx ? 1 : 0;
+    const rightColor = rightCenter < cellBorderPx ? 1 : 0;
+    return leftColor * (rightCenter - probePx) +
+      rightColor * (probePx - leftCenter);
+  }
+
+  it('fits two registered 0.125m-cell surfaces with integer texel boundaries even after fallback', () => {
+    const a = fineSurface('SOURCE-A');
+    const b = fineSurface('SOURCE-B');
+    const placements = allocateSurfaceAtlas([a, b], 1024, 128, 8);
+    const rectA = placements.get(a.id)!;
+    const rectB = placements.get(b.id)!;
+    // At 128 ppm, the two 4m surfaces cannot fit the 1024px page.
+    // Rather than using the old 108.8 fractional fallback, use the next
+    // compatible density without adding a surface, mask or path.
+    expect(rectA.pixelsPerMeter).toBe(104);
+    expect(rectB.pixelsPerMeter).toBe(rectA.pixelsPerMeter);
+    expect(rectA.pixelsPerMeter * a.cellSize).toBe(13);
+    for (const [surface, rect] of [[a, rectA], [b, rectB]] as const) {
+      for (let cell = 0; cell <= surface.widthCells; cell++) {
+        expect(Number.isInteger(rect.x + cell * surface.cellSize * rect.pixelsPerMeter))
+          .toBe(true);
+      }
+      for (let cell = 0; cell <= surface.heightCells; cell++) {
+        expect(Number.isInteger(rect.y + cell * surface.cellSize * rect.pixelsPerMeter))
+          .toBe(true);
+      }
+    }
+    expect(forbiddenBorderLeak(13)).toBe(0);
+    // This shows the root cause that the new packing strategy removes.
+    expect(forbiddenBorderLeak(0.125 * 128 * 0.85)).toBeGreaterThan(0.1);
+  });
+
+  it('keeps denied CPU owner cells outside the corresponding GPU brush runs with aligned atlas sampling', () => {
+    const a = fineSurface('real-INK-paintable');
+    const b = fineSurface('second-real-surface');
+    a.atlasRect = allocateSurfaceAtlas([a, b], 1024, 128, 8).get(a.id)!;
+    const forbiddenX = 8;
+    const row = 7;
+    a.flagsGrid[a.index(forbiddenX, row)] = SurfaceFlags.Floor;
+    const event: PaintEvent = {
+      ...paintEvent(a.id), centerU: 0.9375, centerV: 0.9375,
+      radiusU: 0.16, radiusV: 0.16
+    };
+    const { raster, quads } = paintAndQuads(a, event);
+    expect(raster.rasterEligibleCells).toBeGreaterThan(0);
+    expect(a.ownerGrid[a.index(forbiddenX, row)]).toBe(Team.Neutral);
+    expect(simulatedFragmentAtLocal(a, quads, 1.01, 0.9375)).toBe(false);
+    expect(simulatedFragmentAtLocal(a, quads, 0.9375, 0.9375)).toBe(true);
+    const pixelBoundary = a.atlasRect.x + forbiddenX * a.cellSize *
+      a.atlasRect.pixelsPerMeter;
+    expect(Number.isInteger(pixelBoundary)).toBe(true);
+    expect(forbiddenBorderLeak(pixelBoundary)).toBe(0);
   });
 });

@@ -16,6 +16,8 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
+import {isAlignedOriginalSourceCrowdTarget}
+ from './OriginalSourceCrowdTargetAlignment';
 import {shouldRefreshStalledOriginalSourceCrowd,
  deferSourceCrowdSteeringForCommittedWeapon,
  SOURCE_CROWD_STALL_SECONDS,
@@ -307,6 +309,12 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Only previously SOURCE-authorized native destinations may be retained. */
   private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
+  /** A requested Crowd target is NOT the same as a SOURCE-authorized
+   * original paint heading. Only record an actual native request with
+   * its current Recast agent; KCC veto and target reset clear it. */
+  private readonly sourceLiveNativeMotionGoal = new Map<string,{
+    agent:CrowdAgent;goal:Vec3
+  }>();
   /** A genuine source 1.2-second real-foot stall can refresh passive Recast
    * steering proxy ONCE per native CPU life, never its Rapier capsule. */
   private readonly sourceCrowdRefreshedThisLife=new Set<string>();
@@ -948,6 +956,7 @@ export class CpuAgentSystem {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
     this.sourceLastAdmittedRouteGoal.clear();
+    this.sourceLiveNativeMotionGoal.clear();
     this.sourceCrowdRefreshedThisLife.clear();
     this.sourceLastPhysicalBlockedTick.clear();
     this.sourceLastRecoveryAuditTick.clear();
@@ -1070,6 +1079,7 @@ export class CpuAgentSystem {
       this.b212PreviousHuman=null;
       this.qaContinuity.reset();
       this.qaMotionGoals.clear();
+      this.sourceLiveNativeMotionGoal.clear();
       this.qaTurfShotCooldown.clear();
       this.stats.cpuQaSuspectedStalls = 0;
       this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1273,6 +1283,13 @@ export class CpuAgentSystem {
         if (!jumpStarted) {
           let sourceGoal=this.f3dSourceGoals?.chooseSourceGoal(
             bot.id,bot.position,this.goal)??false;
+          // Distinguish the real SOURCE original goal approval from the
+          // final native Crowd endpoint. These are NOT equivalent on a
+          // multi-floor Recast mesh; no unapproved projection is submitted.
+          let projectedApprovedSourceGoal:Readonly<{
+            x:number;y:number;z:number
+          }>|null=null;
+          let newlyAuditedOriginalSourceGoal=false;
           // Original SOURCE only: a closestPoint projection may be on a
           // disconnected island. A true Recast route from the ACTUAL Rapier
           // foot is necessary before requesting Crowd movement. Keep the
@@ -1293,7 +1310,7 @@ export class CpuAgentSystem {
             const footSupported=
               hasRegisteredOriginalSourceCpuRapierFootSupport(
                 bot.position,physical,this.stage.solids);
-            const admitted=footSupported?
+            const admitted=footSupported&&bot.agent?
               chooseAuditedOriginalSourceCpuGoal(
                 bot.position,this.goal,
                 rejoined?this.sourceLastAdmittedRouteGoal.get(bot.id)??null:null,
@@ -1305,8 +1322,21 @@ export class CpuAgentSystem {
             if(admitted){
               this.goal.set(admitted.point.x,admitted.point.y,
                 admitted.point.z);
-              if(!admitted.reusedPrevious)
-                this.sourceLastAdmittedRouteGoal.set(bot.id,this.goal.clone());
+              // The audit validated THIS actual foot -> original point.
+              // closestPoint() silently returns the requested coordinate
+              // on native query failure. Use the explicit success-bearing
+              // projection instead: no false native Crowd target when
+              // a second Recast query failed or chose another floor.
+              const projected=this.navigation.auditNavMeshProjection(
+                this.goal);
+              if(projected.success&&projected.nearestPoint&&
+                 projected.distanceMeters!==null&&
+                 projected.distanceMeters<=.22+1e-6&&
+                 isAlignedOriginalSourceCrowdTarget(
+                   this.goal,projected.nearestPoint)){
+                projectedApprovedSourceGoal=projected.nearestPoint;
+                newlyAuditedOriginalSourceGoal=!admitted.reusedPrevious;
+              }else sourceGoal=false;
             }else sourceGoal=false;
           }
           if(sourceGoal||!this.f3dSourceGoals){
@@ -1318,7 +1348,8 @@ export class CpuAgentSystem {
               currentPosition: bot.position,
               humanPosition
             }, this.goal);
-            const goal = this.navigation.closestPoint(this.goal);
+            const goal = projectedApprovedSourceGoal??
+              this.navigation.closestPoint(this.goal);
             if(bot.agent){
               let submit=true;
               if(this.b35OptInNativeRefresh&&this.f3dSourceGoals){
@@ -1338,9 +1369,25 @@ export class CpuAgentSystem {
               }
               if(submit){
                bot.agent.requestMoveTarget(goal);
+               if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
+                  projectedApprovedSourceGoal)
+                this.sourceLiveNativeMotionGoal.set(bot.id,{
+                  agent:bot.agent,
+                  goal:new Vec3(goal.x,goal.y,goal.z)
+                });
                if(this.b35OptInNativeRefresh)
                 this.b35RealNativeRequests++;
               }
+              // An audited request is NOT a live movement authorization
+              // until it has really been passed to this native agent
+              // (or that same agent still owns the unchanged live goal).
+              const active=this.sourceLiveNativeMotionGoal.get(bot.id);
+              if(newlyAuditedOriginalSourceGoal&&active&&
+                 active.agent===bot.agent&&
+                 Math.hypot(active.goal.x-goal.x,
+                   active.goal.y-goal.y,active.goal.z-goal.z)<=.025)
+                this.sourceLastAdmittedRouteGoal.set(
+                  bot.id,this.goal.clone());
             }
             if (this.phase14qGroundCollision && bot.agent) {
               this.qaMotionGoals.set(bot.id, new Vec3(goal.x, goal.y, goal.z));
@@ -1349,6 +1396,7 @@ export class CpuAgentSystem {
           } else {
             bot.agent?.resetMoveTarget();
             this.b35LastNativeTarget.delete(bot.id);
+            this.sourceLiveNativeMotionGoal.delete(bot.id);
             this.qaMotionGoals.delete(bot.id);
             // SOURCE authority or the strict native route has refused a
             // live goal. Drop its historical MOVEMENT fallback as well:
@@ -1484,6 +1532,10 @@ export class CpuAgentSystem {
       if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
         this.navigation.removeAgent(bot.agent);
         bot.agent=null;
+        // Upper-source Crowd target never survives a genuine one-way
+        // physical first drop into a DIFFERENT lower native agent.
+        this.sourceLiveNativeMotionGoal.delete(bot.id);
+        this.sourceLastAdmittedRouteGoal.delete(bot.id);
         bot.mobilityState='FIRST_DROP_FALL';
         continue;
       }
@@ -1631,7 +1683,10 @@ export class CpuAgentSystem {
 
     if (this.phase14qGroundCollision) {
       this.qaContinuity.observe(dt, this.bots.map(bot => {
-        const goal = this.qaMotionGoals.get(bot.id);
+        const submitted=this.sourceLiveNativeMotionGoal.get(bot.id);
+        const goal=this.f3dSourceGoals&&this.phase14qF2RecoverableSteps?
+          (submitted?.agent===bot.agent?submitted.goal:null):
+          this.qaMotionGoals.get(bot.id);
         return {
           id: bot.id, x: bot.position.x, y: bot.position.y, z: bot.position.z,
           lifeState: bot.lifeState, mobilityState: bot.mobilityState,
@@ -1711,6 +1766,7 @@ export class CpuAgentSystem {
       throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
     bot.agent.teleport(nav);
     bot.agent.resetMoveTarget();
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     // B35's dedup cache is not the live Crowd target: resetMoveTarget
     // discarded the target, so the SAME already-authorized original goal
     // must be submitted at the next real tactical think, not suppressed
@@ -1761,13 +1817,19 @@ export class CpuAgentSystem {
         bot.weaponGuarding,
         actual.stationarySeconds))continue;
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
+      const submitted=this.sourceLiveNativeMotionGoal.get(actual.id);
       if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
         actualFoot:bot.position,admittedGoal:goal??null,
         stationarySeconds:actual.stationarySeconds,
         aliveGroundedPhysicallyRejoined:
           this.sourceCpuMayStartActions(bot)&&
           this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true,
-        hasCrowdAgent:bot.agent!==null&&this.qaMotionGoals.has(bot.id),
+        // A paid ink heading is NOT a live native movement request.
+        // Reanchor only a truly submitted target for this same agent.
+        hasCrowdAgent:bot.agent!==null&&
+          submitted?.agent===bot.agent&&!!goal&&
+          Math.hypot(submitted.goal.x-goal.x,
+            submitted.goal.y-goal.y,submitted.goal.z-goal.z)<=.22,
         alreadyRefreshedThisLife:
           this.sourceCrowdRefreshedThisLife.has(bot.id),
         currentSourceTick:this.sourceNativeMotionTick,
@@ -1809,6 +1871,7 @@ export class CpuAgentSystem {
         throw Error('T21_V28_CPU_STALL_PROXY_REANCHOR_FAILED');
       bot.agent.resetMoveTarget();
       this.b35LastNativeTarget.delete(bot.id);
+      this.sourceLiveNativeMotionGoal.delete(bot.id);
       this.qaMotionGoals.delete(bot.id);
       bot.thinkRemaining=Math.min(
         bot.thinkRemaining,GAME_CONFIG.cpu.tacticalThinkSeconds*.25);
@@ -4667,6 +4730,7 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
@@ -4732,6 +4796,7 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);

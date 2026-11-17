@@ -63,6 +63,15 @@ export function b480FocusedSourcePracticeCss(search:string):string{
   // pointer events, physics, QA mode or the original 25/17/26/0 stage.
   '#ui-root[data-t21-b245-presentation="PLAYER"]',
   '#t21-f3-b245-view-toggle',
+  '{left:auto!important;right:14px!important;bottom:200px!important;}',
+  // Real B475 QA preserves the same actionable B25 card at
+  // left:12px,bottom:16px,width:256px. Historical QA F8 moved to
+  // left:225px,bottom:14px,z-index:72 while B25 is z-index:39:
+  // the overlapping x225..268 bottom strip can intercept the REAL
+  // native B25 button. Keep F8 on the proven right-side dock on BOTH
+  // sides of a PLAYER<->QA toggle; do not disable clicks on either.
+  '#ui-root[data-t21-b245-presentation="QA"]',
+  '#t21-f3-b245-view-toggle',
   '{left:auto!important;right:14px!important;bottom:200px!important;}'
  ].join(' ');
 }
@@ -136,6 +145,19 @@ export function b245PlayerSightlineCss(search:string):string{
   on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
    '[data-t21-b195-real-source-clear="true"] #t21-f3-b417-paint-contest',
   '{margin-top:5px!important;}',
+  // The same real B243 camera-centre/shot-to-original-surface caption
+  // exists in ALL native full-round SOURCE player kits, not just B475.
+  // Earlier B475-only layout left the original "white-space:nowrap"
+  // label over the player's back in other playable modes. Wrap that
+  // ACTUAL native paint/cover/CPU aim text beneath the player, keeping
+  // the original centre '+' and all native ray/hit authority unchanged.
+  // B475's later and more specific side-caption styles still win.
+  on+'#t21-f3-b243-source-aim-caption',
+  '{top:clamp(110px,18vh,168px)!important;'+
+   'width:max-content!important;'+
+   'max-width:min(340px,calc(100vw - 32px))!important;'+
+   'white-space:normal!important;overflow-wrap:anywhere!important;'+
+   'text-align:center!important;line-height:1.5!important;}',
   // Append after normal font size: a narrow native PLAYER viewport should
   // never clip or shrink the selected weapon's real B338 control guide.
   '@media(max-width:720px){',

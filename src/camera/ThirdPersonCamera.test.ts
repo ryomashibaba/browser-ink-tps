@@ -53,10 +53,11 @@ function harness(storage?:{
     preventDefault:()=>{prevented.called=true;}});
   return prevented.called;
  };
- const mouse=(movementY:number)=>{
+ const mouseMove=(movementX:number,movementY:number)=>{
   for(const handler of documentListeners.get('mousemove')??[])
-   handler({movementX:0,movementY});
+   handler({movementX,movementY});
  };
+ const mouse=(movementY:number)=>mouseMove(0,movementY);
  const pointerLock=()=>{
   for(const handler of documentListeners.get('pointerlockchange')??[])
    handler({});
@@ -77,8 +78,8 @@ function harness(storage?:{
    handler({button,altKey:false,clientX:0,clientY:0,
     preventDefault:()=>{}});
  };
- return {camera,key,mouse,pointerLock,pointerLockError,pointerDown,
-  frame,documentStub,elements,canvas,wheel};
+ return {camera,key,mouse,mouseMove,pointerLock,pointerLockError,
+  pointerDown,frame,documentStub,elements,canvas,wheel};
 }
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -285,6 +286,67 @@ describe('Issue #19 lot4: visible real SOURCE mouse-lock recovery',()=>{
   h.pointerLockError();
   h.frame();
   expect(h.elements).toHaveLength(0);
+ });
+});
+
+describe('Issue #19 SOURCE live camera-to-WASD and mouse-recapture quality',()=>{
+ it('steers on the latest yaw even before the next camera render',()=>{
+  const source=harness();source.camera.enableSourcePracticeControls();
+  const before=new Vec3();source.camera.getFlatForward(before);
+  expect([before.x,before.z]).toEqual([0,-1]);
+  source.mouseMove(100,0); // 22 degrees since last camera frame
+  const live=new Vec3();source.camera.getFlatForward(live);
+  const angle=22*Math.PI/180;
+  expect(live.x).toBeCloseTo(Math.sin(angle),6);
+  expect(live.z).toBeCloseTo(-Math.cos(angle),6);
+  source.frame(); // the next render must resolve to the exact same bearing
+  const rendered=new Vec3();source.camera.getFlatForward(rendered);
+  expect(rendered.x).toBeCloseTo(live.x,6);
+  expect(rendered.z).toBeCloseTo(live.z,6);
+  const frozen=harness();
+  frozen.mouseMove(100,0);
+  const baseline=new Vec3();frozen.camera.getFlatForward(baseline);
+  expect([baseline.x,baseline.z]).toEqual([0,-1]);
+ });
+ it('bounds only the initial pointer recapture spikes, not normal fast flicks',()=>{
+  const source=harness();source.camera.enableSourcePracticeControls();
+  source.pointerLock();
+  source.mouseMove(10000,0); // first: 180px cap, not 600px
+  expect(source.camera.sourcePracticeViewSnapshot().yawDegrees)
+   .toBeCloseTo(39.6,6);
+  source.mouseMove(-10000,0); // second event
+  expect(source.camera.sourcePracticeViewSnapshot().yawDegrees)
+   .toBeCloseTo(0,6);
+  source.mouseMove(10000,0); // steady state returns to previous 600px cap
+  expect(source.camera.sourcePracticeViewSnapshot().yawDegrees)
+   .toBeCloseTo(132,6);
+  source.documentStub.pointerLockElement=null;
+  source.pointerLock();
+  source.documentStub.pointerLockElement=source.canvas;
+  source.pointerLock();
+  source.mouseMove(10000,0); // next recapture starts new guard window
+  expect(source.camera.sourcePracticeViewSnapshot().yawDegrees)
+   .toBeCloseTo(171.6,6);
+ });
+ it('ignores a superseded Promise rejection during a newer lock attempt',async()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  let rejectFirst:(reason?:unknown)=>void=()=>{};
+  const first=new Promise<void>((_,reject)=>{rejectFirst=reject;});
+  const request=vi.fn().mockReturnValueOnce(first)
+   .mockResolvedValueOnce(undefined);
+  Object.defineProperty(h.canvas,'requestPointerLock',{value:request});
+  h.pointerDown(0);
+  h.pointerDown(0); // newer user click supersedes the first pending request
+  rejectFirst(new Error('stale denied'));
+  await Promise.resolve();
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(h.elements).toHaveLength(0); // old result cannot show false failure
+  h.documentStub.pointerLockElement=h.canvas;
+  h.pointerLock();
+  h.frame();
+  expect(h.elements.at(-1)?.textContent).toContain('CAMERA');
+  expect(h.elements.at(-1)?.textContent).not.toContain('NOT GRANTED');
  });
 });
 

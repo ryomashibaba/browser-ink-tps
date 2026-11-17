@@ -36,10 +36,40 @@ describe('B480 restore REAL B441 practice only, no source authority change',()=>
    '[data-t21-b338-phase="PLAYING"] #t21-f3-b245-view-toggle');
   expect(f8Rule).not.toContain('display:none');
   expect(f8Rule).not.toContain('pointer-events:none');
-  expect(f8Rule).not.toContain('data-t21-b245-presentation="QA"');
+  // A QA-mode F8 may NOT return to the historical x=225 bottom
+  // position: the genuine B475 B25 start card spans x12..268 at bottom16
+  // and its button can sit underneath the higher-z F8 toggle.
+  const qaSelector='#ui-root[data-t21-b245-presentation="QA"] '+
+   '#t21-f3-b245-view-toggle';
+  expect(css).toContain(qaSelector);
+  const qaRule=css.slice(css.indexOf(qaSelector)+qaSelector.length);
+  expect(qaRule).toMatch(/^ \{left:auto!important;right:14px!important;bottom:200px!important;\}/);
+  expect(qaRule).not.toContain('pointer-events:none');
+  expect(qaRule).not.toContain('display:none');
   // The original live compact B25 progress rule remains PLAYING-only.
   expect(css).toContain(
    '[data-t21-b338-phase="PLAYING"] #t21-f3-b25-paint-run');
+ });
+ it('keeps both F8 views on the same safe dock independent of phase',()=>{
+  const css=b480FocusedSourcePracticeCss(genuine);
+  const selector=(mode:'PLAYER'|'QA')=>
+   '#ui-root[data-t21-b245-presentation="'+mode+'"] '+
+   '#t21-f3-b245-view-toggle';
+  for(const mode of ['PLAYER','QA'] as const){
+   const start=css.indexOf(selector(mode));
+   expect(start).toBeGreaterThan(-1);
+   const rule=css.slice(start+selector(mode).length,
+    css.indexOf('}',start)+1);
+   expect(rule).toContain('right:14px!important');
+   expect(rule).toContain('bottom:200px!important');
+   expect(rule).toContain('left:auto!important');
+   expect(selector(mode)).not.toContain('data-t21-b338-phase');
+   expect(rule).not.toMatch(/display\s*:\s*none/);
+   expect(rule).not.toMatch(/pointer-events\s*:\s*none/);
+  }
+  // QA still receives full B25, not a fake click via pointer-events.
+  expect(css).not.toContain('#t21-f3-b25-start');
+  expect(css).not.toContain('z-index:');
  });
  it('leaves all other native SOURCE, A1, QA and production hidden',()=>{
   for(const [key,value] of [

@@ -24,6 +24,7 @@ import {t21QaAuditK2LiveWindow} from './t21-v28-qa-k2-source-window.mjs';
 import {validateB484ModeSpecificHud} from './t21-v28-qa-b484-hud-gate.mjs';
 import {classifyRealNativeHpSnapshot} from './t21-v28-qa-real-hp-witness.mjs';
 import {auditSourceRealGameplayBlockers} from './t21-v28-qa-native-playability-blockers.mjs';
+import {sampleRealSourceCombat,auditRealSourceCombatFrames} from './t21-v28-qa-native-combat-window.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -3255,6 +3256,9 @@ async function main(){
      n.b178SourceInkRecovery?.actualEnemyPaintFootTicks??null,
     nativeCpuMaxSpeedByActor:
      n.b178SourceInkRecovery?.nativeCpuMaxSpeedByActor??null};
+   // One read-only real native snapshot, no new CDP polling.
+   try{data.qa18ActualNativeCombat=sampleRealSourceCombat(n);}
+   catch(error){data.qa18NativeCombatHold=String(error).slice(0,200);}
    if(proof.b441NativeEvidence.realFrames.length<40&&
      (!proof.b441NativeEvidence.realFrames.length||
       n.tick-proof.b441NativeEvidence.realFrames.at(-1).tick>=24)){
@@ -3265,6 +3269,27 @@ async function main(){
    }
    return n.tick>=after.tick+nativeFrontObservationTicks?n:false;
   },600000,500);
+  // Preserve actual human projectile -> CPU HP/splat state from all sampled
+  // PLAYING frames before a later K2, HUD or physical route gate can HOLD.
+  const combatFrames=proof.b441NativeEvidence.realFrames
+   .map(f=>f.qa18ActualNativeCombat).filter(Boolean);
+  try{
+   const lastCombat=sampleRealSourceCombat(actual);
+   if(!combatFrames.length||lastCombat.tick>combatFrames.at(-1).tick)
+    combatFrames.push(lastCombat);
+  }catch(error){
+   proof.qaIssue18NativeCombatTerminalHold=String(error).slice(0,200);
+  }
+  proof.qaIssue18NativeCombatWindow=auditRealSourceCombatFrames(combatFrames);
+  writeFileSync(resolve(out,'qa-issue18-native-combat-window.json'),
+   JSON.stringify({audit:proof.qaIssue18NativeCombatWindow,
+    sampledActualFrames:combatFrames,missingSamplingReasons:
+     proof.b441NativeEvidence.realFrames
+      .map(f=>f.qa18NativeCombatHold).filter(Boolean),
+    browserOrigin:proof.browserOrigin,actorWrites:0,
+    nativeClockWrites:0,sourceGeometryWrites:0,
+    originalScoreable:0},null,2)+'\n');
+  save();
   // One read-only actual native SOURCE kit witness. All launches,
   // explosions, and ink cells are existing gameplay counters, not
   // scripted kit requests. No claim that every new ink cell was bomb ink.
@@ -4248,7 +4273,8 @@ async function main(){
   let qa18Playability=null,qa18PlayabilityReadError=null;
   try{
    qa18Playability=auditSourceRealGameplayBlockers(
-    proof,b454Report,actual.cpu?.cpuSourceNativeGroundMotion??null);
+    proof,b454Report,actual.cpuSourceNativeGroundMotion??null,
+     after.cpuSourceNativeGroundMotion??null);
   }catch(error){
    qa18PlayabilityReadError=String(error).slice(0,500);
   }
