@@ -41,6 +41,7 @@ function fixture(originalF3: boolean) {
   // Object.create bypasses real constructor fields, including native
   // SOURCE enemy-ink movement speed state and splat/respawn cleanup.
   system.b178NativeCpuMovementSpeed = new Map();
+  system.b178NativeCpuSpeedAgent = new Map();
   system.selectedSourcePaintSaturation = new Map();
   system.selectedSourceEmptyAimStreak = new Map();
   system.nativeSourceSubScanByActor=new Map();
@@ -1118,7 +1119,52 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(changed).toHaveBeenCalledTimes(3);
     // A physical splat must not carry a stale slow into a future life.
     system.b178NativeCpuMovementSpeed.delete(bot.id);
+    system.b178NativeCpuSpeedAgent.delete(bot.id);
     expect(system.b178NativeCpuMovementSpeed.has(bot.id)).toBe(false);
+    expect(system.b178NativeCpuSpeedAgent.has(bot.id)).toBe(false);
+  });
+  it('rebinds native enemy-ink Crowd maxSpeed after real first-drop agent replacement even with unchanged floor owner',()=>{
+    const {system,bot}=fixture(true);
+    const oldUpdate=vi.fn(),newUpdate=vi.fn();
+    bot.agent.updateParameters=oldUpdate;
+    bot.hp=GAME_CONFIG.combat.playerMaxHp;
+    bot.ink=100;
+    bot.inkRecoveryLockSeconds=0;
+    bot.hpRecoveryDelaySeconds=0;
+    system.samplePoint=new Vec3();
+    system.b178RealSourceInkRecovery=true;
+    system.phase14qF2RecoverableSteps=true;
+    system.b178NativeCpuMovementSpeed=new Map();
+    system.b178NativeCpuSpeedAgent=new Map();
+    system.b178OwnNativeTicks=0;
+    system.b178EnemyNativeTicks=0;
+    system.b178NeutralNativeTicks=0;
+    system.b179ActualEnemyHpLost=0;
+    system.b179ActualOwnInkRecovered=0;
+    system.b179ActualOwnRecoverTicks=0;
+    system.sampleRegisteredSourceFoot=()=>({
+      owner:Team.A,
+      surface:{isScoreable:false,
+        baseFlags:SurfaceFlags.Paintable|SurfaceFlags.Floor}
+    });
+    const foot=bot.position.clone(),firstAgent=bot.agent;
+    system.updateResources(bot,1/60);
+    expect(oldUpdate).toHaveBeenCalledOnce();
+    expect(system.b178NativeCpuMovementSpeed.get(bot.id)).toBe(
+      GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond);
+    // Genuine first drop swaps the Recast handle without changing
+    // the REAL Rapier foot's ink owner. Old speed cache was keyed only
+    // by id and silently omitted the new Agent's update.
+    bot.agent={...firstAgent,updateParameters:newUpdate};
+    system.updateResources(bot,1/60);
+    expect(newUpdate).toHaveBeenCalledOnce();
+    expect(newUpdate).toHaveBeenCalledWith({
+      maxSpeed:GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond
+    });
+    system.updateResources(bot,1/60);
+    expect(newUpdate).toHaveBeenCalledOnce();
+    expect(bot.position).toEqual(foot);
+    expect(system.b178NativeCpuSpeedAgent.get(bot.id)).toBe(bot.agent);
   });
   it('does not change legacy CPU Crowd speed outside the actual SOURCE F2 world',()=>{
     const {system,bot}=fixture(true);
@@ -1896,7 +1942,9 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     system.sourceCrowdRefreshedThisLife.add('B1');
     system.sourceLastPhysicalBlockedTick.set('B1',420);
     system.sourceLastRecoveryAuditTick.set('B1',430);
+    system.b178NativeCpuSpeedAgent.set('B1',bot.agent);
     system.respawnBot(bot);
+    expect(system.b178NativeCpuSpeedAgent.has('B1')).toBe(false);
     expect(system.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
     expect(system.sourceLastPhysicalBlockedTick.has('B1')).toBe(false);
     expect(system.sourceLastRecoveryAuditTick.has('B1')).toBe(false);
