@@ -17,7 +17,7 @@ function registeredSurface(id: string, flags = SurfaceFlags.Paintable | SurfaceF
   );
 }
 
-function request(surfaceId: string, overrides: Partial<PaintRequest> = {}): PaintRequest {
+function request(surfaceId: string, overrides: Partial<PaintRequest> = {}): PaintRequest & {source:PaintSource} {
   return {
     source: PaintSource.Human,
     team: Team.A,
@@ -29,7 +29,9 @@ function request(surfaceId: string, overrides: Partial<PaintRequest> = {}): Pain
     angle: 0,
     strength: 1,
     type: PaintEventType.Impact,
-    ...overrides
+    ...overrides,
+    // Direct GameplayInkSystem.apply requires a guaranteed real source.
+    source: PaintSource.Human
   };
 }
 

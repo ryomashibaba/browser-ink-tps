@@ -223,7 +223,7 @@ export function installB250SourceView(app:AppBase,camera:Entity,
    // This is the exact pre-split visual, not inferred walkable geometry.
    const original=new MeshInstance(originalMesh,originalMaterial);
    entity.render!.meshInstances=[original,registered,ghost];
-   ghost.castShadows=false; // optical-only faces cannot cast solid shadows
+   ghost.castShadow=false; // optical-only faces cannot cast solid shadows
    glassBindings.push({original,registered,ghost});
    excludedFromTint.add(ghost);
    excludedFromTint.add(original);
