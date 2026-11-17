@@ -760,6 +760,8 @@ describe('F3B playable 8-actor original source runtime',()=>{
   traffic.b443OriginalGoalLocks=new Map();
   traffic.b442LastApprovedFront=new Map();
   traffic.b467LiveSourceGoals=new Map();
+  // Legacy Object.create fixture skips this genuine per-life Map.
+  traffic.b467LastLiveRetryTick=new Map();
   traffic.b470LastNativeRetry=new Map();
   traffic.realKccRejectedSteps=new Map();
   traffic.p2BTeamDroughtFoot=new Map();

@@ -56,7 +56,8 @@ import type {SourceSpawnPlan}
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {planT21F2SourceDropRoutes,type T21F2RoutePlan}
  from '../stage/undertow/UndertowF2SourceDropRoutes';
-import {originalNativeLandingFootReprojection}
+import {originalNativeLandingFootReprojection,
+ originalNativeRampFootReprojection}
  from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
 
 export interface F3TrafficCpu{
@@ -763,6 +764,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // at native projected Y is within the unchanged 0.25m threshold.
    // No source position, Actor, NavLink, physical step or scoring changes.
    if(this.nav&&originalNativeLandingFootReprojection(
+     this.stage,this.physics!,this.nav,point,
+     sideSign===1?1:-1))return true;
+   // The same straight polyline can also rise well above the exact
+   // ORIGINAL FloorConcrete03 slope. Recheck native nearest height
+   // against the registered source triangles and the REAL Rapier
+   // HUMAN collider at this XZ, not a fabricated slope or bigger gap.
+   if(this.nav&&originalNativeRampFootReprojection(
      this.stage,this.physics!,this.nav,point,
      sideSign===1?1:-1))return true;
    // A real B2 Ramp KCC foot remains supported, but Recast can float

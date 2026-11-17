@@ -6,7 +6,8 @@ import {initializeRecastNavigation,RecastStageNavigation}
 import {PerformanceStats} from '../../core/PerformanceStats';
 import {undertowT21dConnectivityQaStage}
  from './UndertowSpillwayConnectivityQa';
-import {originalNativeLandingFootReprojection}
+import {originalNativeLandingFootReprojection,
+ originalNativeRampFootReprojection}
  from './UndertowOriginalNativeLandingFootReprojection';
 
 beforeAll(async()=>await Promise.all([
@@ -72,5 +73,66 @@ describe('Issue #13 real original landing NavMesh Y vs collision face',()=>{
   } as unknown as RecastStageNavigation;
   expect(originalNativeLandingFootReprojection(
    stage,physics,highNav,raw,-1)).toBeNull();
+ });
+});
+
+
+describe('Issue #13 original mirrored FloorConcrete03 ramp native Y recheck',()=>{
+ it('finds the true slope face for genuine B2/B4 post-landing denials without allowing actor movement',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const points=[
+   new Vec3(-1.6752602259318037,3.894444465637207,
+    -49.090881983439125),
+   new Vec3(-1.708983707016912,3.72758620360802,
+    -49.548011779785156)
+  ];
+  for(const p of points){
+   const off=.68;
+   const nativeRaw=physics.castCharacterFootSupport(
+    new Vec3(p.x,p.y+off,p.z),off,'HUMAN');
+   expect(nativeRaw?.solidId).toBe(
+    'UndertowT21D:right-low-route-ramp-negative-z');
+   expect(p.y-nativeRaw!.point.y).toBeGreaterThan(.25);
+   const proof=originalNativeRampFootReprojection(
+    stage,physics,nav,p,-1);
+   expect(proof?.originalSolidId).toBe(
+    'UndertowT21D:right-low-route-ramp-negative-z');
+   expect(proof!.actualPhysicalGapMeters).toBeGreaterThan(0);
+   expect(proof!.actualPhysicalGapMeters).toBeLessThanOrEqual(.25);
+   expect(proof!.projectionXZErrorMeters).toBeLessThan(.01);
+   expect(proof!.realRapierFaceY).toBeCloseTo(
+    proof!.originalTriangleFaceY,2);
+   expect(proof!.newFloorOrOffmeshLinkAuthorized).toBe(false);
+   expect(proof!.completePhysicalKccRouteCertified).toBe(false);
+  }
+ });
+ it('refuses wrong side, false source triangles and off-corridor native snaps',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const raw={x:-1.6752602259318037,y:3.894444465637207,
+   z:-49.090881983439125};
+  expect(originalNativeRampFootReprojection(
+   stage,physics,nav,raw,1)).toBeNull();
+  expect(originalNativeRampFootReprojection(
+   stage,physics,nav,{...raw,x:NaN},-1)).toBeNull();
+  const without={...stage,solids:stage.solids.filter(s=>
+   s.id!=='UndertowT21D:right-low-route-ramp-negative-z')};
+  expect(originalNativeRampFootReprojection(
+   without,physics,nav,raw,-1)).toBeNull();
+  const wrongNearest={auditNavMeshProjection:()=>({
+   success:true,nearestPoint:new Vec3(raw.x+.10,3.20,raw.z),
+   distanceMeters:.1
+  })} as unknown as RecastStageNavigation;
+  expect(originalNativeRampFootReprojection(
+   stage,physics,wrongNearest,raw,-1)).toBeNull();
+  const wrongLayer={auditNavMeshProjection:()=>({
+   success:true,nearestPoint:new Vec3(raw.x,5.5,raw.z),
+   distanceMeters:.1
+  })} as unknown as RecastStageNavigation;
+  expect(originalNativeRampFootReprojection(
+   stage,physics,wrongLayer,raw,-1)).toBeNull();
  });
 });
