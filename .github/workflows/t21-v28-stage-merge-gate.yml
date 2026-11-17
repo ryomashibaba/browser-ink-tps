@@ -1,0 +1,25 @@
+name: T21 V28 source spawn physical review gate
+on:
+  push:
+    branches:
+      - research/t21-v28-stage-merge-gate-20261117
+permissions:
+  contents: read
+jobs:
+  source-spawn-physical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript native stage preflight
+        run: npm run typecheck
+      - name: Genuine Rapier Recast original 4+4 spawn test
+        run: npx vitest run src/stage/undertow/UndertowPhase14QSourceSpawnPlan.test.ts
+      - name: Browser bundle typecheck gate
+        run: npm run build -- --base=/browser-ink-tps/
