@@ -12,7 +12,7 @@ const live:CpuSourceCrowdStallEvidence={
  currentSourceTick:600,lastPhysicalBlockTick:null
 };
 describe('T21 V28 real-foot stalled SOURCE Crowd proxy bounded refresh',()=>{
- it('only considers five seconds of actual stationary with distant authorized goal',()=>{
+ it('detects 1.2-second physical stationary SOURCE steering safely with distant authorized goal',()=>{
   expect(SOURCE_CROWD_STALL_SECONDS).toBe(1.2);
   expect(should(live)).toBe(true);
   // The existing QA warning remains five seconds. This SOURCE-only
