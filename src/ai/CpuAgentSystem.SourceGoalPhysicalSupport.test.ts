@@ -56,6 +56,11 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
       nativePathPoints:[from,to]
     })),
     closestPoint:vi.fn((p:Vec3)=>p.clone()),
+    auditNavMeshProjection:vi.fn((p:Vec3)=>({
+      success:true,
+      nearestPoint:{x:p.x,y:p.y,z:p.z},
+      distanceMeters:0
+    })),
     fixedUpdate:vi.fn()
   };
   cpu.updateResources=vi.fn();
@@ -94,7 +99,9 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     const {cpu,bot,agent,destination,tick,foot}=fixture(.24438563346862807);
     tick();
     expect(agent.requestMoveTarget).toHaveBeenCalledOnce();
-    expect(agent.requestMoveTarget).toHaveBeenCalledWith(destination);
+    expect(agent.requestMoveTarget.mock.calls[0]?.[0]).toMatchObject({
+      x:destination.x,y:destination.y,z:destination.z
+    });
     expect(cpu.sourceLastAdmittedRouteGoal.get('B2')).toEqual(destination);
     expect(cpu.sourceLiveNativeMotionGoal.get('B2')).toEqual({
       agent,goal:destination
@@ -138,8 +145,10 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     const {cpu,bot,agent,foot,tick}=fixture(.23);
     // Recast closestPoint is a NEW second query, not proof of the
     // previously audited terminal: wrong vertical layer must HOLD.
-    cpu.navigation.closestPoint=vi.fn((p:Vec3)=>({
-      x:p.x,y:p.y+2.4,z:p.z
+    cpu.navigation.auditNavMeshProjection=vi.fn((p:Vec3)=>({
+      success:true,
+      nearestPoint:{x:p.x,y:p.y+2.4,z:p.z},
+      distanceMeters:2.4
     }));
     tick();
     expect(cpu.navigation.auditPath).toHaveBeenCalledOnce();
@@ -185,6 +194,33 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     tick();
     expect(bot.agent.requestMoveTarget).toHaveBeenCalledOnce();
     expect(cpu.sourceLiveNativeMotionGoal.get('B2')?.agent).toBe(bot.agent);
+  });
+
+  it('does not turn failed native projection into an imaginary Crowd request',()=>{
+    const {cpu,agent,tick}=fixture(.23);
+    cpu.navigation.auditNavMeshProjection=vi.fn(()=>({
+      success:false,nearestPoint:null,distanceMeters:null
+    }));
+    tick();
+    expect(cpu.navigation.auditPath).toHaveBeenCalledOnce();
+    expect(agent.requestMoveTarget).not.toHaveBeenCalled();
+    expect(cpu.sourceLastAdmittedRouteGoal.size).toBe(0);
+    expect(cpu.sourceLiveNativeMotionGoal.size).toBe(0);
+  });
+  it('submits the native-projected SAME-layer endpoint after strict SOURCE audit',()=>{
+    const {cpu,agent,destination,tick}=fixture(.23);
+    const endpoint={x:destination.x+.1,y:destination.y,z:destination.z};
+    cpu.navigation.auditNavMeshProjection=vi.fn(()=>({
+      success:true,nearestPoint:endpoint,distanceMeters:.1
+    }));
+    tick();
+    expect(agent.requestMoveTarget).toHaveBeenCalledOnce();
+    expect(agent.requestMoveTarget.mock.calls[0]?.[0]).toEqual(endpoint);
+    expect(cpu.sourceLastAdmittedRouteGoal.get('B2')).toEqual(destination);
+    expect(cpu.sourceLiveNativeMotionGoal.get('B2')?.goal)
+      .toEqual(new Vec3(endpoint.x,endpoint.y,endpoint.z));
+    expect(cpu.qaContinuity.observe.mock.lastCall?.[1]?.[0]?.expectsMotion)
+      .toBe(true);
   });
 
 });
