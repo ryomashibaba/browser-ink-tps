@@ -1,0 +1,47 @@
+name: T21 V28 QA - one original Chromium smoke at fa124516
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-20261117
+    paths:
+      - '.github/workflows/t21-v28-qa-fa124516-once.yml'
+permissions:
+  contents: read
+jobs:
+  original-720-tick-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check exact target content and one-shot scope
+        env:
+          SOURCE_SHA: fa12451665588f91e190f88fc52f0c16c0d47973
+        run: |
+          test "$(git rev-parse HEAD^)" = "$SOURCE_SHA"
+          git diff --name-only "$SOURCE_SHA" HEAD | grep -Fx '.github/workflows/t21-v28-qa-fa124516-once.yml'
+          test "$(git diff --name-only "$SOURCE_SHA" HEAD | wc -l)" -eq 1
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+      - name: Install exact SOURCE dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify TypeScript and browser production bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Run existing genuine Chromium original SOURCE 720-tick smoke exactly once
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          T21_B440_OUT: /tmp/t21-v28-qa-fa124516
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Preserve immutable genuine RAW and PNG (including HOLD)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-v28-qa-fa124516-native-720
+          path: /tmp/t21-v28-qa-fa124516/
+          if-no-files-found: warn
+          retention-days: 14
