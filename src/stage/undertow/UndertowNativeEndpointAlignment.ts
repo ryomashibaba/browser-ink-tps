@@ -75,18 +75,21 @@ export function auditUndertowNativeEndpointAlignment(
   if (
     !validPoint(evidence.requestedTarget) ||
     (terminal !== null && !validPoint(terminal)) ||
-    ![
-      evidence.startSnapDistanceMeters,
-      evidence.endSnapDistanceMeters,
-      evidence.projectedEndpointErrorMeters
-    ].every((value) => Number.isFinite(value) && value >= 0) ||
     (measuredDistance !== null && !Number.isFinite(measuredDistance))
   ) return result('INVALID_ENDPOINT_EVIDENCE');
 
   if (!evidence.targetRapierSupported || !evidence.targetSourceSolidId)
     return result('NO_REQUESTED_SOURCE_SUPPORT');
+  // A failed Recast query can report Infinity for its snap/error metrics.
+  // Classify that as NO_NATIVE_PATH, never a valid endpoint or corrupt floor.
   if (!evidence.recastReachedProjectedTarget)
     return result('NO_NATIVE_PATH');
+  if (![
+    evidence.startSnapDistanceMeters,
+    evidence.endSnapDistanceMeters,
+    evidence.projectedEndpointErrorMeters
+  ].every((value) => Number.isFinite(value) && value >= 0))
+    return result('INVALID_ENDPOINT_EVIDENCE');
   if (
     evidence.startSnapDistanceMeters > SOURCE_TOLERANCE_METERS ||
     evidence.endSnapDistanceMeters > SOURCE_TOLERANCE_METERS
