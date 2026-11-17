@@ -57,6 +57,9 @@ function fixture(originalF3: boolean) {
   // This isolated real-method fixture bypasses the class constructor.
   // Preserve native per-life goal-cache cleanup without weakening it.
   system.sourceLastAdmittedRouteGoal = new Map();
+  system.sourceCrowdRefreshedThisLife = new Set();
+  system.sourceLastPhysicalBlockedTick = new Map();
+  system.sourceNativeMotionTick = 0;
   system.phase14eFirstDrop = { cancel: vi.fn() };
   system.phase14qGroundCollision = {
     removeRealCpuFoot: vi.fn()
@@ -1886,7 +1889,13 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       expect(bot.hp).toBe(0);
     });
     system.f3dSourceGoals.onNativeSourceCpuRespawn=expireOldLife;
+    // This CPU's previous life had already exhausted its one bounded
+    // native proxy recovery and recorded a real blocked physical step.
+    system.sourceCrowdRefreshedThisLife.add('B1');
+    system.sourceLastPhysicalBlockedTick.set('B1',420);
     system.respawnBot(bot);
+    expect(system.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
+    expect(system.sourceLastPhysicalBlockedTick.has('B1')).toBe(false);
     expect(expireOldLife).toHaveBeenCalledTimes(1);
     expect(expireOldLife).toHaveBeenCalledWith('B1');
     expect(expireOldLife.mock.invocationCallOrder[0]).toBeLessThan(
@@ -2413,6 +2422,7 @@ describe('SOURCE real CPU respawn executes on native tick 150',()=>{
    position:new Vec3(0,0,0)};
   cpu.bots=[bot];
   cpu.f3dSourceGoals=nativeSource?{}:null;
+  cpu.sourceNativeMotionTick=0;
   cpu.phase14qHumanCrowd=null;
   cpu.phase14qGroundCollision=null;
   // This fixture runs the real fixedUpdate countdown without an actual
