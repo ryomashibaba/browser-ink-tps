@@ -400,6 +400,11 @@ export class PlayerController {
     if (this.desired.lengthSq() > 1) this.desired.normalize();
 
     const jumpPressed = this.input.consumeJump();
+    // The SOURCE input queue captures physical Shift taps that start/end
+    // between 60Hz steps. This only chooses HUMAN/SQUID for one *real* KCC
+    // step; no extra floor, paint ownership, collision or wall authority.
+    const squidHeldForTick=this.nativeSourceGroundInkGuard
+      ? this.input.consumeSquidHeldForPlayerTick():this.input.squidHeld;
     // A genuine Space tap one fixed tick before landing used to disappear.
     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
     // No extra ground/coyote-time/stepping or changes to frozen T20.
@@ -513,7 +518,7 @@ export class PlayerController {
       this.surgeRemainingSeconds = Math.max(0, this.surgeRemainingSeconds - dt);
       this.verticalVelocity -= GAME_CONFIG.player.surgeGravityMetersPerSecond2 * dt;
       this.setSnapToGround(false);
-    } else if (this.input.squidHeld) {
+    } else if (squidHeldForTick) {
       this.setMode('SQUID');
       const wall = this.findOwnWallSample(bodyPosition);
       // A wall swim/charge owns its Space semantics; do not carry a floor

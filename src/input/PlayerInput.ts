@@ -9,6 +9,9 @@ export class PlayerInput {
   // Native SOURCE input: require a fresh keydown after Pointer Lock loss.
   // Inert until genuine SOURCE STAGING; T20/QA behavior is unchanged.
   private sourceNativeRepeatGuard=false;
+  // SOURCE-only: a real Shift down/up between 60Hz ticks should still be
+  // seen once by the next physics step, never as a persistent held key.
+  private sourceSquidTapQueued=false;
   private readonly sourcePrestartHeldKeys=new Set<string>();
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
@@ -58,9 +61,15 @@ export class PlayerInput {
         event.preventDefault();
         return;
       }
+      const freshPress=!this.keys.has(event.code);
       this.keys.add(event.code);
+      if(this.sourceNativeRepeatGuard&&!this.deterministicQaEnabled&&
+         freshPress&&!event.repeat&&
+         (event.code==='ShiftLeft'||event.code==='ShiftRight'))
+        this.sourceSquidTapQueued=true;
       if (event.code === 'Space') {
-        if (!event.repeat) this.jumpQueued = true;
+        if (!event.repeat&&(!this.sourceNativeRepeatGuard||freshPress))
+          this.jumpQueued = true;
         event.preventDefault();
       }
       if (event.code === 'KeyF' && !event.repeat && this.combatInputActive) {
@@ -90,6 +99,7 @@ export class PlayerInput {
       this.sourcePrestartHeldKeys.clear();
       clearPointerState();
       this.jumpQueued = false;
+      this.sourceSquidTapQueued = false;
       this.subPressedQueued = false;
       this.specialPressedQueued = false;
       this.jumpRequiresRelease = !this.combatInputActive;
@@ -147,7 +157,10 @@ export class PlayerInput {
   public setSourcePrestartMovementBlocked(blocked:boolean):void{
     if(this.deterministicQaEnabled||this.sourcePrestartBlocked===blocked)return;
     this.sourcePrestartBlocked=blocked;
-    if(blocked)this.sourceNativeRepeatGuard=true;
+    if(blocked){
+      this.sourceNativeRepeatGuard=true;
+      this.sourceSquidTapQueued=false;
+    }
     if(!blocked)return;
     for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
      if(this.keys.has(code))this.sourcePrestartHeldKeys.add(code);
@@ -172,6 +185,7 @@ export class PlayerInput {
     this.specialPressedQueued=false;
     this.primaryPressAtMs=Number.NaN;
     this.jumpQueued=false;
+    this.sourceSquidTapQueued=false;
     this.keys.delete('Space');
     // A physical Space keyup (not an automatic key repeat) rearms jump
     // after death; no modification to Rapier, movement, CPU or ink.
@@ -207,6 +221,18 @@ export class PlayerInput {
   public get squidHeld(): boolean {
     return !this.sourcePrestartBlocked&&
      (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
+  }
+
+  /** SOURCE human fixed step consumes a real, briefly tapped Shift once.
+   * No synthetic paint contact or squid-speed grant: PlayerController still
+   * requires its existing registered Rapier support for own-ink swimming.
+   * Held Shift stays held until physical keyup. Never called by frozen T20. */
+  public consumeSquidHeldForPlayerTick():boolean{
+    const tap=this.sourceSquidTapQueued;
+    this.sourceSquidTapQueued=false;
+    return this.squidHeld||
+      (!this.deterministicQaEnabled&&this.sourceNativeRepeatGuard&&
+       !this.sourcePrestartBlocked&&tap);
   }
 
   public get fireHeld(): boolean {
