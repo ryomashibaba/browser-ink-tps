@@ -91,7 +91,7 @@ export function b245PlayerSightlineCss(search:string):string{
   on+'#t21-f3-b338-source-guide',
   '{max-height:none!important;overflow:visible!important;'+
   'white-space:normal!important;overflow-wrap:break-word!important;'+
-  'font-size:9px!important;line-height:1.4!important;}',
+  'font-size:clamp(11px,0.9vw,13px)!important;line-height:1.4!important;}',
   // The native ink gauge remains fully live; detailed B355 in F8 QA.
   on+'#t21-f3-b355-source-ink-readout','{display:none!important;}',
   // B464 still renders every real value/dataset. Keep an unobtrusive
@@ -101,7 +101,7 @@ export function b245PlayerSightlineCss(search:string):string{
   'height:27px!important;max-height:27px!important;'+
   'padding:5px 9px!important;overflow:hidden!important;'+
   'white-space:nowrap!important;text-overflow:ellipsis!important;'+
-  'font-size:9px!important;line-height:1.4!important;}',
+  'font-size:10px!important;line-height:1.4!important;}',
   // Compact actual A1 ally bearings only in normal PLAYER. The full
   // original physical/Crowd provenance text remains in F8 QA.
   on+'#t21-f3-b141-real-ally',
@@ -166,6 +166,15 @@ export function installB245SourcePresentation(
   'border-color:rgba(111,242,233,.63);}',
   '#ui-root[data-t21-b245-presentation="PLAYER"] #t21-f3-b245-view-toggle',
   '{left:14px;}',
+  // Keyboard focus must be visible without obscuring original floor cues.
+  '#ui-root #t21-f3-b245-view-toggle:focus-visible',
+  '{outline:3px solid #fff0a5;outline-offset:3px;}',
+  // Preserve legible native weapon controls on smaller real-play windows.
+  '@media(max-width:720px){',
+  '#ui-root[data-t21-b245-presentation="PLAYER"]',
+  '[data-t21-b338-phase="PLAYING"] #t21-f3-b338-source-guide',
+  '{font-size:12px!important;line-height:1.45!important;}',
+  '}',
   '#ui-root[data-t21-b245-presentation="QA"] #t21-f3-b245-view-toggle',
   '{left:225px;}',
   '@media(max-width:620px){',
@@ -195,9 +204,9 @@ export function installB245SourcePresentation(
  button.type='button';
  button.setAttribute('aria-label','Toggle source QA evidence view (F8)');
  button.style.cssText='position:fixed;bottom:14px;z-index:72;pointer-events:auto;'+
-  'padding:9px 12px;border:1px solid #6cdad9;border-radius:10px;'+
+  'padding:11px 14px;border:1px solid #6cdad9;border-radius:10px;'+
   'background:rgba(4,25,39,.92);color:#dffcff;box-shadow:0 7px 26px #0019;'+
-  'font:750 11px/1.2 system-ui;cursor:pointer';
+  'font:750 12px/1.3 system-ui;cursor:pointer';
  const apply=(view:B245View,manual:boolean)=>{
   ui.dataset.t21B245Presentation=view;
   ui.dataset.t21B245Inspect=String(manual&&view==='QA');
