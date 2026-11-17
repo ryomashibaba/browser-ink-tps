@@ -256,6 +256,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
    nativeRouteRayProbes:number;realGoalRequests:number;
    b137NativeTick:number;b441OriginalRampApprovals:number;
    b441OriginalRampRejected:number;
+   b441OriginalRampRetentions:number;
    b441FrontGoals:Map<string,Vec3[]>;
    physicallyRejoined:Set<string>;
    realKccRejectedSteps:Map<string,number>;
@@ -273,6 +274,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   traffic.nativeRouteRayProbes=0;traffic.realGoalRequests=0;
   traffic.b137NativeTick=1765;
   traffic.b441OriginalRampApprovals=0;traffic.b441OriginalRampRejected=0;
+  traffic.b441OriginalRampRetentions=0;
   traffic.b441FrontGoals=new Map([['B2',[]]]);
   traffic.physicallyRejoined=new Set(['B2']);
   traffic.realKccRejectedSteps=new Map([['B2',0]]);
@@ -382,6 +384,31 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(rampActualSourceBiasSupported).toBeGreaterThan(0);
   expect(rampRecovered).toBe(true);
   expect(traffic.b441OriginalRampApprovals).toBe(1);
+  // Genuine SOURCE B2 physical foot measured at native tick 1575
+  // on 2026-11-17 (distance ~0.738m to its active original goal).
+  const activeOriginalGoal=new Vec3(-3.3792406999999995,3.75,-47.6718403);
+  const realApproachFoot=new Vec3(-4.03349883404004,4.007615787199216,
+   -47.89508902982832);
+  expect(realApproachFoot.distance(activeOriginalGoal)).toBeGreaterThan(.30);
+  expect(realApproachFoot.distance(activeOriginalGoal)).toBeLessThan(1.2);
+  const originalFootHit=w.physics.castCharacterFootSupport(
+   new Vec3(realApproachFoot.x,realApproachFoot.y+
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,realApproachFoot.z),
+   PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+  expect(originalFootHit?.solidId).toBe(
+   'UndertowT21D:right-low-route-ramp-negative-z');
+  traffic.b441OriginalRampGoal.set('B2',activeOriginalGoal.clone());
+  const retained=new Vec3();
+  const verifiedRetention=traffic.tryOriginalRampLocalRecovery(
+   'B2',realApproachFoot,retained);
+  expect(verifiedRetention).toBe(true);
+  expect(retained.distance(activeOriginalGoal)).toBeLessThan(.001);
+  expect(traffic.b441OriginalRampGoal.get('B2')?.distance(activeOriginalGoal))
+   .toBeLessThan(.001);
+  expect(traffic.b441OriginalRampApprovals).toBe(1);
+  expect(traffic.b441OriginalRampRetentions).toBe(1);
+  expect((traffic.bots[0] as {position:Vec3}).position)
+   .toEqual(originalFoot); // no invented CPU movement
   w.actors.dispose();
  });
  it('real HUMAN production PlayerController KCC must not walk through a stationary CPU collider in its own Rapier stage world',()=>{

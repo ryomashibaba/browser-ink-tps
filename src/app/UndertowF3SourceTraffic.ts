@@ -821,7 +821,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const proposals=proposeB441OriginalRampLocalGoals(this.stage,'B');
   if(!proposals.length)return false;
   const prior=this.b441OriginalRampGoal?.get(id);
-  if(prior&&realFoot.distance(prior)<=1.2)
+  // Genuine live native B2/B3/B4 feet reached 0.29-0.69m from
+  // original ramp goals. The old 1.2m "arrived" cancels a real
+  // in-flight goal before a physical foot gets to its endpoint.
+  // Never synthesize arrival from nav projection: require <=30cm.
+  if(prior&&realFoot.distance(prior)<=.30)
    this.b441OriginalRampGoal?.delete(id);
   const inFlight=this.b441OriginalRampGoal?.get(id);
   // True 720-tick SOURCE B2/B4 congestion recovery improved actual
@@ -888,7 +892,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   for(const proposal of options){
    if(proposal.sourceSolidId!==sourceId)continue;
    const goal=new Vec3(...proposal.point);
-   if(goal.distance(realFoot)<1.5||goal.z> -33||
+   // Exclude new close-range candidates, but let an in-flight
+   // goal finish its final native-supported step. The same real
+   // Recast path, 0.30m original Rapier support and actor-block
+   // validation below remain mandatory.
+   if((!inFlight&&goal.distance(realFoot)<1.5)||goal.z> -33||
       this.sourceNativeCharacterFootHit(goal)?.solidId!==sourceId)
     continue;
    const route=this.nav.auditPath(realFoot,goal);
