@@ -79,6 +79,34 @@ describe('SOURCE prestart guard for live human research-flag URLs',()=>{
  });
 });
 
+describe('T21 V28 repeated live SOURCE mode lookups stay strict',()=>{
+ const menu='https://example.org/browser-ink-tps/play-source.html';
+ const selected=sourcePlayWeaponModeDestinations(menu,'ink-saber');
+ it('returns the same authentic mode across repeated gameplay/HUD reads',()=>{
+  for(const [name,url] of Object.entries(selected))
+   for(let tick=0;tick<120;tick++)
+    expect(sourceCanonicalPlayableMode(url)).toBe(name);
+ });
+ it('revalidates changed query, path, mode and selected weapon URL',()=>{
+  expect(sourceCanonicalPlayableMode(selected.combat)).toBe('combat');
+  const injected=new URL(selected.combat);
+  injected.searchParams.append('t21QaInput','deterministic');
+  for(let tick=0;tick<10;tick++)
+   expect(sourceCanonicalPlayableMode(injected.href)).toBeNull();
+  expect(sourceCanonicalPlayableMode(selected.combat)).toBe('combat');
+  expect(sourceCanonicalPlayableMode(selected.frontline)).toBe('frontline');
+  expect(sourceCanonicalPlayableMode(selected.coop)).toBe('coop');
+  const duplicate=new URL(selected.coop);
+  duplicate.searchParams.append('t21W10B389','ink-saber');
+  expect(sourceCanonicalPlayableMode(duplicate.href)).toBeNull();
+  expect(sourceCanonicalPlayableMode(selected.coop)).toBe('coop');
+  const otherPath=new URL(selected.combat);
+  otherPath.pathname='/browser-ink-tps/other.html';
+  expect(sourceCanonicalPlayableMode(otherPath.href)).toBeNull();
+  expect(sourceCanonicalPlayableMode(selected.combat)).toBe('combat');
+ });
+});
+
 describe('T21 real playable SOURCE game entry',()=>{
  it('launches authentic existing 12-weapon 180s SOURCE circuit',()=>{
   const d=sourcePlayPortalDestinations('https://example.org/browser-ink-tps/play-source.html');
