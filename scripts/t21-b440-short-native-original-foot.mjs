@@ -223,6 +223,50 @@ const origin=()=>evaluate('performance.timeOrigin');
 const locked=()=>evaluate('document.pointerLockElement===document.querySelector("#app-canvas")');
 async function buttonClick(selector){
  await cdp('Page.bringToFront');
+ // Issue #11: one read-only snapshot BEFORE the real CDP click. Crucially
+ // this does not call DOM click(), move the button or change input checks.
+ if(selector==='#t21-f3-b25-start'&&
+    process.env.T21_V28_ISSUE11_DOM_AUDIT==='1'){
+  const hit=await evaluate(`(() => {
+   const b=document.querySelector('#t21-f3-b25-start');
+   const f8=document.querySelector('#t21-f3-b245-view-toggle');
+   const card=document.querySelector('#t21-f3-b25-paint-run');
+   const serialize=e=>{
+    if(!e)return null;
+    const c=getComputedStyle(e),r=e.getBoundingClientRect();
+    return {tag:e.tagName,id:e.id,cls:String(e.className??'').slice(0,160),
+     hidden:!!e.hidden,disabled:'disabled'in e?!!e.disabled:null,
+     display:c.display,visibility:c.visibility,opacity:c.opacity,
+     pointerEvents:c.pointerEvents,zIndex:c.zIndex,position:c.position,
+     rect:{x:r.x,y:r.y,width:r.width,height:r.height}};
+   };
+   const chain=[];for(let e=b,i=0;e&&i<8;e=e.parentElement,i++)
+    chain.push(serialize(e));
+   const rect=b?.getBoundingClientRect();
+   const x=rect?rect.left+rect.width/2:null;
+   const y=rect?rect.top+rect.height/2:null;
+   const target=x!==null&&y!==null?document.elementFromPoint(x,y):null;
+   const hits=x!==null&&y!==null?
+    document.elementsFromPoint(x,y).slice(0,10).map(serialize):[];
+   let source=null;
+   try{const s=window.__t21F3?.snapshot?.();
+    source=s?{tick:s.tick,matchState:s.matchState,paused:s.paused,
+     stopReason:s.stopReason,practiceStatus:s.b25SourcePaintRun?.status,
+     solids:s.originalSourceSolids,paint:s.originalPaintSurfaces,
+     nav:s.originalSourceNavigationLinks,scoreable:s.sourceScoreablePromotions}:null;
+   }catch(error){source={readError:String(error).slice(0,160)}}
+   return {selector:'#t21-f3-b25-start',viewport:{width:innerWidth,height:innerHeight},
+    source,button:serialize(b),card:serialize(card),f8:serialize(f8),
+    parentChain:chain,center:{x,y},
+    centerHit:serialize(target),elementsAtCenter:hits,
+    receives:b&&target&&(target===b||b.contains(target))?true:false,
+    withinViewport:x!==null&&y!==null&&x>=0&&y>=0&&
+     x<=innerWidth&&y<=innerHeight,
+    originalActorsOrPhysicsChanged:false,realClickDispatchedYet:false};
+  })()`);
+  proof.issue11ReadOnlyStartHit=hit;save();
+  console.log('T21_V28_ISSUE11_REAL_CHROMIUM_START_HIT',JSON.stringify(hit));
+ }
  const location=await evaluate(`(() => {
   const b=document.querySelector(${JSON.stringify(selector)});
   if(!b||b.hidden||b.disabled||getComputedStyle(b).display==='none')return null;
