@@ -650,7 +650,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.currentHumanDamageable=true;
     projectile.currentHumanTeam=Team.A;
     projectile.currentHumanPosition=new Vec3(0,.87,0);
-    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.resources={currentHp:100,applyDamage:vi.fn(()=>40)};
     projectile.stats={cpuPlayerHits:0};
     projectile.cpuAgents={findNearestCombatHit:vi.fn(()=>null)};
     projectile.physics={castStageSegment:vi.fn(()=>null)};
@@ -696,6 +696,13 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       projectile.currentHumanPosition,true,false,new Vec3(1,0,0));
     expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(2);
     expect(projectile.stats.cpuPlayerHits).toBe(2);
+    // A real collision without any resolved HP must NOT become an
+    // invented SOURCE combat hit. The physical ray still completes.
+    projectile.resources.applyDamage.mockReturnValue(0);
+    mode='SQUID';
+    attack(.33);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(3);
+    expect(projectile.stats.cpuPlayerHits).toBe(2);
   });
 
   it('real SOURCE enemy SUB respects physical HUMAN capsule, SQUID sphere, living HP and native blast overlap',()=>{
@@ -703,7 +710,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.currentHumanDamageable=true;
     projectile.currentHumanTeam=Team.A;
     projectile.currentHumanPosition=new Vec3(0,.87,0);
-    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.resources={currentHp:100,applyDamage:vi.fn(()=>24)};
     projectile.stats={cpuPlayerHits:0};
     projectile.currentHumanGuarding=false;
     projectile.cpuAgents={applyAreaDamage:vi.fn()};
@@ -759,7 +766,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.currentHumanTeam=Team.A;
     projectile.currentHumanPosition=new Vec3(2,.68,0);
     projectile.currentHumanGuarding=false;
-    projectile.resources={currentHp:100,applyDamage:vi.fn()};
+    projectile.resources={currentHp:100,applyDamage:vi.fn(()=>20)};
     projectile.stats={cpuPlayerHits:0};
     const wall={solidId:'UndertowT21D:registered-original-cover',
       distance:.11,point:new Vec3(.11,.68,0)};
@@ -780,6 +787,12 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     expect(system.stats.cpuCombatHits).toBe(1);
     projectile.applyExternalAreaDamage(explosion,3,20,Team.B);
     expect(projectile.resources.applyDamage).toHaveBeenCalledOnce();
+    expect(projectile.stats.cpuPlayerHits).toBe(1);
+    // A real SOURCE blast can overlap a target without removing HP.
+    // It must not increment the native CPU->human hit counter.
+    projectile.resources.applyDamage.mockReturnValue(0);
+    projectile.applyExternalAreaDamage(explosion,3,20,Team.B);
+    expect(projectile.resources.applyDamage).toHaveBeenCalledTimes(2);
     expect(projectile.stats.cpuPlayerHits).toBe(1);
     // Frozen legacy T20 keeps radius-only HP damage and no SOURCE ray.
     const old=fixture(false);

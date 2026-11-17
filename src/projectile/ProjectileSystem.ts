@@ -225,6 +225,15 @@ export class ProjectileSystem {
     this.feedback.confirmedNativeHumanDamage(attacker,contact,applied);
   }
 
+  /** A physical contact is not a successful SOURCE player hit unless
+   * actual HP was removed (the target may already be splatted). Keep
+   * frozen T20 contact-counter semantics unchanged. */
+  private recordCpuPlayerDamageHit(hpLoss:number):void{
+    if(this.nativeSourceHumanPhysicalMode!==null&&
+       (!Number.isFinite(hpLoss)||hpLoss<=0))return;
+    this.stats.cpuPlayerHits+=1;
+  }
+
   public get currentPlayerWeapon(): WeaponProfile {
     return weaponProfile(this.playerWeaponId);
   }
@@ -815,7 +824,7 @@ export class ProjectileSystem {
           } else {
             const hpLoss=this.resources.applyDamage(slot.damage);
             this.confirmNativeHumanDamage(hpLoss,combatPoint,slot.team);
-            this.stats.cpuPlayerHits += 1;
+            this.recordCpuPlayerDamageHit(hpLoss);
           }
         }
 
@@ -2171,7 +2180,7 @@ export class ProjectileSystem {
         } else {
           const hpLoss=this.resources.applyDamage(damage);
           this.confirmNativeHumanDamage(hpLoss,endPoint,request.team);
-          this.stats.cpuPlayerHits += 1;
+          this.recordCpuPlayerDamageHit(hpLoss);
         }
       }
     } else if (paintWins && paintHit) {
@@ -2451,7 +2460,7 @@ export class ProjectileSystem {
 
     const hpLoss=this.resources.applyDamage(damage);
     this.confirmNativeHumanDamage(hpLoss,point,team);
-    this.stats.cpuPlayerHits += 1;
+    this.recordCpuPlayerDamageHit(hpLoss);
   }
 
   private applyMeleeDamage(
