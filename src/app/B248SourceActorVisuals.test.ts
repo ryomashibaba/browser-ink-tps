@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {B248_SOURCE_VISUAL_AUTHORITY,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
  B248_SOURCE_SQUID_BODY_HEIGHT_METERS,B248_SOURCE_SQUID_PARENT_SCALE_Y,
- b248HumanParts,b249FacingDegrees,b249StrideDegrees}
+ b248HumanParts,b248NativePigmentEmission,b249FacingDegrees,b249StrideDegrees}
  from './B248SourceActorVisuals';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
@@ -66,5 +66,27 @@ describe('B248 genuine grounded SOURCE squid visual foot correspondence',()=>{
   // No value in PlayerCharacterPhysics or the original-source collider moved.
   expect(PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters).toBeCloseTo(.87);
   expect(PLAYER_CHARACTER_PHYSICS.squidRadiusMeters).toBeCloseTo(.34);
+ });
+});
+
+describe('Issue #17 actual B-side source actor pigment readability',()=>{
+ it('brightens only the already-rendered B team pigments, not A or geometry',()=>{
+  for(const original of [.2,.23,.42,.18]){
+   const ally=b248NativePigmentEmission(original,'A');
+   const opponent=b248NativePigmentEmission(original,'B');
+   expect(ally).toBe(original);
+   expect(opponent).toBeGreaterThan(original);
+   expect(opponent).toBeLessThanOrEqual(.48);
+   expect(opponent).toBeCloseTo(Math.min(.48,original+.13),9);
+  }
+ });
+ it('fails closed on broken material emission, keeps native actor authority',()=>{
+  for(const bad of [Number.NaN,Number.POSITIVE_INFINITY,-1,1.01])
+   expect(()=>b248NativePigmentEmission(bad,'B'))
+    .toThrow('B248_BAD_SOURCE_VISUAL_EMISSION');
+  expect(B248_SOURCE_VISUAL_AUTHORITY).toMatchObject({
+   visualOnly:true,scoreableAdded:0,actorBodiesAdded:0,
+   physicalActorsMoved:0,productionAuthorized:false
+  });
  });
 });
