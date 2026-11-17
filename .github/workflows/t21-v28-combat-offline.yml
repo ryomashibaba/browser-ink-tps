@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - research/t21-v28-combat-20261117
+      - research/t21-v28-combat-rear-blast-20261117
     paths:
       - 'src/projectile/**'
       - 'src/weapons/**'
@@ -25,3 +26,4 @@ jobs:
       - run: npm run typecheck
       - name: Real projectile pool and weapon regression tests (no browser)
         run: npx vitest run src/projectile/NativeSourceChargerAndImpactAuthority.test.ts src/projectile/NativeSourceSpecialBlastAndTtl.test.ts src/projectile/NativeSourceGuardProjectileHp.test.ts src/projectile/SourceSplatlingBurstPoolWait.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/NativeSourceHumanPause.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
