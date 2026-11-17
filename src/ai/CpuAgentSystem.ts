@@ -16,7 +16,9 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
-import {shouldRefreshStalledOriginalSourceCrowd}
+import {shouldRefreshStalledOriginalSourceCrowd,
+ SOURCE_CROWD_STALL_SECONDS,
+ SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity,
@@ -302,10 +304,12 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Only previously SOURCE-authorized native destinations may be retained. */
   private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
-  /** A genuine 5-second real-foot stall can refresh the passive Recast
+  /** A genuine source 1.2-second real-foot stall can refresh passive Recast
    * steering proxy ONCE per native CPU life, never its Rapier capsule. */
   private readonly sourceCrowdRefreshedThisLife=new Set<string>();
   private readonly sourceLastPhysicalBlockedTick=new Map<string,number>();
+  /** Source-only expensive failed recovery probes are bounded to 90 ticks. */
+  private readonly sourceLastRecoveryAuditTick=new Map<string,number>();
   private sourceNativeMotionTick=0;
   private b35OptInNativeRefresh=false;
   private b35RealNativeRequests=0;
@@ -939,6 +943,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.clear();
     this.sourceCrowdRefreshedThisLife.clear();
     this.sourceLastPhysicalBlockedTick.clear();
+    this.sourceLastRecoveryAuditTick.clear();
     this.sourceNativeMotionTick=0;
     this.b35LastNativeTarget.clear();
     this.b35RealNativeRequests=0;
@@ -1563,6 +1568,12 @@ export class CpuAgentSystem {
             // infer a collision from a merely stationary Crowd agent.
             this.f3dSourceGoals?.noteRealSourceKccRejectedStep?.(
                bot.id,bot.position,shared.colliderOwnerIds,shared.cause);
+            // This SOURCE destination was denied by genuine Rapier KCC.
+            // It must not be resurrected by the subsequent helper's
+            // "previously authorized" Recast fallback. SOURCE traffic
+            // may choose the same or another goal only with fresh authority;
+            // no physical position, KCC, or stationary weapon aim changes.
+            this.sourceLastAdmittedRouteGoal.delete(bot.id);
             this.reconcileBlockedT21F2CrowdProxy(bot);
             this.continueBlockedOriginalSourceCpuActions(bot,dt,
               humanTeam,humanPosition,humanActive,canStartNewCombatActions);
@@ -1622,7 +1633,9 @@ export class CpuAgentSystem {
       // but remain motionless with no KCC rejection: refresh only its
       // steering proxy once per life, and re-request ONLY source-approved
       // goals on the next think. This cannot grant physical movement.
-      if(report.suspectedStallCount>0)
+      if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
+         report.actors.some(a=>
+           a.stationarySeconds>=SOURCE_CROWD_STALL_SECONDS))
         this.tryRefreshStalledOriginalSourceCrowd(report);
     }
     this.b234ObserveRealCpu();
@@ -1718,8 +1731,17 @@ export class CpuAgentSystem {
        this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
       return;
     for(const actual of report.actors){
-      if(!actual.suspectedNavigationStall)continue;
+      // This is earlier than the unchanged five-second read-only QA
+      // warning; the standalone SOURCE gate still requires true foot,
+      // >=1.2s actual stop and a 300-tick window without a KCC veto.
+      if(actual.stationarySeconds<SOURCE_CROWD_STALL_SECONDS)continue;
       const bot=this.bots.find(b=>b.id===actual.id);
+      // The genuine SOURCE splatling's charge/burst and shield are active
+      // weapon actions, NOT evidence of a broken movement goal. Preserve
+      // B4's live paid barrage instead of resetting the Crowd proxy
+      // while its weapon is deliberately committed.
+      if(bot&&(bot.weaponChargeSeconds>0||
+         bot.weaponBurstShotsRemaining>0||bot.weaponGuarding))continue;
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
       if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
         actualFoot:bot.position,admittedGoal:goal??null,
@@ -1734,6 +1756,14 @@ export class CpuAgentSystem {
         lastPhysicalBlockTick:
           this.sourceLastPhysicalBlockedTick.get(bot.id)??null
       }))continue;
+      // A missing original route may persist for many frames. Recheck
+      // sparingly; a held path MUST NOT provoke a 60Hz audit storm.
+      const lastAudit=this.sourceLastRecoveryAuditTick.get(bot.id);
+      if(lastAudit!==undefined&&
+         this.sourceNativeMotionTick-lastAudit<
+           SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS)continue;
+      this.sourceLastRecoveryAuditTick.set(bot.id,
+        this.sourceNativeMotionTick);
       // The Recast nearest polygon cannot certify a floor, and the
       // actual supported Rapier foot must be on the SAME original level.
       const support=this.phase14qGroundCollision
@@ -4619,6 +4649,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
@@ -4682,6 +4713,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);

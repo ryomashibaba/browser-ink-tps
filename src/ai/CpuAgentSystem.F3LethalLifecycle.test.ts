@@ -59,6 +59,7 @@ function fixture(originalF3: boolean) {
   system.sourceLastAdmittedRouteGoal = new Map();
   system.sourceCrowdRefreshedThisLife = new Set();
   system.sourceLastPhysicalBlockedTick = new Map();
+  system.sourceLastRecoveryAuditTick = new Map();
   system.sourceNativeMotionTick = 0;
   system.b35LastNativeTarget = new Map();
   system.phase14eFirstDrop = { cancel: vi.fn() };
@@ -1894,9 +1895,11 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     // native proxy recovery and recorded a real blocked physical step.
     system.sourceCrowdRefreshedThisLife.add('B1');
     system.sourceLastPhysicalBlockedTick.set('B1',420);
+    system.sourceLastRecoveryAuditTick.set('B1',430);
     system.respawnBot(bot);
     expect(system.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
     expect(system.sourceLastPhysicalBlockedTick.has('B1')).toBe(false);
+    expect(system.sourceLastRecoveryAuditTick.has('B1')).toBe(false);
     expect(expireOldLife).toHaveBeenCalledTimes(1);
     expect(expireOldLife).toHaveBeenCalledWith('B1');
     expect(expireOldLife.mock.invocationCallOrder[0]).toBeLessThan(
