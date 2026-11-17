@@ -54,6 +54,16 @@ export function nativeSourceWallReleaseVerticalVelocity(
    velocity>0?0:velocity;
 }
 
+/** SOURCE-only short pre-landing Space buffer, never a second authority
+ * for ground contact. A lock loss or exclusive move consumes the intent. */
+export function nativeSourceNextJumpBufferSeconds(
+ previous:number,jumpPressed:boolean,dt:number,
+ liveInput:boolean,exclusiveAction:boolean
+):number{
+ if(!liveInput||exclusiveAction)return 0;
+ return jumpPressed?0.10:Math.max(0,previous-dt);
+}
+
 /** Real SOURCE only: an optical/nearby paint surface cannot grant
  * OWN/ENEMY resource or squid ground speed when a DIFFERENT registered
  * 25-solid Rapier floor supports the character. No new collision. */
@@ -421,16 +431,15 @@ export class PlayerController {
     if (this.nativeSourceGroundInkGuard) {
       // A pointer-lock drop makes old Space intent invalid even if the
       // browser has not delivered pointerlockchange yet.
-      this.sourceJumpBufferSeconds = !this.input.sourceLiveInputAvailable
-        ? 0 : jumpPressed
-          ? 0.10 : Math.max(0, this.sourceJumpBufferSeconds - dt);
       // Space during exclusive Dualies/dodge, squid-roll or surge cannot
       // become a delayed unrelated grounded jump when that action ends.
-      if(this.weaponDodgeQueued||this.weaponDodgeStartupSeconds>0||
-         this.weaponDodgeRemainingSeconds>0||
-         this.weaponDodgeMoveLockSeconds>0||
-         this.squidRollRemainingSeconds>0||this.surgeRemainingSeconds>0)
-        this.sourceJumpBufferSeconds=0;
+      const exclusiveAction=this.weaponDodgeQueued||
+        this.weaponDodgeStartupSeconds>0||this.weaponDodgeRemainingSeconds>0||
+        this.weaponDodgeMoveLockSeconds>0||
+        this.squidRollRemainingSeconds>0||this.surgeRemainingSeconds>0;
+      this.sourceJumpBufferSeconds=nativeSourceNextJumpBufferSeconds(
+        this.sourceJumpBufferSeconds,jumpPressed,dt,
+        this.input.sourceLiveInputAvailable,exclusiveAction);
     }
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
 
