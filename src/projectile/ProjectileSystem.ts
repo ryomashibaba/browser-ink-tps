@@ -16,6 +16,7 @@ import type { GameFeedback } from '../feedback/GameFeedback';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { PaintCoordinator, PaintRequest } from '../ink/PaintCoordinator';
 import {sourceRegisteredPaintHitActive,
+ sourceRegisteredPaintCellActive,sourceOriginalBlastPaintLineClear,
  type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import {
@@ -2685,19 +2686,22 @@ export class ProjectileSystem {
          (!Number.isFinite(projected.u)||
           !Number.isFinite(projected.v)||
           !Number.isFinite(projected.planeDistance)||
-          projected.planeDistance<0))continue;
+          projected.planeDistance<0||
+          !sourceRegisteredPaintCellActive(surface,projected.u,projected.v)))
+        continue;
       if(verifyPhysicalSourceTrail){
         const face=surface.localToWorld(projected.u,projected.v);
         const meters=worldPoint.distance(face);
         if(![meters,face.x,face.y,face.z].every(Number.isFinite))continue;
-        // The destination face itself may be the final Rapier contact;
-        // only an EARLIER registered blocker can veto this real stamp.
-        // Same 2.5cm edge-contact allowance as SOURCE melee ray checks.
+        // Share the EXACT existing registered Rapier-cover check with
+        // genuine SOURCE human/CPU bomb/SPECIAL stamps. A different
+        // original wall 1cm before the target is real cover; only the
+        // paint surface's OWN backing can use 6cm face alignment.
         if(meters>1e-8){
           const blocker=this.physics.castStageSegment(
             worldPoint,face,'ink-projectile');
-          if(blocker&&(!Number.isFinite(blocker.distance)||
-             blocker.distance<Math.max(0,meters-.025)))continue;
+          if(!sourceOriginalBlastPaintLineClear(
+            worldPoint,face,surface,blocker))continue;
         }
       }
       if (!best || projected.planeDistance < best.planeDistance) {
