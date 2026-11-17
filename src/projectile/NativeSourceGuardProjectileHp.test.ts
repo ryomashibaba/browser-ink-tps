@@ -123,6 +123,84 @@ describe('SOURCE real projectile, shield, HP and hit ledger',()=>{
     expect(f.stats.activeProjectiles).toBe(1);
   });
 
+  it('rejects an almost-sideways source hit on the physical rear half',()=>{
+    // From inside the registered capsule at x=.25 z=+.02: legacy -0.10
+    // tolerance called this rear-quadrant ray a genuine FRONT shield hit.
+    const f=combatFixture({
+      origin:new Vec3(.25,0,.02),velocities:[-8]
+    });
+    f.step();
+    expect(f.stats.playerWeaponGuardBlocks).toBe(0);
+    expect(f.resources.currentHp).toBe(60);
+    expect(f.stats.cpuPlayerHits).toBe(1);
+    expect(f.cues).toHaveBeenCalledOnce();
+  });
+
+  it('still blocks a physically front-half grazing SOURCE projectile',()=>{
+    const f=combatFixture({
+      origin:new Vec3(.25,0,-.02),velocities:[8]
+    });
+    f.step();
+    expect(f.stats.playerWeaponGuardBlocks).toBe(1);
+    expect(f.resources.currentHp).toBe(100);
+    expect(f.stats.cpuPlayerHits).toBe(0);
+    expect(f.cues).not.toHaveBeenCalled();
+  });
+
+  it('restores movement speed on SOURCE guard break without faking HP damage',()=>{
+    const f=combatFixture({velocities:[8]});
+    expect(f.game.getMovementMultiplier(false,true)).toBe(.74);
+    f.hits[0]!.damage=130;
+    f.step();
+    expect(f.stats.playerWeaponGuardBlocks).toBe(1);
+    expect(f.stats.playerWeaponGuardHp).toBe(0);
+    expect(f.state.guardBreakSeconds).toBe(2.5);
+    expect(f.game.getMovementMultiplier(false,true)).toBe(1);
+    expect(f.resources.currentHp).toBe(100);
+    expect(f.stats.cpuPlayerHits).toBe(0);
+  });
+
+  it('retains frozen T20 shield movement penalty and centered-hit guard',()=>{
+    const f=combatFixture({
+      native:false,origin:new Vec3(.25,0,.02),velocities:[-8]
+    });
+    f.step();
+    expect(f.stats.playerWeaponGuardBlocks).toBe(1);
+    expect(f.resources.currentHp).toBe(100);
+    // Frozen T20 still slows movement whenever secondary is held.
+    f.state.guardBreakSeconds=2.5;
+    expect(f.game.getMovementMultiplier(false,true)).toBe(.74);
+  });
+
+  it('starts a new SOURCE round with no stale live human damageable target',()=>{
+    const f=combatFixture();
+    Object.assign(f.state,{
+      b346ShooterWitness:{reset:vi.fn()},
+      sourceCpuLastPhysicalGrant:new Map<string,number>(),
+      b367PhysicalEvents:[],
+      delayedBursts:[],
+      currentHumanDamageable:true,currentHumanGuarding:true,
+      currentHumanTeam:Team.A,
+      cpuAgents:{applyAreaDamage:vi.fn(),findNearestCombatHit:()=>null},
+      combatTargets:{applyAreaDamage:vi.fn(),findNearestHit:()=>null}
+    });
+    f.game.reset();
+    expect(f.state.currentHumanDamageable).toBe(false);
+    expect(f.state.currentHumanGuarding).toBe(false);
+    expect(f.stats.playerWeaponGuarding).toBe(false);
+    // Pre-first-frame real enemy SUB / SPECIAL does not damage a stale
+    // previous-match human collider. No fabricated invincibility after the
+    // first real fixedUpdate writes the authoritative physical body.
+    f.game.applyExternalAreaDamage(new Vec3(0,0,-1),2,35,Team.B);
+    expect(f.resources.currentHp).toBe(100);
+    expect(f.stats.cpuPlayerHits).toBe(0);
+    expect(f.cues).not.toHaveBeenCalled();
+    f.step(false);
+    f.game.applyExternalAreaDamage(new Vec3(0,0,-1),2,35,Team.B);
+    expect(f.resources.currentHp).toBe(65);
+    expect(f.stats.cpuPlayerHits).toBe(1);
+  });
+
   it('does not inflict damage through a closer original Rapier solid',()=>{
     const f=combatFixture({guard:false,origin:new Vec3(0,0,-0.6),velocities:[36]});
     f.state.physics.castStageSegment=()=>({
