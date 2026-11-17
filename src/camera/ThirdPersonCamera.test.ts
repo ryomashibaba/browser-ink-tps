@@ -248,7 +248,7 @@ describe('Issue #19 lot4: visible real SOURCE mouse-lock recovery',()=>{
   const h=harness();h.camera.enableSourcePracticeControls();
   h.documentStub.pointerLockElement=null;
   Object.defineProperty(h.canvas,'requestPointerLock',{
-   value:()=>Promise.reject(new Error('denied'))});
+   value:()=>Promise.reject(new Error('denied')),configurable:true});
   h.pointerDown(0);
   await Promise.resolve();
   h.frame();
