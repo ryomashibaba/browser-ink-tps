@@ -33,7 +33,8 @@ export interface SurfaceProjection {
 export function sourceRegisteredPaintCellActive(
  surface:PaintSurface,u:number,v:number
 ):boolean{
- if(!Number.isFinite(u)||!Number.isFinite(v))return false;
+ if(!Number.isFinite(u)||!Number.isFinite(v)||
+    u<0||v<0||u>surface.widthMeters||v>surface.heightMeters)return false;
  const x=Math.min(surface.widthCells-1,Math.max(0,
   Math.floor(u/surface.cellSize)));
  const y=Math.min(surface.heightCells-1,Math.max(0,

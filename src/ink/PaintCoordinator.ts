@@ -26,7 +26,7 @@ export interface PaintTickReport {
 }
 
 export class PaintCoordinator {
-  private readonly requests: PaintRequest[] = [];
+  private readonly requests: Readonly<PaintRequest>[] = [];
   public lastEvent: PaintEvent | null = null;
 
   public constructor(
@@ -42,11 +42,16 @@ export class PaintCoordinator {
   ) {}
 
   public enqueue(request: PaintRequest): void {
-    this.requests.push(request);
+    // The weapon/projectile side may reuse its request object later in this
+    // tick. Capture the actual impact now, rather than painting at its next
+    // location after the pooled request has been mutated.
+    this.requests.push(Object.freeze({ ...request }));
   }
 
   public enqueueMany(requests: readonly PaintRequest[]): void {
-    this.requests.push(...requests);
+    // Snapshot each request and avoid the spread-argument limit for long
+    // continuous bursts or large scripted paint batches.
+    for (const request of requests) this.enqueue(request);
   }
 
   public processTick(tick: number): PaintTickReport {
@@ -65,9 +70,14 @@ export class PaintCoordinator {
     const cpuScoreableAreaMeters2ByActor: Record<string, number> = {};
     for (const request of batch) {
       const source = request.source ?? PaintSource.System;
-      const event: PaintEvent = Object.freeze({ tick, ...request, source });
+      // Tick and source authority must not be overridden by extra fields in a
+      // structurally compatible but untrusted pooled request.
+      const event: PaintEvent = Object.freeze({ ...request, source, tick });
       const result = this.gameplay.apply(event);
       changedCells += result.changedCells;
+      // Existing QA uses the raster observation to distinguish denied
+      // attempts from repaint. Preserve that diagnostic contract; the
+      // actual GPU queue and last-accepted UI telemetry remain gated below.
       this.onAcceptedPaint?.(event, result.changedCells, result);
       if (event.source === PaintSource.Cpu) {
         // Count authoritative cell ownership transitions, not just ink
@@ -95,17 +105,19 @@ export class PaintCoordinator {
       // eligible for visual wetness, even when changedCells is zero.
       if (result.rasterEligibleCells > 0) {
         this.gpu.queue(event, result.paintableRuns);
-      }
-      this.lastEvent = event;
-      const surface = this.gameplay.getSurface(event.surfaceId);
-      if (surface) {
-        const world = surface.localToWorld(event.centerU, event.centerV);
-        this.stats.lastPaintSurface = event.surfaceId;
-        this.stats.lastPaintU = event.centerU;
-        this.stats.lastPaintV = event.centerV;
-        this.stats.lastPaintWorldX = world.x;
-        this.stats.lastPaintWorldY = world.y;
-        this.stats.lastPaintWorldZ = world.z;
+        // Same-team restamps still refresh visual wetness, but denied
+        // requests must not masquerade as the last valid paint impact.
+        this.lastEvent = event;
+        const surface = this.gameplay.getSurface(event.surfaceId);
+        if (surface) {
+          const world = surface.localToWorld(event.centerU, event.centerV);
+          this.stats.lastPaintSurface = event.surfaceId;
+          this.stats.lastPaintU = event.centerU;
+          this.stats.lastPaintV = event.centerV;
+          this.stats.lastPaintWorldX = world.x;
+          this.stats.lastPaintWorldY = world.y;
+          this.stats.lastPaintWorldZ = world.z;
+        }
       }
     }
     this.stats.recordPaint(batch.length, changedCells);
