@@ -47,9 +47,22 @@ function make(rgb:readonly [number,number,number],emission=0):StandardMaterial{
  m.emissive=new Color(rgb[0]*emission,rgb[1]*emission,rgb[2]*emission);
  m.useMetalness=true;m.metalness=.12;m.gloss=.5;m.update();return m;
 }
+/**
+ * Render-only opponent pigment visibility at native stage depth. The old
+ * genuine SOURCE 1600x900 capture has tiny magenta native opponents over
+ * dark concrete. Lift ONLY the already-rendered TEAM/INK pigment emission
+ * of B-side meshes a little; leave team identity colors, silhouette,
+ * visibility/depth tests, draw ownership and actual CPU positions alone.
+ * This never adds a silhouette behind walls or a target/HP cue.
+ */
+export function b248NativePigmentEmission(base:number,team:'A'|'B'):number{
+ if(!Number.isFinite(base)||base<0||base>1)
+  throw Error('B248_BAD_SOURCE_VISUAL_EMISSION');
+ return team==='B'?Math.min(.48,base+.13):base;
+}
 function makeColors(team:'A'|'B'):Record<MaterialId,StandardMaterial>{
  const pigment=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
- return {SUIT:make([.13,.22,.33]),TEAM:make(pigment,.2),
+ return {SUIT:make([.13,.22,.33]),TEAM:make(pigment,b248NativePigmentEmission(.2,team)),
   VISOR:make([.74,.94,1],.3),DARK:make([.07,.10,.17]),
   GEAR:make([.22,.29,.36])};
 }
@@ -125,7 +138,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   const originalTeam=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
   const materials={
    ARMOR:make([.075,.115,.165]),TRIM:make([.17,.23,.29]),
-   VISOR:make([.38,.8,.92],.35),INK:make(originalTeam,.23),
+   VISOR:make([.38,.8,.92],.35),INK:make(originalTeam,b248NativePigmentEmission(.23,team)),
    FABRIC:make([.06,.085,.115]),METAL:make([.23,.3,.37])
   };
   for(const p of B268_COMPACT_HUMAN_PARTS){
@@ -148,7 +161,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
    ARMOR:make([.11,.17,.22]),
    FABRIC:make([.075,.11,.14]),
    PLATE:make([.25,.33,.38]),
-   TEAM:make(pigment,.42),
+   TEAM:make(pigment,b248NativePigmentEmission(.42,team)),
    VISOR:make([.68,.88,.96],.20),
    STEEL:make([.15,.22,.27])
   };
@@ -172,7 +185,7 @@ export function decorateB248Actor(parent:Entity,team:'A'|'B',
   const pigment=team==='A'?GAME_CONFIG.visual.teamA:GAME_CONFIG.visual.teamB;
   const materials={
    SUIT:make([.09,.15,.20]),CLOTH:make([.17,.25,.29]),
-   TEAM:make(pigment,.18),VISOR:make([.36,.71,.78],.12),
+   TEAM:make(pigment,b248NativePigmentEmission(.18,team)),VISOR:make([.36,.71,.78],.12),
    GEAR:make([.08,.12,.16])
   };
   for(const p of B292_PARTS){

@@ -66,11 +66,18 @@ function b250ExactSourceMesh(app:AppBase,
  mesh.update();
  return mesh;
 }
-function b250OpticalOnlyMaterial():StandardMaterial{
+/**
+ * The 8 excluded optical triangles per glass side are not backed by the
+ * corresponding 94-triangle original Rapier collision query. Their faint
+ * tint must not read like the actual registered walkable glass.
+ * Reduce visual opacity only; still draw original source optical triangles,
+ * never change the registered 188 collision faces or source geometry.
+ */
+export function b250OpticalOnlyMaterial():StandardMaterial{
  const m=new StandardMaterial();
  m.diffuse=new Color(.84,.59,.34);
  m.emissive=new Color(.09,.055,.026);
- m.blendType=BLEND_NORMAL;m.opacity=.13;m.depthWrite=false;
+ m.blendType=BLEND_NORMAL;m.opacity=.075;m.depthWrite=false;
  m.cull=CULLFACE_NONE;m.useMetalness=false;m.gloss=.14;
  m.update();
  return m;

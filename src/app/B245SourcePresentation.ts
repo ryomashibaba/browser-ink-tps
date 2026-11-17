@@ -248,6 +248,49 @@ export function b245RealFrontlineCombatReadabilityCss(search:string):string{
   '}'
  ].join('');
 }
+/**
+ * VISUAL #17 / SOURCE lot 3: real 1600x900 B243 original caption is
+ * wider than the player silhouette; moving it only downward (old lot)
+ * still obstructs the exact source floor immediately under the actor.
+ * Put the SAME authoritative text to the right of the aiming corridor.
+ * No center ray or weapon hit changed, no new marker/enemy detection.
+ *
+ * SOURCE B286's real B211 rejoin status gets a visible amber text only
+ * when that native value is positive. ACTIVE does NOT mean moving:
+ * genuine B2/B4 showed 8-10s near-still while grounded in QA RAW.
+ * CSS must not transform the active count into a verified path or hit.
+ */
+export function b245RealFrontlineAimAndRejoinCss(search:string):string{
+ const q=new URLSearchParams(search);
+ if(!b475RealFrontlineReadyMode(q)||q.has('production')||
+    q.has('scoreable')||q.get('t21Presentation')==='qa')return '';
+ const live='#ui-root[data-t21-b245-presentation="PLAYER"]'+
+  '[data-t21-b338-phase="PLAYING"]'+
+  ':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])';
+ return [
+  // Parent is exactly the original center reticle. Move only its existing
+  // text caption right; the tiny '+' remains centered on the native ray.
+  '@media(min-width:821px){',
+  live+' #t21-f3-b243-source-aim-caption',
+  '{left:calc(50% + 96px)!important;top:45px!important;'+
+   'transform:none!important;max-width:270px!important;'+
+   'box-sizing:border-box!important;}',
+  '}',
+  // On narrow viewports the old centered, wrapped, lower caption is
+  // safer than running off the right edge.
+  '@media(max-width:820px){',
+  live+' #t21-f3-b243-source-aim-caption',
+  '{left:50%!important;top:116px!important;'+
+   'transform:translateX(-50%)!important;'+
+   'max-width:min(290px,calc(100vw - 36px))!important;}',
+  '}',
+  // Rejoin only when observed in the existing native B211/B286 roster.
+  // No invented movement, CPU target, contact, splat or respawn event.
+  live+' #t21-f3-b286-source-team[data-rejoining]:not([data-rejoining="0"])'+
+   ' #t21-f3-b286-team-detail',
+  '{color:#ffd39a!important;font-weight:800!important;}'
+ ].join('');
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {
@@ -311,6 +354,8 @@ export function installB245SourcePresentation(
  style.textContent+=b245RealFrontlineLiveHudDockCss(window.location.search);
  // #17 next lot: original-source aim, true damage and squad clarity only.
  style.textContent+=b245RealFrontlineCombatReadabilityCss(window.location.search);
+ // #17 lot 3: safe side-caption and truthful native CPU rejoin highlight.
+ style.textContent+=b245RealFrontlineAimAndRejoinCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
