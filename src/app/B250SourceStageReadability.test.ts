@@ -4,7 +4,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
 import {b250SolidTone,b250GlassSourceVisibilityPartition,
  B250_REGISTERED_SOURCE_NEUTRAL,B250_REGISTERED_SOURCE_RAMP_NEUTRAL,
  b250CollisionFaceNeedsTwoSidedDraw,
- b250SolidVisualElevationMeters,b250SetGlassVisibility}
+ b250SolidVisualElevationMeters,b250SetGlassVisibility,
+ b250OpticalOnlyMaterial}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -25,6 +26,27 @@ describe('B250 one-time glass render ownership and reversible A/B visibility',()
   // Scene A/B switches are rendering-only: optical glass must never
   // become a solid shadow caster on re-enable.
   expect(refs.map(m=>m.castShadow)).toEqual([true,true,false]);
+ });
+});
+
+describe('Issue #17 original Glass01 optical-only is not a supported floor',()=>{
+ it('makes ONLY 16 excluded visual triangles faint and non-occluding',()=>{
+  const m=b250OpticalOnlyMaterial();
+  expect(m.opacity).toBeCloseTo(.075,8);
+  expect(m.opacity).toBeLessThan(.13);
+  expect(m.depthWrite).toBe(false);
+  // Genuine registered Rapier collision material remains wholly separate.
+  const full=undertowT21dConnectivityQaStage();
+  const visual=full.solids.filter(s=>s.id.includes('upper-glass-')&&
+   s.id.endsWith(':visual'));
+  expect(visual).toHaveLength(2);
+  expect(visual.reduce((n,s)=>n+
+   b250GlassSourceVisibilityPartition(full,s)!.opticalOnly.indices.length/3,
+   0)).toBe(16);
+  expect(visual.reduce((n,s)=>n+
+   b250GlassSourceVisibilityPartition(full,s)!.registered.indices.length/3,
+   0)).toBe(188);
+  expect(full.solids).toBe(stage.solids);
  });
 });
 
