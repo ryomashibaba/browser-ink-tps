@@ -1,5 +1,7 @@
 import {afterEach,expect,test,vi} from 'vitest';
 import {PlayerInput} from './PlayerInput';
+import {applyB379NativePlayerWeaponMobility}
+ from '../app/B379NativePlayerWeaponMobility';
 
 /** Native player behaviour remains unchanged; QA mode requires explicit ctor gate. */
 function createInput(qa=false){
@@ -461,4 +463,77 @@ test('SOURCE movement taps reject OS repeat and shortcut-modified keys; QA unaff
  expect(deterministic.input.consumeMoveAxesForPlayerTick())
   .toMatchObject({x:-.4,y:.8});
  deterministic.input.clearQaAxis();
+});
+
+test('SOURCE 60Hz fast BRELLA right-click gives exactly one true shield tick with real movement penalty',()=>{
+ const {input,emit}=lockedInput();
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect(input.secondaryHeld).toBe(false);
+ const player={setWeaponMoveMultiplier:vi.fn(),requestWeaponDodge:vi.fn(()=>true)};
+ const weapons={
+  currentPlayerWeapon:{weaponClass:'BRELLA'},
+  getMovementMultiplier:vi.fn((_fire:boolean,secondary:boolean)=>secondary?.74:1)
+ };
+ const step=()=>applyB379NativePlayerWeaponMobility({
+  input,player,weapons,humanAlive:true,realPointerLocked:true,
+  sourceRoundPhase:'PLAYING',stopped:false,canonicalSourceRound:true
+ });
+ const a=step();
+ expect(a).toEqual({movementMultiplier:.74,
+  realDodgeAccepted:false,realBrellaGuardTap:true});
+ expect(weapons.getMovementMultiplier).toHaveBeenCalledWith(false,true);
+ expect(player.setWeaponMoveMultiplier).toHaveBeenCalledWith(.74);
+ expect(player.requestWeaponDodge).not.toHaveBeenCalled();
+ const b=step();
+ expect(b).toEqual({movementMultiplier:1,
+  realDodgeAccepted:false,realBrellaGuardTap:false});
+ expect(weapons.getMovementMultiplier).toHaveBeenLastCalledWith(false,false);
+});
+
+test('SOURCE held BRELLA stays held, and quick right-click never arms a noncanonical guard',()=>{
+ const {input,emit}=lockedInput();
+ const player={setWeaponMoveMultiplier:vi.fn(),requestWeaponDodge:vi.fn(()=>true)};
+ const weapons={currentPlayerWeapon:{weaponClass:'BRELLA'},
+  getMovementMultiplier:vi.fn((_fire:boolean,secondary:boolean)=>secondary?.74:1)};
+ const step=(canonical:boolean)=>applyB379NativePlayerWeaponMobility({
+  input,player,weapons,humanAlive:true,realPointerLocked:true,
+  sourceRoundPhase:'PLAYING',stopped:false,canonicalSourceRound:canonical
+ });
+ emit('canvas','pointerdown',{button:2});
+ expect(step(true).realBrellaGuardTap).toBe(false);
+ expect(weapons.getMovementMultiplier).toHaveBeenLastCalledWith(false,true);
+ emit('canvas','pointerup',{button:2});
+ expect(step(true).realBrellaGuardTap).toBe(false);
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect(step(false).realBrellaGuardTap).toBe(false);
+ expect(weapons.getMovementMultiplier).toHaveBeenLastCalledWith(false,false);
+});
+
+test('SOURCE short right-click keeps real DUALIES dodge but cannot become BRELLA shield or stale paused action',()=>{
+ const {input,emit}=lockedInput();
+ const player={setWeaponMoveMultiplier:vi.fn(),requestWeaponDodge:vi.fn(()=>true)};
+ const weapons={currentPlayerWeapon:{weaponClass:'DUALIES'},
+  getMovementMultiplier:vi.fn(()=>1)};
+ const step=(alive=true,locked=true,stopped=false)=>applyB379NativePlayerWeaponMobility({
+  input,player,weapons,humanAlive:alive,realPointerLocked:locked,
+  sourceRoundPhase:'PLAYING',stopped,canonicalSourceRound:true
+ });
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect(step()).toEqual({movementMultiplier:1,
+  realDodgeAccepted:true,realBrellaGuardTap:false});
+ expect(player.requestWeaponDodge).toHaveBeenCalledOnce();
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect(step(false)).toEqual({movementMultiplier:1,
+  realDodgeAccepted:false,realBrellaGuardTap:false});
+ // The input edge is consumed even if a nonplaying/unsafe state rejected it.
+ expect(step()).toEqual({movementMultiplier:1,
+  realDodgeAccepted:false,realBrellaGuardTap:false});
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect(step(true,false,true).realDodgeAccepted).toBe(false);
+ expect(step().realDodgeAccepted).toBe(false);
 });

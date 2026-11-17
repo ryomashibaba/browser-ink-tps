@@ -5430,11 +5430,12 @@ export class UndertowF3PlayablePreviewApp{
      this.nativeLiveSourcePrestart&&this.matchState==='STAGING');
     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
-    applyB379NativePlayerWeaponMobility({
+    const b379Mobility=applyB379NativePlayerWeaponMobility({
      input:this.input,player:this.player,weapons:this.projectiles,
      realPointerLocked:document.pointerLockElement===this.canvas,
      humanAlive:alive,sourceRoundPhase:this.matchState,
-     stopped:Boolean(this.stopReason)
+     stopped:Boolean(this.stopReason),
+     canonicalSourceRound:this.nativeLiveSourcePrestart
     });
     if(alive)this.player.computeFixed(seconds);
     this.physics.step();
@@ -5605,7 +5606,8 @@ export class UndertowF3PlayablePreviewApp{
       actionWindow.humanCanStartNewActions&&
        realPointerFire&&this.player.canShoot,
       actionWindow.humanCanStartNewActions&&
-       this.input.secondaryHeld&&this.player.canShoot,
+       (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
+       this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
       actionWindow.humanCanStartNewActions,alive);
     }
