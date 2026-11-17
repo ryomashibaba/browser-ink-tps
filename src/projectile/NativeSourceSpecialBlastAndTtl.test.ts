@@ -155,6 +155,21 @@ describe('native SOURCE real SUB/SPECIAL area damage and guard direction',()=>{
     expect(f.stats.playerWeaponGuardBlocks).toBe(1);
     expect(f.stats.cpuPlayerHits).toBe(0);
   });
+  it('preserves actual SOURCE HP when CPU blast has no human aim snapshot',()=>{
+    // Integration #44075590121 exposed a missing headless native aim
+    // vector even though genuine SOURCE human guard was inactive.
+    // Never attempt shield-dot math or invent a shield block here.
+    for(const guard of [false,true]){
+      const f=physicalCombat({guard});
+      f.state.currentHumanAimDirection=undefined;
+      f.blast(new Vec3(.1,0,-1),25,2);
+      expect(f.resources.currentHp).toBe(75);
+      expect(f.stats.playerDamageTaken).toBe(25);
+      expect(f.stats.cpuPlayerHits).toBe(1);
+      expect(f.stats.playerWeaponGuardBlocks).toBe(0);
+      expect(f.cues).toHaveBeenCalledOnce();
+    }
+  });
   it('retains the old T20 body-centered explosion shield contract',()=>{
     const f=physicalCombat({source:false,guard:true});
     f.blast(new Vec3(),30);
