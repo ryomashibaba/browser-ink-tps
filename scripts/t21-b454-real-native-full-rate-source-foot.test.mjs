@@ -83,3 +83,19 @@ test('separates genuine late CPU travel from an actually stationary early foot',
  assert.ok(proof.witnessedNativeXZPolylineMeters>12);
  assert.equal(proof.originalGoalReachabilityGranted,false);
 });
+
+
+test('no former B446 dry denial is not a mobile certificate without actually submitted original native goals',()=>{
+ const {raw,source}=fixture();
+ raw.b441NativeEvidence.b446LiveActualCpuFootDryRouteProbes=[];
+ assert.throws(()=>auditRealB454(raw,source),
+  /B454_ORIGINAL_NATIVE_60HZ_SOURCE_HOLD/);
+ raw.b441NativeEvidence.b445LastOriginalGateByCpu=[
+  {id:'B2',strictlyApprovedGoals:2,runtimeTrueOriginalGoalRequests:44,runtimeNoOriginalFrontGoals:0},
+  {id:'B4',strictlyApprovedGoals:2,runtimeTrueOriginalGoalRequests:43,runtimeNoOriginalFrontGoals:0}
+ ];
+ // Even with genuine SOURCE goals a stationary full-rate actor is NOT
+ // moving, and therefore may not take the no-dry-witness branch.
+ assert.throws(()=>auditRealB454(raw,source),
+  /MOBILE_ORIGINAL_FULL_RATE_PHYSICAL_MOVE_NOT_PROVEN/);
+});

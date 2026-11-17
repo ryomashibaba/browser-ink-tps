@@ -3,7 +3,8 @@
  * Recast path coordinates from ONE genuine Chromium SOURCE world.
  * A read-only comparison is NEVER a continuous 60Hz KCC route certificate.
  */
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {auditRealB454} from './t21-b454-real-native-full-rate-source-foot.mjs';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const hold=s=>{throw Error('B452_REAL_SOURCE_FOOT_TRACE_HOLD_'+s)};
@@ -12,7 +13,7 @@ const integer=n=>Number.isSafeInteger(n)&&n>=0;
 const xzd=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 const ids=['A1','A2','A3','B1','B2','B3','B4'];
 /** Strictly inspect original native witnesses; does not assign actor goals. */
-export function inspectB452NativeFootAgainstRejectedRecast(d){
+export function inspectB452NativeFootAgainstRejectedRecast(d,fullRate=null){
  const e=d?.b441NativeEvidence;
  // Earlier B441 short proof and the later real native 180s+replay proof
  // are different legitimate verdicts of the SAME first SOURCE world.
@@ -79,8 +80,58 @@ export function inspectB452NativeFootAgainstRejectedRecast(d){
  }
  if(maxGap>120)hold('SOURCE_SAMPLING_TOO_SPARSE');
  const all=e.b446LiveActualCpuFootDryRouteProbes;
- if(!Array.isArray(all)||all.length!==3||
-  new Set(all.map(x=>x?.id)).size!==3)
+ if(!Array.isArray(all))hold('NATIVE_RECAST_DRY_PROVENANCE');
+ if(all.length===0){
+  // Current genuine 7CPU SOURCE has actually moving B2/B4. No old
+  // "dry denial" witnesses exist, so never manufacture rejected
+  // Recast samples. B454 checks every true native 60Hz Rapier foot,
+  // same browser origin, supported original solids and live goals.
+  if(!fullRate)hold('MOVING_REQUIRES_SAME_WORLD_60HZ_ORIGINAL_RAW');
+  let native;
+  try{native=auditRealB454(d,fullRate);}
+  catch{hold('MOVING_FULL_RATE_INDEPENDENT_PHYSICS_REJECTED');}
+  if(native.mobileOriginalSourceMode!==true||
+     native.dryDenialMode!==false)
+   hold('MOVING_MUST_NOT_IMPERSONATE_OLD_DENIAL');
+  const cpu={};
+  for(const id of ['B2','B4']){
+   const p=native.B2B4[id],polled=frames.map(f=>({
+    tick:f.tick,foot:f.physicalFeet.find(x=>x.id===id).foot
+   }));
+   if(p.independentlyMatchedSparseChromePolls!==frames.length||
+      p.originalRapierRegisteredSamples!==p.nativeTickCount||
+      p.atMostUnchanged025mStaticGapSamples!==p.nativeTickCount||
+      p.witnessedNativeXZPolylineMeters<20||
+      p.observedGroundedMotionNativeTicks<100)
+    hold('MOVING_NATIVE_SOURCE_PHYSICAL_WITNESS_'+id);
+   cpu[id]={
+    observedOriginalPhysicalFootFrames:polled.length,
+    realFullRatePhysicalFootTicks:p.nativeTickCount,
+    nativeGoalAndOriginalPhysicsRequired:true,
+    measuredOriginalSourceXZTravelMeters:p.witnessedNativeXZPolylineMeters,
+    observedNativeMotionTicks:p.observedGroundedMotionNativeTicks,
+    originalRegisteredFloorSamples:p.originalRapierRegisteredSamples,
+    rejectedRecastSamples:0,
+    noRejectedRecastRouteExistsToCompare:true,
+    physicalContinuousRouteCertified:false,
+    full4v4Certified:false
+   };
+  }
+  return {
+   schema:'B452_REAL_MOVING_SOURCE_FOOT_NO_DRY_DENIAL_V2',
+   verdict:'PASS_SAME_WORLD_REAL_NATIVE_CPU_MOVED_NO_REJECTED_PATH_NOT_4V4',
+   source:'25/17/26/0',browserWorldOrigin:d.browserOrigin,
+   allSevenRealCpuPhysicallyRejoined:true,realNativeTicks:e.realNativeTicks,
+   observedNativeFrames:frames.length,maxUnobservedNativeTicks:maxGap-1,
+   B2B4:cpu,
+   actorWrites:0,geometryWrites:0,clockWrites:0,scoreWrites:0,
+   cpuGoalWrites:0,originalCollisionAuthorizationChanged:false,
+   physicalContinuousRouteCertified:false,
+   humanCpuOpposingEncounterCertified:false,unrestricted4v4Certified:false,
+   winner:'NONE',productionAuthorized:false
+  };
+ }
+ if(all.length!==3||new Set(all.map(x=>x?.id)).size!==3)
   hold('NATIVE_RECAST_DRY_PROVENANCE');
  const results={};
  for(const id of ['B2','B4']){
@@ -172,8 +223,11 @@ export function inspectB452NativeFootAgainstRejectedRecast(d){
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  if(process.argv.length!==3)hold('REQUIRES_SAME_REAL_BROWSER_JSON');
  const path=resolve(process.argv[2]);
+ const fullRatePath=join(dirname(path),'b454-native-b2-b4-physical-60hz.json');
  const report=inspectB452NativeFootAgainstRejectedRecast(
-  JSON.parse(readFileSync(path,'utf8')));
+  JSON.parse(readFileSync(path,'utf8')),
+  existsSync(fullRatePath)?
+   JSON.parse(readFileSync(fullRatePath,'utf8')):null);
  writeFileSync(join(dirname(path),'b452-real-foot-vs-original-recast.json'),
   JSON.stringify(report,null,2)+'\n');
  console.log('B452_REAL_SAME_WORLD_PHYSICAL_FOOT_PARITY',JSON.stringify(report));

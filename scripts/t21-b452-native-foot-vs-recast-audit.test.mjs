@@ -114,3 +114,11 @@ test('never permits spoofed full-run label to bypass B452 native SOURCE gates',(
   assert.throws(()=>audit(d),/B452_REAL_SOURCE_FOOT_TRACE_HOLD/);
  }
 });
+
+
+test('real moving SOURCE cannot pass B452 by deleting all blocked-route probes',()=>{
+ const d=fixture();
+ d.b441NativeEvidence.b446LiveActualCpuFootDryRouteProbes=[];
+ assert.throws(()=>audit(d),/MOVING_REQUIRES_SAME_WORLD_60HZ_ORIGINAL_RAW/);
+ assert.throws(()=>audit(d,{schema:'FAKE'}),/MOVING_FULL_RATE_INDEPENDENT_PHYSICS_REJECTED/);
+});

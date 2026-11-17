@@ -35,11 +35,22 @@ export function auditRealB454(raw,source){
   source.dropped?.B2!==0||source.dropped?.B4!==0)
   fail('REAL_ORIGINAL_WORLD_AND_NO_GAME_WRITES');
  const probes=e.b446LiveActualCpuFootDryRouteProbes;
- if(!Array.isArray(probes)||!['B2','B4'].every(id=>
+ if(!Array.isArray(probes))fail('MISSING_ORIGINAL_DENIAL_LEDGER');
+ const deniedMode=['B2','B4'].every(id=>
   probes.some(p=>p.id===id&&Array.isArray(p.b450FailedOriginalGoals)&&
    p.b450FailedOriginalGoals.length===p.nativeIntermediateSupport&&
-   p.nativeIntermediateSupport>=1)))
-  fail('MISSING_ORIGINAL_DENIED_RECAST_PATHS');
+   p.nativeIntermediateSupport>=1));
+ const mobileMode=probes.length===0&&
+  ['B2','B4'].every(id=>{
+   const gate=e.b445LastOriginalGateByCpu?.find(x=>x.id===id);
+   return gate&&nat(gate.strictlyApprovedGoals)&&
+    gate.strictlyApprovedGoals>=1&&
+    nat(gate.runtimeTrueOriginalGoalRequests)&&
+    gate.runtimeTrueOriginalGoalRequests>=1&&
+    gate.runtimeNoOriginalFrontGoals===0;
+  });
+ if(!deniedMode&&!mobileMode)
+  fail('NO_REAL_DENIAL_OR_STRICT_APPROVED_MOBILE_GOALS');
  const byId={};
  for(const id of ['B2','B4']){
   const rows=source.rows?.[id],probe=probes.find(p=>p.id===id);
@@ -99,7 +110,7 @@ export function auditRealB454(raw,source){
       if(lastTick-v.tick<120)last120GroundedMeters+=d;
     }else stationaryRun=0;
    }
-   for(const g of probe.b450FailedOriginalGoals){
+   for(const g of probe?.b450FailedOriginalGoals??[]){
     const t=g.firstDenied;
     if(!xyz(t.xyz)||t.cause!=='NATIVE_PATH_RAPIER_HEIGHT_MISMATCH'||
       !Number.isFinite(t.verticalGapMeters)||t.verticalGapMeters<=.25)
@@ -114,6 +125,15 @@ export function auditRealB454(raw,source){
       rejectedRecastPointGapMeters:t.verticalGapMeters};
    }
   }
+  // A non-stalled actor generates no old B446 dry-route record.
+  // This is valid ONLY after a full same-world, untouched 60Hz
+  // original Rapier trajectory with actual approved native goals.
+  if(mobileMode&&(nRegistered!==rows.length||
+     nWithin025!==rows.length||nonGrounded!==0||
+     totalNativeMeters<20||motionTicks<100||
+     maxNativeStep>.5||
+     new Set(rows.map(x=>x.originalRapierSolidId)).size<3))
+   fail('MOBILE_ORIGINAL_FULL_RATE_PHYSICAL_MOVE_NOT_PROVEN_'+id);
   let polledMatches=0;
   for(const frame of e.realFrames){
    const observed=frame.physicalFeet?.find(x=>x.id===id)?.foot;
@@ -139,6 +159,8 @@ export function auditRealB454(raw,source){
    maximumConsecutiveNativeTickXZStepMeters:maxNativeStep,
    independentlyMatchedSparseChromePolls:polledMatches,
    closestSameWorldActualFootToDeniedNativeRecast:closest,
+   oldDryDenialAbsentBecauseRealSourceCpuMoved:mobileMode,
+   approvedMobileNativeSourceGoalsObserved:mobileMode,
    originalGoalReachabilityGranted:false,
    fullyContinuousCapsuleContactCertified:false};
  }
@@ -146,6 +168,7 @@ export function auditRealB454(raw,source){
   verdict:'PASS_REAL_EVERY_TICK_PHYSICAL_FOOT_OBSERVATION_NOT_A_KCC_ROUTE_CERT',
   browserWorldOrigin:raw.browserOrigin,source:'25/17/26/0',
   realSevenCpu:true,realNativeTicks:e.realNativeTicks,
+  dryDenialMode:deniedMode,mobileOriginalSourceMode:mobileMode,
   B2B4:byId,unrestricted4v4Certified:false,
   naturalCrossTeamRouteCertified:false,
   originalCollisionSafetyGateChanged:false,
