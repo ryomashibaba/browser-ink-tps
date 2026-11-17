@@ -230,7 +230,22 @@ export type SourcePlayableMode='circuit'|'combat'|'coop'|'frontline';
 /** Only one of the four actual SOURCE launcher URLs can switch modes.
  * Rejects injected parameters, duplicate keys and mixed research flags.
  */
+/** A genuine SOURCE mode is derived from the immutable exact URL.
+ * Repeated gameplay/HUD checks must not rebuild four canonical launcher
+ * URLs every native tick. Changing pathname, query, kit or mode recomputes
+ * the entire existing authority gate. The one-entry cache is bounded and
+ * stores invalid/null verdicts too; it never grants source authority.
+ */
+let lastCanonicalSourceMode:
+ {href:string;mode:SourcePlayableMode|null}|null=null;
 export function sourceCanonicalPlayableMode(href:string):SourcePlayableMode|null{
+ if(lastCanonicalSourceMode?.href===href)
+  return lastCanonicalSourceMode.mode;
+ const mode=computeCanonicalPlayableSourceMode(href);
+ lastCanonicalSourceMode={href,mode};
+ return mode;
+}
+function computeCanonicalPlayableSourceMode(href:string):SourcePlayableMode|null{
  const menu=sourcePlayPortalReturnUrl(href);
  if(!menu)return null;
  try{
