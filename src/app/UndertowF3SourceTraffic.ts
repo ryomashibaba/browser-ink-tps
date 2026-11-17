@@ -1301,11 +1301,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   id:string,foot:Readonly<{x:number;y:number;z:number}>,
   audit:ReturnType<RecastStageNavigation['auditPath']>
  ):boolean{
-  // Genuine 90s B2 KCC now reports real B3/B4 contact rather than
-  // unsupported floor. Treat its same-team capsule as an actual path
-  // veto too; never reject a route from an optical proximity alone.
+  // All seven SOURCE CPUs now use real Rapier teammate sliding.
+  // Likewise veto only a truly contacted teammate directly blocking an
+  // ORIGINAL candidate; other-side, static and inferred proximity are not
+  // obstruction witnesses. No path/actor/geometry authority is added.
   if(!this.enableB441SourceFrontline||
-     (id!=='B2'&&id!=='B3'&&id!=='B4')||
+     !/^[AB][1-4]$/.test(id)||
      (this.realKccRejectedSteps.get(id)??0)<B34_GROUNDED_STALL_TICKS)return false;
   const witness=this.realKccLastActorBlocker?.get(id);
   if(!witness||!Number.isSafeInteger(this.b137NativeTick)||
@@ -1334,7 +1335,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * This is not a static-stage refusal or path authority. */
  private recentRealTeammateKccBlock(id:string):boolean{
   if(!this.enableB441SourceFrontline||
-     (id!=='B2'&&id!=='B3'&&id!=='B4')||
+     !/^[AB][1-4]$/.test(id)||
      (this.realKccRejectedSteps.get(id)??0)<B34_GROUNDED_STALL_TICKS)
    return false;
   const witness=this.realKccLastActorBlocker?.get(id);

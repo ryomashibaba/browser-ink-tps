@@ -502,6 +502,66 @@ it('B2 real weapon-ready no-aim uses another existing ORIGINAL paint goal only a
  expect(source.p2BTeamDroughtFoot.has('B2')).toBe(false);
 });
 
+it('all seven SOURCE CPU may escape genuine same-team KCC congestion only by an existing Rapier/Recast-audited goal',()=>{
+ for(const [id,mateId,team,side] of [
+  ['A1','A2',Team.A,1],['A2','A3',Team.A,1],
+  ['B1','B2',Team.B,-1]
+ ] as const){
+  const foot=new Vec3(0,3.2,40*side);
+  const occupied=new Vec3(.64,3.2,40*side);
+  const forward=new Vec3(5,3.2,40*side);
+  const alternative=new Vec3(0,3.2,46*side);
+  const bot={id,team,position:foot,agent:{},
+   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+  const mate={id:mateId,team,position:occupied,agent:{},
+   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+  Object.assign(source,{
+   stage:undertowT21dConnectivityQaStage(),bots:[bot,mate],
+   freeCombat:true,enableB441SourceFrontline:true,physics:{},
+   physicallyRejoined:new Set([id,mateId]),
+   respawnOriginalDrops:new Set(),originalSourceRecoveryIntent:new Set(),
+   b443OriginalGoalLocks:new Map(),b442LastApprovedFront:new Map(),
+   b441FrontGoals:new Map([[id,[]]]),
+   b445FrontlineGates:new Map(),b446LiveFootProbes:new Map(),
+   b467LiveSourceGoals:new Map(),
+   p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
+   patrolGoals:new Map([[id,[forward,alternative]]]),
+   patrolIndex:new Map([[id,0]]),
+   realKccRejectedSteps:new Map(),realKccLastActorBlocker:new Map(),
+   b137NativeTick:400,hasSourceFootSupport:()=>true,
+   hasSourceSupportedRoute:()=>true,
+   nav:{auditPath:(from:Vec3,to:Vec3)=>({
+    reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,pointCount:2,
+    nativePathPoints:[from.clone(),to.clone()]
+   })},realGoalRequests:0,heldRequests:0
+  });
+  const path=(target:Vec3)=>source.nav.auditPath(foot,target);
+  for(let frame=0;frame<36;frame++){
+   source.b137NativeTick=400+frame;
+   source.noteRealSourceKccRejectedStep(id,foot,[mateId],
+    'DYNAMIC_ACTOR_OR_STAGE_BLOCKER');
+  }
+  expect(source.recentRealTeammateKccBlock(id)).toBe(true);
+  expect(source.kccActorBlocksOriginalRoute(id,foot,path(forward)))
+   .toBe(true);
+  expect(source.kccActorBlocksOriginalRoute(id,foot,path(alternative)))
+   .toBe(false);
+  const out=new Vec3(99,99,99);
+  expect(source.chooseSourceGoal(id,foot,out)).toBe(true);
+  expect(out.equals(alternative)).toBe(true);
+  expect(source.patrolIndex.get(id)).toBe(1);
+  expect(bot.position.equals(foot)).toBe(true);
+  expect(mate.position.equals(occupied)).toBe(true);
+  // No in-world enemy contact or official cross-team path is asserted.
+  source.enableB441SourceFrontline=false;
+  expect(source.recentRealTeammateKccBlock(id)).toBe(false);
+  expect(source.kccActorBlocksOriginalRoute(id,foot,path(forward)))
+   .toBe(false);
+ }
+});
+
 it('B4 uses only real B3 Rapier contact to reject a directly blocked ORIGINAL direction',()=>{
  const foot=new Vec3(-6.27816915512085,4.607564449310303,-49.2904167175293);
  const blocked=new Vec3(-5.718484878540039,4.2646484375,-49.52046585083008);
