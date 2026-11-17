@@ -3325,17 +3325,19 @@ async function main(){
          !Array.isArray(pos)||pos.length!==3||
          !pos.every(Number.isFinite))
        fail('NATIVE_RAMP_GOAL_PHYSICAL_FOOT_MISSING_'+id);
+      const stillInFlight=f.originalRampLocal?.active?.some(g=>
+       g.id===id&&Array.isArray(g.point)&&g.point.length===3&&
+       g.point.every((v,j)=>Math.abs(v-goal[j])<.005))===true;
       measured.push({tick:f.tick,d:Math.hypot(
-       pos[0]-goal[0],pos[1]-goal[1],pos[2]-goal[2])});
-      // Observe one actual frame after a completed/replaced goal;
-      // do not attribute subsequent patrol movement to this ramp goal.
-      if(i>first&&!f.originalRampLocal?.active?.some(g=>
-        g.id===id&&Array.isArray(g.point)&&
-        g.point.length===3&&g.point.every((v,j)=>
-         Math.abs(v-goal[j])<.005)))break;
+       pos[0]-goal[0],pos[1]-goal[1],pos[2]-goal[2]),stillInFlight});
+      // Do not attribute motion after removal to the approved ramp goal.
+      // One last sample can witness a cancellation, NOT KCC completion.
+      if(i>first&&!stillInFlight)break;
      }
      const closest=measured.reduce((a,b)=>b.d<a.d?b:a);
      const starting=measured[0];
+     const realNearActive=measured.filter(v=>
+      v.stillInFlight&&v.d>.30&&v.d<=1.2);
      return [id,{
       actualGoalObserved:true,
       firstSeenNativeTick:initial.tick,originalGoal:[...goal],
@@ -3343,6 +3345,11 @@ async function main(){
       initialDistance3dMeters:Number(starting.d.toFixed(4)),
       nearestDistance3dMeters:Number(closest.d.toFixed(4)),
       nearestNativeTick:closest.tick,
+      // Counts ONLY true in-game Rapier physical-foot samples with the
+      // SAME original ramp goal still live inside the old 1.2m radius.
+      activeOriginalRampGoalNearFootSamples:realNearActive.length,
+      firstNearLiveGoalTick:realNearActive[0]?.tick??null,
+      closestSampleStillOriginalGoalActive:closest.stillInFlight,
       physicalApproachWithin1mObserved:
        closest.d<=1&&starting.d-closest.d>=.2,
       full60HzOriginalKccRouteCertified:false
