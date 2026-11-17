@@ -3297,6 +3297,57 @@ async function main(){
       rampCountAfter<rampCountBefore)
     fail('NATIVE_ORIGINAL_RAMP_APPROVAL_COUNTER_UNTRUSTED');
    const realRampApprovalsDelta=rampCountAfter-rampCountBefore;
+   // Per-actor ACTUAL Rapier physical feet from the natural 7CPU
+   // Chromium game. A source GOAL approval is never equated to a
+   // successful physical walk or certified full 60Hz capsule route.
+   const nativeOriginalRampPhysicalApproachByCpu=Object.fromEntries(
+    ['B2','B3','B4'].map(id=>{
+     const frames=proof.b441NativeEvidence.realFrames;
+     const first=frames.findIndex(f=>
+      f.originalRampLocal?.active?.some(g=>g.id===id&&
+       Array.isArray(g.point)&&g.point.length===3&&
+       g.point.every(Number.isFinite)));
+     if(first<0)return [id,{
+      actualGoalObserved:false,firstSeenNativeTick:null,
+      sampledFeet:0,initialDistance3dMeters:null,
+      nearestDistance3dMeters:null,nearestNativeTick:null,
+      physicalApproachWithin1mObserved:false,
+      full60HzOriginalKccRouteCertified:false
+     }];
+     const initial=frames[first];
+     const goal=initial.originalRampLocal.active.find(g=>g.id===id).point;
+     const measured=[];
+     for(let i=first;i<frames.length;i++){
+      const f=frames[i];
+      if(f.tick-initial.tick>168)break;
+      const pos=f.physicalFeet?.find(x=>x.id===id)?.foot;
+      if(!Number.isSafeInteger(f.tick)||
+         !Array.isArray(pos)||pos.length!==3||
+         !pos.every(Number.isFinite))
+       fail('NATIVE_RAMP_GOAL_PHYSICAL_FOOT_MISSING_'+id);
+      measured.push({tick:f.tick,d:Math.hypot(
+       pos[0]-goal[0],pos[1]-goal[1],pos[2]-goal[2])});
+      // Observe one actual frame after a completed/replaced goal;
+      // do not attribute subsequent patrol movement to this ramp goal.
+      if(i>first&&!f.originalRampLocal?.active?.some(g=>
+        g.id===id&&Array.isArray(g.point)&&
+        g.point.length===3&&g.point.every((v,j)=>
+         Math.abs(v-goal[j])<.005)))break;
+     }
+     const closest=measured.reduce((a,b)=>b.d<a.d?b:a);
+     const starting=measured[0];
+     return [id,{
+      actualGoalObserved:true,
+      firstSeenNativeTick:initial.tick,originalGoal:[...goal],
+      sampledFeet:measured.length,
+      initialDistance3dMeters:Number(starting.d.toFixed(4)),
+      nearestDistance3dMeters:Number(closest.d.toFixed(4)),
+      nearestNativeTick:closest.tick,
+      physicalApproachWithin1mObserved:
+       closest.d<=1&&starting.d-closest.d>=.2,
+      full60HzOriginalKccRouteCertified:false
+     }];
+    }));
    proof.nativeTurfSub={
     schema:'TRUE_SOURCE_SEVEN_CPU_PAID_TURF_SUB_ONE_WINDOW',
     source:'25/17/26/0',nativeTicks:actual.tick-after.tick,
@@ -3305,7 +3356,7 @@ async function main(){
     actualSubDelta:delta,actualSevenCpuChangedCells:changed,
     originalSourceSubSearchTelemetry:subSearchDelta,
     realTeammateKccSlideDelta,realTeamPhysicalFootTravelMeters,
-    realRampApprovalsDelta,
+    realRampApprovalsDelta,nativeOriginalRampPhysicalApproachByCpu,
     actualOriginalRampGoalsAtEnd:sourceRampAfter?.active??[],
     realOriginalRampGoalCertified:realRampApprovalsDelta>0,
     b2FullOriginalCapsuleWalkCertified:false,
