@@ -159,6 +159,10 @@ describe('Issue #17 next lot real B475 combat and original-source sightline clar
   expect(css).toContain('border:2px solid #a8ffbb!important');
   expect(css).toContain('#t21-f3-b84-danger');
   expect(css).toContain('border-left:4px solid #ff9b7e!important');
+  expect(css).toContain('#t21-f3-b113-ground-warning');
+  expect(css).toContain('border:2px solid #ffcb83!important');
+  // Existing warning visibility is still owned by the real KCC/edge gate.
+  expect(css).not.toContain('#t21-f3-b113-ground-warning{display:block');
   expect(css).toContain('#t21-f3-b286-source-team');
   expect(css).toContain('#t21-f3-b286-team-counts');
   expect(css).toContain('#t21-f3-b141-real-ally');
