@@ -38,10 +38,11 @@ function fixture(){
   // not undefined, so the read-only snapshot can be exercised honestly.
   b445FrontlineGates:new Map(),b441FrontGoals:new Map(),
   b443OriginalGoalLocks:new Map(),
+  originalSourceRecoveryIntent:new Set(),
   b446LiveFootProbes:new Map(),
   b467LiveSourceGoals:new Map(),b467LastLiveRetryTick:new Map(),
   b470LastNativeRetry:new Map(),
-  b467NativeRetargetWitnesses:[],b467LiveSourceGoals:new Map(),
+  b467NativeRetargetWitnesses:[],
   b470NativeRetargetWitnesses:[],b442LastApprovedFront:new Map(),
   b471ReadOnlyAllyCoverageOrder:()=>null,
   freeCombat:true
