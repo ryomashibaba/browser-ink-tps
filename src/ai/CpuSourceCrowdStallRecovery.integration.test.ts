@@ -59,7 +59,8 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(cpu.navigation.auditPath).toHaveBeenCalledTimes(1);
   expect(cpu.navigation.auditPath.mock.calls[0][0]).toEqual(foot);
   expect(cpu.navigation.auditPath.mock.calls[0][1]).toEqual(goal);
-  expect(agent.teleport).toHaveBeenCalledExactlyOnceWith(
+  expect(agent.teleport).toHaveBeenCalledOnce();
+  expect(agent.teleport).toHaveBeenCalledWith(
     {x:foot.x,y:foot.y,z:foot.z});
   expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
   expect(bot.position).toEqual(foot);
