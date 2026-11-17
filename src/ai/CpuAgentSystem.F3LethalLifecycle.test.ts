@@ -2314,9 +2314,9 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
       'PAINT_SURFACE_SEGMENT','REGISTERED_SOURCE_PAINT');
   });
   it('SOURCE HUMAN/CPU SUB body collision cannot pass a nearer original Rapier blocker',()=>{
-    // A SOURCE paint plane 5cm beyond a real solid is within the old
-    // paint-priority epsilon. Actor contact 1cm beyond that solid must
-    // still NOT become HP damage through original cover.
+    // A different SOURCE paint plane 5cm BEHIND a registered Rapier
+    // solid must not intercept thrown bombs or damage an actor behind it.
+    // A plane on the SAME backing may still use the genuine 6cm tolerance.
     const stageHit={distance:.48,point:new Vec3(.48,2,0),solidId:'SOURCE_WALL'};
     const paintHit={distance:.53,worldPoint:new Vec3(.53,2,0),
       surface:{id:'SOURCE_PAINT'}};
@@ -2337,9 +2337,11 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     human.enableNativeSourceHumanSubBodyContact();
     human.fixedUpdate(1/60);
     expect(human.cpuAgents.findNearestCombatHit).toHaveBeenCalledOnce();
+    // The old 6cm paint bias may not cross a DIFFERENT Rapier wall.
+    // Physical original wall is now the only permitted contact here.
     expect(human.onContact).toHaveBeenCalledWith(
-      human.bombs[0],subWeaponProfile('pulse-bomb'),paintHit.worldPoint,
-      'PAINT_SURFACE_SEGMENT','SOURCE_PAINT');
+      human.bombs[0],subWeaponProfile('pulse-bomb'),stageHit.point,
+      'RAPIER_STAGE_SOLID',stageHit.solidId);
 
     const cpu:any=Object.create(CpuKitSystem.prototype);
     cpu.bombs=[makeBomb()];cpu.delta=new Vec3();
@@ -2352,7 +2354,7 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     cpu.updateBombs(1/60);
     expect(cpu.cpuAgents.findNearestCombatHit).toHaveBeenCalledOnce();
     expect(cpu.onBombContact).toHaveBeenCalledWith(
-      cpu.bombs[0],subWeaponProfile('pulse-bomb'),paintHit.worldPoint);
+      cpu.bombs[0],subWeaponProfile('pulse-bomb'),stageHit.point);
   });
 
   it('SOURCE HUMAN and CPU CHARGER rays cannot damage an actor behind near-coplanar real cover',()=>{

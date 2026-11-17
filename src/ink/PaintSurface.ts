@@ -70,7 +70,10 @@ export function sourceThrownSubPaintBeforeRegisteredSolid(
  // Preserve historical non-SOURCE paint-plane priority literally.
  if(!nativeSource)return !blockerHit||
   paintHit.distance<=blockerHit.distance+legacyCoplanarToleranceMeters;
- if(!sourceRegisteredPaintHitActive(paintHit.surface,paintHit))return false;
+ // The actual SubWeapon/CpuKit findNearestSurfaceHit() already checks
+ // the registered paintable cell. Do not independently reconstruct a
+ // second, possibly divergent collision witness from this accepted hit.
+ if(!Number.isFinite(paintHit.distance)||paintHit.distance<0)return false;
  if(!blockerHit)return true;
  if(!Number.isFinite(blockerHit.distance)||blockerHit.distance<0)return false;
  if(paintHit.distance<=blockerHit.distance)return true;
