@@ -23,6 +23,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {t21QaAuditK2LiveWindow} from './t21-v28-qa-k2-source-window.mjs';
 import {validateB484ModeSpecificHud} from './t21-v28-qa-b484-hud-gate.mjs';
 import {classifyRealNativeHpSnapshot} from './t21-v28-qa-real-hp-witness.mjs';
+import {auditSourceRealGameplayBlockers} from './t21-v28-qa-native-playability-blockers.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -4237,6 +4238,36 @@ async function main(){
     'PASS_REAL_FRONT_GOAL_REQUESTS_NOT_CROSSING_OR_COMBAT':
     'HOLD_NO_GENUINE_ORIGINAL_FRONT_GOAL_PROVEN'};
   save();
+  // Issue #18 / lot4: make genuine gameplay QA point to the first actual
+  // safety gate, not merely "CPU moved 0 m" or "browser PASS". Reuse the
+  // SAME already-sampled native 60Hz original feet, B445/B446 source
+  // rejection and B487 original 16-pair Recast result. No new test run,
+  // actor relocation, path reauthorization or second Chromium session.
+  // A QA diagnostic failure is a HOLD of the diagnostic only, never
+  // permission to bypass a native Rapier/Recast veto.
+  let qa18Playability=null,qa18PlayabilityReadError=null;
+  try{
+   qa18Playability=auditSourceRealGameplayBlockers(
+    proof,b454Report,actual.cpu?.cpuSourceNativeGroundMotion??null);
+  }catch(error){
+   qa18PlayabilityReadError=String(error).slice(0,500);
+  }
+  proof.qaIssue18NativeGameplayBlockers=qa18Playability??{
+   schema:'T21_V28_ISSUE18_REAL_CPU_ROUTE_AND_GAMEPLAY_BLOCKERS_V1',
+   source:'25/17/26/0',result:'HOLD_MISSING_AUTHENTIC_BLOCKER_EVIDENCE',
+   readError:qa18PlayabilityReadError,
+   nativeSourceRecastAndRapierSafetyMustRemainEnforced:true,
+   full180sMatchCertified:false,formal4v4Certified:false,
+   noStageNavActorHealthClockScoreWrites:0};
+  writeFileSync(resolve(out,'qa-issue18-native-gameplay-blockers.json'),
+   JSON.stringify(proof.qaIssue18NativeGameplayBlockers,null,2)+'\n');
+  save();
+  console.log('QA18_REAL_PLAYABILITY_FIRST_BLOCKER',
+   JSON.stringify({result:proof.qaIssue18NativeGameplayBlockers.result,
+    primary:proof.qaIssue18NativeGameplayBlockers.primaryPlayable4v4Gate??null,
+    perActor:Object.fromEntries(['B2','B4'].map(id=>[id,
+     proof.qaIssue18NativeGameplayBlockers.byActor?.[id]?.observedGate??'HOLD']))
+   }));
   if(b448Experiment){
    const evidence=proof.b441NativeEvidence.b448A3RealEvidence;
    const a3=closestById.A3;
