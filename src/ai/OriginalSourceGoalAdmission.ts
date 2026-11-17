@@ -19,7 +19,9 @@ export interface OriginalSourceAdmittedGoal {
   readonly point:OriginalSourceCpuPoint;
   readonly reusedPrevious:boolean;
 }
-const MAX_ACTUAL_FOOT_NAV_SNAP_METERS=.20;
+// Original high-spawn respawn offmesh admission allows .25m; rejoined
+// SOURCE combat paths already have a stricter <=.20m adapter gate.
+const MAX_ACTUAL_FOOT_NAV_SNAP_METERS=.25;
 const MAX_ORIGINAL_GOAL_NAV_SNAP_METERS=.65;
 const MIN_RETAINED_GOAL_DISTANCE_METERS=1.5;
 const finitePoint=(p:OriginalSourceCpuPoint):boolean=>
