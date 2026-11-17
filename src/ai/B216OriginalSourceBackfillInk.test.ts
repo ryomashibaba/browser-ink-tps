@@ -404,6 +404,11 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
    teleport:()=>{},resetMoveTarget:()=>{agentReset++},
    position:()=>originalFoot.clone()
   };
+  // Object.create skips constructor field initializers: provide the real
+  // native movement ledger, then verify an actual reset clears its record.
+  system.sourceLiveNativeMotionGoal=new Map([['A1',{
+   agent:bot.agent,goal:staleGoal.clone()
+  }]]);
   system.b35LastNativeTarget=new Map([['A1',{
    agent:bot.agent,goal:staleGoal.clone(),repeat:0
   }]]);
@@ -415,6 +420,7 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
   expect(agentReset).toBe(1);
   expect(bot.thinkRemaining).toBeCloseTo(.20);
   expect(system.b35LastNativeTarget.has('A1')).toBe(false);
+  expect(system.sourceLiveNativeMotionGoal.has('A1')).toBe(false);
   expect(system.qaMotionGoals.get('A1')).toEqual(staleGoal);
   // The old patrol heading is read-only paint context. With its own
   // candidate rays exhausted, the independent real-foot 1.7m band is
