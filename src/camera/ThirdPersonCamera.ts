@@ -578,9 +578,16 @@ export class ThirdPersonCamera {
           (document.pointerLockElement !== this.canvas ||
            !Number.isFinite(event.deltaY))) return;
       event.preventDefault();
-      // Cap single-event zoom spikes while preserving repeated wheel input.
+      // Modern browsers deliver wheel deltas in pixels, lines or pages.
+      // Original SOURCE interpreted Firefox line units as pixels, making
+      // zoom feel unresponsive. Normalize only genuine SOURCE; keep T20
+      // wheel behavior untouched. Cap one giant event without blocking
+      // repeated user scroll or changing the real camera collision cast.
+      const nativeWheelScale=this.sourcePracticeControls
+        ? event.deltaMode===1?16:event.deltaMode===2?480:1 : 1;
+      const nativeDelta=event.deltaY*nativeWheelScale;
       const deltaY=this.sourcePracticeControls
-        ? Math.max(-240,Math.min(240,event.deltaY)):event.deltaY;
+        ? Math.max(-240,Math.min(240,nativeDelta)):event.deltaY;
       this.distance = Math.max(3.6, Math.min(9.5, this.distance * Math.exp(deltaY * 0.001)));
     }, { passive: false });
   }
