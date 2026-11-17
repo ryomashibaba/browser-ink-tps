@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - research/t21-v28-player-20261117
+      - research/t21-v28-player-lot2-b817c7ea-20261117
     paths:
       - 'src/player/PlayerController.ts'
+      - 'src/input/PlayerInput.ts'
+      - 'src/input/PlayerInput.qa.test.ts'
       - 'src/player/PlayerController.source-player.test.ts'
       - 'src/camera/ThirdPersonCamera.ts'
       - 'src/camera/ThirdPersonCamera.test.ts'
