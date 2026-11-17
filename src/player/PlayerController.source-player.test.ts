@@ -90,6 +90,21 @@ describe('Issue #19 SOURCE wall-release and exclusive-motion responsiveness',()=
   expect(nativeSourceWallReleaseVerticalVelocity('SQUID_ROLL',5.1)).toBe(5.1);
   expect(nativeSourceWallReleaseVerticalVelocity('HUMAN',8.2)).toBe(8.2);
  });
+ it('clears leftover upward wall-swim speed while Shift stays down but OWN wall vanishes',()=>{
+  // Real OWN-wall probing already rejected the wall; the player must not
+  // continue climbing in air solely from the previous physics tick.
+  const lastWallState='SWIM_WALL' as const;
+  const released=nativeSourceWallReleaseVerticalVelocity(lastWallState,5.4);
+  expect(released).toBe(0);
+  // Leaving a wall while descending must preserve legitimate falling.
+  expect(nativeSourceWallReleaseVerticalVelocity(lastWallState,-2.5))
+   .toBe(-2.5);
+  // No artificial brake on a real KCC jump/roll or authenticated surge.
+  expect(nativeSourceWallReleaseVerticalVelocity('SQUID_DRY',8.2))
+   .toBe(8.2);
+  expect(nativeSourceWallReleaseVerticalVelocity('SURGE',10.6))
+   .toBe(10.6);
+ });
  it('retains valid pre-landing Space until real contact and expires at 100ms',()=>{
   expect(nativeSourceNextJumpBufferSeconds(0,true,1/60,true,false))
    .toBeCloseTo(.1);
