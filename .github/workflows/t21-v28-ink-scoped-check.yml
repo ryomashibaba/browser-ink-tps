@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - research/t21-v28-ink-20261117
+      - research/t21-integrated-a1-c-patrol-four-mode-20261105
     paths:
       - 'src/ink/**'
+      - 'src/core/InkBrushHotPath.ts'
+      - 'src/core/InkBrushHotPath.test.ts'
       - '.github/workflows/t21-v28-ink-scoped-check.yml'
   workflow_dispatch:
 permissions:
@@ -29,7 +32,7 @@ jobs:
       # SHA-pinned independent SOURCE gates. Run the ink-owned surface tests
       # here; retain separate upstream full-suite QA instead of masking holds.
       - name: Ink raster and adjacent authoritative regression tests
-        run: npx vitest run src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts src/ink/PaintSurface.test.ts src/ink/PaintCoordinatorCpuQa.test.ts src/ink/PaintCoordinatorContinuity.test.ts
+        run: npx vitest run src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts src/ink/PaintSurface.test.ts src/ink/PaintCoordinatorCpuQa.test.ts src/ink/PaintCoordinatorContinuity.test.ts src/core/InkBrushHotPath.test.ts
       - name: Vite browser build preflight (no deploy)
         run: npm run build -- --base=/browser-ink-tps/
 
