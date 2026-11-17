@@ -1,0 +1,27 @@
+name: T21 PERFORMANCE #21 one-shot bounded ink buffer check (NO CHROMIUM)
+on:
+  push:
+    branches: ["research/t21-v28-performance-reuse-raster-buffers-20261117"]
+    paths:
+      - "src/core/InkBrushRasterStream.ts"
+      - "src/core/InkBrushRasterStream.test.ts"
+      - "src/ink/GpuInkAtlas.ts"
+      - ".github/workflows/t21-perf-reuse-check.yml"
+permissions:
+  contents: read
+jobs:
+  fast-performance:
+    if: github.repository == 'ryomashibaba/browser-ink-tps'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npx vitest run src/core/InkBrushRasterStream.test.ts src/core/InkBrushGpuPacking.test.ts src/core/InkBrushHotPath.test.ts src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts
+      - run: npm run build -- --base=/browser-ink-tps/
