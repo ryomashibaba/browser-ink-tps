@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Issue 16 real WebGL2 ink raster witness</title></head>
+<body><output id="result">INK_WEBGL2_PENDING</output>
+<script type="module">
+import { Vec3 } from 'playcanvas';
+import { GameplayInkSystem } from './GameplayInkSystem.ts';
+import { buildInkBrushRasterQuads } from './InkBrushRasterGeometry.ts';
+import { localMetersToBrushAtlas } from './AtlasCoordinates.ts';
+import { PaintSurface } from './PaintSurface.ts';
+import { PaintEventType, PaintSource, SurfaceFlags, Team } from './types.ts';
+
+const output = document.getElementById('result');
+try {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true, antialias: false });
+  if (!gl) throw new Error('No real WebGL2 context');
+
+  const vertexSource = `#version 300 es
+    in vec2 aPos;
+    in vec2 aUv0;
+    in vec2 aRectMin;
+    in vec2 aRectMax;
+    out vec2 vUv0;
+    out vec2 vAtlasPos;
+    out vec2 vRectMin;
+    out vec2 vRectMax;
+    void main() {
+      gl_Position = vec4(aPos.x * 2.0 - 1.0, 1.0 - aPos.y * 2.0, 0.0, 1.0);
+      vUv0 = aUv0;
+      vAtlasPos = aPos;
+      vRectMin = aRectMin;
+      vRectMax = aRectMax;
+    }`;
+  // Same ellipse/raster-rect fragment rejection as GpuInkAtlas.ts,
+  // ported from its GLSL ES 1.00 syntax to WebGL2 GLSL ES 3.00.
+  const fragmentSource = `#version 300 es
+    precision highp float;
+    in vec2 vUv0;
+    in vec2 vAtlasPos;
+    in vec2 vRectMin;
+    in vec2 vRectMax;
+    out vec4 fragColor;
+    void main() {
+      vec2 p = vUv0 * 2.0 - 1.0;
+      if (dot(p,p) > 1.0) discard;
+      if (vAtlasPos.x < vRectMin.x || vAtlasPos.y < vRectMin.y ||
+          vAtlasPos.x > vRectMax.x || vAtlasPos.y > vRectMax.y) discard;
+      fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }`;
+
+  const makeShader = (type, source) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error('Shader compile: ' + gl.getShaderInfoLog(shader));
+    }
+    return shader;
+  };
+  const program = gl.createProgram();
+  gl.attachShader(program, makeShader(gl.VERTEX_SHADER, vertexSource));
+  gl.attachShader(program, makeShader(gl.FRAGMENT_SHADER, fragmentSource));
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error('Shader link: ' + gl.getProgramInfoLog(program));
+  }
+  gl.useProgram(program);
+  gl.viewport(0, 0, 512, 512);
+  gl.disable(gl.BLEND);
+  gl.disable(gl.DEPTH_TEST);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  const attr = (name, count, offset) => {
+    const loc = gl.getAttribLocation(program, name);
+    if (loc < 0) throw new Error('Missing ' + name);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, count, gl.FLOAT, false, 32, offset);
+  };
+  attr('aPos', 2, 0);
+  attr('aUv0', 2, 8);
+  attr('aRectMin', 2, 16);
+  attr('aRectMax', 2, 24);
+
+  const surface = new PaintSurface(
+    'original-permitted-floor', new Vec3(), new Vec3(1,0,0),
+    new Vec3(0,0,-1), 4, 4, 1,
+    SurfaceFlags.Paintable | SurfaceFlags.Floor, 2
+  );
+  surface.atlasRect = {
+    x: 16, y: 32, width: 256, height: 256,
+    atlasSize: 512, pixelsPerMeter: 64
+  };
+  surface.flagsGrid[surface.index(1,1)] = SurfaceFlags.Floor;
+  const system = new GameplayInkSystem();
+  system.registerSurface(surface);
+  const event = {
+    tick: 1, source: PaintSource.Human, team: Team.A,
+    surfaceId: surface.id, centerU: 1.5, centerV: 1.5,
+    radiusU: 1.3, radiusV: 1.3, angle: 0,
+    type: PaintEventType.Impact, strength: 1
+  };
+  const raster = system.apply(event);
+  if (raster.rasterEligibleCells !== 4 ||
+      system.snapshot().totalScoreableArea !== 1e-9) {
+    throw new Error('Authoritative source raster or scoring changed');
+  }
+  const quads = buildInkBrushRasterQuads(surface, event, raster.paintableRuns);
+  if (!quads.length) throw new Error('No paintable GPU geometry');
+  const triangles = [0,1,2, 0,2,3];
+  const verts = [];
+  for (const q of quads) {
+    for (const i of triangles) {
+      const v = q.vertices[i];
+      verts.push(v.x, v.y, v.uvX, v.uvY,
+        q.clipMinX, q.clipMinY, q.clipMaxX, q.clipMaxY);
+    }
+  }
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+  gl.clearColor(0.5, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLES, 0, verts.length / 8);
+  if (gl.getError() !== gl.NO_ERROR) throw new Error('WebGL draw error');
+
+  const pixel = new Uint8Array(4);
+  const isRed = (u, v) => {
+    const point = localMetersToBrushAtlas(surface.atlasRect, u, v);
+    const x = Math.floor(point.x * 512);
+    const y = Math.floor((1 - point.y) * 512);
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('WebGL readPixels error');
+    return pixel[0] > 235 && pixel[1] < 30 && pixel[2] < 30;
+  };
+  let verifiedBlank = 0;
+  for (let v = 1.1; v <= 1.9; v += 0.1) {
+    for (let u = 1.1; u <= 1.9; u += 0.1) {
+      if (isRed(u,v)) throw new Error('Forbidden cell got real GPU red ink at ' + u + ',' + v);
+      verifiedBlank++;
+    }
+  }
+  if (!isRed(0.5, 1.5) || !isRed(2.5, 1.5)) {
+    throw new Error('Valid neighboring cells failed real GPU ink draw');
+  }
+  output.textContent = 'INK_WEBGL2_PASS blankProbes=' + verifiedBlank +
+    ' approvedQuads=' + quads.length;
+} catch (error) {
+  output.textContent = 'INK_WEBGL2_FAIL ' + String(error.stack || error);
+}
+</script>
+</body>
+</html>
