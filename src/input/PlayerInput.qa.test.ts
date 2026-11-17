@@ -260,6 +260,61 @@ test('native SOURCE focus recovery rejects stale OS key repeats until a fresh pr
  expect(input.moveX).toBe(1);
 });
 
+test('SOURCE quick Shift press and release between fixed ticks enters squid for exactly one tick',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'ShiftLeft',repeat:false});
+ emit('window','keyup',{code:'ShiftLeft'});
+ expect(input.squidHeld).toBe(false);
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(true);
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+ // A normal held key must remain active for every real fixed step.
+ emit('window','keydown',{code:'ShiftRight',repeat:false});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(true);
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(true);
+ emit('window','keyup',{code:'ShiftRight'});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+});
+
+test('SOURCE STAGING, lock loss and real death cannot leak a queued squid tap',()=>{
+ const {input,canvas,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ emit('window','keydown',{code:'ShiftLeft',repeat:false});
+ emit('window','keyup',{code:'ShiftLeft'});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'ShiftLeft',repeat:false});
+ emit('window','keyup',{code:'ShiftLeft'});
+ Object.defineProperty(document,'pointerLockElement',{value:null,writable:true});
+ emit('window','pointerlockchange');
+ Object.defineProperty(document,'pointerLockElement',{value:canvas,writable:true});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+ emit('window','keydown',{code:'ShiftRight',repeat:true});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+ emit('window','keydown',{code:'ShiftRight',repeat:false});
+ emit('window','keyup',{code:'ShiftRight'});
+ input.setCombatInputActive(false);
+ input.setCombatInputActive(true);
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(false);
+ // Pressing again after physical release is immediately responsive.
+ emit('window','keydown',{code:'ShiftRight',repeat:false});
+ expect(input.consumeSquidHeldForPlayerTick()).toBe(true);
+});
+
+test('SOURCE repeated nonrepeat Space keydown cannot create a second jump without keyup',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect(input.consumeJump()).toBe(true);
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect(input.consumeJump()).toBe(false);
+ emit('window','keyup',{code:'Space'});
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect(input.consumeJump()).toBe(true);
+});
+
 test('QA-only deterministic source input keeps its existing authoritative axis',()=>{
  const {input}=createInput(true);
  input.setSourcePrestartMovementBlocked(true);
