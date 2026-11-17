@@ -50,4 +50,17 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
   expect(b463ReadPreviousSourceRound('{invalid',origin)).toBeNull();
   expect(b463ReadPreviousSourceRound('a'.repeat(2049),origin)).toBeNull();
  });
+ it('shows authentic physical splats and 150-tick returns across 180s rounds',()=>{
+  const old=b463FromRealTimeUp({
+   ...view(),actualHumanSplats:3,actualHumanRespawns:2
+  },11856,origin-500)!;
+  const now=b463FromRealTimeUp({
+   ...view(),actualHumanSplats:1,actualHumanRespawns:1
+  },11890,origin)!;
+  const report=b463FormatSourceRoundComparison(old,now);
+  expect(report).toContain('HUMAN SPLATS 3 → 1 (-2)');
+  expect(report).toContain('HUMAN 150-TICK RETURNS 2 → 1 (-1)');
+  expect(report).toContain('NOT AN OFFICIAL SCORE');
+  expect(report).toContain('WINNER NONE');
+ });
 });

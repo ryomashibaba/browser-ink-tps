@@ -42,7 +42,19 @@ export function b389NativeBootWeapon(
 ):WeaponId|null{
  const id=params.get('t21W10B389');
  if(!id||!WEAPON_ORDER.includes(id as WeaponId))return null;
- if(b384SourceCircuitSelected(params))return id as WeaponId;
+ if(b384SourceCircuitSelected(params)){
+  // Canonical B384 user-selected kit must have EXACT launcher provenance.
+  // Formerly this branch accepted extra QA/production flags and duplicate
+  // selected-weapon entries despite the standard SOURCE mode rejecting
+  // that same URL at replay. Do not boot a divergent kit at READY.
+  const expected=['t21Play','t21QaDrive','t21W10B112',
+   't21W10B183','t21W10B192','t21W10B203',
+   't21W10B384','t21W10B389'].sort();
+  const actual=[...params.keys()].sort();
+  if(actual.length!==expected.length||
+     actual.some((key,i)=>key!==expected[i]))return null;
+  return id as WeaponId;
+ }
  const common=['t21Play','t21QaDrive','t21W10B183',
   't21W10B203','t21W10B389'];
  if(params.get('t21Play')!=='preview'||
