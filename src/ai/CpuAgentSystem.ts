@@ -1736,6 +1736,12 @@ export class CpuAgentSystem {
       // >=1.2s actual stop and a 300-tick window without a KCC veto.
       if(actual.stationarySeconds<SOURCE_CROWD_STALL_SECONDS)continue;
       const bot=this.bots.find(b=>b.id===actual.id);
+      // The genuine SOURCE splatling's charge/burst and shield are active
+      // weapon actions, NOT evidence of a broken movement goal. Preserve
+      // B4's live paid barrage instead of resetting the Crowd proxy
+      // while its weapon is deliberately committed.
+      if(bot&&(bot.weaponChargeSeconds>0||
+         bot.weaponBurstShotsRemaining>0||bot.weaponGuarding))continue;
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
       if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
         actualFoot:bot.position,admittedGoal:goal??null,
