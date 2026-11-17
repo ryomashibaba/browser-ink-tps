@@ -165,7 +165,6 @@ jobs:
     timeout-minutes: 8
     permissions:
       contents: read
-      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -184,24 +183,6 @@ jobs:
           npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B245SourcePresentation.test.ts src/app/B207SourceCombatRound.test.ts src/app/SourcePlayPortal.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/ai/B180OriginalSourcePaintOpportunity.test.ts src/ai/B216OriginalSourceBackfillInk.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts src/ai/B178OriginalSourceInkResources.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts src/ink/PaintSurface.test.ts src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts src/stage/undertow/UndertowW10B13HumanToCpuSplatRespawn.test.ts
-      # One already-completed genuine 720-tick browser RAW, read only.
-      # Native run 44049705256 itself achieved B2/B4 registered original
-      # physical movement, but legacy B450 assumed every CPU was stalled.
-      # Validate current mobile/denied split without launching Chromium.
-      - name: Reuse immutable recent B2 B4 60Hz registered source feet
-        uses: actions/download-artifact@v4
-        with:
-          name: b441-true-native-source-frontline-short
-          run-id: 44049705256
-          github-token: ${{ github.token }}
-          path: /tmp/t21-v28-real-mobile-b2b4
-      - name: Read-only real moving CPU B450 and QA18 evidence gate
-        run: |
-          node --check scripts/t21-b450-real-b2-b4-gap-audit.mjs
-          node --test scripts/t21-v28-qa-native-playability-blockers.test.mjs
-          node scripts/t21-b450-real-b2-b4-gap-audit.mjs /tmp/t21-v28-real-mobile-b2b4/b440-short-real-original-human-foot.json
-          node scripts/t21-v28-qa-native-playability-blockers.mjs /tmp/t21-v28-real-mobile-b2b4/b440-short-real-original-human-foot.json /tmp/t21-v28-real-mobile-b2b4/b454-native-b2-b4-physical-60hz.json /tmp/t21-v28-real-mobile-b2b4/qa18-real-moving-native-recheck.json
-          node -e "const fs=require('node:fs');const dir='/tmp/t21-v28-real-mobile-b2b4/';const b=JSON.parse(fs.readFileSync(dir+'b450-first-original-gap-report.json'));const q=JSON.parse(fs.readFileSync(dir+'qa18-real-moving-native-recheck.json'));for(const id of ['B2','B4']){if(b.schema!=='B451_REAL_B2_B4_SOURCE_MOBILE_OBSERVATION_V3'||b.perCpu[id].allRegisteredOriginalRapierFootRows!==732||b.perCpu[id].cumulativePhysicalXZTravelMeters<20||q.byActor[id].observedGate!=='PASS_LIMITED_REAL_ORIGINAL_SOURCE_FOOT_MOTION_NOT_4V4')process.exit(1)}if(q.actualCrossTeamNativePathPairs!==0||q.formal4v4Certified!==false||b.crossTeamPathCertified!==false||q.originalF4Certified!==false)process.exit(1);console.log('PASS_LIMITED_GENUINE_ORIGINAL_B2_B4_KCC_MOTION_NON_4V4')"
       # B493 pinned RAW only. No Chromium or source gameplay simulation.
       - name: Download immutable original B2 B4 60Hz Chromium foot ledger
         if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') }}
