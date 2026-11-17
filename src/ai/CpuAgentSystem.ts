@@ -1323,12 +1323,18 @@ export class CpuAgentSystem {
               this.goal.set(admitted.point.x,admitted.point.y,
                 admitted.point.z);
               // The audit validated THIS actual foot -> original point.
-              // closestPoint() is a second independent Recast lookup;
-              // reject a different layer/endpoint even if the first
-              // path audit succeeded. No fake NavMesh start or Actor step.
-              const projected=this.navigation.closestPoint(this.goal);
-              if(isAlignedOriginalSourceCrowdTarget(this.goal,projected)){
-                projectedApprovedSourceGoal=projected;
+              // closestPoint() silently returns the requested coordinate
+              // on native query failure. Use the explicit success-bearing
+              // projection instead: no false native Crowd target when
+              // a second Recast query failed or chose another floor.
+              const projected=this.navigation.auditNavMeshProjection(
+                this.goal);
+              if(projected.success&&projected.nearestPoint&&
+                 projected.distanceMeters!==null&&
+                 projected.distanceMeters<=.22+1e-6&&
+                 isAlignedOriginalSourceCrowdTarget(
+                   this.goal,projected.nearestPoint)){
+                projectedApprovedSourceGoal=projected.nearestPoint;
                 newlyAuditedOriginalSourceGoal=!admitted.reusedPrevious;
               }else sourceGoal=false;
             }else sourceGoal=false;
