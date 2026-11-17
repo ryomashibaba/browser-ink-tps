@@ -26,6 +26,7 @@ function fixture(){
  cpu.sourceLastPhysicalBlockedTick=new Map<string,number>();
  cpu.sourceLastRecoveryAuditTick=new Map<string,number>();
  cpu.sourceLastAdmittedRouteGoal=new Map([['B1',goal]]);
+ cpu.sourceLiveNativeMotionGoal=new Map([['B1',{agent,goal:goal.clone()}]]);
  cpu.qaMotionGoals=new Map([['B1',goal.clone()]]);
  cpu.b35LastNativeTarget=new Map([['B1',{agent,goal,repeat:1}]]);
  cpu.phase14qGroundCollision={
@@ -66,6 +67,7 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
   expect(bot.position).toEqual(foot);
   expect(cpu.b35LastNativeTarget.has('B1')).toBe(false);
+  expect(cpu.sourceLiveNativeMotionGoal.has('B1')).toBe(false);
   expect(cpu.qaMotionGoals.has('B1')).toBe(false);
   expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
   expect(bot.thinkRemaining).toBeLessThan(.08);
@@ -126,6 +128,16 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   bot.weaponChargeSeconds=.5;
   report.actors[0].stationarySeconds=9.7;
   cpu.sourceLastPhysicalBlockedTick.set('B1',599);
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(agent.teleport).not.toHaveBeenCalled();
+  expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
+ });
+ it('never invents a live movement from a retained paid-ink aiming heading',()=>{
+  const {cpu,agent,goal,report}=fixture();
+  // KCC reset clears the submitted Recast target but B4's prior
+  // SOURCE ink heading may remain for authentic paid shots.
+  cpu.sourceLiveNativeMotionGoal.delete('B1');
+  expect(cpu.qaMotionGoals.get('B1')).toEqual(goal);
   cpu.tryRefreshStalledOriginalSourceCrowd(report);
   expect(agent.teleport).not.toHaveBeenCalled();
   expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
@@ -216,7 +228,7 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
    if(reason==='HIGH_SPAWN')
     cpu.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
    if(reason==='SPLATTED')bot.lifeState='SPLATTED';
-   if(reason==='NO_GOAL')cpu.qaMotionGoals.clear();
+   if(reason==='NO_GOAL')cpu.sourceLiveNativeMotionGoal.clear();
    // On a genuine KCC rejection the CPU discards the historical fallback,
    // even if a stale QA heading was retained for paid ink decisions.
    if(reason==='KCC_INVALIDATED_GOAL')
