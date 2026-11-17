@@ -14,7 +14,8 @@ const evidence=()=>({
    b443FirstActualFrontlineArrivals:3,
    b448A3FreshLiveOriginalGoalsAuthorized:5,
    b448A3RealNativeGoalRequests:4,
-   realGroundTravelMetersByActor:{B2:27.531335,B4:29.340056}
+   realGroundTravelMetersByActor:{B2:27.531335,B4:29.340056} as
+    {B2:number;B4:number}|undefined
   }}
 });
 describe('B464 real player-visible optional native CPU frontline',()=>{
@@ -106,10 +107,10 @@ describe('B464 real SOURCE native PLAYER uncluttered Rapier motion',()=>{
  });
  it('does not infer movement from ACTIVE or fake nonfinite native travel',()=>{
   const s=evidence();
-  delete s.cpu.sourcePatrol.realGroundTravelMetersByActor;
+  s.cpu.sourcePatrol.realGroundTravelMetersByActor=undefined;
   expect(b464PlayerFacingSourceFrontlineLines(
    b464RealSourceFrontlineView(s)!)).toContain('NATIVE FOOT TRAVEL UNVERIFIED');
-  for(const [B2,B4] of [[NaN,2],[12,Infinity],[-1,5],[2001,7]]){
+  for(const [B2,B4] of [[NaN,2],[12,Infinity],[-1,5],[2001,7]] as const){
    s.cpu.sourcePatrol.realGroundTravelMetersByActor={B2,B4};
    expect(b464RealSourceFrontlineView(s)?.sourceGroundTravelB2B4)
     .toBeNull();
