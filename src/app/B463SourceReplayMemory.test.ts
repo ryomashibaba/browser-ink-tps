@@ -36,6 +36,12 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
   expect(b463FromRealTimeUp({...v,officialWinner:'TEAM_A'},11856,origin)).toBeNull();
   expect(b463FromRealTimeUp({...v,officialScoreableSurfaces:1},11856,origin)).toBeNull();
   expect(b463FromRealTimeUp({...v,genuineHumanShots:-1},11856,origin)).toBeNull();
+  expect(b463FromRealTimeUp({...v,actualHumanSplats:0,
+   actualHumanRespawns:1},11856,origin)).toBeNull();
+  expect(b463FromRealTimeUp({...v,actualHumanSplats:3,
+   actualHumanRespawns:1},11856,origin)).toBeNull();
+  expect(b463FromRealTimeUp({...v,actualHumanSplats:81,
+   actualHumanRespawns:80},11856,origin)).toBeNull();
  });
  it('refuses tampered, oversized, future-world and invented official records',()=>{
   const a=b463FromRealTimeUp(view(),11856,origin)!;
@@ -43,7 +49,10 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
    {...a,source:'31/17/26/0'},{...a,cpuRejoined:6},
    {...a,formal4v4Certified:true},{...a,realNativeTick:9000},
    {...a,humanShots:NaN},{...a,worldOrigin:origin+3},
-   {...a,worldOrigin:-1},{...a,worldOrigin:-0.25}]){
+   {...a,worldOrigin:-1},{...a,worldOrigin:-0.25},
+   {...a,humanSplats:0,humanRespawns:1},
+   {...a,humanSplats:4,humanRespawns:2},
+   {...a,humanSplats:81,humanRespawns:80}]){
    expect(b463ReadPreviousSourceRound(JSON.stringify(bad),origin+2))
     .toBeNull();
   }
@@ -61,6 +70,8 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
   expect(report).toContain('HUMAN SPLATS 3 → 1 (-2)');
   expect(report).toContain('HUMAN 150-TICK RETURNS 2 → 1 (-1)');
   expect(report).toContain('NOT AN OFFICIAL SCORE');
+  expect(report).toContain('PENDING HUMAN RETURN AT TIME_UP YES → NO');
+  expect(report).toContain('HP CONTACT NOT CERTIFIED');
   expect(report).toContain('WINNER NONE');
  });
 });

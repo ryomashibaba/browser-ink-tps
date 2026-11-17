@@ -59,15 +59,37 @@ describe('T21 V28 native SOURCE circuit replay lifecycle',()=>{
    'https://example.org/browser-ink-tps/?t21Play=preview',
    action())).toBeNull();
  });
- it('does not carry query injection, hash or official-score claims into replay',()=>{
-  const contaminated=circuit+'&production=1&scoreable=99#old';
-  const next=b389NativeNewRoundHref(contaminated,action({matchState:'PLAYING'}));
-  expect(next).not.toBeNull();
-  const u=new URL(next!);
-  expect(u.searchParams.has('production')).toBe(false);
-  expect(u.searchParams.has('scoreable')).toBe(false);
-  expect(u.hash).toBe('');
-  expect(sourceCanonicalPlayableMode(next!)).toBe('circuit');
+ it('blocks accidental replay from QA/production/score spoofed rounds',()=>{
+  for(const injected of [
+   '&production=1','&scoreable=1','&t21QaInput=manual',
+   '&t21W10B343=sourceVolleyAtomic','&t21W10B384=loadoutCircuit',
+   '#old'
+  ]){
+   expect(b389NativeNewRoundHref(circuit+injected,
+    action({matchState:'PLAYING'}))).toBeNull();
+  }
+  expect(b389NativeNewRoundHref(circuit,
+   action({sourceBoundary:['25',17,26,0] as unknown as number[]})))
+   .toBeNull();
+  // Real paused user replay stays available, not automated JS clicks.
+  expect(b389NativeNewRoundHref(circuit,
+   action({matchState:'PLAYING',paused:true}))).not.toBeNull();
+ });
+ it('recovers authentic /index.html circuit replays and retains current kit',()=>{
+  for(const id of WEAPON_ORDER){
+   const boot=new URL(b384SourceCircuitHref(circuit,true,id)!);
+   boot.pathname='/browser-ink-tps/index.html';
+   const next=b389NativeNewRoundHref(boot.href,
+    action({matchState:'TIME_UP',weaponId:id}));
+   expect(next).not.toBeNull();
+   expect(new URL(next!).pathname).toBe('/browser-ink-tps/');
+   expect(sourceCanonicalPlayableMode(next!)).toBe('circuit');
+   const second=b389NativeNewRoundHref(next!,
+    action({weaponId:id}));
+   expect(sourceCanonicalPlayableMode(second!)).toBe('circuit');
+   expect(new URL(second!).searchParams.get('t21W10B389'))
+    .toBe(id===DEFAULT_WEAPON_ID?null:id);
+  }
  });
  it('rejects mixed QA/production or duplicate circuit weapon boot authority',()=>{
   const selected=new URL(b384SourceCircuitHref(circuit,true,WEAPON_ORDER[2])!);
