@@ -291,6 +291,35 @@ export function b245RealFrontlineAimAndRejoinCss(search:string):string{
   '{color:#ffd39a!important;font-weight:800!important;}'
  ].join('');
 }
+/**
+ * VISUAL #17 lot 4: native B464 already knows each real B441 requested
+ * source goal, actual arrival and rejected/unsafe hold. The former global
+ * PLAYER one-line 27px clipping made those values invisible during live
+ * 1600x900 gameplay and could imply 7/7 alive CPUs were navigating.
+ *
+ * Show the first three existing source-only lines (live status, requests
+ * versus arrivals, held/unreachable) at lower-right on a roomy viewport.
+ * The F8 diagnostic original full five-line readout remains untouched.
+ * NO new sampler, CPU motion, path certification, hit, splash or score.
+ */
+export function b245RealFrontlineSourceProgressCss(search:string):string{
+ const q=new URLSearchParams(search);
+ if(!b475RealFrontlineReadyMode(q)||q.has('production')||
+    q.has('scoreable')||q.get('t21Presentation')==='qa')return '';
+ const live='#ui-root[data-t21-b245-presentation="PLAYER"]'+
+  '[data-t21-b338-phase="PLAYING"]'+
+  ':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])';
+ return [
+  '@media(min-width:1100px) and (min-height:680px){',
+  live+' #t21-f3-b464-real-cpu-frontline',
+  '{width:min(340px,calc(100vw - 24px))!important;'+
+   'height:auto!important;max-height:82px!important;'+
+   'padding:7px 9px!important;overflow:hidden!important;'+
+   'white-space:pre-line!important;text-overflow:clip!important;'+
+   'font-size:10px!important;line-height:1.35!important;}',
+  '}'
+ ].join('');
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {
@@ -356,6 +385,9 @@ export function installB245SourcePresentation(
  style.textContent+=b245RealFrontlineCombatReadabilityCss(window.location.search);
  // #17 lot 3: safe side-caption and truthful native CPU rejoin highlight.
  style.textContent+=b245RealFrontlineAimAndRejoinCss(window.location.search);
+ // #17 lot 4: in the native B475 live SOURCE viewport, show verified
+ // B464 request/arrival/held evidence instead of cropping at one line.
+ style.textContent+=b245RealFrontlineSourceProgressCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
