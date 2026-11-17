@@ -1,7 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
 import {PlayerController,nativeSourceNextJumpBufferSeconds,
- nativeSourceWallReleaseVerticalVelocity} from './PlayerController';
+ nativeSourceWallReleaseVerticalVelocity,nativeSourceWallSurgeRequested,
+ nativeSourceSquidRollJumpRequested} from './PlayerController';
 
 // Unit reconstruction of the actual controller methods. No fake SOURCE
 // floor, synthetic navigation links, Chromium pass or official match proof.
@@ -123,5 +124,41 @@ describe('Issue #19 SOURCE wall-release and exclusive-motion responsiveness',()=
   // Regained live controls need a genuinely new physical press.
   expect(nativeSourceNextJumpBufferSeconds(0,false,1/60,true,false))
    .toBe(0);
+ });
+});
+
+
+describe('Issue #19 native SOURCE: short Space survives real squid actions',()=>{
+ it('launches a minimum-charge surge for a real one-tick wall Space tap',()=>{
+  // Called ONLY after findOwnWallSample establishes an actual OWN wall.
+  expect(nativeSourceWallSurgeRequested(false,0,true,true)).toBe(true);
+  // The frozen T20 behaviour remains held-key/charged-state only.
+  expect(nativeSourceWallSurgeRequested(false,0,true,false)).toBe(false);
+  expect(nativeSourceWallSurgeRequested(true,0,false,false)).toBe(true);
+  expect(nativeSourceWallSurgeRequested(false,.1,false,false)).toBe(true);
+  expect(nativeSourceWallSurgeRequested(false,0,false,true)).toBe(false);
+ });
+ it('uses only an unexpired real Space buffer for a grounded ink roll',()=>{
+  // Controller still requires BOTH genuine KCC grounded and the existing
+  // OWN-ink reversed-direction roll window before this predicate is used.
+  expect(nativeSourceSquidRollJumpRequested(false,true,.06)).toBe(true);
+  expect(nativeSourceSquidRollJumpRequested(false,true,0)).toBe(false);
+  expect(nativeSourceSquidRollJumpRequested(false,false,.06)).toBe(false);
+  expect(nativeSourceSquidRollJumpRequested(true,false,0)).toBe(true);
+  const p=playerProbe(true);
+  p.grounded=false;
+  p.sourceJumpBufferSeconds=.06;
+  // The same buffered Space NEVER invents ground contact in tryJump.
+  p.tryJump(false,7.5);
+  expect(p.verticalVelocity).toBe(0);
+  expect(p.grounded).toBe(false);
+ });
+ it('still expires and clears native Space on pointer loss or dodge',()=>{
+  const expired=nativeSourceNextJumpBufferSeconds(.06,false,.08,true,false);
+  expect(nativeSourceSquidRollJumpRequested(false,true,expired)).toBe(false);
+  const denied=nativeSourceNextJumpBufferSeconds(.06,true,1/60,false,false);
+  expect(nativeSourceSquidRollJumpRequested(false,true,denied)).toBe(false);
+  const dodge=nativeSourceNextJumpBufferSeconds(.06,true,1/60,true,true);
+  expect(nativeSourceSquidRollJumpRequested(false,true,dodge)).toBe(false);
  });
 });

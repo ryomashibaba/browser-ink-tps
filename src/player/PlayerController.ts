@@ -64,6 +64,24 @@ export function nativeSourceNextJumpBufferSeconds(
  return jumpPressed?0.10:Math.max(0,previous-dt);
 }
 
+/** A real SOURCE Space tap can begin a minimum wall surge even when its
+ * keyup arrives before the next native physics step. Genuine OWN wall
+ * probing still gates the action; frozen T20 keeps held/charged semantics. */
+export function nativeSourceWallSurgeRequested(
+ jumpHeld:boolean,chargeSeconds:number,jumpPressed:boolean,source:boolean
+):boolean{
+ return jumpHeld||chargeSeconds>0||(source&&jumpPressed);
+}
+
+/** A pre-landing Space press may select the existing squid-roll action on
+ * true KCC ground contact, rather than being lost to a normal jump.
+ * No roll without current OWN floor and legitimate reverse-turn window. */
+export function nativeSourceSquidRollJumpRequested(
+ jumpPressed:boolean,source:boolean,bufferSeconds:number
+):boolean{
+ return jumpPressed||(source&&bufferSeconds>0);
+}
+
 /** Real SOURCE only: an optical/nearby paint surface cannot grant
  * OWN/ENEMY resource or squid ground speed when a DIFFERENT registered
  * 25-solid Rapier floor supports the character. No new collision. */
@@ -558,7 +576,10 @@ export class PlayerController {
       // A wall swim/charge owns its Space semantics; do not carry a floor
       // jump tap into a later unrelated ground contact.
       if (wall) this.sourceJumpBufferSeconds = 0;
-      if (wall && (this.input.jumpHeld || this.surgeChargeSeconds > 0)) {
+      if (wall && nativeSourceWallSurgeRequested(
+        this.input.jumpHeld,this.surgeChargeSeconds,jumpPressed,
+        this.nativeSourceGroundInkGuard
+      )) {
         if (this.input.jumpHeld) {
           this.input.consumeJump();
           this.surgeChargeSeconds = Math.min(
@@ -609,7 +630,9 @@ export class PlayerController {
           this.locomotionState = 'SWIM_GROUND';
           this.captureSquidRollTurnIntent();
 
-          if (jumpPressed && this.grounded && this.squidRollTurnWindowSeconds > 0) {
+          if (nativeSourceSquidRollJumpRequested(
+            jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
+          ) && this.grounded && this.squidRollTurnWindowSeconds > 0) {
             this.startSquidRoll();
           } else {
             this.applyHorizontalTarget(

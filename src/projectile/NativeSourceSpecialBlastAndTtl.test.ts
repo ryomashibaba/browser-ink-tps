@@ -128,6 +128,33 @@ describe('native SOURCE real SUB/SPECIAL area damage and guard direction',()=>{
     expect(f.stats.playerDamageTaken).toBe(25);
     expect(f.stats.cpuPlayerHits).toBe(1);
   });
+  it('does not shield a SOURCE explosion contacting the true rear hemisphere',()=>{
+    // The authentic damage path previously reused T20's -0.10
+    // tolerance: lateral x=.25, rear z=+.02 incorrectly blocked.
+    const f=physicalCombat({guard:true});
+    f.blast(new Vec3(.25,0,.02),24,1);
+    expect(f.resources.currentHp).toBe(76);
+    expect(f.stats.playerWeaponGuardBlocks).toBe(0);
+    expect(f.stats.playerDamageTaken).toBe(24);
+    expect(f.stats.cpuPlayerHits).toBe(1);
+    expect(f.cues).toHaveBeenCalledOnce();
+  });
+  it('still shields the corresponding real front-half SOURCE blast',()=>{
+    const f=physicalCombat({guard:true});
+    f.blast(new Vec3(.25,0,-.02),24,1);
+    expect(f.resources.currentHp).toBe(100);
+    expect(f.stats.playerWeaponGuardBlocks).toBe(1);
+    expect(f.stats.playerWeaponGuardHp).toBe(76);
+    expect(f.stats.cpuPlayerHits).toBe(0);
+    expect(f.cues).not.toHaveBeenCalled();
+  });
+  it('retains the T20 slightly-rear guard tolerance outside SOURCE',()=>{
+    const f=physicalCombat({source:false,guard:true});
+    f.blast(new Vec3(.25,0,.02),24,1);
+    expect(f.resources.currentHp).toBe(100);
+    expect(f.stats.playerWeaponGuardBlocks).toBe(1);
+    expect(f.stats.cpuPlayerHits).toBe(0);
+  });
   it('retains the old T20 body-centered explosion shield contract',()=>{
     const f=physicalCombat({source:false,guard:true});
     f.blast(new Vec3(),30);
