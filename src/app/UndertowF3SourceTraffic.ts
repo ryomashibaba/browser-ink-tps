@@ -36,6 +36,7 @@ import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryAct
 import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals,
  b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
+ b468MayReauditInitiallyApprovedOriginalBGoal,
  b470MayAuditRealInkRankedSameSideFront,
  b471MayRequestActualA1SourceOrder}
  from './B441OriginalSourceFrontline';
@@ -2137,29 +2138,58 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // Rapier foot. A second goal is never inferred from the first route.
    const nativeLock=this.b443OriginalGoalLocks.get(id);
    let newlyExtendedNativeFront:Vec3|null=null;
-   const mayExtendBFront=b468MayRetryDifferentOriginalBGoalAfterRealDwell({
-    id,nativeTick:this.b137NativeTick,
-    approvedOriginalGoals:fronts.length,
-    originallyAuthorized:this.b467LiveSourceGoals.has(id),
-    arrivedSinceTick:nativeLock?.arrivedSinceTick??null,
-    heldGoal:nativeLock?[
-     nativeLock.target.x,nativeLock.target.y,nativeLock.target.z]:null,
-    realFoot:[realFoot.x,realFoot.y,realFoot.z]
-   });
+   const arrivedSinceTick=nativeLock?.arrivedSinceTick??null;
+   const lockedOriginalGoal=nativeLock?[
+    nativeLock.target.x,nativeLock.target.y,nativeLock.target.z
+   ] as [number,number,number]:null;
+   const actualBOriginalLowFloor=
+    (id==='B2'||id==='B4')?
+     this.sourceNativeCharacterFootHit(realFoot)?.solidId:null;
+   // Normal healthy B2/B4 now genuinely reach B441-original goals.
+   // They have NO old denied-foot B446 probe, so the old B467-only
+   // retry could never expand their ink coverage beyond the initial
+   // two goals. Admit a NEW audit scheduler only after a proven B443
+   // 120-tick physical dwell on the registered right-low B solid.
+   const initialBFrontDwell=b468MayReauditInitiallyApprovedOriginalBGoal(
+    this.stage,{
+     id,nativeTick:this.b137NativeTick,
+     approvedOriginalGoals:fronts.length,
+     initialStrictOriginalGoals:gate?.strictlyApprovedGoals??0,
+     arrivedSinceTick,heldGoal:lockedOriginalGoal,
+     realFoot:[realFoot.x,realFoot.y,realFoot.z],
+     actualOriginalSolidId:actualBOriginalLowFloor,
+     lastRetryNativeTick:this.b467LastLiveRetryTick.get(id)??null,
+     rejoined:this.physicallyRejoined.has(id),
+     active:bot.lifeState==='ACTIVE',
+     grounded:bot.mobilityState==='GROUND'
+    });
+   const mayExtendBFront=initialBFrontDwell||
+    b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+     id,nativeTick:this.b137NativeTick,
+     approvedOriginalGoals:fronts.length,
+     originallyAuthorized:this.b467LiveSourceGoals.has(id),
+     arrivedSinceTick,heldGoal:lockedOriginalGoal,
+     realFoot:[realFoot.x,realFoot.y,realFoot.z]
+    });
    if((fronts.length===0||mayExtendBFront)&&
       (id==='B2'||id==='B4')&&
       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'){
     const initial=this.b446LiveFootProbes.get(id);
     const hit=this.sourceNativeCharacterFootHit(realFoot);
-    if(b467MayRetryOriginalBFrontFromRealFoot(this.stage,{
-      id,nativeTick:this.b137NativeTick,
-      firstDeniedNativeTick:initial?.nativeTick??null,
-      lastRetryNativeTick:this.b467LastLiveRetryTick.get(id)??null,
-      actualOriginalSolidId:hit?.solidId??null,
-      foot:[realFoot.x,realFoot.y,realFoot.z],
-      rejoined:this.physicallyRejoined.has(id),
-      active:bot.lifeState==='ACTIVE',grounded:bot.mobilityState==='GROUND'
-    })){
+    // A previously DENIED foot still needs the existing 60-tick B467
+    // proof. The independently proven initial B441 goal uses the
+    // physically observed 120-tick B443 dwell route instead. Both
+    // branches keep full original Rapier + Recast proposal checks.
+    if(initialBFrontDwell||
+       b467MayRetryOriginalBFrontFromRealFoot(this.stage,{
+        id,nativeTick:this.b137NativeTick,
+        firstDeniedNativeTick:initial?.nativeTick??null,
+        lastRetryNativeTick:this.b467LastLiveRetryTick.get(id)??null,
+        actualOriginalSolidId:hit?.solidId??null,
+        foot:[realFoot.x,realFoot.y,realFoot.z],
+        rejoined:this.physicallyRejoined.has(id),
+        active:bot.lifeState==='ACTIVE',grounded:bot.mobilityState==='GROUND'
+       })){
      this.b467LastLiveRetryTick.set(id,this.b137NativeTick);
      this.b467LiveRetryAttempts++;
      const flat=hit?inspectB130OriginalFlatSource({

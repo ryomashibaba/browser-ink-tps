@@ -19,6 +19,7 @@ import {sourcePlayWeaponModeDestinations} from './SourcePlayPortal';
 import {b214EligibleSourceBattleInk} from './B214SelectedSourceBattleInk';
 import {proposeB441OriginalFrontline,b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
+ b468MayReauditInitiallyApprovedOriginalBGoal,
  b470MayAuditRealInkRankedSameSideFront,
  b471MayRequestActualA1SourceOrder,proposeB441OriginalRampLocalGoals}
  from './B441OriginalSourceFrontline';
@@ -87,6 +88,55 @@ describe('B441 SOURCE-only frontline proposals / never invented crossing',()=>{
  });
 });
 
+
+
+describe('P1 genuine native B2/B4 post-first-goal source expansion scheduler',()=>{
+ const stage=()=>undertowT21dConnectivityQaStage();
+ const sample:Parameters<typeof b468MayReauditInitiallyApprovedOriginalBGoal>[1]={
+  id:'B2',nativeTick:1788,approvedOriginalGoals:2,
+  initialStrictOriginalGoals:2,
+  arrivedSinceTick:1650,
+  heldGoal:[-6.185263365007792,4.502,-37.32132381225935],
+  realFoot:[-6.22,4.599999904632568,-37.40],
+  actualOriginalSolidId:'UndertowT21D:right-low-team-b',
+  lastRetryNativeTick:null,rejoined:true,active:true,grounded:true
+ };
+ const may=(v:typeof sample,source=stage())=>
+  b468MayReauditInitiallyApprovedOriginalBGoal(source,v);
+ it('restores ONLY a new native audit after actual B443 original B2/B4 dwell',()=>{
+  expect(may(sample)).toBe(true);
+  expect(may({...sample,id:'B4'})).toBe(true);
+  // The original B467 rejection-path rule never changes: normal
+  // successfully moving initial B2/B4 have no first denied foot.
+  expect(b467MayRetryOriginalBFrontFromRealFoot(stage(),{
+   id:sample.id,nativeTick:sample.nativeTick,firstDeniedNativeTick:null,
+   lastRetryNativeTick:null,actualOriginalSolidId:sample.actualOriginalSolidId,
+   foot:sample.realFoot,rejoined:true,active:true,grounded:true
+  })).toBe(false);
+ });
+ it('never pre-empts early arrival, unapproved goal, another floor, or rejoin loss',()=>{
+  for(const changed of [
+   {nativeTick:1769},{arrivedSinceTick:null},
+   {initialStrictOriginalGoals:0},{approvedOriginalGoals:0},
+   {approvedOriginalGoals:4},
+   {lastRetryNativeTick:1720},
+   {actualOriginalSolidId:'UndertowT21D:first-drop-landing-negative-z'},
+   {actualOriginalSolidId:'UndertowT21D:right-low-route-ramp-negative-z'},
+   {rejoined:false},{active:false},{grounded:false},
+   {realFoot:[-6.22,4.599,-32.9] as const},
+   {realFoot:[-6.22,5.60,-37.4] as const},
+   {heldGoal:[-6.185,3,-37.32] as const},
+   {heldGoal:null},{id:'A1'},{id:'B1'}
+  ])expect(may({...sample,...changed})).toBe(false);
+ });
+ it('never schedules after source geometry/score authority drift',()=>{
+  const s=stage();
+  expect(may(sample,{...s,solids:s.solids.slice(1)})).toBe(false);
+  expect(may(sample,{...s,navigationLinks:[]})).toBe(false);
+  expect(may(sample,{...s,paintSurfaces:s.paintSurfaces.map((p,i)=>
+   i===0?{...p,flags:p.flags|SurfaceFlags.Scoreable}:p)})).toBe(false);
+ });
+});
 
 describe('B467 only rechecks real B2/B4 after native arrival on existing B low floor',()=>{
  const realFoot:Parameters<typeof b467MayRetryOriginalBFrontFromRealFoot>[1]=

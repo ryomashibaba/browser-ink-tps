@@ -82,6 +82,43 @@ export function b468MayRetryDifferentOriginalBGoalAfterRealDwell(e:{
   Math.abs(y-gy)<=.30&&Math.hypot(x-gx,z-gz)<=3;
 }
 
+
+/** P1 actual B2/B4 same-side expansion: the FIRST source B441 goal
+ * was admitted by the genuine constructor Rapier/Recast gate, so no
+ * B446 denial probe exists. That absence must not prevent a NEW route
+ * audit after an ACTUAL registered-floor 120-tick arrival/dwell.
+ * Scheduling only. Caller still independently checks current HUMAN
+ * Rapier support, exact original goal, full Recast and all 0.30m
+ * intermediate native path samples before any Crowd goal request. */
+export function b468MayReauditInitiallyApprovedOriginalBGoal(
+ stage:StageDefinition,e:{
+  readonly id:string;readonly nativeTick:number;
+  readonly approvedOriginalGoals:number;
+  readonly initialStrictOriginalGoals:number;
+  readonly arrivedSinceTick:number|null;
+  readonly heldGoal:readonly [number,number,number]|null;
+  readonly realFoot:readonly [number,number,number];
+  readonly actualOriginalSolidId:string|null;
+  readonly lastRetryNativeTick:number|null;
+  readonly rejoined:boolean;readonly active:boolean;readonly grounded:boolean;
+ }):boolean{
+ if(!authorized(stage)||!e.rejoined||!e.active||!e.grounded||
+    e.actualOriginalSolidId!=='UndertowT21D:right-low-team-b'||
+    !Number.isSafeInteger(e.initialStrictOriginalGoals)||
+    e.initialStrictOriginalGoals<1||
+    (e.lastRetryNativeTick!==null&&
+      (!Number.isSafeInteger(e.lastRetryNativeTick)||
+       e.lastRetryNativeTick<0||
+       e.nativeTick-e.lastRetryNativeTick<90)))return false;
+ return b468MayRetryDifferentOriginalBGoalAfterRealDwell({
+  id:e.id,nativeTick:e.nativeTick,
+  approvedOriginalGoals:e.approvedOriginalGoals,
+  originallyAuthorized:true,
+  arrivedSinceTick:e.arrivedSinceTick,
+  heldGoal:e.heldGoal,realFoot:e.realFoot
+ });
+}
+
 /** B470 real same-side pursuit scheduler: every non-A1 CPU with an
  * already-approved original-frontline goal can explore a THIRD/FOURTH
  * SOURCE goal only after 120 true native arrival ticks. The boolean is
