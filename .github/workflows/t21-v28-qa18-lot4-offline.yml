@@ -1,0 +1,39 @@
+name: T21 V28 QA18 Lot4 source gameplay blocker real runner static gate
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-route-cpu-cause-lot4-20261117
+    paths:
+      - .github/workflows/t21-v28-qa18-lot4-offline.yml
+permissions:
+  contents: read
+jobs:
+  independent-realplay-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 80
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Keep original SOURCE and only QA-owned changes
+        env:
+          SOURCE_SHA: e442edb5796a9633d25a72c661fc84bf5e34d7ce
+        run: |
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          git diff --name-only "$SOURCE_SHA" HEAD | while IFS= read -r file; do
+            case "$file" in
+              scripts/t21-b440-short-native-original-foot.mjs|scripts/t21-v28-qa-native-playability-blockers.mjs|scripts/t21-v28-qa-native-playability-blockers.test.mjs|docs/qa/T21_V28_ISSUE18_LOT4_GOAL_DENIAL_20261117_JA.md|.github/workflows/t21-v28-qa18-lot4-offline.yml) ;;
+              *) echo "HOLD_UNAUTHORIZED_FILE: $file"; exit 1;;
+            esac
+          done
+      - name: Check actual B440 native Chromium runner syntax (no test browser)
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --check scripts/t21-v28-qa-native-playability-blockers.mjs
+      - name: Run independent actual-source goal denial and prior B484 B367 QA regressions
+        run: |
+          node --test scripts/t21-v28-qa-native-playability-blockers.test.mjs scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs
