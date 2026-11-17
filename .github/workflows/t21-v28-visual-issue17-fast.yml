@@ -1,0 +1,29 @@
+name: T21 V28 VISUAL Issue 17 - real-source HUD layout fast verification
+on:
+  push:
+    branches:
+      - research/t21-v28-visual-20261117
+    paths:
+      - '.github/workflows/t21-v28-visual-issue17-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-ux-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Playable visual, registered floor and B475/B476 scope tests
+        run: npx vitest run src/app/B245SourcePresentation.test.ts src/app/B480FocusedSourcePracticeCss.test.ts src/app/B475RealFrontlineReadyChallenge.test.ts src/app/B476OriginalFrontlineObjectiveLayout.test.ts src/app/B250SourceStageReadability.test.ts
+      - name: Full project typecheck and production bundle
+        run: npm run build -- --base=/browser-ink-tps/
