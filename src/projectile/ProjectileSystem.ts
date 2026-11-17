@@ -2188,11 +2188,11 @@ export class ProjectileSystem {
       } else if (combatKind === 'PLAYER') {
         if (
           guarding &&
-          this.isGuardBlockingPoint(
-            request.origin,
-            playerPosition,
-            playerAimDirection
-          )
+          (this.nativeSourceHumanPhysicalMode!==null
+            ? this.isNativeSourceGuardBlockingIncoming(
+                direction,endPoint,playerPosition,playerAimDirection)
+            : this.isGuardBlockingPoint(
+                request.origin,playerPosition,playerAimDirection))
         ) {
           this.guardHp = Math.max(0, this.guardHp - damage);
           this.stats.playerWeaponGuardBlocks += 1;
@@ -2336,7 +2336,12 @@ export class ProjectileSystem {
       );
     }
 
-    if (slot.delayedBurstSeconds > 0) {
+    // SOURCE STRINGER fuses are attached to actual physical contacts:
+    // a projectile that simply exhausts its range in open air has not
+    // stuck to any real player/CPU or original paintable/solid. Do not
+    // create a delayed damage center at an unsupported air position.
+    if (slot.delayedBurstSeconds > 0 &&
+        (this.nativeSourceHumanPhysicalMode===null||reason!=='TTL')) {
       this.stats.stringerFuses += 1;
       this.feedback.stringerFuse(
         slot.team,
@@ -2356,7 +2361,12 @@ export class ProjectileSystem {
       });
     }
 
-    if (!paintHit && slot.paintRadius > 0 && slot.sourceKind === 'HUMAN') {
+    // The only SOURCE terrain impact painting is an accepted original
+    // paint-surface contact (enqueueImpact). Projecting a HUMAN shot's
+    // TTL/actor/solid endpoint onto a nearby unrelated surface paints
+    // phantom ink without an actual impact. Keep frozen T20 unchanged.
+    if (this.nativeSourceHumanPhysicalMode===null &&
+        !paintHit && slot.paintRadius > 0 && slot.sourceKind === 'HUMAN') {
       this.paintWorldStamp(
         slot.team,
         point,
@@ -2702,10 +2712,25 @@ export class ProjectileSystem {
     playerPosition: Vec3,
     aimDirection: Vec3
   ): boolean {
+    return this.isNativeSourceGuardBlockingIncoming(
+      slot.velocity,contactPoint,playerPosition,aimDirection
+    );
+  }
+
+  /** SOURCE MAIN and CPU CHARGER use the SAME physical contact point.
+   * A ray that starts inside the real HUMAN capsule has zero contact
+   * offset; only its real incoming direction can establish shield side.
+   * Never infer a front-side hit from a centered muzzle position. */
+  private isNativeSourceGuardBlockingIncoming(
+    incomingVelocity:Vec3,
+    contactPoint:Vec3,
+    playerPosition:Vec3,
+    aimDirection:Vec3
+  ):boolean{
     const attackSide=contactPoint.clone().sub(playerPosition);
     attackSide.y=0;
     if(attackSide.lengthSq()<=1e-8){
-      attackSide.copy(slot.velocity).mulScalar(-1);
+      attackSide.copy(incomingVelocity).mulScalar(-1);
       attackSide.y=0;
       if(attackSide.lengthSq()<=1e-8)return false;
     }
