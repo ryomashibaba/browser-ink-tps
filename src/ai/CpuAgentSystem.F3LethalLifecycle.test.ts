@@ -58,6 +58,7 @@ function fixture(originalF3: boolean) {
   // This isolated real-method fixture bypasses the class constructor.
   // Preserve native per-life goal-cache cleanup without weakening it.
   system.sourceLastAdmittedRouteGoal = new Map();
+  system.sourceLiveNativeMotionGoal = new Map();
   system.sourceCrowdRefreshedThisLife = new Set();
   system.sourceLastPhysicalBlockedTick = new Map();
   system.sourceLastRecoveryAuditTick = new Map();
@@ -465,6 +466,10 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
       ['B1',lastGoal.clone()],
       ['A1',new Vec3(1,0,3)]
     ]);
+    system.sourceLiveNativeMotionGoal=new Map([
+      ['B1',{agent,goal:lastGoal.clone()}],
+      ['A1',{agent:unrelatedAgent,goal:new Vec3(1,0,3)}]
+    ]);
     system.reconcileBlockedT21F2CrowdProxy(bot);
     // The reset is for MOVEMENT; the old source-audited ink heading stays
     // available until a fresh source route replaces it. This preserves
@@ -477,6 +482,8 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     expect(bot.position.equals(originalFoot)).toBe(true); // No CPU pose write.
     expect(system.b35LastNativeTarget.has('B1')).toBe(false);
     expect(system.b35LastNativeTarget.has('A1')).toBe(true);
+    expect(system.sourceLiveNativeMotionGoal.has('B1')).toBe(false);
+    expect(system.sourceLiveNativeMotionGoal.has('A1')).toBe(true);
     expect(shouldReissueOriginalSourceNativeTarget(null,lastGoal)).toBe(true);
     expect(bot.thinkRemaining).toBeCloseTo(.20);
   });
@@ -1942,12 +1949,16 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     system.sourceCrowdRefreshedThisLife.add('B1');
     system.sourceLastPhysicalBlockedTick.set('B1',420);
     system.sourceLastRecoveryAuditTick.set('B1',430);
+    system.sourceLiveNativeMotionGoal.set('B1',{
+      agent:bot.agent,goal:new Vec3(5,3,-40)
+    });
     system.b178NativeCpuSpeedAgent.set('B1',bot.agent);
     system.respawnBot(bot);
     expect(system.b178NativeCpuSpeedAgent.has('B1')).toBe(false);
     expect(system.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
     expect(system.sourceLastPhysicalBlockedTick.has('B1')).toBe(false);
     expect(system.sourceLastRecoveryAuditTick.has('B1')).toBe(false);
+    expect(system.sourceLiveNativeMotionGoal.has('B1')).toBe(false);
     expect(expireOldLife).toHaveBeenCalledTimes(1);
     expect(expireOldLife).toHaveBeenCalledWith('B1');
     expect(expireOldLife.mock.invocationCallOrder[0]).toBeLessThan(
