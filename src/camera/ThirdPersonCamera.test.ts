@@ -398,7 +398,11 @@ describe('SOURCE third-person center crosshair finite original ray',()=>{
     screenToWorld:(_x:number,_y:number,z:number)=>new Vec3(0,0,z)
    },getPosition:()=>new Vec3()} as unknown as Entity;
   const paint={
+    // SOURCE requires registered-plane authority as well as raster flags.
+    // Match a real PaintSurface: isolated camera mocks must not bypass ink.
+    widthMeters:2,heightMeters:2,
     widthCells:1,heightCells:1,cellSize:2,
+    baseFlags:SurfaceFlags.Paintable|SurfaceFlags.Floor,
     flagsGrid:new Uint16Array([SurfaceFlags.Paintable]),
     isCellActive:()=>true,index:()=>0,
     intersectRay:(_from:Vec3,_dir:Vec3)=>({
