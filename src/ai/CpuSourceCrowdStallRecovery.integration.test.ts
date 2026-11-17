@@ -24,6 +24,7 @@ function fixture(){
  cpu.sourceNativeMotionTick=600;
  cpu.sourceCrowdRefreshedThisLife=new Set<string>();
  cpu.sourceLastPhysicalBlockedTick=new Map<string,number>();
+ cpu.sourceLastRecoveryAuditTick=new Map<string,number>();
  cpu.sourceLastAdmittedRouteGoal=new Map([['B1',goal]]);
  cpu.qaMotionGoals=new Map([['B1',goal.clone()]]);
  cpu.b35LastNativeTarget=new Map([['B1',{agent,goal,repeat:1}]]);
@@ -70,6 +71,26 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(bot.thinkRemaining).toBeLessThan(.08);
   cpu.tryRefreshStalledOriginalSourceCrowd(report);
   expect(agent.teleport).toHaveBeenCalledTimes(1);
+ });
+ it('acts on an early real 72-tick idle without changing the five-second QA verdict',()=>{
+  const {cpu,agent,report}=fixture();
+  report.actors[0].stationarySeconds=1.2;
+  report.actors[0].suspectedNavigationStall=false;
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(agent.teleport).toHaveBeenCalledOnce();
+ });
+ it('throttles denied expensive checks and retries only after 90 real native ticks',()=>{
+  const {cpu,agent,report}=fixture();
+  cpu.phase14qGroundCollision.sourceFootSupport.mockReturnValue(null);
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(cpu.phase14qGroundCollision.sourceFootSupport).toHaveBeenCalledOnce();
+  cpu.sourceNativeMotionTick+=60;
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(cpu.phase14qGroundCollision.sourceFootSupport).toHaveBeenCalledOnce();
+  cpu.sourceNativeMotionTick+=30;
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(cpu.phase14qGroundCollision.sourceFootSupport).toHaveBeenCalledTimes(2);
+  expect(agent.teleport).not.toHaveBeenCalled();
  });
  it('never reseeds a real Rapier-blocked actor even after the QA 5s stall',()=>{
   const {cpu,agent,report}=fixture();
