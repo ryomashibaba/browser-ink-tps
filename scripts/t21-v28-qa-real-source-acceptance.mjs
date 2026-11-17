@@ -73,16 +73,32 @@ export function auditRealSourceB440(proof){
  }
  const k2=proof.k2PerActorNativeShotAndInk;
  const window=proof.k2WindowProvenance;
- const k2MeasuredDelta=validCount(window?.nativeTickDelta)?
-  window.nativeTickDelta:
-  validCount(k2?.nativeTicksObserved)?k2.nativeTicksObserved:null;
- const sameBrowser=window?.browserOriginEqual===true;
- // Legacy genuine RAW might have no terminal origin: NEVER infer PASS.
+ // Do not infer origin or the K2 terminal tick from the requested
+ // 720-tick setting. Require actual numeric native tick and browser values.
+ const verifiedWindowTicks=validCount(window?.firstTick)&&
+  validCount(window?.lastTick)&&window.lastTick>window.firstTick&&
+  window?.nativeTickDelta===window.lastTick-window.firstTick&&
+  window.firstTick===proof.after?.tick;
+ const k2MeasuredDelta=verifiedWindowTicks?window.nativeTickDelta:null;
+ const sameBrowser=Number.isFinite(window?.expectedBrowserOrigin)&&
+  window.expectedBrowserOrigin>0&&
+  Number.isFinite(window?.observedBrowserOrigin)&&
+  window.observedBrowserOrigin>0&&
+  window.expectedBrowserOrigin===window.observedBrowserOrigin&&
+  window?.browserOriginEqual===true;
+ const validCpuImpactCounters=ACTORS.every(id=>{
+  const a=k2?.byActor?.[id];
+  return validCount(a?.sourceTurfShotRequests)&&
+   validCount(a?.impactChangedCells)&&validCount(a?.changedCells)&&
+   a.impactChangedCells<=a.changedCells;
+ });
  const k2Verified=!!started&&noObserverWrites&&
+  proof.syntheticInput!==true&&
   k2MeasuredDelta!==null&&k2MeasuredDelta>=LIMIT&&sameBrowser&&
+  k2?.nativeTicksObserved===k2MeasuredDelta&&
   k2?.source==='25/17/26/0'&&
   k2?.sameUnmodifiedSourceWorld===true&&
-  k2?.originalActorOrColliderWrites===0;
+  k2?.originalActorOrColliderWrites===0&&validCpuImpactCounters;
  const byActor={};
  for(const id of ACTORS){
   const x=k2?.byActor?.[id];
