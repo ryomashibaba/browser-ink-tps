@@ -130,7 +130,7 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
   expect(w.actors.cpuColliderCount).toBe(0);
   expect(freeze.activationReady).toBe(false);
  });
- it('native real B-side CPU can consume a genuine Rapier teammate-contact slide on the original registered floor',()=>{
+ it('both original SOURCE CPU teams can use only genuine Rapier teammate-contact slides on a registered floor',()=>{
   const w=world(),proposals=proposeB441OriginalFrontline(w.stage,'B');
   expect(proposals.length).toBeGreaterThan(0);
   // ORIGINAL 25-solid, paint-backed, interior proposals only. The
@@ -201,6 +201,29 @@ describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in 
     JSON.stringify({witness,physicalTravelMeters:moved,
      originalStage:[25,17,26,0],
      bodyTeleportPerformed:false,originalPathAuthorizationChanged:false}));
+  }
+  // The identical registered Rapier floor and physical request must
+  // also work for A1/A2. The former B-only gate stranded A-side traffic.
+  if(witness){
+    w.actors.removeRealCpuFoot('B2');
+    w.actors.removeRealCpuFoot('B3');
+    w.actors.syncRealCpuFoot('A1',witness.from);
+    w.actors.syncRealCpuFoot('A2',witness.other);
+    w.physics.step();
+    const rejection=w.actors.auditGroundStep(
+      'A1',witness.from,witness.requested,DT,true);
+    expect(rejection.approved).toBe(false);
+    expect(rejection.colliderOwnerIds).toContain('A2');
+    const aSlide=w.actors.tryOriginalTeammateKccSlideStep(
+      'A1',witness.from,witness.requested,DT);
+    expect(aSlide).not.toBeNull();
+    expect(native(aSlide!)?.solidId).toBe(witness.sourceId);
+    expect(w.actors.qaRegisteredRealCpuCapsule('A1')?.foot)
+      .toEqual(witness.from);
+    // Neither team may turn an overspeed request into free movement.
+    expect(w.actors.tryOriginalTeammateKccSlideStep('A1',witness.from,{
+      x:witness.from.x+2,y:witness.from.y,z:witness.from.z
+    },DT)).toBeNull();
   }
   w.actors.dispose();
  });

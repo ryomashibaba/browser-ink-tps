@@ -1488,12 +1488,12 @@ export class CpuAgentSystem {
             }
           }
         }
-        // Do not use the original rejected Crowd endpoint. A separately
-        // source-floor-backed Rapier KCC slide may proceed around an
-        // ACTUAL teammate contact, without bypassing collision.
+        // Do not use the original rejected Crowd endpoint. Every genuinely
+        // rejoined SOURCE CPU (both teams) may accept only an ACTUAL
+        // teammate-contact Rapier KCC slide on its registered floor;
+        // the helper rejects human/enemy contacts and unsupported feet.
         if(!shared.approved&&this.phase14qF2RecoverableSteps&&
            shared.cause==='DYNAMIC_ACTOR_OR_STAGE_BLOCKER'&&
-           bot.team===Team.B&&
            this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true){
           const moved=this.phase14qGroundCollision
            .tryOriginalTeammateKccSlideStep?.(

@@ -316,13 +316,13 @@ export class UndertowPhase14QSharedActorCollision{
     };
   }
 
-  /** B-side crowded movement: use ACTUAL Rapier KCC sliding, not the
-   * blocked Crowd endpoint. Keeps the SAME registered floor and real live
-   * human/CPU colliders, with no added route or actor relocation. */
+  /** Both SOURCE teams: use ACTUAL Rapier KCC teammate sliding, never
+   * the rejected Crowd endpoint. Same registered original floor, live
+   * human/CPU colliders, no added route or actor relocation. */
   public tryOriginalTeammateKccSlideStep(
     id:string,from:T21QFoot,to:T21QFoot,dt:number
   ):T21QFoot|null{
-    if(!['B2','B3','B4'].includes(id)||!Number.isFinite(dt)||
+    if(!/^[AB][1-4]$/.test(id)||!Number.isFinite(dt)||
        Math.abs(dt-1/60)>1e-8||!this.humanSourceFoot||
        ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite))
       return null;
