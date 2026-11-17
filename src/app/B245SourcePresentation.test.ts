@@ -72,6 +72,48 @@ describe('B245 real source PLAYER weapon guidance not clipped',()=>{
  });
 });
 
+describe('Issue #17 actual SOURCE centre-ray caption across all playable kits',()=>{
+ const original='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound';
+ it('wraps same native B243 caption beneath the player in all full-round SOURCE modes',()=>{
+  for(const url of [
+   original,original+'&t21W10B384=loadoutCircuit',
+   original+'&t21W10B193=allyCoop',
+   original+'&t21W10B441=sourceFrontline'
+  ]){
+   const css=b245PlayerSightlineCss(url);
+   const selector='[data-t21-b245-presentation="PLAYER"]'+
+    '[data-t21-b338-phase="PLAYING"] #t21-f3-b243-source-aim-caption';
+   const index=css.indexOf(selector);
+   expect(index).toBeGreaterThan(-1);
+   const rule=css.slice(index,css.indexOf('}',index));
+   expect(rule).toContain('top:clamp(110px,18vh,168px)!important');
+   expect(rule).toContain('white-space:normal!important');
+   expect(rule).toContain('overflow-wrap:anywhere!important');
+   expect(rule).toContain('max-width:min(340px,calc(100vw - 32px))!important');
+   expect(rule).not.toContain('left:');
+   expect(rule).not.toContain('transform:');
+   expect(rule).not.toContain('pointer-events');
+   expect(css).not.toContain('#t21-f3-b243-source-aim-line{display:none');
+  }
+ });
+ it('only real SOURCE PLAYER fullRound gains caption clarity, never QA or score',()=>{
+  const originalCss=b245PlayerSightlineCss(original);
+  expect(originalCss).not.toContain('[data-t21-b245-presentation="QA"]'+
+   '[data-t21-b338-phase="PLAYING"] #t21-f3-b243-source-aim-caption');
+  expect(originalCss).not.toContain('B484');
+  expect(originalCss).not.toContain('source-score');
+  for(const [key,value] of [
+   ['t21QaInput','deterministic'],['t21QaDrive','other'],
+   ['t21Play','production'],['t21W10B203','off'],
+   ['production','yes'],['scoreable','yes']
+  ] as const){
+   const q=new URLSearchParams(original);q.set(key,value);
+   expect(b245PlayerSightlineCss('?'+q.toString())).toBe('');
+  }
+ });
+});
+
 describe('Issue #17 genuine B475 PLAYING camera sightline dock',()=>{
  const url='?t21Play=preview&t21QaDrive=source&'+
   't21W10B112=humanGround&t21W10B183=firstDropPlay&'+
