@@ -2144,7 +2144,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    ] as [number,number,number]:null;
    const actualBOriginalLowFloor=
     (id==='B2'||id==='B4')?
-     this.sourceNativeCharacterFootHit(realFoot)?.solidId:null;
+     (this.sourceNativeCharacterFootHit(realFoot)?.solidId??null):null;
    // Normal healthy B2/B4 now genuinely reach B441-original goals.
    // They have NO old denied-foot B446 probe, so the old B467-only
    // retry could never expand their ink coverage beyond the initial
