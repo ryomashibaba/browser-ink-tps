@@ -107,14 +107,14 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
  it('after five seconds of TRUE physical idle, committed charge/burst/guard can reacquire ONLY Recast steering',()=>{
   for(const situation of ['CHARGE','BURST','GUARD'] as const){
    const {cpu,bot,agent,report}=fixture();
-   bot.weaponChargeSeconds=situation==='CHARGE'?.85:0;
+   bot.weaponChargeSeconds=situation==='CHARGE' ? 0.85 : 0;
    bot.weaponBurstShotsRemaining=situation==='BURST'?2:0;
    bot.weaponGuarding=situation==='GUARD';
    report.actors[0].stationarySeconds=5;
    cpu.tryRefreshStalledOriginalSourceCrowd(report);
    expect(agent.teleport).toHaveBeenCalledOnce();
    expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
-   expect(bot.weaponChargeSeconds).toBe(situation==='CHARGE'?.85:0);
+   expect(bot.weaponChargeSeconds).toBe(situation==='CHARGE' ? 0.85 : 0);
    expect(bot.weaponBurstShotsRemaining).toBe(situation==='BURST'?2:0);
    expect(bot.weaponGuarding).toBe(situation==='GUARD');
    cpu.tryRefreshStalledOriginalSourceCrowd(report);
