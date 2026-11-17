@@ -11,7 +11,8 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import {sourceRegisteredPaintCellActive,
- sourceRegisteredPaintHitActive,type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
+ sourceRegisteredPaintHitActive,sourceThrownSubPaintBeforeRegisteredSolid,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import {
   PaintEventType,
   PaintSource,
@@ -246,11 +247,10 @@ export class CpuKitSystem {
         next,
         'thrown-sub'
       );
-      const paintWins = paintHit && (
-        !blockerHit ||
-        paintHit.distance <=
-          blockerHit.distance +
-          GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      const paintWins=sourceThrownSubPaintBeforeRegisteredSolid(
+        paintHit,blockerHit,
+        this.nativeOriginalSourceCombatantSubContactEnabled,
+        GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
 
       // A real thrown SUB has finite diameter and may hit an ACTUAL

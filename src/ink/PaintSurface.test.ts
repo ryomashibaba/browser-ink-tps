@@ -1,7 +1,8 @@
 import { Vec3 } from 'playcanvas';
 import { describe, expect, it, vi } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
-import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive } from './PaintSurface';
+import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive,
+ sourceThrownSubPaintBeforeRegisteredSolid } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
@@ -242,6 +243,92 @@ describe('true SOURCE human/CPU thrown SUB follows registered paint cells',()=>{
   expect(humanPick(true,[near])?.surface.id).toBeUndefined();
   expect(humanPick(true,[far])?.surface.id).toBe(far.id);
  });
+});
+
+describe('native SOURCE thrown bombs respect exact registered original Rapier backing',()=>{
+ const solidId='UndertowT21D:original-solid';
+ const registered=(id:string)=>new PaintSurface(
+  id,new Vec3(0,0,0),new Vec3(1,0,0),new Vec3(0,0,1),
+  4,4,1,SurfaceFlags.Paintable|SurfaceFlags.Floor,2);
+ const physicalHit=(paintId:string,distance:number):SurfaceRayHit=>({
+  surface:registered(paintId),distance,
+  worldPoint:new Vec3(0,0,distance),u:2,v:2
+ });
+ const blocker={distance:.5,point:new Vec3(0,0,.5),solidId};
+ const tolerance=.06;
+ const allowed=(id:string,distance:number,native:boolean)=>
+  sourceThrownSubPaintBeforeRegisteredSolid(
+   physicalHit(id,distance),blocker,native,tolerance);
+ it('retains 6cm on the SAME original Rapier backing; denies another wall behind it',()=>{
+  expect(allowed(solidId+':paint',.54,true)).toBe(true);
+  expect(allowed(solidId+':paint',.56,true)).toBe(false);
+  expect(allowed('other-original-floor:paint',.54,true)).toBe(false);
+  expect(allowed('other-original-floor:paint',.54,false)).toBe(true);
+  expect(allowed('other-original-floor:paint',.40,true)).toBe(true);
+  expect(sourceThrownSubPaintBeforeRegisteredSolid(
+   physicalHit(solidId+':paint',.54),null,true,tolerance)).toBe(true);
+  expect(sourceThrownSubPaintBeforeRegisteredSolid(
+   physicalHit(solidId+':paint',.54),
+   {distance:.5},true,tolerance)).toBe(false);
+ });
+ // Execute the REAL native CPU/HUMAN bomb movement and real on-contact
+ // ordering. Only the collider-return adapters are isolated; no fake
+ // actors, paint, stage writes, original path or Chrome pass is claimed.
+ for(const kind of ['HUMAN','CPU'] as const){
+  const execute=(native:boolean,paintId:string,distance:number)=>{
+   const hit=physicalHit(paintId,distance);
+   const slot={active:true,landed:false,subId:'pulse-bomb',
+    team:kind==='HUMAN'?Team.A:Team.B,
+    position:new Vec3(),previousPosition:new Vec3(),
+    velocity:new Vec3(0,0,60),ttl:2,fuseSeconds:1,
+    entity:{setPosition:vi.fn()}
+   };
+   const contact=vi.fn();
+   const backing={castStageSegment:vi.fn(()=>blocker)};
+   if(kind==='HUMAN'){
+    const obj=Object.create(SubWeaponSystem.prototype) as
+     SubWeaponSystem;
+    Object.assign(obj,{
+     bombs:[slot],delta:new Vec3(),physics:backing,
+     nativeSourceHumanSubBodyContactEnabled:native,
+     cpuAgents:{findNearestCombatHit:vi.fn(()=>null)},
+     findNearestSurfaceHit:vi.fn(()=>hit),
+     onContact:contact
+    });
+    obj.fixedUpdate(1/60);
+    return {contact,backing};
+   }
+   const obj=Object.create(CpuKitSystem.prototype) as CpuKitSystem;
+   Object.assign(obj,{
+    bombs:[slot],delta:new Vec3(),physics:backing,
+    nativeOriginalSourceCombatantSubContactEnabled:native,
+    cpuAgents:{findNearestCombatHit:vi.fn(()=>null)},
+    projectiles:{findNativeSourceHumanPhysicalHit:vi.fn(()=>null)},
+    findNearestSurfaceHit:vi.fn(()=>hit),
+    onBombContact:contact
+   });
+   (CpuKitSystem.prototype as unknown as {
+    updateBombs:(this:CpuKitSystem,dt:number)=>void
+   }).updateBombs.call(obj,1/60);
+   return {contact,backing};
+  };
+  it(kind+' real bomb hits Rapier first when a DIFFERENT registered paint plane is 4cm behind',()=>{
+   const {contact,backing}=execute(true,'other-original-floor:paint',.54);
+   expect(backing.castStageSegment).toHaveBeenCalledOnce();
+   expect(contact).toHaveBeenCalledOnce();
+   if(kind==='HUMAN')expect(contact.mock.calls[0]![3]).toBe('RAPIER_STAGE_SOLID');
+   expect((contact.mock.calls[0]![kind==='HUMAN'?2:2] as Vec3).z)
+    .toBeCloseTo(.5);
+  });
+  it(kind+' keeps genuine same-backing near-coplanar floor impact and T20 behavior',()=>{
+   for(const [native,id] of [[true,solidId+':paint'],[false,'other-original-floor:paint']] as const){
+    const {contact}=execute(native,id,.54);
+    expect(contact).toHaveBeenCalledOnce();
+    if(kind==='HUMAN')expect(contact.mock.calls[0]![3]).toBe('PAINT_SURFACE_SEGMENT');
+    expect((contact.mock.calls[0]![2] as Vec3).z).toBeCloseTo(.54);
+   }
+  });
+ }
 });
 
 describe('genuine SOURCE bomb stamps use a real paintable grid center',()=>{

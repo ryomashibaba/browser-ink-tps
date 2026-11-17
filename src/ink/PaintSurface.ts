@@ -55,6 +55,34 @@ export function sourceRegisteredPaintHitActive(
   sourceRegisteredPaintCellActive(surface,hit.u,hit.v);
 }
 
+/** TRUE SOURCE thrown SUB: 6cm paint-plane/backing-solid registration
+ * tolerance exists only for that SAME registered original solid.
+ * An unrelated solid in front is actual Rapier cover, never permission
+ * to collide/paint through it. Frozen T20 keeps the legacy 6cm tolerance.
+ * The caller still runs its authentic thrown-SUB collision and fuse. */
+export function sourceThrownSubPaintBeforeRegisteredSolid(
+ paintHit:SurfaceRayHit|null,
+ blockerHit:{readonly distance:number;readonly solidId?:string}|null,
+ nativeSource:boolean,
+ legacyCoplanarToleranceMeters:number
+):boolean{
+ if(!paintHit)return false;
+ // Preserve historical non-SOURCE paint-plane priority literally.
+ if(!nativeSource)return !blockerHit||
+  paintHit.distance<=blockerHit.distance+legacyCoplanarToleranceMeters;
+ if(!sourceRegisteredPaintHitActive(paintHit.surface,paintHit))return false;
+ if(!blockerHit)return true;
+ if(!Number.isFinite(blockerHit.distance)||blockerHit.distance<0)return false;
+ if(paintHit.distance<=blockerHit.distance)return true;
+ // Never treat a different original floor/wall merely within 6cm as
+ // the paint backing: a close parallel surface can be true cover.
+ return typeof blockerHit.solidId==='string'&&
+  paintHit.surface.id===blockerHit.solidId+':paint'&&
+  Number.isFinite(legacyCoplanarToleranceMeters)&&
+  legacyCoplanarToleranceMeters>=0&&
+  paintHit.distance<=blockerHit.distance+legacyCoplanarToleranceMeters;
+}
+
 export class PaintSurface {
   public readonly ownerGrid: Int8Array;
   public readonly flagsGrid: Uint16Array;
