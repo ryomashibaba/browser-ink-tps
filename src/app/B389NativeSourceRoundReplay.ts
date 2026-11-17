@@ -1,7 +1,8 @@
 /** B389: explicitly user-chosen new SOURCE world, retaining only the existing
  * human weapon choice. Never persist game state, actors, paint or ticks.
  */
-import {WEAPON_ORDER,type WeaponId} from '../weapons/WeaponCatalog';
+import {WEAPON_ORDER,DEFAULT_WEAPON_ID,type WeaponId}
+ from '../weapons/WeaponCatalog';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 
 export type B389ReplayAction={
@@ -20,16 +21,36 @@ export function b389NativeNewRoundHref(
  let u:URL;
  try{u=new URL(href)}catch{return null}
  if(!b384SourceCircuitSelected(u.searchParams)||
-    action.sourceBoundary.join(',')!=='25,17,26,0'||
+    action.sourceBoundary.length!==4||
+    action.sourceBoundary.some((v,i)=>v!==[25,17,26,0][i])||
     action.pointerLocked||action.stopReason||
     !WEAPON_ORDER.includes(action.weaponId as WeaponId)||
     !['PLAYING','TIME_UP'].includes(action.matchState)||
     (action.matchState==='PLAYING'&&!action.paused))return null;
- // Delegate kit encoding to the existing canonical circuit launcher.
- // In particular, the default kit MUST omit B389: adding an explicit
- // default weapon makes later sourceCanonicalPlayableMode checks reject
- // this otherwise genuine fresh SOURCE world on the next replay.
- return b384SourceCircuitHref(href,true,action.weaponId);
+ // A genuine circuit is a precise SOURCE mode, not a production/QA URL
+ // that merely happens to contain the circuit switch. The former B389
+ // fresh-round path accepted extra flags then silently erased them.
+ // Align this replay gate with the four already canonical SOURCE launchers.
+ const selected=u.searchParams.get('t21W10B389');
+ if(selected===DEFAULT_WEAPON_ID||
+    selected!==null&&b389NativeBootWeapon(u.searchParams)!==selected||
+    u.hash!==''||
+    !(u.pathname.endsWith('/')||u.pathname.endsWith('/index.html')))
+  return null;
+ const allowed=['t21Play','t21QaDrive','t21W10B112',
+  't21W10B183','t21W10B192','t21W10B203','t21W10B384',
+  ...(selected===null?[]:['t21W10B389'])].sort();
+ const actual=[...u.searchParams.keys()].sort();
+ if(actual.length!==allowed.length||
+    actual.some((key,i)=>key!==allowed[i]))return null;
+ // A game launched through /index.html has real native physics but its
+ // pathname fails the directory-only portal replay check. Preserve the
+ // current REAL user kit while rebooting a canonical fresh source world.
+ const gamePath=u.pathname.endsWith('/index.html')?
+  u.pathname.slice(0,-'index.html'.length):u.pathname;
+ const clean=new URL(gamePath,u.origin);
+ clean.searchParams.set('t21Play','preview');
+ return b384SourceCircuitHref(clean.href,true,action.weaponId);
 }
 /** B472: source-ONLY real 12-weapon boot for all four existing portal
  * modes. The legacy B384 circuit remains unchanged; every OTHER mode

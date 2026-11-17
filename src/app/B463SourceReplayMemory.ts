@@ -19,8 +19,18 @@ export interface B463RoundRecord {
  cpuRejoined:7;officialScoreable:0;officialWinner:'NONE';
  localBrowserRecordOnly:true;formal4v4Certified:false;
 }
-const nonnegativeInteger=(n:unknown)=>Number.isSafeInteger(n)&&
- typeof n==='number'&&n>=0;
+const nonnegativeInteger=(n:unknown):n is number=>
+ typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
+/** One physical SOURCE human life may still be waiting for its next
+ * 150th native tick at TIME_UP, but cannot have two pending splats or
+ * more genuine returns than fatal contacts. No synthetic respawn granted. */
+function coherentHumanLife(
+ splats:unknown,returns:unknown,nativeTick:unknown
+):boolean{
+ return nonnegativeInteger(splats)&&nonnegativeInteger(returns)&&
+  nonnegativeInteger(nativeTick)&&returns<=splats&&
+  splats-returns<=1&&returns<=Math.floor(nativeTick/150);
+}
 export function b463FromRealTimeUp(
  v:B463RoundView,realNativeTick:number,worldOrigin:number
 ):B463RoundRecord|null{
@@ -30,8 +40,9 @@ export function b463FromRealTimeUp(
     !Number.isFinite(worldOrigin)||worldOrigin<=0||
     !nonnegativeInteger(realNativeTick)||realNativeTick<10800||
     ![v.genuineHumanShots,v.realHumanImpactInkCells,
-      v.actualCpuSourceShots,v.actualCpuImpactInkCells,
-      v.actualHumanSplats,v.actualHumanRespawns].every(nonnegativeInteger))
+      v.actualCpuSourceShots,v.actualCpuImpactInkCells].every(nonnegativeInteger)||
+    !coherentHumanLife(v.actualHumanSplats,
+      v.actualHumanRespawns,realNativeTick))
   return null;
  return {schema:'B463_LOCAL_SOURCE_ROUND_V1',
   source:'25/17/26/0',worldOrigin,realNativeTick,
@@ -60,8 +71,9 @@ export function b463ReadPreviousSourceRound(
      x.worldOrigin>=currentWorldOrigin||
      !nonnegativeInteger(x.realNativeTick)||x.realNativeTick!<10800||
      ![x.humanShots,x.humanOriginalInkCells,x.cpuSourceShots,
-       x.cpuOriginalInkCells,x.humanSplats,x.humanRespawns]
-       .every(nonnegativeInteger))return null;
+       x.cpuOriginalInkCells].every(nonnegativeInteger)||
+     !coherentHumanLife(x.humanSplats,x.humanRespawns,
+       x.realNativeTick))return null;
   return x as B463RoundRecord;
  }catch{return null;}
 }
@@ -85,5 +97,8 @@ export function b463FormatSourceRoundComparison(
   'HUMAN 150-TICK RETURNS '+previous.humanRespawns+
   ' → '+current.humanRespawns+
   ' ('+delta(current.humanRespawns-previous.humanRespawns)+')\n'+
-  'LOCAL TAB DATA ONLY · DIFFERENT MODES ARE NOT RANKED · WINNER NONE';
+  'PENDING HUMAN RETURN AT TIME_UP '+
+  (previous.humanSplats>previous.humanRespawns?'YES':'NO')+
+  ' → '+(current.humanSplats>current.humanRespawns?'YES':'NO')+'\n'+
+  'LOCAL TAB DATA ONLY · HP CONTACT NOT CERTIFIED BY THIS RECORD · WINNER NONE';
 }
