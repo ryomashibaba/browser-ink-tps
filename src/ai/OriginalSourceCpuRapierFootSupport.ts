@@ -7,7 +7,8 @@
  * tactical target and stall recovery mistakenly required <=0.20m.
  *
  * This is ONLY the original static floor SUPPORT band. It does not widen
- * the original Recast path start <=0.20m, native endpoint <=0.22m,
+ * the original rejoined Recast path start <=0.20m (FIRST_DROP .25m),
+ * native endpoint <=0.22m,
  * source goal geometry, actual per-step KCC or offmesh permissions.
  */
 export const ORIGINAL_SOURCE_CPU_RAPIER_FOOT_SUPPORT_BAND_METERS=0.25;
