@@ -7,7 +7,8 @@ import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import {sourceRegisteredPaintCellActive,
- sourceRegisteredPaintHitActive,type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
+ sourceRegisteredPaintHitActive,sourceThrownSubPaintBeforeRegisteredSolid,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import {
@@ -223,10 +224,9 @@ export class SubWeaponSystem {
         };
       }
 
-      const paintWins = paintHit && (
-        !blockerHit ||
-        paintHit.distance <=
-          blockerHit.distance + GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      const paintWins=sourceThrownSubPaintBeforeRegisteredSolid(
+        paintHit,blockerHit,this.nativeSourceHumanSubBodyContactEnabled,
+        GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
       );
 
       // The true SOURCE human SUB and true SOURCE CPU SUB must obey the
