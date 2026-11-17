@@ -9,6 +9,10 @@
  */
 import {Vec3} from 'playcanvas';
 import {GAME_CONFIG} from '../../config/game/gameConfig';
+import {
+ auditUndertowNativeEndpointAlignment,
+ type UndertowNativeEndpointAlignment
+} from './UndertowNativeEndpointAlignment';
 import {auditPhase14JRapierRejoinStep} from './UndertowPhase14JCollisionRejoinGate';
 import type {RecastStageNavigation} from '../../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../../physics/RapierStagePhysics';
@@ -57,7 +61,9 @@ export interface W10NativeRouteAudit{
 export interface W10SourceTransitionResult {
   readonly from:W10SourceEndpoint;
   readonly to:W10SourceEndpoint;
+  /** Strict source endpoint alignment, never a completed physical route. */
   readonly nativePathReached:boolean;
+  readonly nativeEndpointAlignment:UndertowNativeEndpointAlignment;
   readonly chord:W10SourceChordAudit;
   readonly nativeRoute:W10NativeRouteAudit;
   readonly nativeStartSnapMeters:number;
@@ -195,9 +201,19 @@ export function auditW10SourceTransition(
    terminal.point[0]-to[0],terminal.point[1]-to[1],terminal.point[2]-to[2]),
   rapierSupported:terminal.raySupported,solidId:terminal.solidId
  }:null;
- const nativePathReached=path.reachedTarget &&
-  path.startSnapDistanceMeters<=.25 &&
-  path.endSnapDistanceMeters<=.25;
+ const nativeEndpointAlignment=auditUndertowNativeEndpointAlignment({
+  requestedTarget:to,
+  targetRapierSupported:target.raySupported,
+  targetSourceSolidId:target.solidId,
+  recastReachedProjectedTarget:path.reachedTarget,
+  startSnapDistanceMeters:path.startSnapDistanceMeters,
+  endSnapDistanceMeters:path.endSnapDistanceMeters,
+  projectedEndpointErrorMeters:path.endpointErrorMeters,
+  actualTerminal:nativeTerminal?.point??null,
+  terminalRapierSupported:nativeTerminal?.rapierSupported??false,
+  terminalSourceSolidId:nativeTerminal?.solidId??null
+ });
+ const nativePathReached=nativeEndpointAlignment.endpointAligned;
  const hold:W10TransitionHold=
   !origin.raySupported||!target.raySupported
    ?'HOLD_NO_RAPIER_ENDPOINT_SUPPORT':
@@ -210,7 +226,7 @@ export function auditW10SourceTransition(
    ?'HOLD_STRAIGHT_CHORD_KCC_BLOCKED':
    'HOLD_PENDING_ORIGINAL_KCC_REPLAY';
  return {from:origin,to:target,chord,nativeRoute,
-  nativePathReached,
+  nativePathReached,nativeEndpointAlignment,
   nativeStartSnapMeters:path.startSnapDistanceMeters,
   nativeEndSnapMeters:path.endSnapDistanceMeters,
   nativeEndpointErrorMeters:path.endpointErrorMeters,
