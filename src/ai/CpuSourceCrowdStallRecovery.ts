@@ -23,6 +23,22 @@ export const SOURCE_CROWD_STALL_SECONDS=1.2;
 /** Avoid a 60Hz series of costly Recast/Rapier probes after a held audit. */
 export const SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS=90;
 export const SOURCE_CROWD_BLOCK_QUIET_TICKS=300;
+export const SOURCE_COMMITTED_WEAPON_STEERING_GRACE_SECONDS=5;
+/**
+ * Keep short, legitimate spinner charge/burst and active guard untouched.
+ * A 5+ second genuine supported-foot idle is NOT itself proof that a shot
+ * is over; allow only a separately fully audited Recast steering-proxy
+ * refresh while retaining every weapon/ink/HP state. The one-per-life cap,
+ * Rapier veto quiet window and strict route admission remain authoritative.
+ */
+export function deferSourceCrowdSteeringForCommittedWeapon(
+  committedWeaponAction:boolean,
+  actualStationarySeconds:number
+):boolean {
+  return committedWeaponAction &&
+    (!Number.isFinite(actualStationarySeconds) ||
+     actualStationarySeconds<SOURCE_COMMITTED_WEAPON_STEERING_GRACE_SECONDS);
+}
 const valid=(p:CpuSourceRecoveryFoot)=>[p.x,p.y,p.z].every(Number.isFinite);
 
 /** Refresh after 1.2 seconds of ACTUAL stationary, with a distant
