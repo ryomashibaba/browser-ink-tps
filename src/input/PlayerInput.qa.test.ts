@@ -366,3 +366,71 @@ test('SOURCE ignores shortcut-modified motion but keeps ordinary fresh controls'
  emit('window','keydown',{code:'Space',repeat:false});
  expect([input.moveY,input.squidHeld,input.consumeJump()]).toEqual([1,true,true]);
 });
+
+test('SOURCE very short real WASD taps register exactly one native KCC step',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.moveY).toBe(0); // legacy per-frame held state loses the tap
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(1);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+ emit('window','keydown',{code:'KeyA',repeat:false});
+ emit('window','keyup',{code:'KeyA'});
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(-1);
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+});
+
+test('SOURCE held movement persists but same-tick opposite taps cancel',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(1);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(1);
+ emit('window','keydown',{code:'KeyS',repeat:false});
+ emit('window','keyup',{code:'KeyS'});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(1);
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+});
+
+test('SOURCE does not replay tap axes after lock loss, STAGING or life transition',()=>{
+ const {input,canvas,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ emit('window','keyup',{code:'KeyD'});
+ input.setCombatInputActive(false);
+ input.setCombatInputActive(true);
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ emit('window','keyup',{code:'KeyD'});
+ Object.defineProperty(document,'pointerLockElement',{value:null,writable:true});
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+ emit('window','pointerlockchange');
+ Object.defineProperty(document,'pointerLockElement',{value:canvas,writable:true});
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(1);
+});
+
+test('SOURCE movement taps reject OS repeat and shortcut-modified keys; QA unaffected',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyW',repeat:true});
+ emit('window','keydown',{code:'KeyA',repeat:false,ctrlKey:true});
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+ const deterministic=createInput(true);
+ deterministic.input.setQaAxis(-.4,.8);
+ expect(deterministic.input.consumeMoveAxesForPlayerTick())
+  .toMatchObject({x:-.4,y:.8});
+ deterministic.input.clearQaAxis();
+});
