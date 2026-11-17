@@ -441,6 +441,10 @@ jobs:
           # Integrated V28 second-lot gameplay authority + GPU batch proof.
           # Focused node tests only: no 180s Chromium, new floor or formal QA.
           npx vitest run src/core/InkBrushHotPath.test.ts src/ai/CpuSourceCrowdStallRecovery.test.ts src/ai/CpuSourceCrowdStallRecovery.integration.test.ts src/projectile/NativeSourceSpecialBlastAndTtl.test.ts src/ink/PaintCoordinatorContinuity.test.ts src/app/B389NativeSourceRoundReplay.test.ts src/input/PlayerInput.qa.test.ts
+          # Independently verify latest real CPU foot support and QA-only B484/HP witnesses.
+          # This is code-only evidence, never a second native Chromium match.
+          npx vitest run src/ai/CpuAgentSystem.SourceGoalPhysicalSupport.test.ts src/ai/OriginalSourceCpuRapierFootSupport.test.ts src/ai/CpuSourceCrowdStallRecovery.integration.test.ts
+          node --test scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs
           npm run build -- --base=/browser-ink-tps/
       # K3 reuses already-certified K0/K1/K2: do not spend the one
       # native acceptance run repeating the historical wide B441 matrix.
