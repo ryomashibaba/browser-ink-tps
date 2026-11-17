@@ -382,6 +382,34 @@ test('SOURCE very short real WASD taps register exactly one native KCC step',()=
  expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
 });
 
+test('SOURCE rapid 60Hz WASD reversal follows the latest physically pressed direction',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ // W was actually released before S went down in this SAME native tick.
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keyup',{code:'KeyW'});
+ emit('window','keydown',{code:'KeyS',repeat:false});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(-1);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(-1);
+ emit('window','keyup',{code:'KeyS'});
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+ // A fast three-reversal tap sequence cannot neutralize the final D.
+ for(const code of ['KeyD','KeyA','KeyD']){
+  emit('window','keydown',{code,repeat:false});
+  emit('window','keyup',{code});
+ }
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(1);
+ expect(input.consumeMoveAxesForPlayerTick().x).toBe(0);
+ // Reverse without any held key: the last genuine S tap wins.
+ for(const code of ['KeyS','KeyW','KeyS']){
+  emit('window','keydown',{code,repeat:false});
+  emit('window','keyup',{code});
+ }
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(-1);
+ expect(input.consumeMoveAxesForPlayerTick().y).toBe(0);
+});
+
 test('SOURCE held movement persists but same-tick opposite taps cancel',()=>{
  const {input,emit}=lockedInput();
  input.setSourcePrestartMovementBlocked(true);
