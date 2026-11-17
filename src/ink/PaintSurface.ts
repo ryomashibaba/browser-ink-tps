@@ -99,8 +99,13 @@ export function sourceOriginalBlastPaintLineClear(
  if(!Number.isFinite(span))return false;
  if(!blocker)return true;
  if(!Number.isFinite(blocker.distance)||blocker.distance<0)return false;
- if(blocker.distance>=span-.025)return true;
- return paintSurface.id===blocker.solidId+':paint'&&
+ // A different ORIGINAL solid is an obstacle even one centimeter
+ // before this plane. The former unconditional 2.5cm tolerance leaked
+ // live bombs, specials and trails through thin registered walls.
+ // A hit at/after the destination plane is not an intervening obstacle.
+ if(blocker.distance>=span)return true;
+ return typeof blocker.solidId==='string'&&
+  paintSurface.id===blocker.solidId+':paint'&&
   blocker.distance>=Math.max(0,span-.06);
 }
 

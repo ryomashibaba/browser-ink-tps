@@ -350,12 +350,13 @@ describe('true SOURCE blast paint obeys original Rapier cover on BOTH kits',()=>
    origin,to,surface,null)).toBe(true);
  });
  for(const kind of ['HUMAN','CPU'] as const){
-  const run=(native:boolean,cover:'NONE'|'OTHER_WALL'|'OWN_BACKING')=>{
+  const run=(native:boolean,cover:'NONE'|'OTHER_WALL'|'OWN_BACKING',
+  coverInsetMeters=.04)=>{
    const surface=paint(),stamps:{surfaceId:string}[]=[];
    const cast=vi.fn((from:Vec3,to:Vec3)=>{
     if(cover==='NONE')return null;
     const span=from.distance(to);
-    return {distance:Math.max(0,span-.04),
+    return {distance:Math.max(0,span-coverInsetMeters),
      solidId:cover==='OWN_BACKING'?solidId:'UndertowT21D:other-wall'};
    });
    const receiver:any=Object.create(kind==='HUMAN'
@@ -394,6 +395,12 @@ describe('true SOURCE blast paint obeys original Rapier cover on BOTH kits',()=>
    expect(own.stamps).toHaveLength(9);
    expect(own.cast).toHaveBeenCalledTimes(9);
   });
+  it(kind+' never paints behind a DIFFERENT original wall just 1cm before the plane',()=>{
+   const denied=run(true,'OTHER_WALL',.01);
+   expect(denied.cast).toHaveBeenCalledTimes(9);
+   expect(denied.stamps).toHaveLength(0);
+   expect(run(true,'OWN_BACKING',.01).stamps).toHaveLength(9);
+  });
   it(kind+' keeps registered clear paint and frozen T20 stamping unchanged',()=>{
    const clear=run(true,'NONE');
    expect(clear.stamps).toHaveLength(9);
@@ -402,6 +409,77 @@ describe('true SOURCE blast paint obeys original Rapier cover on BOTH kits',()=>
    expect(historical.cast).not.toHaveBeenCalled();
   });
  }
+});
+
+describe('SOURCE original cover at thin walls and genuine MID-DROPLET raster',()=>{
+ const solidId='UndertowT21D:original-floor';
+ const ownPaintId=solidId+':paint';
+ const make=(id=ownPaintId,y=0)=>new PaintSurface(
+  id,new Vec3(0,y,0),new Vec3(1,0,0),new Vec3(0,0,1),
+  5,5,1,SurfaceFlags.Paintable|SurfaceFlags.Floor,2);
+ const origin=new Vec3(0,.06,0);
+ it('rejects a separate real registered wall even 1cm behind the target plane',()=>{
+  const surface=make(),at=surface.localToWorld(2.5,2.5),
+   distance=origin.distance(at);
+  expect(sourceOriginalBlastPaintLineClear(origin,at,surface,{
+   distance:distance-.01,solidId:'UndertowT21D:other-original-wall'
+  })).toBe(false);
+  expect(sourceOriginalBlastPaintLineClear(origin,at,surface,{
+   distance:distance-.01,solidId
+  })).toBe(true);
+  expect(sourceOriginalBlastPaintLineClear(origin,at,surface,{
+   distance:distance,solidId:'UndertowT21D:other-original-wall'
+  })).toBe(true);
+  expect(sourceOriginalBlastPaintLineClear(origin,at,surface,{
+   distance:Number.NaN,solidId
+  })).toBe(false);
+ });
+ const fire=(native:boolean,cover:'WALL'|'BACKING'|'CLEAR',
+  surfaces:PaintSurface[]= [make()])=>{
+  const stamped:{surfaceId:string}[]=[];
+  const cast=vi.fn((from:Vec3,to:Vec3)=>{
+   if(cover==='CLEAR')return null;
+   return {distance:Math.max(0,from.distance(to)-.01),
+    solidId:cover==='BACKING'?solidId:'UndertowT21D:other-original-wall'};
+  });
+  const receiver:any=Object.create(ProjectileSystem.prototype);
+  receiver.surfaces=surfaces;
+  receiver.nativeSourceHumanPhysicalMode=native?()=> 'HUMAN':null;
+  receiver.physics={castStageSegment:cast};
+  receiver.coordinator={enqueue:(entry:{surfaceId:string})=>stamped.push(entry)};
+  const fn=(ProjectileSystem.prototype as unknown as {
+   paintWorldStamp:(this:ProjectileSystem,team:Team.A|Team.B,
+    point:Vec3,radiusU:number,radiusV:number,direction:Vec3,
+    maxPlaneDistance:number,type:PaintEventType,source:PaintSource)=>boolean
+  }).paintWorldStamp;
+  const accepted=fn.call(receiver,Team.A,origin,1,.5,
+   new Vec3(1,0,0),.25,PaintEventType.MidDroplet,PaintSource.Human);
+  return {accepted,cast,stamped};
+ };
+ it('SOURCE human/CPU in-flight stamp refuses a real 1cm-thick intervening wall',()=>{
+  const wall=fire(true,'WALL');
+  expect(wall.accepted).toBe(false);
+  expect(wall.stamped).toHaveLength(0);
+  expect(wall.cast).toHaveBeenCalledOnce();
+  const own=fire(true,'BACKING');
+  expect(own.accepted).toBe(true);
+  expect(own.stamped.map(x=>x.surfaceId)).toEqual([ownPaintId]);
+  const old=fire(false,'WALL');
+  expect(old.accepted).toBe(true);
+  expect(old.cast).not.toHaveBeenCalled();
+ });
+ it('SOURCE MID-DROPLET ignores inactive original ink-cell and uses active surface',()=>{
+  const near=make('inactive-registered-plane',.04);
+  const far=make(ownPaintId);
+  near.flagsGrid[near.index(2,2)]=0;
+  const native=fire(true,'CLEAR',[near,far]);
+  expect(native.accepted).toBe(true);
+  expect(native.stamped.map(x=>x.surfaceId)).toEqual([ownPaintId]);
+  const legacy=fire(false,'CLEAR',[near,far]);
+  expect(legacy.accepted).toBe(true);
+  expect(legacy.stamped.map(x=>x.surfaceId)).toEqual(['inactive-registered-plane']);
+  expect(legacy.cast).not.toHaveBeenCalled();
+ });
 });
 
 describe('genuine SOURCE bomb stamps use a real paintable grid center',()=>{
