@@ -33,7 +33,10 @@ export interface SurfaceProjection {
 export function sourceRegisteredPaintCellActive(
  surface:PaintSurface,u:number,v:number
 ):boolean{
- if(!Number.isFinite(u)||!Number.isFinite(v)||
+ // GPU/CPU paint admission also requires the registered surface itself
+ // to be paintable; a stray per-cell flag cannot create SOURCE paint.
+ if((surface.baseFlags&SurfaceFlags.Paintable)===0||
+    !Number.isFinite(u)||!Number.isFinite(v)||
     u<0||v<0||u>surface.widthMeters||v>surface.heightMeters)return false;
  const x=Math.min(surface.widthCells-1,Math.max(0,
   Math.floor(u/surface.cellSize)));
@@ -45,7 +48,10 @@ export function sourceRegisteredPaintCellActive(
 export function sourceRegisteredPaintHitActive(
  surface:PaintSurface,hit:SurfaceRayHit
 ):boolean{
- return Number.isFinite(hit.distance)&&hit.distance>=0&&
+ // A ray hit's original registered plane must match the plane being
+ // authorized. Coordinates from a different surface are not transferable.
+ return hit.surface===surface&&
+  Number.isFinite(hit.distance)&&hit.distance>=0&&
   sourceRegisteredPaintCellActive(surface,hit.u,hit.v);
 }
 
@@ -205,10 +211,18 @@ export class PaintSurface {
    * Gameplay sampling and hit resolution must use this instead of duplicating basis math.
    */
   public projectWorldPoint(point: Vec3): SurfaceProjection {
-    const rel = point.clone().sub(this.center);
-    const signedPlaneDistance = rel.dot(this.normal);
-    const u = rel.dot(this.uAxis) + this.widthMeters * 0.5;
-    const v = rel.dot(this.vAxis) + this.heightMeters * 0.5;
+    // Original basis projection in scalar form avoids allocating a Vec3
+    // for every sampled registered floor. This is a hot path for SOURCE
+    // CPU ink searches and the player's authentic Rapier-supported foot.
+    const dx = point.x - this.center.x;
+    const dy = point.y - this.center.y;
+    const dz = point.z - this.center.z;
+    const signedPlaneDistance =
+      dx * this.normal.x + dy * this.normal.y + dz * this.normal.z;
+    const u = dx * this.uAxis.x + dy * this.uAxis.y +
+      dz * this.uAxis.z + this.widthMeters * 0.5;
+    const v = dx * this.vAxis.x + dy * this.vAxis.y +
+      dz * this.vAxis.z + this.heightMeters * 0.5;
     const epsilon = 1e-4;
     return {
       u,
@@ -256,11 +270,24 @@ export class PaintSurface {
     const denom = this.normal.dot(direction);
     if (Math.abs(denom) < 1e-6) return null;
 
-    const toPlane = this.center.clone().sub(origin);
-    const distance = toPlane.dot(this.normal) / denom;
-    if (distance <= 0) return null;
+    // Do not allocate a transient toPlane Vec3 for every actual projectile
+    // or sub-weapon ray. Only a genuine forward intersection allocates the
+    // hit point that the caller already needs for authoritative physics.
+    const toPlaneX = this.center.x - origin.x;
+    const toPlaneY = this.center.y - origin.y;
+    const toPlaneZ = this.center.z - origin.z;
+    const distance = (
+      toPlaneX * this.normal.x +
+      toPlaneY * this.normal.y +
+      toPlaneZ * this.normal.z
+    ) / denom;
+    if (!(distance > 0) || !Number.isFinite(distance)) return null;
 
-    const worldPoint = direction.clone().mulScalar(distance).add(origin);
+    const worldPoint = new Vec3(
+      direction.x * distance + origin.x,
+      direction.y * distance + origin.y,
+      direction.z * distance + origin.z
+    );
     const projected = this.projectWorldPoint(worldPoint);
     if (!projected.inside) return null;
 

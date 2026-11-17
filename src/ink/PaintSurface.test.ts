@@ -1,5 +1,5 @@
 import { Vec3 } from 'playcanvas';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
 import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
@@ -301,4 +301,66 @@ describe('genuine SOURCE bomb stamps use a real paintable grid center',()=>{
   expect(fire()).toBe(true);
   expect(stamps.at(-1)?.surfaceId).toBe('near-empty-cell');
  });
+});
+
+describe('SOURCE ink projection and hit authority, allocation-aware real contact', () => {
+  const registered = (id: string, flags = SurfaceFlags.Paintable | SurfaceFlags.Floor) =>
+    new PaintSurface(id, new Vec3(0, 0, 0),
+      new Vec3(1, 0, 0), new Vec3(0, 0, 1),
+      4, 4, 1, flags, 2);
+
+  it('does not let inconsistent individual cell flags authorize a nonpaintable registered plane', () => {
+    const unpaintable = registered('physical-solid-no-paint', SurfaceFlags.Floor);
+    unpaintable.flagsGrid[unpaintable.index(2, 2)] |= SurfaceFlags.Paintable;
+    expect(sourceRegisteredPaintCellActive(unpaintable, 2.5, 2.5)).toBe(false);
+    const hit = unpaintable.intersectRay(new Vec3(.5, 3, .5), new Vec3(0, -1, 0));
+    expect(hit).not.toBeNull();
+    expect(sourceRegisteredPaintHitActive(unpaintable, hit!)).toBe(false);
+    const game = new GameplayInkSystem();
+    game.registerSurface(unpaintable);
+    const attempt = game.apply({
+      tick: 1, team: Team.A, surfaceId: unpaintable.id,
+      centerU: 2.5, centerV: 2.5, radiusU: .5, radiusV: .5,
+      angle: 0, source: PaintSource.Human, type: PaintEventType.Impact, strength: 1
+    });
+    expect(attempt.rasterEligibleCells).toBe(0);
+    expect(attempt.changedCells).toBe(0);
+    expect(unpaintable.ownerGrid[unpaintable.index(2, 2)]).toBe(Team.Neutral);
+  });
+
+  it('accepts only the actual registered ray surface, not another plane with coincident UVs', () => {
+    const first = registered('original-hit');
+    const other = registered('unrelated-overlay');
+    const hit = first.intersectRay(new Vec3(.5, 3, .5), new Vec3(0, -1, 0));
+    expect(hit).not.toBeNull();
+    expect(sourceRegisteredPaintHitActive(first, hit!)).toBe(true);
+    expect(sourceRegisteredPaintHitActive(other, hit!)).toBe(false);
+    expect(sourceRegisteredPaintHitActive(first, { ...hit!, distance: -1 })).toBe(false);
+  });
+
+  it('retains rotated original-plane geometry and exact ray contact without transient Vec3 clones', () => {
+    const target = new PaintSurface(
+      'rotated-original-registered-plane',
+      new Vec3(9, 2, -4), new Vec3(1, 0, 1), new Vec3(-1, 0, 1),
+      6, 5, .25, SurfaceFlags.Paintable | SurfaceFlags.Floor, 4
+    );
+    const realWorld = target.localToWorld(2.25, 1.75);
+    const from = realWorld.clone().add(new Vec3(0, 4, 0));
+    const downward = new Vec3(0, -1, 0);
+    const cloneSpy = vi.spyOn(Vec3.prototype, 'clone');
+    try {
+      const projected = target.projectWorldPoint(realWorld);
+      const intersection = target.intersectRay(from, downward);
+      expect(projected.inside).toBe(true);
+      expect(projected.u).toBeCloseTo(2.25, 7);
+      expect(projected.v).toBeCloseTo(1.75, 7);
+      expect(intersection?.distance).toBeCloseTo(4, 7);
+      expect(intersection?.u).toBeCloseTo(2.25, 7);
+      expect(intersection?.v).toBeCloseTo(1.75, 7);
+      expect(intersection?.worldPoint.distance(realWorld)).toBeLessThan(1e-6);
+      expect(cloneSpy).not.toHaveBeenCalled();
+    } finally {
+      cloneSpy.mockRestore();
+    }
+  });
 });
