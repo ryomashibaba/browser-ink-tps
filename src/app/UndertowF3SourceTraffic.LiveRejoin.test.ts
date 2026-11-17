@@ -523,7 +523,10 @@ it('all seven SOURCE CPU may escape genuine same-team KCC congestion only by an 
    respawnOriginalDrops:new Set(),originalSourceRecoveryIntent:new Set(),
    b443OriginalGoalLocks:new Map(),b442LastApprovedFront:new Map(),
    b441FrontGoals:new Map([[id,[]]]),
-   b445FrontlineGates:new Map(),b446LiveFootProbes:new Map(),
+   b445FrontlineGates:new Map(),
+   // This is a goal-selection unit test: do not re-run the separate
+   // B446 dry SOURCE geometry probe using a fake Rapier world.
+   b446LiveFootProbes:new Map([[id,{probeOnlyNoActorOrGoalWrites:true}]]),
    b467LiveSourceGoals:new Map(),
    p2BTeamDroughtFoot:new Map(),p2BTeamLastFullRouteAuditTick:new Map(),
    patrolGoals:new Map([[id,[forward,alternative]]]),
