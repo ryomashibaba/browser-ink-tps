@@ -13,6 +13,12 @@ describe('T21 V28 native 180s action authority and 150-tick human return',()=>{
   expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
    ...state,matchState:'PLAYING',remainingSeconds:1/60})).toBe(false);
   expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
+   ...state,matchState:'PLAYING',remainingSeconds:1/60+4e-13}))
+   .toBe(false);
+  expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
+   ...state,matchState:'PLAYING',remainingSeconds:2/60}))
+   .toBe(true);
+  expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
    ...state,matchState:'TIME_UP'})).toBe(false);
   expect(nativeSourceCpuCanStartActionsBeforeTickEnd({
    ...state,matchState:'PLAYING',stopReason:'SAFE_STOP'})).toBe(false);

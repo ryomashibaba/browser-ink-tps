@@ -15,7 +15,11 @@ export function nativeSourceCpuCanStartActionsBeforeTickEnd(input:{
  return (input.matchState==='STAGING'&&
     !input.nativeHumanPrestartLocked)||
   input.matchState==='PLAYING'&&
-   Math.max(0,input.remainingSeconds-input.nativeDtSeconds)>0;
+   // 180 seconds is reduced by 60 Hz floats. A residual a few ulps
+   // above zero is not another real native attack window: otherwise a
+   // CPU can spend ink/cooldown for a projectile on a virtually ended
+   // final frame. Do not change the actual 180s clock, physics or tick.
+   input.remainingSeconds-input.nativeDtSeconds>1e-9;
 }
 
 /** SOURCE-only real 60Hz actor action authority.
