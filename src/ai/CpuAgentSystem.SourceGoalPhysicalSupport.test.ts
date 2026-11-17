@@ -106,9 +106,9 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     expect(agent.requestMoveTarget).toHaveBeenCalledOnce();
   });
   it('keeps a 0.251m physical support or failed original native route in HOLD',()=>{
-    for(const [gap,startSnap] of [
+    for(const [gap,startSnap] of ([
       [.251,0],[.24438563346862807,.201]
-    ]){
+    ] as const)){
       const {agent,tick,cpu}=fixture(gap,startSnap);
       tick();
       expect(agent.requestMoveTarget).not.toHaveBeenCalled();
