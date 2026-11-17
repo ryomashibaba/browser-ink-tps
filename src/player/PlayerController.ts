@@ -586,6 +586,13 @@ export class PlayerController {
         this.applyWallSwim(wall);
         this.setSnapToGround(false);
       } else {
+        // Shift is still held, but the real OWN wall probe no longer
+        // authorizes swimming. Drop the previous wall-climb drive just as
+        // when releasing Shift into HUMAN. Do not create airborne ascent
+        // from a missing wall or change genuine SURGE/roll jump impulses.
+        if(this.nativeSourceGroundInkGuard)
+          this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
+            this.locomotionState,this.verticalVelocity);
         this.surgeChargeSeconds = 0;
         this.wallSurfaceId = '-';
         this.setSnapToGround(true);
