@@ -5546,7 +5546,10 @@ export class UndertowF3PlayablePreviewApp{
     // new post-round CPU/human attacks or use a stale human HP flag.
     const actionWindow=nativeSourceRoundActionWindow({
      matchState:this.matchState,stopReason:this.stopReason,
-     actualHumanHp:this.resources.currentHp
+     actualHumanHp:this.resources.currentHp,
+     // Match the existing native CPU pre-action authority: real seven-CPU
+     // STAGING is never an attack phase, even when input is pointer-locked.
+     nativeHumanPrestartLocked:this.nativeLiveSourcePrestart
     });
     this.cpu.drainFireRequests(req=>{
      if(actionWindow.cpuCanStartNewActions)this.projectiles.queueCpuShot(req);

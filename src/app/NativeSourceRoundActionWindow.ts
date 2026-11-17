@@ -26,9 +26,17 @@ export function nativeSourceRoundActionWindow(input:{
  readonly matchState:string;
  readonly actualHumanHp:number;
  readonly stopReason:string|null;
+ /** Canonical 180s SOURCE: seven real CPUs must rejoin before ANY
+  * paid attack. Optional so frozen QA/T20 staging remains unchanged. */
+ readonly nativeHumanPrestartLocked?:boolean;
 }):{readonly cpuCanStartNewActions:boolean;
  readonly humanCanStartNewActions:boolean}{
- const open=(input.matchState==='STAGING'||input.matchState==='PLAYING')&&
+ // Do not rely on PlayerInput alone: native projectile, SUB and SPECIAL
+ // effects share this final action gate. During genuine 7/7 STAGING,
+ // no human or CPU launches, even if an input request was somehow queued.
+ // On the exact real rejoin tick matchState becomes PLAYING first.
+ const open=(input.matchState==='PLAYING'||
+   input.matchState==='STAGING'&&!input.nativeHumanPrestartLocked)&&
   !input.stopReason;
  return {
   cpuCanStartNewActions:open,

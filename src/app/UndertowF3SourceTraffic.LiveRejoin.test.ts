@@ -5,7 +5,8 @@ import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals}
  from './B441OriginalSourceFrontline';
-import {nativeSourceCpuCanStartActionsBeforeTickEnd}
+import {nativeSourceCpuCanStartActionsBeforeTickEnd,
+ nativeSourceRoundActionWindow}
  from './NativeSourceRoundActionWindow';
 import {FixedStepClock} from '../core/FixedStepClock';
 import {UndertowF3SourceTraffic,sourceNativeLiveRejoinedCpu,
@@ -63,6 +64,43 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   })).toBe(true);
  });
 
+ it('holds all eight native attacks until genuine 7/7 joins, then enables actual 180s PLAYING',()=>{
+  const action=(matchState:string,locked:boolean,hp=100,
+    stopReason:string|null=null)=>
+   nativeSourceRoundActionWindow({
+    matchState,actualHumanHp:hp,stopReason,
+    nativeHumanPrestartLocked:locked
+   });
+  // This is a final physical projectile/SUB/SPECIAL execution gate,
+  // independent of whether PlayerInput already suppressed the click.
+  expect(action('STAGING',true)).toEqual({
+   cpuCanStartNewActions:false,humanCanStartNewActions:false
+  });
+  expect(action('STAGING',true,0)).toEqual({
+   cpuCanStartNewActions:false,humanCanStartNewActions:false
+  });
+  // The exact CPU 7/7 transition uses PLAYING in the same native tick.
+  expect(action('PLAYING',true)).toEqual({
+   cpuCanStartNewActions:true,humanCanStartNewActions:true
+  });
+  expect(action('PLAYING',true,0)).toEqual({
+   cpuCanStartNewActions:true,humanCanStartNewActions:false
+  });
+  expect(action('TIME_UP',true)).toEqual({
+   cpuCanStartNewActions:false,humanCanStartNewActions:false
+  });
+  expect(action('PLAYING',true,100,'KCC_STOP')).toEqual({
+   cpuCanStartNewActions:false,humanCanStartNewActions:false
+  });
+  // Frozen manual/deterministic source QA keeps its previous STAGING
+  // authority because it does not own the canonical live 7/7 prestart.
+  expect(action('STAGING',false)).toEqual({
+   cpuCanStartNewActions:true,humanCanStartNewActions:true
+  });
+  expect(nativeSourceRoundActionWindow({
+   matchState:'STAGING',actualHumanHp:100,stopReason:null
+  }).cpuCanStartNewActions).toBe(true);
+ });
  it('stops the real 180s SOURCE clock on the exact TIME_UP physics tick inside a slow render-frame catch-up',()=>{
   // The native game callback processes two genuine 60Hz ticks; the
   // 3rd/4th attempts cannot silently increment the clock after TIME_UP.

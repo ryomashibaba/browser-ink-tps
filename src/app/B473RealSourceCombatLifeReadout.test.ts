@@ -3,7 +3,8 @@ import {b473RealSourceCombatLifeReadoutSelected} from './B473RealSourceCombatLif
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {sourcePlayFrontlineResearchUrl} from './SourcePlayPortal';
-import {nativeSourceHumanRespawnElapsedTicks}
+import {nativeSourceHumanRespawnElapsedTicks,
+ nativeSourceRoundActionWindow}
  from './NativeSourceRoundActionWindow';
 
 const portal='https://example.org/browser-ink-tps/play-source.html';
@@ -57,6 +58,17 @@ describe('B473 read-only real CPU lifecycle on player-selected B207 SOURCE comba
 });
 
 describe('physical SOURCE human death and 150 true native tick recovery',()=>{
+ it('fatal HP-zero suppresses human attacks until actual new life while CPUs remain active',()=>{
+  const decide=(actualHumanHp:number)=>nativeSourceRoundActionWindow({
+   matchState:'PLAYING',nativeHumanPrestartLocked:true,
+   actualHumanHp,stopReason:null
+  });
+  expect(decide(0).humanCanStartNewActions).toBe(false);
+  expect(decide(-1).humanCanStartNewActions).toBe(false);
+  expect(decide(Number.NaN).humanCanStartNewActions).toBe(false);
+  expect(decide(0).cpuCanStartNewActions).toBe(true);
+  expect(decide(100).humanCanStartNewActions).toBe(true);
+ });
  it('counts zero on damage tick, 149 before recovery and 150 at recovery',()=>{
   const fatal=720;
   expect(nativeSourceHumanRespawnElapsedTicks(fatal,fatal)).toBe(0);
