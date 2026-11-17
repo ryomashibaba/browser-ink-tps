@@ -6,6 +6,14 @@
  * rather than accidentally changing which surface an event addresses.
  * The atlas rects are allocated once for a GpuInkAtlas lifetime.
  */
+/** Reusable immutable-in-practice quad templates; never allocate inside a brush loop. */
+export const INK_BRUSH_UNIT_CORNERS: readonly (readonly [number, number])[] = [
+  [-1, -1], [1, -1], [1, 1], [-1, 1]
+];
+export const INK_BRUSH_UNIT_UVS: readonly (readonly [number, number])[] = [
+  [0, 0], [1, 0], [1, 1], [0, 1]
+];
+
 export interface InkBrushAtlasRect {
   readonly x: number;
   readonly y: number;

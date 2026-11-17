@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { brushClipRect, localMetersToBrushAtlas } from '../ink/AtlasCoordinates';
-import { indexInkBrushSurfaces } from './InkBrushSurfaceIndex';
+import {
+  indexInkBrushSurfaces,
+  INK_BRUSH_UNIT_CORNERS,
+  INK_BRUSH_UNIT_UVS
+} from './InkBrushSurfaceIndex';
 
 describe('InkBrushSurfaceIndex (visual GPU lookup only)', () => {
+  it('keeps original quad winding and UV order in shared constants', () => {
+    expect(INK_BRUSH_UNIT_CORNERS).toEqual([[-1, -1], [1, -1], [1, 1], [-1, 1]]);
+    expect(INK_BRUSH_UNIT_UVS).toEqual([[0, 0], [1, 0], [1, 1], [0, 1]]);
+  });
   it('returns the identical rect and clip values as the per-event linear path', () => {
     const surfaces = Array.from({ length: 17 }, (_, i) => ({
       id: `source-${i}`,

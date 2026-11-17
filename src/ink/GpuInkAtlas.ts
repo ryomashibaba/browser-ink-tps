@@ -22,7 +22,12 @@ import {
   ShaderMaterial,
   Texture
 } from 'playcanvas';
-import { indexInkBrushSurfaces, type IndexedInkBrushRect } from '../core/InkBrushSurfaceIndex';
+import {
+  indexInkBrushSurfaces,
+  INK_BRUSH_UNIT_CORNERS,
+  INK_BRUSH_UNIT_UVS,
+  type IndexedInkBrushRect
+} from '../core/InkBrushSurfaceIndex';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
 import { localMetersToBrushAtlas } from './AtlasCoordinates';
 import type { PaintSurface } from './PaintSurface';
@@ -291,8 +296,8 @@ export class GpuInkAtlas {
       const radiusY = event.radiusV * rect.pixelsPerMeter / this.atlasSize;
       const c = Math.cos(event.angle);
       const s = Math.sin(event.angle);
-      const corners: readonly [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-      const brushUvs: readonly [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+      const corners = INK_BRUSH_UNIT_CORNERS;
+      const brushUvs = INK_BRUSH_UNIT_UVS;
       const clip = cached!.clip;
       const rectMinX = clip.minX;
       const rectMinY = clip.minY;
