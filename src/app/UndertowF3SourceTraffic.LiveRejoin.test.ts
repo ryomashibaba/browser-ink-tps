@@ -37,6 +37,7 @@ function fixture(){
   // this lightweight lifecycle fixture was introduced. Keep them empty,
   // not undefined, so the read-only snapshot can be exercised honestly.
   b445FrontlineGates:new Map(),b441FrontGoals:new Map(),
+  b443OriginalGoalLocks:new Map(),
   b446LiveFootProbes:new Map(),
   b467LiveSourceGoals:new Map(),b467LastLiveRetryTick:new Map(),
   b470LastNativeRetry:new Map(),
