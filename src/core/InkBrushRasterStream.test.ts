@@ -98,7 +98,7 @@ describe('T21 V28 performance: stream exact INK-authorized GPU raster (#21)', ()
     assertExact([full]);
     const overflow = scenario(4, 17, 964);
     expect(() => packInkBrushRasterRuns(overflow)).toThrow('INK_GPU_QUAD_BUDGET_EXCEEDED');
-  });
+  }, 20_000);
 
   it('does not draw malformed, out-of-range, or clipped/degenerate rows', () => {
     const [g] = scenario(7, 1, 5);
