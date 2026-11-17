@@ -19,7 +19,6 @@ function registeredSurface(id: string, flags = SurfaceFlags.Paintable | SurfaceF
 
 function request(surfaceId: string, overrides: Partial<PaintRequest> = {}): PaintRequest & {source:PaintSource} {
   return {
-    source: PaintSource.Human,
     team: Team.A,
     surfaceId,
     centerU: 1.5,
