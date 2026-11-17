@@ -1,0 +1,24 @@
+name: T21 V28 ROUND lot4 lightweight verification (temporary)
+on:
+  push:
+    branches: [research/t21-v28-round-lot4-20261117]
+    paths: [.github/workflows/t21-v28-round-lot4-verify.yml]
+permissions:
+  contents: read
+jobs:
+  round-lot4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run typecheck
+      - name: Verify 180s ROUND, portal and genuine human life contracts
+        run: npx vitest run src/app/B207SourceCombatRound.test.ts src/app/B389NativeSourceRoundReplay.test.ts src/app/B463SourceReplayMemory.test.ts src/app/NativeSourceRoundActionWindow.test.ts src/app/B473RealSourceCombatLifeReadout.test.ts src/app/SourcePlayPortal.test.ts src/app/UndertowF3SourceSessionBoard.test.ts
+      - name: Build game only, no browser QA or Pages publish
+        run: npm run build -- --base=/browser-ink-tps/
