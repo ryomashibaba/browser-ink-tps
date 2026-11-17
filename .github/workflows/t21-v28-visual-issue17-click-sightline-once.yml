@@ -1,0 +1,26 @@
+name: T21 V28 Issue17 actual QA click + source aiming lightweight verification
+on:
+  push:
+    branches:
+      - research/t21-v28-visual-issue17-click-sightline-20261117
+    paths:
+      - '.github/workflows/t21-v28-visual-issue17-click-sightline-once.yml'
+permissions:
+  contents: read
+jobs:
+  check-real-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Native B25, F8, B243, source sightline and stage render regressions
+        run: npx vitest run src/app/B480FocusedSourcePracticeCss.test.ts src/app/B245SourcePresentation.test.ts src/app/B475RealFrontlineReadyChallenge.test.ts src/app/B476OriginalFrontlineObjectiveLayout.test.ts src/app/B250SourceStageReadability.test.ts src/app/B484TrueNativeA1FollowThrough.test.ts
+      - name: TypeScript and Vite build
+        run: npm run build -- --base=/browser-ink-tps/
