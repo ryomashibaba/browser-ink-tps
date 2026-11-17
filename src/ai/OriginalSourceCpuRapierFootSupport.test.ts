@@ -5,7 +5,7 @@ import {hasRegisteredOriginalSourceCpuRapierFootSupport as supported,
 
 const foot={x:-5.829700946807861,y:4.607137680053711,z:-48.33926010131836};
 const id='UndertowT21D:right-low-route-ramp-negative-z';
-const registered=new Set([id]);
+const registered=[{id}];
 const hit=(gap:number,solidId=id)=>({
  point:{...foot,y:foot.y-gap},solidId
 });
@@ -20,7 +20,7 @@ describe('T21 V28 original SOURCE actual Rapier supported feet',()=>{
   for(const gap of [.251,.3,2.8])
    expect(supported(foot,hit(gap),registered)).toBe(false);
   expect(supported(foot,hit(.1,'not-a-source-solid'),registered)).toBe(false);
-  expect(supported(foot,hit(.1),new Set<string>())).toBe(false);
+  expect(supported(foot,hit(.1),[])).toBe(false);
  });
  it('fails closed on an absent, malformed or nonfinite physical witness',()=>{
   expect(supported(foot,null,registered)).toBe(false);
