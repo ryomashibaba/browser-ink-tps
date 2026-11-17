@@ -1079,6 +1079,7 @@ export class CpuAgentSystem {
       this.b212PreviousHuman=null;
       this.qaContinuity.reset();
       this.qaMotionGoals.clear();
+      this.sourceLiveNativeMotionGoal.clear();
       this.qaTurfShotCooldown.clear();
       this.stats.cpuQaSuspectedStalls = 0;
       this.stats.cpuQaLongestStationarySeconds = 0;
@@ -1525,6 +1526,10 @@ export class CpuAgentSystem {
       if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
         this.navigation.removeAgent(bot.agent);
         bot.agent=null;
+        // Upper-source Crowd target never survives a genuine one-way
+        // physical first drop into a DIFFERENT lower native agent.
+        this.sourceLiveNativeMotionGoal.delete(bot.id);
+        this.sourceLastAdmittedRouteGoal.delete(bot.id);
         bot.mobilityState='FIRST_DROP_FALL';
         continue;
       }
@@ -1672,7 +1677,10 @@ export class CpuAgentSystem {
 
     if (this.phase14qGroundCollision) {
       this.qaContinuity.observe(dt, this.bots.map(bot => {
-        const goal = this.qaMotionGoals.get(bot.id);
+        const submitted=this.sourceLiveNativeMotionGoal.get(bot.id);
+        const goal=this.f3dSourceGoals&&this.phase14qF2RecoverableSteps?
+          (submitted?.agent===bot.agent?submitted.goal:null):
+          this.qaMotionGoals.get(bot.id);
         return {
           id: bot.id, x: bot.position.x, y: bot.position.y, z: bot.position.z,
           lifeState: bot.lifeState, mobilityState: bot.mobilityState,
@@ -1752,6 +1760,7 @@ export class CpuAgentSystem {
       throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
     bot.agent.teleport(nav);
     bot.agent.resetMoveTarget();
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     // B35's dedup cache is not the live Crowd target: resetMoveTarget
     // discarded the target, so the SAME already-authorized original goal
     // must be submitted at the next real tactical think, not suppressed
@@ -1802,13 +1811,19 @@ export class CpuAgentSystem {
         bot.weaponGuarding,
         actual.stationarySeconds))continue;
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
+      const submitted=this.sourceLiveNativeMotionGoal.get(actual.id);
       if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
         actualFoot:bot.position,admittedGoal:goal??null,
         stationarySeconds:actual.stationarySeconds,
         aliveGroundedPhysicallyRejoined:
           this.sourceCpuMayStartActions(bot)&&
           this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true,
-        hasCrowdAgent:bot.agent!==null&&this.qaMotionGoals.has(bot.id),
+        // A paid ink heading is NOT a live native movement request.
+        // Reanchor only a truly submitted target for this same agent.
+        hasCrowdAgent:bot.agent!==null&&
+          submitted?.agent===bot.agent&&!!goal&&
+          Math.hypot(submitted.goal.x-goal.x,
+            submitted.goal.y-goal.y,submitted.goal.z-goal.z)<=.22,
         alreadyRefreshedThisLife:
           this.sourceCrowdRefreshedThisLife.has(bot.id),
         currentSourceTick:this.sourceNativeMotionTick,
@@ -1850,6 +1865,7 @@ export class CpuAgentSystem {
         throw Error('T21_V28_CPU_STALL_PROXY_REANCHOR_FAILED');
       bot.agent.resetMoveTarget();
       this.b35LastNativeTarget.delete(bot.id);
+      this.sourceLiveNativeMotionGoal.delete(bot.id);
       this.qaMotionGoals.delete(bot.id);
       bot.thinkRemaining=Math.min(
         bot.thinkRemaining,GAME_CONFIG.cpu.tacticalThinkSeconds*.25);
@@ -4708,6 +4724,7 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
@@ -4773,6 +4790,7 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
