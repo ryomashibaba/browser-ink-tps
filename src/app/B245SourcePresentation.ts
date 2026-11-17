@@ -225,6 +225,13 @@ export function b245RealFrontlineCombatReadabilityCss(search:string):string{
   live+' #t21-f3-b84-danger',
   '{border-left:4px solid #ff9b7e!important;'+
    'font-size:12px!important;line-height:1.45!important;}',
+  // Physical-source descent caution: retain its existing truth gate.
+  // It must remain conspicuous if B113 itself shows a support-warning,
+  // but NEVER infer or paint an extra safe floor under the player.
+  live+' #t21-f3-b113-ground-warning',
+  '{border:2px solid #ffcb83!important;'+
+   'background:rgba(65,31,16,.96)!important;'+
+   'font-size:12px!important;line-height:1.4!important;}',
   // Top-left B286 counts describe ACTUAL 3 allies / 4 opponents, not
   // cross-team detection or path reachability. B141 ally text is separate.
   live+' #t21-f3-b286-source-team',
