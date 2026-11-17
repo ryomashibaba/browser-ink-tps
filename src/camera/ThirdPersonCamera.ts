@@ -61,6 +61,9 @@ export class ThirdPersonCamera {
   // Ignore late Promise failures from a superseded/recovered mouse-lock
   // request. A stale denial must not overwrite a successful camera recapture.
   private sourceLockRequestToken=0;
+  // Pointer Lock recapture can deliver synthetic large relative deltas.
+  // Only the first two SOURCE events get a tighter cap.
+  private sourceRecaptureMouseEventsRemaining=0;
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
@@ -493,10 +496,14 @@ export class ThirdPersonCamera {
          document.pointerLockElement===this.canvas){
         this.sourceLockRequestPending=false;
         this.sourceLockRequestToken++;
+        this.sourceRecaptureMouseEventsRemaining=2;
         this.showSourceControlToast(
          'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · SHIFT SQUID · SPACE JUMP');
-      }else if(this.sourceControlToast&&!this.sourceToastVisibleWhileUnlocked)
-        this.sourceControlToast.hidden=true;
+      }else{
+        this.sourceRecaptureMouseEventsRemaining=0;
+        if(this.sourceControlToast&&!this.sourceToastVisibleWhileUnlocked)
+          this.sourceControlToast.hidden=true;
+      }
     });
     document.addEventListener('pointerlockerror',()=>{
       // Browsers with void-returning requestPointerLock signal denial as
@@ -603,10 +610,17 @@ export class ThirdPersonCamera {
       if(this.sourcePracticeControls&&
          (!Number.isFinite(event.movementX)||
           !Number.isFinite(event.movementY)))return;
+      const maxSourceDelta=this.sourceRecaptureMouseEventsRemaining>0
+        ? 180:600;
+      if(this.sourcePracticeControls&&
+         this.sourceRecaptureMouseEventsRemaining>0)
+        this.sourceRecaptureMouseEventsRemaining--;
       const moveX=this.sourcePracticeControls
-        ? Math.max(-600,Math.min(600,event.movementX)):event.movementX;
+        ? Math.max(-maxSourceDelta,Math.min(maxSourceDelta,event.movementX))
+        :event.movementX;
       const moveY=this.sourcePracticeControls
-        ? Math.max(-600,Math.min(600,event.movementY)):event.movementY;
+        ? Math.max(-maxSourceDelta,Math.min(maxSourceDelta,event.movementY))
+        :event.movementY;
       this.yaw += moveX * 0.22 * sensitivity;
       this.pitch = Math.max(-55, Math.min(28,
        this.pitch - moveY * 0.18 * sensitivity *
