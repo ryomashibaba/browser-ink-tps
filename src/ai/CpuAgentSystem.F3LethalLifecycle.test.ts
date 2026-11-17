@@ -54,6 +54,9 @@ function fixture(originalF3: boolean) {
     metadata: { id: 'undertow-t21d-partial-connectivity-qa' }
   };
   system.qaMotionGoals = new Map();
+  // This isolated real-method fixture bypasses the class constructor.
+  // Preserve native per-life goal-cache cleanup without weakening it.
+  system.sourceLastAdmittedRouteGoal = new Map();
   system.phase14eFirstDrop = { cancel: vi.fn() };
   system.phase14qGroundCollision = {
     removeRealCpuFoot: vi.fn()
