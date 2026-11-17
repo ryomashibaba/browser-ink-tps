@@ -60,10 +60,10 @@ function harness(storage?:{
   for(const handler of documentListeners.get('pointerlockchange')??[])
    handler({});
  };
- const wheel=(deltaY:number)=>{
+ const wheel=(deltaY:number,deltaMode=0)=>{
   let prevented=false;
   for(const handler of canvasListeners.get('wheel')??[])
-   handler({deltaY,preventDefault:()=>{prevented=true;}});
+   handler({deltaY,deltaMode,preventDefault:()=>{prevented=true;}});
   return prevented;
  };
  const pointerDown=(button:number)=>{
@@ -205,6 +205,34 @@ describe('Issue #19 lot2 SOURCE pointer-lock browser compatibility',()=>{
    sourceAimSensitivityMultiplier:1.25,sourcePhysicsModified:false,
    sourceNavigationModified:false
   });
+ });
+});
+
+describe('Issue #19 SOURCE browser-consistent wheel response',()=>{
+ it('handles Firefox line-unit wheel without apparent loss of zoom',()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  const before=h.camera.sourcePracticeViewSnapshot().zoomMeters;
+  expect(h.wheel(3,1)).toBe(true);
+  expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+   .toBeCloseTo(before*Math.exp(.048),6);
+  expect(h.wheel(-3,1)).toBe(true);
+  expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+   .toBeCloseTo(before,6);
+ });
+ it('caps a page-unit spike while preserving frozen default wheel math',()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  const before=h.camera.sourcePracticeViewSnapshot().zoomMeters;
+  expect(h.wheel(10,2)).toBe(true);
+  expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+   .toBeCloseTo(before*Math.exp(.24),6);
+  h.documentStub.pointerLockElement=null;
+  expect(h.wheel(-5,2)).toBe(false);
+  expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+   .toBeCloseTo(before*Math.exp(.24),6);
+  const t20=harness();const original=t20.camera.sourcePracticeViewSnapshot().zoomMeters;
+  expect(t20.wheel(3,1)).toBe(true);
+  expect(t20.camera.sourcePracticeViewSnapshot().zoomMeters)
+   .toBeCloseTo(original*Math.exp(.003),6);
  });
 });
 
