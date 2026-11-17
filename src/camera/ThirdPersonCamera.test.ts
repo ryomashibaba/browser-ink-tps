@@ -127,6 +127,38 @@ describe('F3 real SOURCE-only player camera controls',()=>{
  });
 });
 
+describe('Issue #19 real SOURCE camera recapture input quality',()=>{
+  it('ignores invalid pointer-lock deltas instead of poisoning pitch/yaw',()=>{
+    const h=harness();
+    h.camera.enableSourcePracticeControls();
+    const before=h.camera.sourcePracticeViewSnapshot();
+    h.mouse(Number.NaN);
+    h.mouse(Number.POSITIVE_INFINITY);
+    expect(h.camera.sourcePracticeViewSnapshot()).toMatchObject({
+      yawDegrees:before.yawDegrees,pitchDegrees:before.pitchDegrees
+    });
+    h.mouse(-10000);
+    expect(h.camera.sourcePracticeViewSnapshot().pitchDegrees).toBe(28);
+    h.mouse(Number.NaN);
+    expect(Number.isFinite(h.camera.sourcePracticeViewSnapshot().pitchDegrees))
+      .toBe(true);
+  });
+  it('clamps a single SOURCE wheel spike without changing unheld wheel behavior',()=>{
+    const h=harness();
+    h.camera.enableSourcePracticeControls();
+    const first=h.camera.sourcePracticeViewSnapshot().zoomMeters;
+    expect(h.wheel(Number.NaN)).toBe(false);
+    expect(h.camera.sourcePracticeViewSnapshot().zoomMeters).toBe(first);
+    expect(h.wheel(10000)).toBe(true);
+    expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+      .toBeCloseTo(first*Math.exp(.24),6);
+    h.documentStub.pointerLockElement=null;
+    expect(h.wheel(-10000)).toBe(false);
+    expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
+      .toBeCloseTo(first*Math.exp(.24),6);
+  });
+});
+
 describe('SOURCE gameplay wheel focus recovery',()=>{
  it('does not change SOURCE zoom or swallow scrolling when unlocked, while locked wheel and frozen T20 still work',()=>{
   const source=harness();source.camera.enableSourcePracticeControls();
