@@ -42,7 +42,8 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
   for(const bad of [{...a,officialWinner:'TEAM_A'},
    {...a,source:'31/17/26/0'},{...a,cpuRejoined:6},
    {...a,formal4v4Certified:true},{...a,realNativeTick:9000},
-   {...a,humanShots:NaN},{...a,worldOrigin:origin+3}]){
+   {...a,humanShots:NaN},{...a,worldOrigin:origin+3},
+   {...a,worldOrigin:-1},{...a,worldOrigin:-0.25}]){
    expect(b463ReadPreviousSourceRound(JSON.stringify(bad),origin+2))
     .toBeNull();
   }

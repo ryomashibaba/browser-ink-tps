@@ -25,11 +25,11 @@ export function b389NativeNewRoundHref(
     !WEAPON_ORDER.includes(action.weaponId as WeaponId)||
     !['PLAYING','TIME_UP'].includes(action.matchState)||
     (action.matchState==='PLAYING'&&!action.paused))return null;
- const native=b384SourceCircuitHref(href,true);
- if(!native)return null;
- const next=new URL(native);
- next.searchParams.set('t21W10B389',action.weaponId);
- return next.href;
+ // Delegate kit encoding to the existing canonical circuit launcher.
+ // In particular, the default kit MUST omit B389: adding an explicit
+ // default weapon makes later sourceCanonicalPlayableMode checks reject
+ // this otherwise genuine fresh SOURCE world on the next replay.
+ return b384SourceCircuitHref(href,true,action.weaponId);
 }
 /** B472: source-ONLY real 12-weapon boot for all four existing portal
  * modes. The legacy B384 circuit remains unchanged; every OTHER mode
