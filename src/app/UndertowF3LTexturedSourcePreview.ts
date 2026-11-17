@@ -50,6 +50,17 @@ export function f3lIsUnverifiedBridgeOverlay(materialName:string):boolean{
 export function f3lIsUnverifiedStageSideOverlay(materialName:string):boolean{
  return /^Fld_Temple01_StageSide[0-9]{2}$/.test(materialName);
 }
+/** A visible false bridge is more misleading than a faint one in live
+ * PLAYER. Suppress ONLY exact unverified original optical overlay groups,
+ * never verified collision-backed ramp renderers or full source REVIEW.
+ * This is render-only: no KCC, source geometry or paint authority changes. */
+export function f3lNativePlayerShouldRenderSourceMaterial(
+ registeredFloorPriority:boolean,sourceMaterialName:string
+):boolean{
+ return !registeredFloorPriority||!(
+  f3lIsUnverifiedFloorMarking(sourceMaterialName)||
+  f3lIsUnverifiedBridgeOverlay(sourceMaterialName));
+}
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
  registeredFloorPriority=false,sourceMaterialName=''){
  // Real SOURCE PLAYER: those original FloorLine/FloorFence overlays used to
@@ -227,7 +238,7 @@ export async function loadF3lTexturedSource(
  root.enabled=false;
  const gpuTextures:Texture[]=[];
  const textureMap=new Map<string,Texture>();
- const materialInstances:{kind:Kind;name:string;material:StandardMaterial}[]=[];
+ const materialInstances:{kind:Kind;name:string;material:StandardMaterial;entity:Entity}[]=[];
  const b256Materials:StandardMaterial[]=[];
  const b257OriginalStaticMeshes:B257OpticalMesh[]=[];
  let b256ApertureRequested=false;
@@ -304,11 +315,12 @@ export async function loadF3lTexturedSource(
     m.setParameter('b256InvViewport',new Float32Array([1,1]));
     m.setParameter('b256ApertureStrength',0);
    }
-   materialInstances.push({kind:material.kind,name:material.name,material:m});
    const object=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+'_NO_COLLISION');
    object.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
     castShadows:false,receiveShadows:false});
    root.addChild(object);
+   materialInstances.push({kind:material.kind,name:material.name,
+    material:m,entity:object});
   }
  }catch(err){
   root.destroy();for(const t of gpuTextures)t.destroy();
@@ -334,8 +346,10 @@ export async function loadF3lTexturedSource(
    if(typeof on!=='boolean')throw Error('T21_F3L_BAD_FLOOR_VISUAL_PRIORITY');
    if(on===registeredFloorPriority)return;
    registeredFloorPriority=on;
-   for(const entry of materialInstances)
+   for(const entry of materialInstances){
+    entry.entity.enabled=f3lNativePlayerShouldRenderSourceMaterial(on,entry.name);
     applyF3lReadability(entry.material,entry.kind,visualMode,on,entry.name);
+   }
   },
   auditB257OriginalStaticRay(from:Vec3,to:Vec3){
    if(!b257Research||b257OriginalStaticMeshes.length!==manifest.materials.length)

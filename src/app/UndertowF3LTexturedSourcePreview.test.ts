@@ -3,6 +3,7 @@ import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
 import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
  f3lIsUnverifiedBridgeOverlay,f3lIsUnverifiedStageSideOverlay,
+ f3lNativePlayerShouldRenderSourceMaterial,
  F3L_STAGE_READABILITY_MODES,
  b253VerifiedInkVisualOptIn,type F3lManifest}
  from './UndertowF3LTexturedSourcePreview';
@@ -153,6 +154,22 @@ describe('genuine SOURCE stage optical overlays cannot impersonate registered pa
 });
 
 describe('native SOURCE optics do not invent an original bridge or background',()=>{
+ it('native human PLAYER suppresses only exact optical false-floor groups, leaving actual source architecture and REVIEW unchanged',()=>{
+  for(const name of ['Fld_Temple01_FloorLine00',
+   'Fld_Temple01_FloorFence03','Fld_Temple01_BridgeMetal04']){
+   expect(f3lNativePlayerShouldRenderSourceMaterial(true,name)).toBe(false);
+   expect(f3lNativePlayerShouldRenderSourceMaterial(false,name)).toBe(true);
+  }
+  for(const name of ['Fld_Temple01_FloorConcrete00',
+   'Fld_Temple01_StageSide00','Fld_Temple01_Wall00',
+   'Fld_Temple01_Pillar00','Fld_Temple00_BridgeMetal00']){
+   expect(f3lNativePlayerShouldRenderSourceMaterial(true,name)).toBe(true);
+  }
+  // Review-to-play and play-to-review are exact inverses; there is no
+  // permanent mesh deletion, synthetic floor, source solid or NavLink.
+  expect(f3lNativePlayerShouldRenderSourceMaterial(false,
+   'Fld_Temple01_BridgeMetal04')).toBe(true);
+ });
  it('ghosts original BridgeMetal UV overlay only with certified floor visual priority',()=>{
   for(const name of ['Fld_Temple01_BridgeMetal00','Fld_Temple01_BridgeMetal04']){
    expect(f3lIsUnverifiedBridgeOverlay(name)).toBe(true);
