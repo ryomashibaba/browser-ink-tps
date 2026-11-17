@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - research/t21-v28-combat-20261117
+      - research/t21-v28-combat-lot5-20261117
     paths:
       - 'src/projectile/**'
       - 'src/weapons/**'
