@@ -20,6 +20,8 @@ import {shouldRefreshStalledOriginalSourceCrowd,
  SOURCE_CROWD_STALL_SECONDS,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
+import {hasRegisteredOriginalSourceCpuRapierFootSupport}
+ from './OriginalSourceCpuRapierFootSupport';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity,
  b180OriginalSourceUnownedNeighborAim}
@@ -1270,20 +1272,21 @@ export class CpuAgentSystem {
           // foot is necessary before requesting Crowd movement. Keep the
           // existing KCC veto as the sole per-step physical authority.
           if(sourceGoal&&this.phase14qF2RecoverableSteps){
-            // The current SOURCE foot must still have a real registered
-            // static Rapier support; navmesh snapping cannot manufacture a
-            // different original floor. A current-life unrejoined high
-            // spawn alone may use the existing .25m F2 start band.
+            // A REAL registered Rapier floor supports SOURCE feet with
+            // the original <=.25m physical band. Genuine B2/B4 60Hz RAW
+            // had .222-.244m on the original ramp: the old independent
+            // CPU-only .20m support veto erased all native targets despite
+            // true floor support. Never change strict Recast start/goal
+            // projections: .20m for rejoined and .25m FIRST_DROP only.
             const rejoined=this.f3dSourceGoals
               ?.isLiveRejoinedSourceCpu?.(bot.id)===true;
             const firstDrop=this.f3dSourceGoals
               ?.isLiveRejoinedSourceCpu?.(bot.id)===false;
             const physical=this.phase14qGroundCollision
               ?.sourceFootSupport?.(bot.id,bot.position);
-            const maxFootBand=firstDrop ? 0.25 : 0.20;
-            const footSupported=!!physical&&
-              this.stage.solids.some(s=>s.id===physical.solidId)&&
-              Math.abs(physical.point.y-bot.position.y)<=maxFootBand+1e-6;
+            const footSupported=
+              hasRegisteredOriginalSourceCpuRapierFootSupport(
+                bot.position,physical,this.stage.solids);
             const admitted=footSupported?
               chooseAuditedOriginalSourceCpuGoal(
                 bot.position,this.goal,
@@ -1341,6 +1344,12 @@ export class CpuAgentSystem {
             bot.agent?.resetMoveTarget();
             this.b35LastNativeTarget.delete(bot.id);
             this.qaMotionGoals.delete(bot.id);
+            // SOURCE authority or the strict native route has refused a
+            // live goal. Drop its historical MOVEMENT fallback as well:
+            // the next 0.28s think must obtain a fresh SOURCE-authorized
+            // intent, not revive an earlier cleared/unsupported target.
+            if(this.f3dSourceGoals)
+              this.sourceLastAdmittedRouteGoal.delete(bot.id);
           }
         }
 
@@ -1768,8 +1777,8 @@ export class CpuAgentSystem {
       // actual supported Rapier foot must be on the SAME original level.
       const support=this.phase14qGroundCollision
         ?.sourceFootSupport?.(bot.id,bot.position);
-      if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
-         Math.abs(support.point.y-bot.position.y)>.20)continue;
+      if(!hasRegisteredOriginalSourceCpuRapierFootSupport(
+           bot.position,support,this.stage.solids))continue;
       const nav=this.navigation.auditNavMeshProjection(bot.position);
       if(!nav.success||!nav.nearestPoint||
          nav.distanceMeters===null||nav.distanceMeters>.20||
