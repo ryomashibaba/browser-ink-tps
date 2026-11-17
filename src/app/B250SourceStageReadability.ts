@@ -127,6 +127,20 @@ export function b250SolidTone(
  const rgb=colors[s.material].map(x=>Math.min(1,x+lift)) as [number,number,number];
  return {band,rgb};
 }
+/** A/B has one permanent three-mesh render set. The original unsplit
+ * mesh and registered/optical split are mutually exclusive to avoid
+ * duplicate floors, while no mesh instance is destroyed on toggle. */
+export function b250SetGlassVisibility(
+ original:Pick<MeshInstance,'visible'>,
+ registered:Pick<MeshInstance,'visible'>,
+ opticalOnly:Pick<MeshInstance,'visible'>,
+ enabled:boolean
+):void{
+ original.visible=!enabled;
+ registered.visible=enabled;
+ opticalOnly.visible=enabled;
+}
+
 export type B250SourceView={
  setEnabled:(on:boolean)=>void;
  snapshot:()=>{enabled:boolean;sourceSolids:25;renderSolids:number;
@@ -149,6 +163,12 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const originalAmbient=app.scene.ambientLight.clone();
  const originalClear=camera.camera.clearColor.clone();
  const bindings:{mesh:MeshInstance;before:Material;after:StandardMaterial}[]=[];
+ // PlayCanvas destroys old MeshInstances when the render component array
+ // is reassigned. Install BOTH views once and toggle their visible flags.
+ // Never reuse destroyed source meshes during B250 frozen-READY A/B QA.
+ const glassBindings:{
+  original:MeshInstance;registered:MeshInstance;ghost:MeshInstance;
+ }[]=[];
  // The opaque ink shader draws over the registered floor's StandardMaterial:
  // tinting ONLY that underneath material cannot improve SOURCE walkability
  // readability. Recolor the existing exact PaintSurface shaders instead.
@@ -171,13 +191,13 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const originalNeutral=new Float32Array(GAME_CONFIG.visual.neutral);
  const legibleNeutral=new Float32Array(B250_REGISTERED_SOURCE_NEUTRAL);
  const rampNeutral=new Float32Array(B250_REGISTERED_SOURCE_RAMP_NEUTRAL);
- const excludedOptical=new Set<MeshInstance>();
+ const excludedFromTint=new Set<MeshInstance>();
  let glassRegisteredCollisionTriangles=0;
  let glassExcludedOpticalTriangles=0;
  const bands:Record<B250Band,number>={LOWER:0,MIDDLE:0,UPPER:0};
  function collect(node:Entity):MeshInstance[]{
   return [...(node.render?.meshInstances??[])
-    .filter(mesh=>!excludedOptical.has(mesh)),
+    .filter(mesh=>!excludedFromTint.has(mesh)),
    ...node.children.flatMap(c=>collect(c as Entity))];
  }
  for(const s of visible){
@@ -188,14 +208,25 @@ export function installB250SourceView(app:AppBase,camera:Entity,
    const originals=entity.render?.meshInstances;
    if(!originals||originals.length!==1)
     throw Error('B250_GLASS_ORIGINAL_SINGLE_MESH_REQUIRED_'+s.id);
+   const originalMesh=originals[0]!.mesh;
+   const originalMaterial=originals[0]!.material;
+   if(!originalMesh||!originalMaterial)
+    throw Error('B250_GLASS_ORIGINAL_RESOURCE_MISSING_'+s.id);
    // Existing visual SOURCE vertices only; collision triangles retain the
    // original material. The excluded 8 per side become faint optical-only.
    const registered=new MeshInstance(
-    b250ExactSourceMesh(app,glass.registered),originals[0]!.material);
+    b250ExactSourceMesh(app,glass.registered),originalMaterial);
    const ghost=new MeshInstance(
     b250ExactSourceMesh(app,glass.opticalOnly),b250OpticalOnlyMaterial());
-   entity.render!.meshInstances=[registered,ghost];
-   excludedOptical.add(ghost);
+   // Cloning a MeshInstance keeps the ORIGINAL mesh/material alive while
+   // its old component-owned instance is replaced (and destroyed).
+   // This is the exact pre-split visual, not inferred walkable geometry.
+   const original=new MeshInstance(originalMesh,originalMaterial);
+   entity.render!.meshInstances=[original,registered,ghost];
+   ghost.castShadow=false; // optical-only faces cannot cast solid shadows
+   glassBindings.push({original,registered,ghost});
+   excludedFromTint.add(ghost);
+   excludedFromTint.add(original);
    glassRegisteredCollisionTriangles+=glass.registered.indices.length/3;
    glassExcludedOpticalTriangles+=glass.opticalOnly.indices.length/3;
   }
@@ -218,6 +249,10 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  let enabled=false;
  const setEnabled=(on:boolean)=>{
   enabled=on;
+  // Only visibility changes; no component reassign/destroy on A/B.
+  // Never alter immutable StageDefinition, Rapier or Navigation roles.
+  for(const glass of glassBindings)
+   b250SetGlassVisibility(glass.original,glass.registered,glass.ghost,on);
   for(const b of bindings)b.mesh.material=on?b.after:b.before;
   for(const surface of sourcePaintMeshes)
    surface.mesh.material.setParameter('uNeutralColor',

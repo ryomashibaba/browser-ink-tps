@@ -90,7 +90,22 @@ export class GameplayInkSystem {
   public apply(event: PaintEvent): PaintApplyResult {
     const surface = this.surfaces.get(event.surfaceId);
     if (!surface) throw new Error(`PaintEvent references unknown surface '${event.surfaceId}'.`);
-    if (!(event.radiusU > 0) || !(event.radiusV > 0) || !(event.strength > 0)) {
+    // A registered surface is not automatically paintable. Reject non-finite
+    // brush input before constructing bounds: Infinity could otherwise paint
+    // an entire raster, while NaN could produce an untrustworthy visual stamp.
+    if (
+      (surface.baseFlags & SurfaceFlags.Paintable) === 0 ||
+      (event.team !== Team.A && event.team !== Team.B) ||
+      !Number.isFinite(event.centerU) ||
+      !Number.isFinite(event.centerV) ||
+      !Number.isFinite(event.radiusU) ||
+      !Number.isFinite(event.radiusV) ||
+      !Number.isFinite(event.angle) ||
+      !Number.isFinite(event.strength) ||
+      !(event.radiusU > 0) ||
+      !(event.radiusV > 0) ||
+      !(event.strength > 0)
+    ) {
       return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
     }
 
@@ -129,9 +144,12 @@ export class GameplayInkSystem {
         if (normalized > 1) continue;
 
         if (!surface.isCellActive(x, y)) continue;
+        const index = surface.index(x, y);
+        // Per-cell flags can exclude a cell even inside a registered footprint.
+        // Neither ownership nor visual admission may treat it as paintable.
+        if ((surface.flagsGrid[index]! & SurfaceFlags.Paintable) === 0) continue;
 
         rasterEligibleCells += 1;
-        const index = surface.index(x, y);
         const oldOwner = surface.ownerGrid[index] as Team;
         if (oldOwner === event.team) {
           rasterAlreadyTeamOwnedCells += 1;

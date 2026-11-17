@@ -90,7 +90,10 @@ export class PaintCoordinator {
           (cpuScoreableAreaMeters2ByActor[event.actorId] ?? 0) +
           result.scoreableAreaMeters2Changed;
       }
-      this.gpu.queue(event);
+      // An event with no authoritative paintable raster cells must not
+      // draw a phantom GPU stamp. Repaints on already-owned cells remain
+      // eligible for visual wetness, even when changedCells is zero.
+      if (result.rasterEligibleCells > 0) this.gpu.queue(event);
       this.lastEvent = event;
       const surface = this.gameplay.getSurface(event.surfaceId);
       if (surface) {

@@ -1200,6 +1200,16 @@ export class ProjectileSystem {
         : stage.firstReached ? 'SPIN_BURST_R1' : 'SPIN_BURST_PARTIAL';
 
       if (this.burstCooldown <= 0) {
+        // A committed genuine SOURCE SPLATLING burst must not disappear
+        // merely because the finite REAL projectile pool is momentarily
+        // full. Wait for an actual free slot without consuming ink,
+        // inventing a projectile or accruing catch-up fire cadence.
+        // Legacy T20 and other non-B343 modes remain unchanged.
+        if (this.b343SourceVolleyAtomic &&
+            !this.slots.some((slot) => !slot.active)) {
+          this.burstCooldown = 0;
+          return;
+        }
         if (this.fireProjectiles(profile, origin, direction, team, 1, spread, 0, {
           speedMultiplier
         })) {

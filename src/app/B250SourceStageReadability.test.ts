@@ -4,10 +4,30 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as stage}
 import {b250SolidTone,b250GlassSourceVisibilityPartition,
  B250_REGISTERED_SOURCE_NEUTRAL,B250_REGISTERED_SOURCE_RAMP_NEUTRAL,
  b250CollisionFaceNeedsTwoSidedDraw,
- b250SolidVisualElevationMeters}
+ b250SolidVisualElevationMeters,b250SetGlassVisibility}
  from './B250SourceStageReadability';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+describe('B250 one-time glass render ownership and reversible A/B visibility',()=>{
+ it('uses the same mesh owners across repeated on/off toggles',()=>{
+  // Mimic PlayCanvas MeshInstance.visible: no render.meshInstances setter.
+  const original={visible:true,castShadow:true},
+    registered={visible:false,castShadow:true},
+    optical={visible:false,castShadow:false};
+  const refs=[original,registered,optical];
+  b250SetGlassVisibility(original,registered,optical,true);
+  expect(refs.map(m=>m.visible)).toEqual([false,true,true]);
+  b250SetGlassVisibility(original,registered,optical,false);
+  expect(refs.map(m=>m.visible)).toEqual([true,false,false]);
+  b250SetGlassVisibility(original,registered,optical,true);
+  expect(refs.map(m=>m.visible)).toEqual([false,true,true]);
+  expect(refs).toEqual([original,registered,optical]);
+  // Scene A/B switches are rendering-only: optical glass must never
+  // become a solid shadow caster on re-enable.
+  expect(refs.map(m=>m.castShadow)).toEqual([true,true,false]);
+ });
+});
+
 describe('SOURCE registered paint-floor visual contrast without physical promotion',()=>{
  it('brightens only the neutral shader color of existing registered floor renderings',()=>{
   const original=[.24,.27,.31] as const;
