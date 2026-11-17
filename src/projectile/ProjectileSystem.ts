@@ -2457,14 +2457,16 @@ export class ProjectileSystem {
     // after the real capsule/life, team, guard and Rapier cover gates.
     // Its returned hit count can include absorbed guard impacts, so
     // NEVER use that count to authorize a hit confirmation.
-    const realHitsBefore=this.stats.cpuCombatHits;
+    // Historical external/melee consumers may not have a splash-feedback
+    // stats fixture. Only genuine SOURCE HUMAN explosive feedback reads it.
+    const sourceHumanSplash=this.nativeSourceHumanPhysicalMode!==null&&
+      sourceHumanExplosiveWeaponId!==undefined&&
+      team===this.currentHumanTeam;
+    const realHitsBefore=sourceHumanSplash?this.stats.cpuCombatHits:NaN;
     this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear,
       this.nativeSourceHumanPhysicalMode!==null,
       sourceHumanMelee&&!!meleeClear&&team===this.currentHumanTeam);
-    if(this.nativeSourceHumanPhysicalMode!==null&&
-       sourceHumanExplosiveWeaponId!==undefined&&
-       team===this.currentHumanTeam&&
-       Number.isFinite(realHitsBefore)&&
+    if(sourceHumanSplash&&Number.isFinite(realHitsBefore)&&
        this.stats.cpuCombatHits>realHitsBefore&&
        this.nativeSourceHumanSplashCueFrame!==this.b367NativeFrame){
       this.nativeSourceHumanSplashCueFrame=this.b367NativeFrame;
