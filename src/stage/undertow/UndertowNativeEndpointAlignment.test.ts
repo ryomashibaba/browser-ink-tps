@@ -20,14 +20,12 @@ const fixture=():UndertowNativeEndpointEvidence=>({
 describe('Undertow original SOURCE native endpoint guard',()=>{
  it('keeps an aligned registered original endpoint as unverified KCC, not route authority',()=>{
   const result=auditUndertowNativeEndpointAlignment(fixture());
-  expect(result).toEqual({
-   endpointAligned:true,
-   reason:'ENDPOINT_ALIGNED_KCC_UNVERIFIED',
-   distanceToRequestedTargetMeters:expect.closeTo(.1,8),
-   fullTrajectoryReplayed:false,
-   sourceRouteCertified:false,
-   runtimePromotionAuthorized:false
-  });
+  expect(result.endpointAligned).toBe(true);
+  expect(result.reason).toBe('ENDPOINT_ALIGNED_KCC_UNVERIFIED');
+  expect(result.distanceToRequestedTargetMeters).toBeCloseTo(.1,8);
+  expect(result.fullTrajectoryReplayed).toBe(false);
+  expect(result.sourceRouteCertified).toBe(false);
+  expect(result.runtimePromotionAuthorized).toBe(false);
  });
  it('refuses an actual terminal farther than the requested source foot even if both projected differences pass',()=>{
   const result=auditUndertowNativeEndpointAlignment({
