@@ -692,17 +692,23 @@ export class ProjectileSystem {
       if (!slot.active) continue;
 
       slot.previousPosition.copy(slot.position);
+      // Native SOURCE must resolve the physically remaining fraction of
+      // its final 60 Hz tick before TTL retirement. Otherwise a genuine
+      // player, CPU or Rapier contact in the last few milliseconds vanishes.
+      // Never extend the true lifetime or alter frozen T20 projectile steps.
+      const sourceLifetime=this.nativeSourceHumanPhysicalMode!==null;
+      const flightDt=sourceLifetime?Math.min(dt,Math.max(0,slot.ttl)):dt;
       slot.ttl -= dt;
       slot.trailPaintCooldown -= dt;
 
-      if (slot.ttl <= 0) {
+      if (slot.ttl <= 0 && (!sourceLifetime || flightDt <= 0)) {
         this.finishProjectile(slot, slot.position, null, 'TTL');
         continue;
       }
 
       const previous = slot.position.clone();
-      slot.velocity.y -= slot.gravity * dt;
-      this.delta.copy(slot.velocity).mulScalar(dt);
+      slot.velocity.y -= slot.gravity * flightDt;
+      this.delta.copy(slot.velocity).mulScalar(flightDt);
       const next = slot.position.clone().add(this.delta);
 
       const paintHit = this.findNearestSurfaceHit(previous, next);
@@ -855,6 +861,12 @@ export class ProjectileSystem {
         continue;
       }
 
+      // An unobstructed SOURCE shot still physically flies through its
+      // remaining lifetime before being retired at the reached position.
+      if(sourceLifetime&&slot.ttl<=0){
+        this.finishProjectile(slot,next,null,'TTL');
+        continue;
+      }
       slot.position.copy(next);
       slot.entity.setPosition(slot.position);
       active += 1;
@@ -2452,8 +2464,17 @@ export class ProjectileSystem {
       if (dx * dx + dy * dy + dz * dz > radius * radius) return;
     }
 
+    // An actual CPU SUB/SPECIAL explosion centered on the human body
+    // has no supported horizontal attack side. Do not grant a free
+    // front-shield block solely because the source equals body center.
+    // The existing physical radius, true HP and Rapier cover decide it.
+    // Frozen T20 retains its historical center-point guard rule.
+    const sourceAreaHasSide=this.nativeSourceHumanPhysicalMode===null||
+      (point.x-this.currentHumanPosition.x)**2+
+      (point.z-this.currentHumanPosition.z)**2>1e-8;
     if (
       this.currentHumanGuarding &&
+      sourceAreaHasSide &&
       this.isGuardBlockingPoint(
         point,
         this.currentHumanPosition,
