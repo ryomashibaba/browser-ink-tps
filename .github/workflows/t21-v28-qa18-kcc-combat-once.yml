@@ -1,0 +1,52 @@
+name: T21 V28 QA18 scoped KCC and combat witness once
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-kcc-combat-witness-20261117
+    paths:
+      - .github/workflows/t21-v28-qa18-kcc-combat-once.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-qa-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate current real runner and QA modules
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --check scripts/t21-v28-qa-native-playability-blockers.mjs
+          node --check scripts/t21-v28-qa-native-combat-window.mjs
+      - name: Focused authentic-source unit regression (no Chromium)
+        run: |
+          node --test scripts/t21-v28-qa-native-playability-blockers.test.mjs scripts/t21-v28-qa-native-combat-window.test.mjs scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs
+      - name: Reuse existing genuine Chromium RAW instead of rerun
+        uses: actions/download-artifact@v4
+        with:
+          name: t21-v28-qa18-post-cpu-b484-original-once
+          repository: ryomashibaba/browser-ink-tps
+          run-id: 44035240101
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/t21-v28-qa18-known-source
+      - name: Confirm old SOURCE 0/16 cannot become real 4v4 by changing QA
+        run: |
+          node scripts/t21-v28-qa-native-playability-blockers.mjs /tmp/t21-v28-qa18-known-source/b440-short-real-original-human-foot.json /tmp/t21-v28-qa18-known-source/b454-native-b2-b4-physical-60hz.json /tmp/qa18-known-blocker.json >/dev/null
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            import assert from "node:assert/strict";
+            const a=JSON.parse(readFileSync("/tmp/qa18-known-blocker.json"));
+            assert.equal(a.actualCrossTeamNativePathPairs,0);
+            for(const id of ["B2","B4"]){
+              assert.equal(a.byActor[id].observedGate,"HOLD_STRICT_ORIGINAL_GOALS_ALL_DENIED");
+              assert.equal(a.byActor[id].sameRunKccInterval.available,false);
+            }
+            assert.equal(a.formal4v4Certified,false);
+            console.log("TRUE_ARCHIVED_SOURCE_RECHECK_PASS_NO_BROWSER_RUN");
+          '
