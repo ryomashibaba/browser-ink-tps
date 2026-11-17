@@ -132,13 +132,17 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(agent.teleport).not.toHaveBeenCalled();
   expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
  });
- it('does not activate on high-spawn, SPLATTED, or missing native goal',()=>{
-  for(const reason of ['HIGH_SPAWN','SPLATTED','NO_GOAL']){
+ it('does not activate on high-spawn, SPLATTED, or missing live native goal',()=>{
+  for(const reason of ['HIGH_SPAWN','SPLATTED','NO_GOAL','KCC_INVALIDATED_GOAL']){
    const {cpu,bot,agent,report}=fixture();
    if(reason==='HIGH_SPAWN')
     cpu.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
    if(reason==='SPLATTED')bot.lifeState='SPLATTED';
    if(reason==='NO_GOAL')cpu.qaMotionGoals.clear();
+   // On a genuine KCC rejection the CPU discards the historical fallback,
+   // even if a stale QA heading was retained for paid ink decisions.
+   if(reason==='KCC_INVALIDATED_GOAL')
+    cpu.sourceLastAdmittedRouteGoal.delete('B1');
    cpu.tryRefreshStalledOriginalSourceCrowd(report);
    expect(agent.teleport).not.toHaveBeenCalled();
   }
