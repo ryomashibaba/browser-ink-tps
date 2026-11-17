@@ -23,7 +23,8 @@ import {
   Texture
 } from 'playcanvas';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
-import { brushClipRect, localMetersToBrushAtlas } from './AtlasCoordinates';
+import { buildInkBrushRasterQuads, type InkBrushQuad } from './InkBrushRasterGeometry';
+import type { PaintRasterRun } from './GameplayInkSystem';
 import type { PaintSurface } from './PaintSurface';
 import { Team, type PaintEvent } from './types';
 
@@ -106,13 +107,18 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
   return output;
 }`;
 
+interface PendingInkEvent {
+  event: PaintEvent;
+  paintableRuns: readonly PaintRasterRun[];
+}
+
 export class GpuInkAtlas {
   public readonly texture: Texture;
   public readonly atlasSize: number;
   public readonly layer: Layer;
   public readonly renderTarget: RenderTarget;
 
-  private readonly pending: PaintEvent[] = [];
+  private readonly pending: PendingInkEvent[] = [];
   private readonly cameraEntity: Entity;
   private readonly batchEntity: Entity;
   private readonly mesh: Mesh;
@@ -244,8 +250,13 @@ export class GpuInkAtlas {
     });
   }
 
-  public queue(event: PaintEvent): void {
-    this.pending.push(event);
+  /**
+   * Only accepted CPU raster runs may be rendered. Never restore an
+   * unconditional full-ellipse fallback for events lacking run authority.
+   */
+  public queue(event: PaintEvent, paintableRuns: readonly PaintRasterRun[] = []): void {
+    if (paintableRuns.length === 0) return;
+    this.pending.push({ event, paintableRuns });
   }
 
   public get backlog(): number {
@@ -253,14 +264,53 @@ export class GpuInkAtlas {
   }
 
   public flush(maxEvents: number): { events: number; buildMs: number } {
-    if (!this.primed || this.clearPending || this.pending.length === 0) return { events: 0, buildMs: 0 };
+    if (!this.primed || this.clearPending || this.pending.length === 0 ||
+        !Number.isFinite(maxEvents) || maxEvents < 1)
+      return { events: 0, buildMs: 0 };
 
     const started = performance.now();
-    // Four vertices per event with Uint16 indices => at most 16,383 complete quads.
-    const maxUint16BrushEvents = 16_383;
-    const count = Math.min(maxEvents, this.pending.length, maxUint16BrushEvents);
-    const batch = this.pending.splice(0, count);
+    // Uint16 mesh indices require at most 16,383 quads per render.
+    // A paint event may generate multiple authorized row-run quads.
+    const maxQuads = 16_383;
+    const eventBudget = Math.floor(maxEvents);
+    let completedEvents = 0;
+    let remainingQuadBudget = maxQuads;
+    const batch: PendingInkEvent[] = [];
 
+    while (this.pending.length > 0 && completedEvents < eventBudget &&
+           remainingQuadBudget > 0) {
+      const first = this.pending[0]!;
+      const taken = Math.min(remainingQuadBudget, first.paintableRuns.length);
+      batch.push({ event: first.event, paintableRuns: first.paintableRuns.slice(0, taken) });
+      remainingQuadBudget -= taken;
+      if (taken === first.paintableRuns.length) {
+        this.pending.shift();
+        completedEvents += 1;
+      } else {
+        // Continue a very large brush next flush without dropping cells or
+        // overflowing the 16-bit index buffer.
+        this.pending[0] = {
+          event: first.event,
+          paintableRuns: first.paintableRuns.slice(taken)
+        };
+        break;
+      }
+    }
+
+    const geometry: Array<{ quad: InkBrushQuad; event: PaintEvent }> = [];
+    for (const { event, paintableRuns } of batch) {
+      const surface = this.surfaces.find((candidate) => candidate.id === event.surfaceId);
+      if (!surface) continue;
+      for (const quad of buildInkBrushRasterQuads(surface, event, paintableRuns)) {
+        geometry.push({ quad, event });
+      }
+    }
+
+    if (geometry.length === 0) {
+      return { events: completedEvents, buildMs: performance.now() - started };
+    }
+
+    const count = geometry.length;
     const positions = new Float32Array(count * 4 * 3);
     const uvs = new Float32Array(count * 4 * 2);
     const rectMins = new Float32Array(count * 4 * 2);
@@ -275,47 +325,24 @@ export class GpuInkAtlas {
     let indexCursor = 0;
     let vertexBase = 0;
 
-    for (const event of batch) {
-      const surface = this.surfaces.find((candidate) => candidate.id === event.surfaceId);
-      const rect = surface?.atlasRect;
-      if (!surface || !rect) continue;
-
-      const center = localMetersToBrushAtlas(rect, event.centerU, event.centerV);
-      const centerX = center.x;
-      const centerY = center.y;
-      const radiusX = event.radiusU * rect.pixelsPerMeter / this.atlasSize;
-      const radiusY = event.radiusV * rect.pixelsPerMeter / this.atlasSize;
-      const c = Math.cos(event.angle);
-      const s = Math.sin(event.angle);
-      const corners: readonly [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-      const brushUvs: readonly [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
-      const clip = brushClipRect(rect);
-      const rectMinX = clip.minX;
-      const rectMinY = clip.minY;
-      const rectMaxX = clip.maxX;
-      const rectMaxY = clip.maxY;
+    for (const { quad, event } of geometry) {
       const ownerByte = event.team === Team.A ? 255 : 0;
       const wetnessByte = Math.round(Math.min(1, Math.max(0, event.strength)) * 255);
-
-      for (let i = 0; i < 4; i += 1) {
-        const [su, sv] = corners[i]!;
-        const dx = su * radiusX * c - sv * radiusY * s;
-        const dy = -(su * radiusX * s + sv * radiusY * c);
-        positions[p++] = centerX + dx;
-        positions[p++] = centerY + dy;
+      for (const vertex of quad.vertices) {
+        positions[p++] = vertex.x;
+        positions[p++] = vertex.y;
         positions[p++] = 0;
 
-        const [bu, bv] = brushUvs[i]!;
-        uvs[uv++] = bu;
-        uvs[uv++] = bv;
+        uvs[uv++] = vertex.uvX;
+        uvs[uv++] = vertex.uvY;
 
-        rectMins[rectCursor] = rectMinX;
-        rectMaxs[rectCursor++] = rectMaxX;
-        rectMins[rectCursor] = rectMinY;
-        rectMaxs[rectCursor++] = rectMaxY;
+        rectMins[rectCursor] = quad.clipMinX;
+        rectMaxs[rectCursor++] = quad.clipMaxX;
+        rectMins[rectCursor] = quad.clipMinY;
+        rectMaxs[rectCursor++] = quad.clipMaxY;
 
         colors[colorCursor++] = ownerByte;
-        colors[colorCursor++] = 255; // coverage
+        colors[colorCursor++] = 255;
         colors[colorCursor++] = wetnessByte;
         colors[colorCursor++] = 255;
       }
@@ -341,7 +368,7 @@ export class GpuInkAtlas {
     this.paintedThisFrame = true;
     if (this.suspendIdleSourceCamera && this.cameraEntity.camera)
       this.cameraEntity.camera.enabled = true;
-    return { events: count, buildMs: performance.now() - started };
+    return { events: completedEvents, buildMs: performance.now() - started };
   }
 
   public clear(): void {
