@@ -6,7 +6,8 @@
 import { Vec3 } from 'playcanvas';
 import { GameplayInkSystem } from './GameplayInkSystem.ts';
 import { buildInkBrushRasterQuads } from './InkBrushRasterGeometry.ts';
-import { localMetersToBrushAtlas } from './AtlasCoordinates.ts';
+import { localMetersToBrushAtlas, surfaceTextureUvRect } from './AtlasCoordinates.ts';
+import { FRAGMENT_GLSL as MATERIAL_FRAGMENT } from './InkSurfaceMaterial.ts';
 import { PaintSurface } from './PaintSurface.ts';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from './types.ts';
 
@@ -143,8 +144,92 @@ try {
   if (!isRed(0.5, 1.5) || !isRed(2.5, 1.5)) {
     throw new Error('Valid neighboring cells failed real GPU ink draw');
   }
+  // Real bilinear texture lookup through the actual material fragment source.
+  // The atlas was drawn through WebGL2 above; upload that very pixel raster
+  // and verify the material shader does not filter approved ink across
+  // the forbidden cell boundary.
+  const atlasPixels = new Uint8Array(512 * 512 * 4);
+  gl.readPixels(0, 0, 512, 512, gl.RGBA, gl.UNSIGNED_BYTE, atlasPixels);
+  const atlasTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, atlasTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 512, 512, 0,
+    gl.RGBA, gl.UNSIGNED_BYTE, atlasPixels);
+
+  const surfaceVertex = `#version 300 es
+    in vec2 aPos;
+    out vec2 vUv0;
+    out vec3 vWorldPos;
+    void main() {
+      gl_Position = vec4(aPos * 2.0 - 1.0, 0.0, 1.0);
+      vUv0 = aPos;
+      vWorldPos = vec3(0.0);
+    }`;
+  const surfaceFragment = '#version 300 es\n' +
+    'out vec4 fragColor;\n' +
+    MATERIAL_FRAGMENT
+      .replaceAll('varying vec2', 'in vec2')
+      .replaceAll('varying vec3', 'in vec3')
+      .replaceAll('texture2D(', 'texture(')
+      .replaceAll('gl_FragColor', 'fragColor');
+  const surfaceProgram = gl.createProgram();
+  gl.attachShader(surfaceProgram, makeShader(gl.VERTEX_SHADER, surfaceVertex));
+  gl.attachShader(surfaceProgram, makeShader(gl.FRAGMENT_SHADER, surfaceFragment));
+  gl.linkProgram(surfaceProgram);
+  if (!gl.getProgramParameter(surfaceProgram, gl.LINK_STATUS)) {
+    throw new Error('Actual material shader link: ' + gl.getProgramInfoLog(surfaceProgram));
+  }
+  gl.useProgram(surfaceProgram);
+  for (let i = 0; i < gl.getParameter(gl.MAX_VERTEX_ATTRIBS); i++) {
+    gl.disableVertexAttribArray(i);
+  }
+  const screenTriangles = new Float32Array([
+    0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1
+  ]);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, screenTriangles, gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(surfaceProgram, 'aPos');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const uniform = (name) => gl.getUniformLocation(surfaceProgram, name);
+  const rect = surfaceTextureUvRect(surface, surface.atlasRect);
+  gl.uniform4f(uniform('uAtlasRect'), rect.x, rect.y, rect.width, rect.height);
+  gl.uniform2f(uniform('uSurfaceMeters'), surface.widthMeters, surface.heightMeters);
+  gl.uniform1f(uniform('uInkCellSize'), surface.cellSize);
+  gl.uniform1f(uniform('uAtlasTexelSize'), 1 / surface.atlasRect.atlasSize);
+  gl.uniform3f(uniform('uNeutralColor'), 0.25, 0.25, 0.25);
+  gl.uniform3f(uniform('uTeamAColor'), 1, 0, 0);
+  gl.uniform3f(uniform('uTeamBColor'), 0, 0, 1);
+  gl.uniform1i(uniform('uInkAtlas'), 0);
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  if (gl.getError() !== gl.NO_ERROR) throw new Error('Actual surface material draw error');
+  const surfaceRedAt = (u, v) => {
+    const px = Math.floor(u / surface.widthMeters * 512);
+    const py = Math.floor(v / surface.heightMeters * 512);
+    gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('Surface material readPixels error');
+    return pixel[0];
+  };
+  const forbiddenCenterRed = surfaceRedAt(1.5, 1.5);
+  const forbiddenBorderRed = surfaceRedAt(1.004, 1.5);
+  const permittedBorderRed = surfaceRedAt(0.996, 1.5);
+  if (forbiddenCenterRed > 112 || forbiddenBorderRed > 112) {
+    throw new Error('Material bilinear leak into blocked cell: ' +
+      forbiddenCenterRed + '/' + forbiddenBorderRed);
+  }
+  if (permittedBorderRed < 140) {
+    throw new Error('Valid cell lost visible ink near boundary: ' + permittedBorderRed);
+  }
   output.textContent = 'INK_WEBGL2_PASS blankProbes=' + verifiedBlank +
-    ' approvedQuads=' + quads.length;
+    ' approvedQuads=' + quads.length +
+    ' forbiddenBorderR=' + forbiddenBorderRed +
+    ' permittedBorderR=' + permittedBorderRed;
 } catch (error) {
   output.textContent = 'INK_WEBGL2_FAIL ' + String(error.stack || error);
 }
