@@ -4,6 +4,9 @@ const SOURCE_PRESTART_MOVEMENT_CODES=new Set([
  'KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyF','KeyG'
 ]);
 const SOURCE_MOVEMENT_CODES=new Set(['KeyW','KeyA','KeyS','KeyD']);
+const SOURCE_OPPOSITE_MOVEMENT:Readonly<Record<string,string>>={
+ KeyW:'KeyS',KeyS:'KeyW',KeyA:'KeyD',KeyD:'KeyA'
+};
 export class PlayerInput {
   private readonly keys = new Set<string>();
   private sourcePrestartBlocked=false;
@@ -76,8 +79,16 @@ export class PlayerInput {
          freshPress&&!event.repeat){
         if(event.code==='ShiftLeft'||event.code==='ShiftRight')
           this.sourceSquidTapQueued=true;
-        if(SOURCE_MOVEMENT_CODES.has(event.code))
+        if(SOURCE_MOVEMENT_CODES.has(event.code)){
+          // Two genuine opposite key presses may occur before the next
+          // fixed 60Hz KCC step. Once the earlier key is physically UP,
+          // its queued tap must not cancel the newer held/tapped direction.
+          // If opposite is still physically held, keep the normal 0 axis.
+          const opposite=SOURCE_OPPOSITE_MOVEMENT[event.code];
+          if(opposite&&!this.keys.has(opposite))
+            this.sourceMovementTapCodes.delete(opposite);
           this.sourceMovementTapCodes.add(event.code);
+        }
       }
       if (event.code === 'Space') {
         if (!event.repeat&&(!this.sourceNativeRepeatGuard||freshPress))
