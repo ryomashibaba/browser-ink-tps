@@ -23,11 +23,12 @@ import {
   Texture
 } from 'playcanvas';
 import { drainInkBrushBatch, indexInkBrushSurfaces } from '../core/InkBrushHotPath';
+import { packInkBrushGpuGroups, type PackedInkGroup } from '../core/InkBrushGpuPacking';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
-import { buildInkBrushRasterQuads, type InkBrushQuad } from './InkBrushRasterGeometry';
+import { buildInkBrushRasterQuads } from './InkBrushRasterGeometry';
 import type { PaintRasterRun } from './GameplayInkSystem';
 import type { PaintSurface } from './PaintSurface';
-import { Team, type PaintEvent } from './types';
+import type { PaintEvent } from './types';
 
 const BRUSH_VERTEX_GLSL = `
 attribute vec3 vertex_position;
@@ -279,71 +280,28 @@ export class GpuInkAtlas {
       this.pending, Math.floor(maxEvents), 16_383
     );
 
-    const geometry: Array<{ quad: InkBrushQuad; event: PaintEvent }> = [];
+    // Only INK's authoritative row-run geometry is packed. Grouping by
+    // event avoids a temporary {quad,event} allocation for every raster run;
+    // the same event color/wetness is evaluated once for its accepted quads.
+    const groups: PackedInkGroup[] = [];
     for (const { event, paintableRuns } of batch) {
       const surface = this.brushSurfaceIndex.get(event.surfaceId);
       if (!surface) continue;
-      for (const quad of buildInkBrushRasterQuads(surface, event, paintableRuns)) {
-        geometry.push({ quad, event });
-      }
+      const quads = buildInkBrushRasterQuads(surface, event, paintableRuns);
+      if (quads.length > 0) groups.push({ event, quads });
     }
 
-    if (geometry.length === 0) {
+    const buffers = packInkBrushGpuGroups(groups);
+    if (!buffers) {
       return { events: completedEvents, buildMs: performance.now() - started };
     }
 
-    const count = geometry.length;
-    const positions = new Float32Array(count * 4 * 3);
-    const uvs = new Float32Array(count * 4 * 2);
-    const rectMins = new Float32Array(count * 4 * 2);
-    const rectMaxs = new Float32Array(count * 4 * 2);
-    const colors = new Uint8Array(count * 4 * 4);
-    const indices = new Uint16Array(count * 6);
-
-    let p = 0;
-    let uv = 0;
-    let rectCursor = 0;
-    let colorCursor = 0;
-    let indexCursor = 0;
-    let vertexBase = 0;
-
-    for (const { quad, event } of geometry) {
-      const ownerByte = event.team === Team.A ? 255 : 0;
-      const wetnessByte = Math.round(Math.min(1, Math.max(0, event.strength)) * 255);
-      for (const vertex of quad.vertices) {
-        positions[p++] = vertex.x;
-        positions[p++] = vertex.y;
-        positions[p++] = 0;
-
-        uvs[uv++] = vertex.uvX;
-        uvs[uv++] = vertex.uvY;
-
-        rectMins[rectCursor] = quad.clipMinX;
-        rectMaxs[rectCursor++] = quad.clipMaxX;
-        rectMins[rectCursor] = quad.clipMinY;
-        rectMaxs[rectCursor++] = quad.clipMaxY;
-
-        colors[colorCursor++] = ownerByte;
-        colors[colorCursor++] = 255;
-        colors[colorCursor++] = wetnessByte;
-        colors[colorCursor++] = 255;
-      }
-
-      indices[indexCursor++] = vertexBase;
-      indices[indexCursor++] = vertexBase + 1;
-      indices[indexCursor++] = vertexBase + 2;
-      indices[indexCursor++] = vertexBase;
-      indices[indexCursor++] = vertexBase + 2;
-      indices[indexCursor++] = vertexBase + 3;
-      vertexBase += 4;
-    }
-
-    this.mesh.setPositions(positions);
-    this.mesh.setUvs(0, uvs);
-    this.mesh.setUvs(1, rectMins);
-    this.mesh.setUvs(2, rectMaxs);
-    this.mesh.setColors32(colors);
-    this.mesh.setIndices(indices);
+    this.mesh.setPositions(buffers.positions);
+    this.mesh.setUvs(0, buffers.uvs);
+    this.mesh.setUvs(1, buffers.rectMins);
+    this.mesh.setUvs(2, buffers.rectMaxs);
+    this.mesh.setColors32(buffers.colors);
+    this.mesh.setIndices(buffers.indices);
     this.mesh.update(PRIMITIVE_TRIANGLES, false);
 
     if (this.batchEntity.render) this.batchEntity.render.enabled = true;
