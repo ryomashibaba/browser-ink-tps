@@ -89,6 +89,17 @@ describe('B463 real SOURCE-only non-scoring replay history',()=>{
   expect(b463ReadPreviousSourceRound(JSON.stringify(tampered),origin))
    .toBeNull();
  });
+ it('classifies a real historical index.html world without granting QA mode',()=>{
+  const index=new URL(combatHref);
+  index.pathname='/browser-ink-tps/index.html';
+  expect(b463FromRealTimeUp(view(),11856,origin,index.href)?.sourceMode)
+   .toBe('combat');
+  index.searchParams.set('production','1');
+  expect(b463FromRealTimeUp(view(),11856,origin,index.href)?.sourceMode)
+   .toBe('OTHER_SOURCE');
+  expect(b463FromRealTimeUp(view(),11856,origin,'not a URL')?.sourceMode)
+   .toBe('OTHER_SOURCE');
+ });
  it('shows authentic physical splats and 150-tick returns across 180s rounds',()=>{
   const old=b463FromRealTimeUp({
    ...view(),actualHumanSplats:3,actualHumanRespawns:2

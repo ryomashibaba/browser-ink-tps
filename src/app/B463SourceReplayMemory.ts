@@ -11,8 +11,15 @@ const B463_SOURCE_MODES:readonly B463SourceMode[]=[
  'combat','circuit','coop','frontline','OTHER_SOURCE'
 ];
 const b463SourceMode=(sourceHref:string):B463SourceMode=>{
- try{return sourceCanonicalPlayableMode(sourceHref)??'OTHER_SOURCE';}
- catch{return 'OTHER_SOURCE';}
+ try{
+  const url=new URL(sourceHref);
+  // Historical /index.html SOURCE worlds use the same native round,
+  // even though their URL itself is not a fresh portal launcher. Decode
+  // the mode for LOCAL statistics only; never broaden boot/replay gates.
+  if(url.pathname.endsWith('/index.html'))
+   url.pathname=url.pathname.slice(0,-'index.html'.length);
+  return sourceCanonicalPlayableMode(url.href)??'OTHER_SOURCE';
+ }catch{return 'OTHER_SOURCE';}
 };
 export interface B463RoundView {
  finished:boolean;timeRemainingSeconds:number;
