@@ -223,3 +223,42 @@ test('unknown previous counters and non-monotonic KCC never pass as real physics
  assert.equal(absent.byActor.B2.sameRunKccInterval.available,false);
  assert.equal(absent.byActor.B2.movementImprovedAfterNewCpuCodeCertified,false);
 });
+
+
+test('genuine-mobile-shaped same-side 60Hz RAW is a limited movement PASS, never a 4v4 or invented dry-route PASS',()=>{
+ const x=make();
+ for(const id of ids){
+  const rows=x.trace.rows[id];
+  for(let i=0;i<rows.length;i++){
+   const t=i/(rows.length-1);
+   rows[i].foot=[2.7-8.5*t,3.10+1.5*t,
+    (id==='B2'?-53.84:-52.79)+16.5*t];
+   rows[i].originalRapierSolidId=i<175?
+    'UndertowT21D:first-drop-landing-negative-z':i<375?
+    'UndertowT21D:right-low-route-ramp-negative-z':
+    'UndertowT21D:right-low-team-b';
+  }
+  const gate=x.proof.b441NativeEvidence.b445LastOriginalGateByCpu
+   .find(r=>r.id===id);
+  gate.strictlyApprovedGoals=2;
+  gate.runtimeNoOriginalFrontGoals=0;
+  gate.runtimeTrueOriginalGoalRequests=44;
+ }
+ x.proof.b441NativeEvidence.b446LiveActualCpuFootDryRouteProbes=[];
+ const result=auditSourceRealGameplayBlockers(
+  x.proof,x.trace,x.actualNativeMotion);
+ for(const id of ids){
+  const state=result.byActor[id];
+  assert.equal(state.observedGate,
+   'PASS_LIMITED_REAL_ORIGINAL_SOURCE_FOOT_MOTION_NOT_4V4');
+  assert.equal(state.actualSameSideRapierFootMovementObserved,true);
+  assert.ok(state.nativeFoot.cumulativeOriginalSourceFootXZTravelMeters>10);
+  assert.equal(state.trueOriginalFootDryRoute
+   .dryProbeNotProducedBecauseRegisteredOriginalCpuMoved,true);
+  assert.equal(state.movementImprovedAfterNewCpuCodeCertified,false);
+ }
+ assert.equal(result.result,'HOLD_REAL_NATIVE_4V4_AND_HP_CHAIN');
+ assert.equal(result.actualCrossTeamNativePathPairs,0);
+ assert.equal(result.actual150TickRespawnCertified,false);
+ assert.equal(result.formal4v4Certified,false);
+});

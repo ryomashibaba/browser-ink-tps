@@ -17,6 +17,8 @@ function fail(code){throw Error('QA18_ORIGINAL_NATIVE_CAUSAL_PROVENANCE_'+code)}
 function fullNativeFoot(rows,id){
  if(!Array.isArray(rows)||rows.length<600)fail('INSUFFICIENT_60HZ_'+id);
  let floor=0,still=0,start=null,longest=0;
+ let cumulativeXZ=0,movingOver2cm=0;
+ const visitedOriginalSolids=new Set();
  for(let i=0;i<rows.length;i++){
   const x=rows[i];
   if(x?.id!==id||!count(x.tick)||!foot(x.foot)||
@@ -25,9 +27,17 @@ function fullNativeFoot(rows,id){
      !x.originalRapierSolidId.startsWith('UndertowT21D:')||
      typeof x.registeredOriginalHit!=='boolean')fail('INVALID_FOOT_'+id);
   if(i>0&&x.tick!==rows[i-1].tick+1)fail('GAP_IN_60HZ_'+id);
-  if(x.registeredOriginalHit)floor++;
+  if(x.registeredOriginalHit){floor++;visitedOriginalSolids.add(x.originalRapierSolidId);}
   if(i>0){
    const p=rows[i-1],delta=Math.hypot(...x.foot.map((v,j)=>v-p.foot[j]));
+   const stepXZ=Math.hypot(x.foot[0]-p.foot[0],
+    x.foot[2]-p.foot[2]);
+   // Original native 60Hz travel must never be inferred from a fake
+   // Crowd goal, huge teleport or a static landing snapshot.
+   if(!Number.isFinite(stepXZ)||stepXZ>.5)
+    fail('UNTRUSTED_CPU_DISPLACEMENT_'+id);
+   cumulativeXZ+=stepXZ;
+   if(stepXZ>.02)movingOver2cm++;
    if(x.registeredOriginalHit&&p.registeredOriginalHit&&delta<=.005){
     if(start===null)start=p.tick;
     still=x.tick-start;
@@ -39,7 +49,13 @@ function fullNativeFoot(rows,id){
   genuine60HzRows:rows.length,originalRapierSupportedRows:floor,
   allRegisteredOriginalFloorSupported:floor===rows.length,
   longestGroundedNearlyStationaryTicks:longest,
-  longestGroundedNearlyStationarySeconds:r6(longest/60)};
+  longestGroundedNearlyStationarySeconds:r6(longest/60),
+  cumulativeOriginalSourceFootXZTravelMeters:r6(cumulativeXZ),
+  physicallyMoving2cmIntervals:movingOver2cm,
+  firstLastPlanarDisplacementMeters:r6(Math.hypot(
+   rows.at(-1).foot[0]-rows[0].foot[0],
+   rows.at(-1).foot[2]-rows[0].foot[2])),
+  registeredOriginalSolidsEncountered:[...visitedOriginalSolids]};
 }
 function validateGate(row,id){
  if(!row||row.id!==id||
@@ -173,9 +189,32 @@ export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null,pr
  for(const id of ACTORS){
   const footResult=fullNativeFoot(trace.rows?.[id],id);
   const gate=validateGate(e.b445LastOriginalGateByCpu?.find(x=>x.id===id),id);
-  const dry=validateDry(e.b446LiveActualCpuFootDryRouteProbes?.find(x=>x.id===id),id);
-  if(dry.realProbeNativeTick>footResult.lastTick||
-     dry.realProbeNativeTick<footResult.firstTick-120)
+  const actualDryProbe=e.b446LiveActualCpuFootDryRouteProbes?.find(x=>x.id===id);
+  // After the authentic SOURCE ramp fix, a moving B2/B4 no longer
+  // creates the OLD 120+ stationary-foot dry-route probe. Its absence
+  // is valid only when true contiguous 60Hz Rapier-supported movement,
+  // same-life live Recast goal requests, and traversed original solids
+  // are already all recorded. It is NOT a certificate of a full 4v4.
+  const actualSameSideMovement=footResult.allRegisteredOriginalFloorSupported&&
+   footResult.cumulativeOriginalSourceFootXZTravelMeters>3&&
+   footResult.firstLastPlanarDisplacementMeters>1&&
+   footResult.physicallyMoving2cmIntervals>=60&&
+   footResult.registeredOriginalSolidsEncountered.length>=2&&
+   gate.actualStrictOriginalGoals>0&&
+   gate.actualNativeSourceGoalRequests>0;
+  if(!actualDryProbe&&!actualSameSideMovement)
+   fail('MISSING_AUTHENTIC_DRY_DENIAL_OR_REAL_MOVEMENT_'+id);
+  const dry=actualDryProbe?validateDry(actualDryProbe,id):{
+   realProbeNativeTick:null,originalGoalCandidatesInspected:0,
+   nativeIntermediateSupportRejected:0,allOriginalChecksPassed:0,
+   firstDeniedCauses:{},
+   actuallyWitnessedMinVerticalGapMeters:null,
+   actuallyWitnessedMaxVerticalGapMeters:null,
+   dryProbeNotProducedBecauseRegisteredOriginalCpuMoved:true
+  };
+  if(dry.realProbeNativeTick!==null&&
+     (dry.realProbeNativeTick>footResult.lastTick||
+      dry.realProbeNativeTick<footResult.firstTick-120))
    fail('DRY_ROUTE_NOT_SAME_NATIVE_TIMELINE_'+id);
   const actualGoalAdmissionBlocked=footResult.allRegisteredOriginalFloorSupported&&
    gate.actualStrictOriginalGoals===0&&
@@ -200,7 +239,9 @@ export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null,pr
    trueOriginalFootDryRoute:dry,
    sameRunKccMotion:sampleKcc(groundMotion,id),
    sameRunKccInterval:kccWindow,
-   observedGate:actualGoalAdmissionBlocked?
+   observedGate:actualSameSideMovement?
+    'PASS_LIMITED_REAL_ORIGINAL_SOURCE_FOOT_MOTION_NOT_4V4':
+    actualGoalAdmissionBlocked?
     'HOLD_STRICT_ORIGINAL_GOALS_ALL_DENIED':
     hasActualApprovedGoal&&
      footResult.longestGroundedNearlyStationaryTicks>=300&&
@@ -215,6 +256,9 @@ export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null,pr
      'HOLD_NO_NATIVE_CAUSE_CERTIFIED',
    sourceHeightGapCauseSeen:(dry.firstDeniedCauses
     .NATIVE_PATH_RAPIER_HEIGHT_MISMATCH??0)>0,
+   // Comparison against previous Chromium RAW is a separate caller's
+   // decision. This proves CURRENT original-source physical movement.
+   actualSameSideRapierFootMovementObserved:actualSameSideMovement,
    movementImprovedAfterNewCpuCodeCertified:false,
    artificialGoalFixAuthorized:false,
    nativeActorTeleports:0
