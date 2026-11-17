@@ -86,7 +86,7 @@ describe('T21 V28 performance: byte-identical authorized row-run GPU packing (#2
 
   it('preserves A/B owner bytes and visual wetness including edge values', () => {
     for (const strength of [-1, 0, 0.01, 0.5, 1, 3, Number.NaN]) {
-      for (const team of [Team.A, Team.B]) {
+      for (const team of [Team.A, Team.B] as const) {
         const single = makeGroup(1, 1);
         assertExactBuffers([{...single, event: {team, strength}}]);
       }
