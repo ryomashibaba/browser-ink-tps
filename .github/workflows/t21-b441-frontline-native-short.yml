@@ -165,7 +165,6 @@ jobs:
     timeout-minutes: 8
     permissions:
       contents: read
-      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -178,33 +177,13 @@ jobs:
       - name: Focused original SOURCE traffic regression
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
+          node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
           node --check scripts/t21-w10b139-original-native-descent-rally.mjs
           node --check scripts/t21-b440-short-native-original-foot.mjs
           node --test scripts/t21-b492-source-height-isolation.test.mjs
           npx vitest run src/app/UndertowF3SourceSessionBoard.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B245SourcePresentation.test.ts src/app/B207SourceCombatRound.test.ts src/app/SourcePlayPortal.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/ai/B180OriginalSourcePaintOpportunity.test.ts src/ai/B216OriginalSourceBackfillInk.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts src/ai/B178OriginalSourceInkResources.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts src/ink/PaintSurface.test.ts src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts src/stage/undertow/UndertowW10B13HumanToCpuSplatRespawn.test.ts
-      # One genuine SOURCE 720tick #44058508758, no NEW browser.
-      # Test the OLD denied-route and NEW original-Rapier-moving
-      # distinction against the precise saved physical 60Hz RAW.
-      - name: Verify B452 B454 moving versus old denial classifiers (offline)
-        if: ${{ contains(github.event.head_commit.message, '[p0-verify-mobile-b452]') }}
-        run: |
-          node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
-      - name: Read immutable original 720tick B2 B4 mobile source RAW
-        if: ${{ contains(github.event.head_commit.message, '[p0-verify-mobile-b452]') }}
-        uses: actions/download-artifact@v4
-        with:
-          name: b441-true-native-source-frontline-short
-          run-id: 44058508758
-          github-token: ${{ github.token }}
-          path: /tmp/t21-v28-mobile-b452
-      - name: Validate real B452 and B454 without new Chromium
-        if: ${{ contains(github.event.head_commit.message, '[p0-verify-mobile-b452]') }}
-        run: |
-          node scripts/t21-b452-native-foot-vs-recast-audit.mjs /tmp/t21-v28-mobile-b452/b440-short-real-original-human-foot.json
-          node scripts/t21-b454-real-native-full-rate-source-foot.mjs /tmp/t21-v28-mobile-b452
-          node -e "const fs=require('node:fs'),p='/tmp/t21-v28-mobile-b452/';const a=JSON.parse(fs.readFileSync(p+'b452-real-foot-vs-original-recast.json'));const b=JSON.parse(fs.readFileSync(p+'b454-independent-real-original-60hz-foot.json'));if(a.schema!=='B452_REAL_MOVING_SOURCE_FOOT_NO_DRY_DENIAL_V2'||b.mobileOriginalSourceMode!==true||b.dryDenialMode!==false)process.exit(1);for(const id of ['B2','B4']){if(a.B2B4[id].rejectedRecastSamples!==0||a.B2B4[id].realFullRatePhysicalFootTicks!==732||b.B2B4[id].originalRapierRegisteredSamples!==732||b.B2B4[id].witnessedNativeXZPolylineMeters<20)process.exit(1)}if(a.unrestricted4v4Certified!==false||b.unrestricted4v4Certified!==false)process.exit(1);console.log('B452_B454_REAL_B2_B4_MOBILE_SOURCE_FOOT_ONLY_PASS_NO_4V4')"
       # B493 pinned RAW only. No Chromium or source gameplay simulation.
       - name: Download immutable original B2 B4 60Hz Chromium foot ledger
         if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') }}
