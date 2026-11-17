@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {b480FocusedSourcePracticeCss,b245PlayerSightlineCss} from './B245SourcePresentation';
+import {b476OriginalFrontlineObjectiveLayout} from './B476OriginalFrontlineObjectiveLayout';
 
 describe('B480 restore REAL B441 practice only, no source authority change',()=>{
  const genuine='?t21Play=preview&t21QaDrive=source&'+
@@ -15,6 +16,30 @@ describe('B480 restore REAL B441 practice only, no source authority change',()=>
   expect(css).toContain('#t21-f3-b245-view-toggle');
   expect(css).toContain('bottom:200px!important');
   expect(css).not.toContain('source-score');
+ });
+ it('Issue #11: SOURCE STAGING B25 start and F8 never share left dock in PLAYER',()=>{
+  const realReady=b476OriginalFrontlineObjectiveLayout({
+   selected:true,originalStage:[25,17,26,0],
+   nativeTick:0,matchState:'STAGING',paused:true,
+   pointerLocked:false,practiceStatus:'IDLE',stopReason:null
+  });
+  expect(realReady).toMatchObject({location:'BOTTOM_LEFT',
+   compact:false,phase:'READY',userReadOnly:true});
+  const css=b480FocusedSourcePracticeCss(genuine);
+  const f8Selector='#ui-root[data-t21-b245-presentation="PLAYER"] '+
+   '#t21-f3-b245-view-toggle';
+  expect(css).toContain(f8Selector);
+  const f8Rule=css.slice(css.indexOf(f8Selector)+f8Selector.length);
+  expect(f8Rule).toMatch(/^ \{left:auto!important;right:14px!important;bottom:200px!important;\}/);
+  // A PLAYING-only F8 dock could never protect the genuine STAGING click.
+  expect(css).not.toContain(
+   '[data-t21-b338-phase="PLAYING"] #t21-f3-b245-view-toggle');
+  expect(f8Rule).not.toContain('display:none');
+  expect(f8Rule).not.toContain('pointer-events:none');
+  expect(f8Rule).not.toContain('data-t21-b245-presentation="QA"');
+  // The original live compact B25 progress rule remains PLAYING-only.
+  expect(css).toContain(
+   '[data-t21-b338-phase="PLAYING"] #t21-f3-b25-paint-run');
  });
  it('leaves all other native SOURCE, A1, QA and production hidden',()=>{
   for(const [key,value] of [

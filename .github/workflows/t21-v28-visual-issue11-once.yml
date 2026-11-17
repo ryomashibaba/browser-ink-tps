@@ -1,0 +1,48 @@
+name: T21 V28 Visual - Issue 11 one genuine Chromium start-hit diagnosis
+
+on:
+  push:
+    branches:
+      - research/t21-v28-visual-20261117
+    paths:
+      - '.github/workflows/t21-v28-visual-issue11-once.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  actual-native-start-hit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check issue 11 test runner syntax
+        run: node --check scripts/t21-b440-short-native-original-foot.mjs
+      - name: Install existing pinned project dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: SOURCE READY and scoped presentation regression
+        run: npx vitest run src/app/B480FocusedSourcePracticeCss.test.ts src/app/B245SourcePresentation.test.ts src/app/B476OriginalFrontlineObjectiveLayout.test.ts
+      - name: Typecheck and build exact source bundle
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: One genuine Chromium B25 source start with read-only center hit evidence
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B441_NATIVE_OBSERVE_TICKS: '240'
+          T21_V28_ISSUE11_DOM_AUDIT: '1'
+          T21_B440_OUT: /tmp/t21-v28-visual-issue11
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Preserve RAW read-only hit stack and true input evidence even on HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-v28-visual-issue11-real-chromium-once
+          path: /tmp/t21-v28-visual-issue11/
+          if-no-files-found: warn
+          retention-days: 14
