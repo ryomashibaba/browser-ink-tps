@@ -2150,8 +2150,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // retry could never expand their ink coverage beyond the initial
    // two goals. Admit a NEW audit scheduler only after a proven B443
    // 120-tick physical dwell on the registered right-low B solid.
-   const initialBFrontDwell=b468MayReauditInitiallyApprovedOriginalBGoal(
-    this.stage,{
+   const initialBFrontDwell=(id==='B2'||id==='B4')&&
+    b468MayReauditInitiallyApprovedOriginalBGoal(this.stage,{
      id,nativeTick:this.b137NativeTick,
      approvedOriginalGoals:fronts.length,
      initialStrictOriginalGoals:gate?.strictlyApprovedGoals??0,
