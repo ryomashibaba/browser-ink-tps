@@ -20,6 +20,7 @@ import {b490ValidateSamePoseFrames,b490LocalComparisonHtml} from './t21-f3l-same
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,isAbsolute,sep,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
+import {t21QaAuditK2LiveWindow} from './t21-v28-qa-k2-source-window.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -3606,9 +3607,25 @@ async function main(){
      cpuImpactChangedCells:n.cpuImpactInkCellsChanged};
   };
   const k2First=k2Read(after),k2Last=k2Read(actual);
-  if(k2Last.tick<=k2First.tick||k2Last.tick-k2First.tick<600||
-     await origin()!==proof.browserOrigin)
-    fail('K2_NOT_SAME_LIVE_NATIVE_OBSERVATION_WINDOW');
+  // Issue #18: preserve BOTH actual native K2 endpoints and browser
+  // timeOrigin before any fail. A deliberately short 240-tick SOURCE
+  // smoke cannot satisfy the unchanged >=600-tick K2 evidence gate.
+  // No stage/actor/physics/ink/clock writes or relaxed acceptance.
+  const k2ObservedBrowserOrigin=await origin();
+  const k2Window=t21QaAuditK2LiveWindow({
+   firstTick:k2First.tick,lastTick:k2Last.tick,
+   configuredObservationTicks:nativeFrontObservationTicks,
+   expectedBrowserOrigin:proof.browserOrigin,
+   observedBrowserOrigin:k2ObservedBrowserOrigin
+  });
+  proof.k2WindowProvenance={...k2Window,
+   expectedBrowserOrigin:proof.browserOrigin,
+   observedBrowserOrigin:k2ObservedBrowserOrigin,
+   unchangedSource:'25/17/26/0',actualClockWrites:0,
+   cpuImpactClaimsFromWindow:0};
+  save();
+  if(!k2Window.eligibleForK2Counters)
+   fail('ISSUE18_'+k2Window.reasons.join('__'));
   const k2Actors=Object.fromEntries(k2Ids.map(id=>{
     const initial=k2First.byActor[id],final=k2Last.byActor[id];
     const delta=Object.fromEntries(Object.keys(initial).map(k=>

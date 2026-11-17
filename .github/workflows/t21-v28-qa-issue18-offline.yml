@@ -1,0 +1,30 @@
+name: T21 V28 QA Issue18 K2 provenance offline
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-k2-issue18-20261117
+    paths:
+      - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - 'scripts/t21-v28-qa-k2-source-window.mjs'
+      - 'scripts/t21-v28-qa-k2-source-window.test.mjs'
+      - '.github/workflows/t21-v28-qa-issue18-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  k2-provenance-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check the unchanged real SOURCE runner syntax and independent QA helper
+        run: |
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --check scripts/t21-v28-qa-k2-source-window.mjs
+      - name: Run independent 600-tick K2 provenance regression (NO CHROMIUM)
+        run: node --test scripts/t21-v28-qa-k2-source-window.test.mjs
