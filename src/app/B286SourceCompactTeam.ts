@@ -39,6 +39,25 @@ export function b286CompactNativeRoster(v:NativeRoster|null){
  };
 }
 
+/**
+ * A native B211 ACTIVE roster proves life/rejoin state, not locomotion,
+ * a verified original cross-team Recast route, or any actual HP hit.
+ * Genuine QA found supported B2/B4 almost static for >8s, while all
+ * seven actors were alive. Preserve every true rejoin/splat detail and
+ * clarify only the full 7/7 live B475 PLAYER summary.
+ * No CPU/path/health writes, extra sampling or synthetic state.
+ */
+export function b286FrontlinePlayerRosterDetail(
+ view:ReturnType<typeof b286CompactNativeRoster>,
+ frontlinePlayer:boolean
+):string|null{
+ if(!view)return null;
+ if(!frontlinePlayer||view.phase!=='PLAYING'||
+    view.allyActive!==3||view.enemyActive!==4||
+    view.notJoined!==0||view.splatted!==0)return view.detail;
+ return 'CPU ACTIVE · ROUTE / CONTACT NOT VERIFIED';
+}
+
 /** B482: in genuine B441 PLAYER study, the B464 frontline occupies the
  * lower-right. Put the existing real B286 7-CPU team status at upper-left
  * where the genuine original 1600x900 screenshot shows free view space.
@@ -91,7 +110,12 @@ export function createB286CompactSourceTeam(ui:HTMLElement){
   root.hidden=!value;
   if(!value)return;
   if(counts.textContent!==value.counts)counts.textContent=value.counts;
-  if(detail.textContent!==value.detail)detail.textContent=value.detail;
+  // The real B211 roster is a life-status snapshot, never evidence
+  // that its ACTIVE 7 CPUs have a cross-team path or can shoot a HUMAN.
+  const playerFrontline=placement==='TOP_LEFT'&&
+   ui.dataset.t21B245Presentation==='PLAYER';
+  const shownDetail=b286FrontlinePlayerRosterDetail(value,playerFrontline);
+  if(detail.textContent!==shownDetail)detail.textContent=shownDetail;
   root.dataset.nativeTick=String(value.tick);
   root.dataset.allyActive=String(value.allyActive);
   root.dataset.enemyActive=String(value.enemyActive);

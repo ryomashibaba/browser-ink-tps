@@ -2,6 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {shouldRefreshStalledOriginalSourceCrowd as should,
  SOURCE_CROWD_STALL_SECONDS,SOURCE_CROWD_BLOCK_QUIET_TICKS,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS,
+ SOURCE_COMMITTED_WEAPON_STEERING_GRACE_SECONDS,
+ deferSourceCrowdSteeringForCommittedWeapon,
  type CpuSourceCrowdStallEvidence} from './CpuSourceCrowdStallRecovery';
 const live:CpuSourceCrowdStallEvidence={
  actualFoot:{x:1,y:3,z:1},admittedGoal:{x:8,y:3,z:1},
@@ -10,7 +12,7 @@ const live:CpuSourceCrowdStallEvidence={
  currentSourceTick:600,lastPhysicalBlockTick:null
 };
 describe('T21 V28 real-foot stalled SOURCE Crowd proxy bounded refresh',()=>{
- it('only considers five seconds of actual stationary with distant authorized goal',()=>{
+ it('detects 1.2-second physical stationary SOURCE steering safely with distant authorized goal',()=>{
   expect(SOURCE_CROWD_STALL_SECONDS).toBe(1.2);
   expect(should(live)).toBe(true);
   // The existing QA warning remains five seconds. This SOURCE-only
@@ -45,5 +47,24 @@ describe('T21 V28 real-foot stalled SOURCE Crowd proxy bounded refresh',()=>{
   expect(should({...live,stationarySeconds:NaN})).toBe(false);
   expect(should({...live,currentSourceTick:NaN})).toBe(false);
   expect(should({...live,lastPhysicalBlockTick:-1})).toBe(false);
+ });
+});
+
+describe('SOURCE native charged-weapon idle: steering-only unlock',()=>{
+ it('preserves short-lived actual charge/burst/guard and old one-per-life gate',()=>{
+  expect(SOURCE_COMMITTED_WEAPON_STEERING_GRACE_SECONDS).toBe(5);
+  for(const s of [0,1.2,4.999])
+   expect(deferSourceCrowdSteeringForCommittedWeapon(true,s)).toBe(true);
+  expect(deferSourceCrowdSteeringForCommittedWeapon(true,NaN)).toBe(true);
+  expect(should({...live,alreadyRefreshedThisLife:true})).toBe(false);
+ });
+ it('after five true stationary seconds allows ONLY the subsequent strict physical/native route audit',()=>{
+  expect(deferSourceCrowdSteeringForCommittedWeapon(true,5)).toBe(false);
+  expect(deferSourceCrowdSteeringForCommittedWeapon(true,9.62)).toBe(false);
+  expect(deferSourceCrowdSteeringForCommittedWeapon(false,0)).toBe(false);
+  expect(should({...live,stationarySeconds:9.62,
+   lastPhysicalBlockTick:590,currentSourceTick:600})).toBe(false);
+  expect(should({...live,stationarySeconds:9.62,
+   lastPhysicalBlockTick:null,currentSourceTick:600})).toBe(true);
  });
 });

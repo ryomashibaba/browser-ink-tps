@@ -7,7 +7,7 @@ import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
  b245RealFrontlineLiveHudDockCss,b245RealFrontlineCombatReadabilityCss,
- b245RealFrontlineAimAndRejoinCss,
+ b245RealFrontlineAimAndRejoinCss,b245RealFrontlineSourceProgressCss,
  b480FocusedSourcePracticeCss,
  b245NativeStopReason,
  b245LocalSourceBuildProvenance,
@@ -241,6 +241,49 @@ describe('Issue #17 SOURCE lot 3: actual aim-sightline and native rejoin truth',
    const params=new URLSearchParams(real);params.set(k,v);
    expect(b245RealFrontlineAimAndRejoinCss('?'+params)).toBe('');
   }
+  expect(b480FocusedSourcePracticeCss(real))
+   .toContain('right:14px!important;bottom:200px!important');
+ });
+});
+
+describe('Issue #17 lot4 native B464 actual goal progress unclipped in real PLAYER',()=>{
+ const real='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B112=humanGround&t21W10B183=firstDropPlay&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline';
+ it('exposes the existing real B441 request/arrival/hold lines at roomy viewports',()=>{
+  const css=b245RealFrontlineSourceProgressCss(real);
+  expect(css).toContain('@media(min-width:1100px) and (min-height:680px)');
+  expect(css).toContain('[data-t21-b245-presentation="PLAYER"]');
+  expect(css).toContain('[data-t21-b338-phase="PLAYING"]');
+  expect(css).toContain(':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])');
+  expect(css).toContain('#t21-f3-b464-real-cpu-frontline');
+  expect(css).toContain('height:auto!important');
+  expect(css).toContain('max-height:82px!important');
+  expect(css).toContain('white-space:pre-line!important');
+  expect(css).toContain('width:min(340px');
+  expect(css).not.toContain('source-aim-line');
+  expect(css).not.toContain('CPU HIT');
+  expect(css).not.toContain('scoreable:1');
+  expect(css).not.toMatch(/pointer-events\s*:/);
+  expect(css).not.toMatch(/z-index\s*:/);
+  expect(css).not.toMatch(/display\s*:\s*block/);
+ });
+ it('retains READY B25, QA B484 and all non-source modes unmodified',()=>{
+  for(const [k,v] of [
+   ['t21W10B441','off'],['t21W10B192','none'],
+   ['t21W10B203','off'],['t21QaInput','deterministic'],
+   ['t21W10B384','loadoutCircuit'],['t21W10B193','allyCoop'],
+   ['t21Play','production'],['t21QaDrive','lab'],
+   ['production','1'],['scoreable','true'],['t21Presentation','qa']
+  ] as const){
+   const q=new URLSearchParams(real);q.set(k,v);
+   expect(b245RealFrontlineSourceProgressCss('?'+q)).toBe('');
+  }
+  const css=b245RealFrontlineSourceProgressCss(real);
+  expect(css).not.toContain('#t21-f3-b25-start');
+  expect(css).not.toContain('#t21-f3-b245-view-toggle');
+  expect(css).not.toContain('B484');
   expect(b480FocusedSourcePracticeCss(real))
    .toContain('right:14px!important;bottom:200px!important');
  });

@@ -78,15 +78,20 @@ export function b464RealSourceFrontlineView(input:unknown):B464FrontlineView|nul
   source:'25/17/26/0',cpuCount:7,
   originalOpponentRoutesCertified:0,originalOfficialScoreable:0,
   officialWinner:'NONE',productionAuthorized:false,
+  // Put the actionable native difference (REQUESTED vs ARRIVED) and
+  // source-only route HOLDS first. The genuine B487 0/16 cross-team
+  // query is a separate read-only QA observation, NOT this B441 metric:
+  // never bake a stale or mismatched "0/12" into a live player's HUD.
   lines:'REAL CPU FRONTLINE · '+status+'\n'+
-   'NATIVE GOAL REQUESTS '+count+
-   ' · SAFE CANDIDATES '+p.b441StrictGoalsAvailable+'\n'+
-   'REAL GOAL ARRIVALS '+p.b443FirstActualFrontlineArrivals+
+   'GOAL REQUESTS '+count+
+   ' · REAL ARRIVALS '+p.b443FirstActualFrontlineArrivals+'\n'+
+   'UNSAFE / UNREACHABLE HELD '+p.b441UnsafeOrUnreachableHolds+
+   ' · OPPONENT PATH UNVERIFIED\n'+
+   'SAFE CANDIDATES '+p.b441StrictGoalsAvailable+
    (p.b448A3ResearchEnabled?
     ' · A3 REQUESTS '+p.b448A3RealNativeGoalRequests:
     ' · A3 OPTIONAL B448 OFF')+'\n'+
-   'UNSAFE / UNREACHABLE HELD '+p.b441UnsafeOrUnreachableHolds+'\n'+
-   'REQUEST ≠ ARRIVAL · CROSS-TEAM ROUTES 0/12 · UNSCORED'
+   'REQUEST ≠ ARRIVAL · SOURCE ONLY / UNSCORED'
  };
 }
 /** Opt-in ONLY. Reads the existing world at 1 Hz, never drives it. */

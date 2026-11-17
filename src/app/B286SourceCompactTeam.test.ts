@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {b211RealNativeRoster,type B211NativeInput} from './B211NativeBattleRoster';
-import {b286CompactNativeRoster,b482NativeFrontlineTeamPlacement}
+import {b286CompactNativeRoster,b286FrontlinePlayerRosterDetail,
+ b482NativeFrontlineTeamPlacement}
  from './B286SourceCompactTeam';
 import {sourcePlayFrontlineResearchUrl,sourcePlayPortalDestinations}
  from './SourcePlayPortal';
@@ -71,5 +72,36 @@ describe('B286 source team compact HUD, native read-only roster',()=>{
   const v=b211RealNativeRoster(input())!;
   expect(b286CompactNativeRoster({...v,officialWinner:'TEAM_A'} as unknown as typeof v)).toBeNull();
   expect(b286CompactNativeRoster({...v,rows:[...v.rows].reverse()})).toBeNull();
+ });
+});
+
+describe('Issue #17 lot4: ACTIVE 7CPU does not certify natural 4v4 encounter',()=>{
+ it('clarifies only 7/7 actual native PLAYING life, not real path/HP hits',()=>{
+  const d=input();d.tick=720;d.matchState='PLAYING';d.paused=false;
+  d.cpu=d.cpu.map(c=>({...c,rejoined:true}));
+  const actual=b286CompactNativeRoster(b211RealNativeRoster(d));
+  expect(actual).not.toBeNull();
+  expect(actual).toMatchObject({allyActive:3,enemyActive:4,notJoined:0,
+   splatted:0,sourceScoreable:0,officialWinner:'NONE'});
+  expect(b286FrontlinePlayerRosterDetail(actual,true))
+   .toBe('CPU ACTIVE · ROUTE / CONTACT NOT VERIFIED');
+  expect(b286FrontlinePlayerRosterDetail(actual,false)).toBe(actual?.detail);
+  expect(b286FrontlinePlayerRosterDetail(null,true)).toBeNull();
+ });
+ it('does not hide original real splat/respawn and staging/rejoin notices',()=>{
+  const d=input();const ready=b286CompactNativeRoster(b211RealNativeRoster(d));
+  expect(b286FrontlinePlayerRosterDetail(ready,true)).toBe(ready?.detail);
+  d.tick=190;d.paused=false;d.matchState='PLAYING';
+  d.cpu=d.cpu.map((x,i)=>({...x,rejoined:true,
+   lifeState:i===5?'SPLATTED' as const:'ACTIVE' as const,
+   hp:i===5?0:100}));
+  const splat=b286CompactNativeRoster(b211RealNativeRoster(d));
+  expect(splat?.detail).toContain('REAL SPLATS 1');
+  expect(b286FrontlinePlayerRosterDetail(splat,true)).toBe(splat?.detail);
+  d.cpu=d.cpu.map((x,i)=>i===5?{...x,lifeState:'ACTIVE' as const,
+   hp:100,rejoined:false}:x);
+  const rejoin=b286CompactNativeRoster(b211RealNativeRoster(d));
+  expect(rejoin?.detail).toContain('REJOINING');
+  expect(b286FrontlinePlayerRosterDetail(rejoin,true)).toBe(rejoin?.detail);
  });
 });

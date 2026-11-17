@@ -95,6 +95,7 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
  it('preserves genuine source splatling charge, paid burst and active guard',()=>{
   for(const situation of ['CHARGE','BURST','GUARD']){
    const {cpu,bot,agent,report}=fixture();
+   report.actors[0].stationarySeconds=1.2;
    bot.weaponChargeSeconds=situation==='CHARGE'?0.8:0;
    bot.weaponBurstShotsRemaining=situation==='BURST'?3:0;
    bot.weaponGuarding=situation==='GUARD';
@@ -102,6 +103,32 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
    expect(agent.teleport).not.toHaveBeenCalled();
    expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
   }
+ });
+ it('after five seconds of TRUE physical idle, committed charge/burst/guard can reacquire ONLY Recast steering',()=>{
+  for(const situation of ['CHARGE','BURST','GUARD'] as const){
+   const {cpu,bot,agent,report}=fixture();
+   bot.weaponChargeSeconds=situation==='CHARGE' ? 0.85 : 0;
+   bot.weaponBurstShotsRemaining=situation==='BURST'?2:0;
+   bot.weaponGuarding=situation==='GUARD';
+   report.actors[0].stationarySeconds=5;
+   cpu.tryRefreshStalledOriginalSourceCrowd(report);
+   expect(agent.teleport).toHaveBeenCalledOnce();
+   expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
+   expect(bot.weaponChargeSeconds).toBe(situation==='CHARGE' ? 0.85 : 0);
+   expect(bot.weaponBurstShotsRemaining).toBe(situation==='BURST'?2:0);
+   expect(bot.weaponGuarding).toBe(situation==='GUARD');
+   cpu.tryRefreshStalledOriginalSourceCrowd(report);
+   expect(agent.teleport).toHaveBeenCalledOnce(); // one per life
+  }
+ });
+ it('never overrides recent real KCC veto even with 9.7s long weapon charge',()=>{
+  const {cpu,bot,agent,report}=fixture();
+  bot.weaponChargeSeconds=.5;
+  report.actors[0].stationarySeconds=9.7;
+  cpu.sourceLastPhysicalBlockedTick.set('B1',599);
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(agent.teleport).not.toHaveBeenCalled();
+  expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
  });
  it('never reseeds a real Rapier-blocked actor even after the QA 5s stall',()=>{
   const {cpu,agent,report}=fixture();

@@ -17,6 +17,7 @@ import {shouldReissueOriginalSourceNativeTarget}
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
 import {shouldRefreshStalledOriginalSourceCrowd,
+ deferSourceCrowdSteeringForCommittedWeapon,
  SOURCE_CROWD_STALL_SECONDS,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
@@ -354,6 +355,10 @@ export class CpuAgentSystem {
   // per-tick envelope share this one same-foot, ownerGrid-derived value.
   // No Recast teleport, route, terrain or new ink is ever authorized.
   private readonly b178NativeCpuMovementSpeed=new Map<string,number>();
+  /** Recast speed belongs to the current physical CPU's Crowd AGENT, not
+   * merely its ID: native first-drop/rejoin can replace the agent while
+   * the floor's real ownerGrid speed remains identical. */
+  private readonly b178NativeCpuSpeedAgent=new Map<string,CrowdAgent>();
   private b180OriginalPatchAimEnabled=false;
   // Opt-in source-only real collider visibility, never original route authority.
   private b181OriginalCombatStageRay:
@@ -961,6 +966,7 @@ export class CpuAgentSystem {
     this.b64CandidatesUnowned=0;
     this.b64CandidatesChosen=0;
     this.b178NativeCpuMovementSpeed.clear();
+    this.b178NativeCpuSpeedAgent.clear();
     this.b178OwnNativeTicks=0;
     this.b178EnemyNativeTicks=0;
     this.b178NeutralNativeTicks=0;
@@ -1749,8 +1755,11 @@ export class CpuAgentSystem {
       // weapon actions, NOT evidence of a broken movement goal. Preserve
       // B4's live paid barrage instead of resetting the Crowd proxy
       // while its weapon is deliberately committed.
-      if(bot&&(bot.weaponChargeSeconds>0||
-         bot.weaponBurstShotsRemaining>0||bot.weaponGuarding))continue;
+      if(bot&&deferSourceCrowdSteeringForCommittedWeapon(
+        bot.weaponChargeSeconds>0||
+        bot.weaponBurstShotsRemaining>0||
+        bot.weaponGuarding,
+        actual.stationarySeconds))continue;
       const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
       if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
         actualFoot:bot.position,admittedGoal:goal??null,
@@ -2645,9 +2654,11 @@ export class CpuAgentSystem {
       const speed=relation==='ENEMY'?
         GAME_CONFIG.player.squidEnemyInkSpeedMetersPerSecond:
         GAME_CONFIG.cpu.maxSpeedMetersPerSecond;
-      if(this.b178NativeCpuMovementSpeed.get(bot.id)!==speed){
+      if(this.b178NativeCpuMovementSpeed.get(bot.id)!==speed||
+         this.b178NativeCpuSpeedAgent.get(bot.id)!==bot.agent){
         bot.agent.updateParameters({maxSpeed:speed});
         this.b178NativeCpuMovementSpeed.set(bot.id,speed);
+        this.b178NativeCpuSpeedAgent.set(bot.id,bot.agent);
       }
     }
 
@@ -4662,6 +4673,7 @@ export class CpuAgentSystem {
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
+    this.b178NativeCpuSpeedAgent.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
     // that were queued before a genuine same-tick lethal hit. Keep every
     // surviving teammate's paid real shots/kit actions intact.
@@ -4726,6 +4738,7 @@ export class CpuAgentSystem {
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
+    this.b178NativeCpuSpeedAgent.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
     // CPU fixedUpdate runs all seven actors before traffic.observe.
     // A newborn HIGH-spawn actor cannot inherit the old lower-floor
