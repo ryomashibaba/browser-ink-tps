@@ -120,6 +120,7 @@ on:
       - 'src/ai/OriginalSourceGoalAdmission.test.ts'
       - 'src/subweapon/SubWeaponSystem.ts'
       - 'src/projectile/ProjectileSystem.ts'
+      - 'src/projectile/NativeSourceSpecialBlastAndTtl.test.ts'
       - 'src/projectile/NativeSourceMeleePaintSupport.test.ts'
       - 'src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts'
       - 'src/ai/B178OriginalSourceInkResources.ts'
