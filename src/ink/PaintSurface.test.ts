@@ -2,7 +2,7 @@ import { Vec3 } from 'playcanvas';
 import { describe, expect, it, vi } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
 import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive,
- sourceThrownSubPaintBeforeRegisteredSolid } from './PaintSurface';
+ sourceThrownSubPaintBeforeRegisteredSolid,sourceOriginalBlastPaintLineClear } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
 import {CpuKitSystem} from '../ai/CpuKitSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
@@ -328,6 +328,78 @@ describe('native SOURCE thrown bombs respect exact registered original Rapier ba
     if(kind==='HUMAN')expect(contact.mock.calls[0]![3]).toBe('PAINT_SURFACE_SEGMENT');
     expect((contact.mock.calls[0]![2] as Vec3).z).toBeCloseTo(.54);
    }
+  });
+ }
+});
+
+describe('true SOURCE blast paint obeys original Rapier cover on BOTH kits',()=>{
+ const origin=new Vec3(0,.06,0);
+ const solidId='UndertowT21D:source-floor';
+ const paint=()=>new PaintSurface(solidId+':paint',
+  new Vec3(0,0,0),new Vec3(1,0,0),new Vec3(0,0,1),
+  5,5,1,SurfaceFlags.Paintable|SurfaceFlags.Floor,2);
+ it('allows the exact registered backing within 6cm, not unrelated cover',()=>{
+  const surface=paint(),to=surface.localToWorld(2.5,2.5);
+  const span=origin.distance(to);
+  expect(sourceOriginalBlastPaintLineClear(
+   origin,to,surface,{distance:Math.max(0,span-.04),solidId})).toBe(true);
+  expect(sourceOriginalBlastPaintLineClear(
+   origin,to,surface,{distance:Math.max(0,span-.04),
+    solidId:'UndertowT21D:other-wall'})).toBe(false);
+  expect(sourceOriginalBlastPaintLineClear(
+   origin,to,surface,null)).toBe(true);
+ });
+ for(const kind of ['HUMAN','CPU'] as const){
+  const run=(native:boolean,cover:'NONE'|'OTHER_WALL'|'OWN_BACKING')=>{
+   const surface=paint(),stamps:{surfaceId:string}[]=[];
+   const cast=vi.fn((from:Vec3,to:Vec3)=>{
+    if(cover==='NONE')return null;
+    const span=from.distance(to);
+    return {distance:Math.max(0,span-.04),
+     solidId:cover==='OWN_BACKING'?solidId:'UndertowT21D:other-wall'};
+   });
+   const receiver:any=Object.create(kind==='HUMAN'
+    ?SubWeaponSystem.prototype:CpuKitSystem.prototype);
+   receiver.surfaces=[surface];
+   receiver.physics={castStageSegment:cast};
+   receiver.coordinator={enqueue:(r:{surfaceId:string})=>stamps.push(r)};
+   receiver.currentEnqueuedStampSurfaceIds=null;
+   receiver.nativeSourceHumanSubBodyContactEnabled=kind==='HUMAN'&&native;
+   receiver.nativeOriginalSourceCombatantSubContactEnabled=kind==='CPU'&&native;
+   receiver.stats={cpuSpecialPaintRequestsEnqueued:0};
+   if(kind==='HUMAN'){
+    const f=(SubWeaponSystem.prototype as unknown as {
+     paintExplosion:(this:SubWeaponSystem,team:Team.A|Team.B,
+      center:Vec3,radius:number)=>void
+    }).paintExplosion;
+    f.call(receiver,Team.A,origin,2.25);
+   }else{
+    const f=(CpuKitSystem.prototype as unknown as {
+     paintRadial:(this:CpuKitSystem,actorId:string,
+      team:Team.A|Team.B,center:Vec3,paintRadius:number,
+      ringRadius:number,count:number,type:PaintEventType,
+      gaugeEligible:boolean,ringPaintScale:number,
+      ringPlaneDistance:number)=>void
+    }).paintRadial;
+    f.call(receiver,'B1',Team.B,origin,1.17,1.30,8,
+     PaintEventType.Bomb,false,.78,2.2);
+   }
+   return {stamps,cast};
+  };
+  it(kind+' rejects authentic SOURCE blast rings occluded by DIFFERENT original solid',()=>{
+   const denied=run(true,'OTHER_WALL');
+   expect(denied.cast).toHaveBeenCalledTimes(9);
+   expect(denied.stamps).toHaveLength(0);
+   const own=run(true,'OWN_BACKING');
+   expect(own.stamps).toHaveLength(9);
+   expect(own.cast).toHaveBeenCalledTimes(9);
+  });
+  it(kind+' keeps registered clear paint and frozen T20 stamping unchanged',()=>{
+   const clear=run(true,'NONE');
+   expect(clear.stamps).toHaveLength(9);
+   const historical=run(false,'OTHER_WALL');
+   expect(historical.stamps).toHaveLength(9);
+   expect(historical.cast).not.toHaveBeenCalled();
   });
  }
 });
