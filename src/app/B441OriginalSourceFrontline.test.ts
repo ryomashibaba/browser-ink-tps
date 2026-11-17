@@ -114,6 +114,30 @@ describe('P1 genuine native B2/B4 post-first-goal source expansion scheduler',()
    foot:sample.realFoot,rejoined:true,active:true,grounded:true
   })).toBe(false);
  });
+ it('read-only original B2/B4 720-tick RAW feet qualify only AFTER 120 genuine dwell ticks',()=>{
+  // Independent 60Hz physical Rapier feet from genuine Chromium
+  // #44049705256, not a synthesized new Actor or invented GOAL:
+  // B2 tick 1382 was already within 1.5m of its original approved foot,
+  // B4 tick 1331 likewise. The helper NEVER supplies the route or
+  // Crowd authority; true B443 first-arrival + Rapier/Recast still do.
+  const realNativeRows=[
+   {id:'B2',nativeTick:1502,arrivedSinceTick:1382,
+    realFoot:[-6.091812610626221,4.599999904632568,
+     -38.0681266784668] as const},
+   {id:'B4',nativeTick:1451,arrivedSinceTick:1331,
+    realFoot:[-6.025191307067871,4.599999904632568,
+     -36.2775993347168] as const}
+  ];
+  for(const row of realNativeRows){
+   const observed={...sample,...row,initialStrictOriginalGoals:2,
+    approvedOriginalGoals:2};
+   expect(may(observed)).toBe(true);
+   expect(may({...observed,
+    nativeTick:row.arrivedSinceTick+119})).toBe(false);
+   expect(may({...observed,
+    actualOriginalSolidId:'UndertowT21D:FAKE_RAMP'})).toBe(false);
+  }
+ });
  it('never pre-empts early arrival, unapproved goal, another floor, or rejoin loss',()=>{
   for(const changed of [
    {nativeTick:1769},{arrivedSinceTick:null},
