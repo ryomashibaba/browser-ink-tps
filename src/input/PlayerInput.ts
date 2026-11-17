@@ -36,6 +36,10 @@ export class PlayerInput {
   ) {
     window.addEventListener('keydown', (event) => {
       if (document.pointerLockElement !== this.canvas) return;
+      // SOURCE gameplay must not interpret browser/system modifier shortcuts
+      // as WASD, squid, Space or weapon intent. T20 stays unchanged.
+      if(this.sourceNativeRepeatGuard &&
+         (event.altKey||event.ctrlKey||event.metaKey))return;
       // An OS key repeat after STAGING/blur is not a new physical press.
       // Without this guard, focus recovery can revive unwanted movement.
       if(this.sourceNativeRepeatGuard &&
@@ -206,20 +210,30 @@ export class PlayerInput {
     this.qaAxis = null;
   }
 
+  /** SOURCE live keyboard/mouse authority is valid only while its canvas
+   * actually owns Pointer Lock. Closes the event-order window between native
+   * lock loss and the browser's asynchronous pointerlockchange notification.
+   * Frozen T20 and deterministic QA are unaffected. */
+  public get sourceLiveInputAvailable():boolean{
+    return !this.sourcePrestartBlocked&&
+      (!this.sourceNativeRepeatGuard||
+       document.pointerLockElement===this.canvas);
+  }
+
   public get moveX(): number {
-    if(this.sourcePrestartBlocked)return 0;
+    if(!this.sourceLiveInputAvailable)return 0;
     return this.qaAxis?.x ??
       ((this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0));
   }
 
   public get moveY(): number {
-    if(this.sourcePrestartBlocked)return 0;
+    if(!this.sourceLiveInputAvailable)return 0;
     return this.qaAxis?.y ??
       ((this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0));
   }
 
   public get squidHeld(): boolean {
-    return !this.sourcePrestartBlocked&&
+    return this.sourceLiveInputAvailable&&
      (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
   }
 
@@ -232,48 +246,48 @@ export class PlayerInput {
     this.sourceSquidTapQueued=false;
     return this.squidHeld||
       (!this.deterministicQaEnabled&&this.sourceNativeRepeatGuard&&
-       !this.sourcePrestartBlocked&&tap);
+       this.sourceLiveInputAvailable&&tap);
   }
 
   public get fireHeld(): boolean {
-    return !this.sourcePrestartBlocked&&this.combatInputActive&&this.fire;
+    return this.sourceLiveInputAvailable&&this.combatInputActive&&this.fire;
   }
 
   /** Consume once per physics tick, including short real pointer taps. */
   public consumePrimaryPressed(): boolean {
     const queued = this.primaryPressedQueued;
     this.primaryPressedQueued = false;
-    return queued;
+    return this.sourceLiveInputAvailable&&queued;
   }
 
   public get secondaryHeld(): boolean {
-    return !this.sourcePrestartBlocked&&this.combatInputActive&&this.secondary;
+    return this.sourceLiveInputAvailable&&this.combatInputActive&&this.secondary;
   }
 
   public consumeSecondaryPressed(): boolean {
     const queued = this.secondaryPressedQueued;
     this.secondaryPressedQueued = false;
-    return queued;
+    return this.sourceLiveInputAvailable&&queued;
   }
 
   public consumeSubPressed(): boolean {
     const queued = this.subPressedQueued;
     this.subPressedQueued = false;
-    return queued;
+    return this.sourceLiveInputAvailable&&queued;
   }
 
   public consumeSpecialPressed(): boolean {
     const queued = this.specialPressedQueued;
     this.specialPressedQueued = false;
-    return queued;
+    return this.sourceLiveInputAvailable&&queued;
   }
 
   public get jumpHeld(): boolean {
-    return !this.sourcePrestartBlocked&&this.keys.has('Space');
+    return this.sourceLiveInputAvailable&&this.keys.has('Space');
   }
 
   public consumeJump(): boolean {
-    if(this.sourcePrestartBlocked){this.jumpQueued=false;return false;}
+    if(!this.sourceLiveInputAvailable){this.jumpQueued=false;return false;}
     const queued = this.jumpQueued;
     this.jumpQueued = false;
     return queued;
