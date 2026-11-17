@@ -66,7 +66,12 @@ function harness(storage?:{
    handler({deltaY,preventDefault:()=>{prevented=true;}});
   return prevented;
  };
- return {camera,key,mouse,pointerLock,documentStub,elements,canvas,wheel};
+ const pointerDown=(button:number)=>{
+  for(const handler of canvasListeners.get('pointerdown')??[])
+   handler({button,altKey:false,clientX:0,clientY:0,
+    preventDefault:()=>{}});
+ };
+ return {camera,key,mouse,pointerLock,pointerDown,documentStub,elements,canvas,wheel};
 }
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -157,6 +162,50 @@ describe('Issue #19 real SOURCE camera recapture input quality',()=>{
     expect(h.camera.sourcePracticeViewSnapshot().zoomMeters)
       .toBeCloseTo(first*Math.exp(.24),6);
   });
+});
+
+describe('Issue #19 lot2 SOURCE pointer-lock browser compatibility',()=>{
+ it('reacquires camera lock even if the browser returns void instead of Promise',()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  const request=vi.fn(()=>undefined);
+  Object.defineProperty(h.canvas,'requestPointerLock',{value:request});
+  expect(()=>h.pointerDown(0)).not.toThrow();
+  expect(request).toHaveBeenCalledOnce();
+  h.pointerDown(2);
+  expect(request).toHaveBeenCalledOnce(); // right button never captures
+ });
+ it('rejected native lock explains why mouse-look is unavailable',async()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  const request=vi.fn(()=>Promise.reject(new Error('lock denied')));
+  Object.defineProperty(h.canvas,'requestPointerLock',{value:request});
+  h.pointerDown(0);
+  await Promise.resolve();
+  expect(request).toHaveBeenCalledOnce();
+  expect(h.elements.at(-1)?.textContent).toContain('MOUSE LOCK NOT GRANTED');
+  expect(h.elements.at(-1)?.hidden).toBe(false);
+ });
+ it('camera reacquires after a policy denial without resetting sensitivity',async()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  expect(h.key('BracketRight')).toBe(true);
+  h.documentStub.pointerLockElement=null;
+  const request=vi.fn()
+   .mockRejectedValueOnce(new Error('denied'))
+   .mockResolvedValueOnce(undefined);
+  Object.defineProperty(h.canvas,'requestPointerLock',{value:request});
+  h.pointerDown(0);
+  await Promise.resolve();
+  h.pointerDown(0);
+  await Promise.resolve();
+  h.documentStub.pointerLockElement=h.canvas;
+  h.pointerLock();
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(h.camera.sourcePracticeViewSnapshot()).toMatchObject({
+   sourceAimSensitivityMultiplier:1.25,sourcePhysicsModified:false,
+   sourceNavigationModified:false
+  });
+ });
 });
 
 describe('SOURCE gameplay wheel focus recovery',()=>{
