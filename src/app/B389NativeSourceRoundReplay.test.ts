@@ -75,7 +75,7 @@ describe('T21 V28 native SOURCE circuit replay lifecycle',()=>{
   for(const extra of [
    ['production','1'],['scoreable','1'],
    ['t21QaInput','deterministic'],
-   ['t21W10B389',WEAPON_ORDER[2]],
+   ['t21W10B389',WEAPON_ORDER[2]!],
    ['t21W10B441','sourceFrontline']
   ] as const){
    const mutated=new URL(selected);

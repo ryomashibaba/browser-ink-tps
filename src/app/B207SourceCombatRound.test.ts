@@ -44,7 +44,7 @@ describe('B207 real native 180s combat world selection',()=>{
   expect(()=>b207CombatRoundUrl('javascript:alert(1)')).toThrow('B207_INVALID_NAVIGATION_ORIGIN');
  });
  it('normalizes real index.html game entry so 180s TIME_UP has a working next match',()=>{
-  for(const id of [DEFAULT_WEAPON_ID,WEAPON_ORDER[3]]){
+  for(const id of [DEFAULT_WEAPON_ID,WEAPON_ORDER[3]!]){
    const u=new URL(b207CombatRoundUrl(
     'https://example.org/browser-ink-tps/index.html?oldQa=1#legacy',id));
    expect(u.pathname).toBe('/browser-ink-tps/');
