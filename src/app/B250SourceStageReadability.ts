@@ -149,6 +149,13 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  const originalAmbient=app.scene.ambientLight.clone();
  const originalClear=camera.camera.clearColor.clone();
  const bindings:{mesh:MeshInstance;before:Material;after:StandardMaterial}[]=[];
+ // Glass's 8 optical-only faces per side must disappear completely when
+ // the original-render A/B view is selected. Merely reverting materials
+ // leaves the split (and its ghost) on screen, which misrepresents the
+ // historical unmodified preview. Keep exact original MeshInstances.
+ const glassBindings:{
+  entity:Entity;original:MeshInstance[];split:MeshInstance[];
+ }[]=[];
  // The opaque ink shader draws over the registered floor's StandardMaterial:
  // tinting ONLY that underneath material cannot improve SOURCE walkability
  // readability. Recolor the existing exact PaintSurface shaders instead.
@@ -194,7 +201,9 @@ export function installB250SourceView(app:AppBase,camera:Entity,
     b250ExactSourceMesh(app,glass.registered),originals[0]!.material);
    const ghost=new MeshInstance(
     b250ExactSourceMesh(app,glass.opticalOnly),b250OpticalOnlyMaterial());
-   entity.render!.meshInstances=[registered,ghost];
+   const split=[registered,ghost];
+   glassBindings.push({entity,original:[...originals],split});
+   entity.render!.meshInstances=split;
    excludedOptical.add(ghost);
    glassRegisteredCollisionTriangles+=glass.registered.indices.length/3;
    glassExcludedOpticalTriangles+=glass.opticalOnly.indices.length/3;
@@ -218,6 +227,10 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  let enabled=false;
  const setEnabled=(on:boolean)=>{
   enabled=on;
+  // Restore the original unsplit render buffers when comparing A/B.
+  // Never alter the immutable StageDefinition, Rapier or Navigation roles.
+  for(const glass of glassBindings)
+   glass.entity.render!.meshInstances=on?glass.split:glass.original;
   for(const b of bindings)b.mesh.material=on?b.after:b.before;
   for(const surface of sourcePaintMeshes)
    surface.mesh.material.setParameter('uNeutralColor',
