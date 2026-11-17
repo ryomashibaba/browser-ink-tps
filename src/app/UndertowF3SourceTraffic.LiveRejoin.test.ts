@@ -1,4 +1,8 @@
 import {describe,expect,it} from 'vitest';
+import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics';
+import {initializeRecastNavigation,RecastStageNavigation}
+ from '../navigation/RecastStageNavigation';
+import {PerformanceStats} from '../core/PerformanceStats';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {undertowT21dConnectivityQaStage}
@@ -1126,4 +1130,88 @@ it('B3 genuine 90s stalled ORIGINAL ramp retains rejection evidence across small
  expect(source.realKccRejectedSteps.get('B3')).toBe(1);
  expect(source.realKccBTeamRecoveryAnchor.get('B3')?.equals(progressed))
   .toBe(true);
+});
+
+
+/** Genuine B450 Chromium #43140584988 rejected ORIGINAL goals only.
+ * This is a read-only SOURCE route-gate regression, NOT a new game goal
+ * source, new route, full-sized KCC, HP event or cross-team permission.
+ * Each integer lattice coordinate represents one of the same pinned 30
+ * original B2/B4 goals (base X/Z plus exact 1.4m SOURCE spacing).
+ */
+it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-face correction',async()=>{
+ await Promise.all([initializeRapier(),initializeRecastNavigation()]);
+ const stage=undertowT21dConnectivityQaStage();
+ expect([stage.solids.length,stage.paintSurfaces.length,
+  stage.navigationLinks?.length]).toEqual([25,17,26]);
+ const physics=new RapierStagePhysics(1/60,stage);
+ physics.step();
+ const nav=new RecastStageNavigation(stage,new PerformanceStats());
+ const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+ Object.assign(traffic,{stage,physics,nav,enableB441SourceFrontline:true,
+  nativeRouteChecks:0,nativeRouteRayProbes:0,sourceEndpointProbes:0});
+ // 30 exact historical goal lattice cells from the genuine first denied
+ // set, with NO newly authored game goal or stage/actor mutation.
+ const pinnedLattice:readonly (readonly [number,number])[]=[
+  [0,0],[2,0],[1,2],[-4,4],[-2,4],[0,4],
+  [-13,5],[-8,5],[-6,5],[-15,6],[-11,6],[-4,6],
+  [-2,6],[0,6],[-13,7],[-9,7],[-7,7],[-16,8],
+  [-11,8],[-5,8],[-3,8],[-1,8],[-14,9],[-9,9],
+  [-7,9],[-12,10],[-5,10],[-3,10],[-15,11],[-10,11]
+ ];
+ const historicalFeet={
+  B2:new Vec3(2.7247390747070312,3.0999999046325684,
+   -53.8424186706543),
+  B4:new Vec3(0.8728739619255066,3.0999999046325684,
+   -52.796791076660156)
+ };
+ const actorReports:Record<string,unknown>={};
+ let totalAlreadyRejected=0,totalPostFixApproved=0;
+ for(const [id,foot] of Object.entries(historicalFeet)){
+  let reached=0,fullRouteApproved=0,endpointsSafe=0;
+  const admitted: number[]=[];
+  const stillHeld: Array<{candidate:number;cause:string;pathPoints:number}>=[];
+  for(let k=0;k<pinnedLattice.length;k++){
+   const [col,row]=pinnedLattice[k]!;
+   const goal=new Vec3(-6.185263365007792+1.4*col,
+    4.502,-37.32132381225935-1.4*row);
+   const route=nav.auditPath(foot,goal);
+   if(route.reachedTarget)reached++;
+   const endpointSafe=route.reachedTarget&&
+    route.startSnapDistanceMeters<=.20&&
+    route.endSnapDistanceMeters<=.20&&route.pointCount>0;
+   if(endpointSafe)endpointsSafe++;
+   const pathApproved=endpointSafe&&
+    traffic.hasSourceSupportedRoute(route,-1,foot,false,false);
+   if(pathApproved){fullRouteApproved++;admitted.push(k);}
+   else stillHeld.push({candidate:k,cause:!route.reachedTarget?
+    'NATIVE_UNREACHED':!endpointSafe?'NATIVE_ENDPOINT_SNAP':
+    'ORIGINAL_RAPIER_RECAST_INTERMEDIATE_HOLD',
+    pathPoints:route.pointCount});
+  }
+  // These were ALL rejected in the pinned original 60Hz Chromium
+  // session. The new calculation does not replay motion or alter it.
+  totalAlreadyRejected+=30;
+  totalPostFixApproved+=fullRouteApproved;
+  actorReports[id]={historicalRejectedGoals:30,reached,
+   endpointsSafe,postFixOriginalFullPathGateApprovals:fullRouteApproved,
+   approvedHistoricalCandidateIndices:admitted,
+   stillHeldCount:stillHeld.length,firstHeld:stillHeld.slice(0,6)};
+  expect(reached).toBe(30);
+  expect(endpointsSafe).toBe(30);
+ }
+ console.log('T21_V28_PINNED_B450_LIVE_ROUTE_RECHECK',JSON.stringify({
+  schema:'PINNED_B450_NATIVE_ROUTE_GATE_POST_STAGE_FACE_FIX_V1',
+  actorReports,historicalRejectedRoutes:totalAlreadyRejected,
+  currentGateApprovedRoutes:totalPostFixApproved,
+  currentGateHeldRoutes:60-totalPostFixApproved,
+  originalSource:'25/17/26/0',crossTeamPathCertified:false,
+  completeCpuSizeKccCertified:false,full4v4Certified:false,
+  originalGeometryOrActorWrites:0
+ }));
+ expect(totalAlreadyRejected).toBe(60);
+ // A valid repair must improve at least a source-certified route, not
+ // merely make the original isolated point look acceptable. Whole-body
+ // KCC and enemy encounters still require one authentic browser trial.
+ expect(totalPostFixApproved).toBeGreaterThan(0);
 });
