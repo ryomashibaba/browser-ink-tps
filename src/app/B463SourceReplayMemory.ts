@@ -1,6 +1,19 @@
 /** B463: short-lived, local-only comparison of authentic SOURCE sessions.
  * These records are never official Turf results or remote QA attestations. */
+import {sourceCanonicalPlayableMode} from './SourcePlayPortal';
+
 export const B463_LOCAL_KEY='t21-f3-last-real-source-round-v1';
+/** Read-only browser SOURCE mode provenance. A local comparison can only
+ * compare the same canonically launched playable mode: co-op/frontline
+ * metrics are NOT interchangeable with combat/circuit performance. */
+export type B463SourceMode='combat'|'circuit'|'coop'|'frontline'|'OTHER_SOURCE';
+const B463_SOURCE_MODES:readonly B463SourceMode[]=[
+ 'combat','circuit','coop','frontline','OTHER_SOURCE'
+];
+const b463SourceMode=(sourceHref:string):B463SourceMode=>{
+ try{return sourceCanonicalPlayableMode(sourceHref)??'OTHER_SOURCE';}
+ catch{return 'OTHER_SOURCE';}
+};
 export interface B463RoundView {
  finished:boolean;timeRemainingSeconds:number;
  cpuPhysicallyRejoined:number;
@@ -13,6 +26,9 @@ export interface B463RoundView {
 export interface B463RoundRecord {
  schema:'B463_LOCAL_SOURCE_ROUND_V1';source:'25/17/26/0';
  worldOrigin:number;realNativeTick:number;
+ /** Optional only for old V1 sessionStorage records written before
+  * browser SOURCE mode provenance was recorded. */
+ sourceMode?:B463SourceMode;
  humanShots:number;humanOriginalInkCells:number;
  cpuSourceShots:number;cpuOriginalInkCells:number;
  humanSplats:number;humanRespawns:number;
@@ -32,7 +48,8 @@ function coherentHumanLife(
   splats-returns<=1&&returns<=Math.floor(nativeTick/150);
 }
 export function b463FromRealTimeUp(
- v:B463RoundView,realNativeTick:number,worldOrigin:number
+ v:B463RoundView,realNativeTick:number,worldOrigin:number,
+ sourceHref?:string
 ):B463RoundRecord|null{
  if(v.finished!==true||v.timeRemainingSeconds!==0||
     v.officialScoreableSurfaces!==0||v.officialWinner!=='NONE'||
@@ -44,8 +61,10 @@ export function b463FromRealTimeUp(
     !coherentHumanLife(v.actualHumanSplats,
       v.actualHumanRespawns,realNativeTick))
   return null;
+ const href=sourceHref??(typeof window==='undefined'?'':window.location.href);
  return {schema:'B463_LOCAL_SOURCE_ROUND_V1',
   source:'25/17/26/0',worldOrigin,realNativeTick,
+  sourceMode:b463SourceMode(href),
   humanShots:v.genuineHumanShots,
   humanOriginalInkCells:v.realHumanImpactInkCells,
   cpuSourceShots:v.actualCpuSourceShots,
@@ -66,6 +85,8 @@ export function b463ReadPreviousSourceRound(
      x.source!=='25/17/26/0'||x.cpuRejoined!==7||
      x.officialScoreable!==0||x.officialWinner!=='NONE'||
      x.localBrowserRecordOnly!==true||x.formal4v4Certified!==false||
+     (x.sourceMode!==undefined&&
+      !B463_SOURCE_MODES.includes(x.sourceMode as B463SourceMode))||
      typeof x.worldOrigin!=='number'||
      !Number.isFinite(x.worldOrigin)||x.worldOrigin<=0||
      x.worldOrigin>=currentWorldOrigin||
@@ -80,8 +101,22 @@ export function b463ReadPreviousSourceRound(
 export function b463FormatSourceRoundComparison(
  previous:B463RoundRecord,current:B463RoundRecord
 ):string{
+ // A previous tab-local record may predate mode provenance, or the
+ // player may have selected a different genuine SOURCE mode at READY.
+ // Cross-mode shot/ink/splat differences are not a valid comparison.
+ // Do not discard either round, infer an opponent route or award a win.
+ const currentMode=current.sourceMode??'UNKNOWN';
+ const previousMode=previous.sourceMode??'UNKNOWN';
+ if(currentMode==='UNKNOWN'||previousMode==='UNKNOWN'||
+    currentMode==='OTHER_SOURCE'||previousMode==='OTHER_SOURCE'||
+    currentMode!==previousMode)
+  return 'PREVIOUS LOCAL SOURCE ROUND • NOT AN OFFICIAL SCORE\n'+
+   'PREVIOUS MODE '+previousMode+' / CURRENT MODE '+currentMode+'\n'+
+   'DIRECT PERFORMANCE COMPARISON UNAVAILABLE · MODES MUST MATCH\n'+
+   'LOCAL TAB DATA ONLY · HP CONTACT NOT CERTIFIED · WINNER NONE';
  const delta=(n:number)=>n>0?'+'+n:String(n);
- return 'PREVIOUS LOCAL SOURCE ROUND • NOT AN OFFICIAL SCORE\n'+
+ return 'PREVIOUS LOCAL SOURCE ROUND • '+currentMode+
+  ' • NOT AN OFFICIAL SCORE\n'+
   'HUMAN SHOTS '+previous.humanShots+' → '+current.humanShots+
   ' ('+delta(current.humanShots-previous.humanShots)+')\n'+
   'HUMAN INK CELLS '+previous.humanOriginalInkCells+
