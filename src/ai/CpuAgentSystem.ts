@@ -14,6 +14,8 @@ import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
 import { CpuContinuityMonitor, type CpuContinuityReport } from './CpuContinuityMonitor';
 import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
+import {chooseAuditedOriginalSourceCpuGoal}
+ from './OriginalSourceGoalAdmission';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity,
  b180OriginalSourceUnownedNeighborAim}
@@ -296,6 +298,8 @@ export class CpuAgentSystem {
   /** Read-only QA witness; never touches production T20 behavior. */
   private readonly qaContinuity = new CpuContinuityMonitor();
   private readonly qaMotionGoals = new Map<string, Vec3>();
+  /** Only previously SOURCE-authorized native destinations may be retained. */
+  private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
   private b35OptInNativeRefresh=false;
   private b35RealNativeRequests=0;
   private b35DuplicateNativeRequestsSuppressed=0;
@@ -925,6 +929,7 @@ export class CpuAgentSystem {
   public reset(humanTeam: Team.A | Team.B): void {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
+    this.sourceLastAdmittedRouteGoal.clear();
     this.b35LastNativeTarget.clear();
     this.b35RealNativeRequests=0;
     this.b35DuplicateNativeRequestsSuppressed=0;
@@ -1241,8 +1246,43 @@ export class CpuAgentSystem {
           );
 
         if (!jumpStarted) {
-          const sourceGoal=this.f3dSourceGoals?.chooseSourceGoal(
+          let sourceGoal=this.f3dSourceGoals?.chooseSourceGoal(
             bot.id,bot.position,this.goal)??false;
+          // Original SOURCE only: a closestPoint projection may be on a
+          // disconnected island. A true Recast route from the ACTUAL Rapier
+          // foot is necessary before requesting Crowd movement. Keep the
+          // existing KCC veto as the sole per-step physical authority.
+          if(sourceGoal&&this.phase14qF2RecoverableSteps){
+            // The current SOURCE foot must still have a real registered
+            // static Rapier support; navmesh snapping cannot manufacture a
+            // different original floor. A current-life unrejoined high
+            // spawn alone may use the existing .25m F2 start band.
+            const rejoined=this.f3dSourceGoals
+              ?.isLiveRejoinedSourceCpu?.(bot.id)===true;
+            const firstDrop=this.f3dSourceGoals
+              ?.isLiveRejoinedSourceCpu?.(bot.id)===false;
+            const physical=this.phase14qGroundCollision
+              ?.sourceFootSupport?.(bot.id,bot.position);
+            const maxFootBand=firstDrop ? 0.25 : 0.20;
+            const footSupported=!!physical&&
+              this.stage.solids.some(s=>s.id===physical.solidId)&&
+              Math.abs(physical.point.y-bot.position.y)<=maxFootBand+1e-6;
+            const admitted=footSupported?
+              chooseAuditedOriginalSourceCpuGoal(
+                bot.position,this.goal,
+                rejoined?this.sourceLastAdmittedRouteGoal.get(bot.id)??null:null,
+                (from,to)=>this.navigation.auditPath(
+                  new Vec3(from.x,from.y,from.z),
+                  new Vec3(to.x,to.y,to.z)
+                ),{allowOriginalFirstDropStartSnap:firstDrop}
+              ):null;
+            if(admitted){
+              this.goal.set(admitted.point.x,admitted.point.y,
+                admitted.point.z);
+              if(!admitted.reusedPrevious)
+                this.sourceLastAdmittedRouteGoal.set(bot.id,this.goal.clone());
+            }else sourceGoal=false;
+          }
           if(sourceGoal||!this.f3dSourceGoals){
             if(!sourceGoal)this.director.chooseGoal({
               team: bot.team,
@@ -4491,6 +4531,7 @@ export class CpuAgentSystem {
     this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
+    this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
@@ -4550,6 +4591,7 @@ export class CpuAgentSystem {
     this.selectedSourceEmptyAimStreak.delete(bot.id);
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
+    this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
