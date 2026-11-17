@@ -6,6 +6,7 @@ on:
       - research/t21-v28-player-lot2-b817c7ea-20261117
       - research/t21-v28-player-lot3-5edbc2d0-20261117
       - research/t21-v28-player-lot4-e442edb5-20261117
+      - research/t21-v28-player-lot6-f36efb60-20261117
     paths:
       - 'src/player/PlayerController.ts'
       - 'src/input/PlayerInput.ts'
@@ -33,5 +34,6 @@ jobs:
           node-version: '24'
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run typecheck
+      - run: npm run build
       - name: Only input, player and camera regressions (no browser, no stage writes)
         run: npx vitest run src/player/PlayerController.source-player.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/input/PlayerInput.qa.test.ts
