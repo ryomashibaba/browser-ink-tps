@@ -1,0 +1,22 @@
+name: T21 V28 stage spawn repair lightweight native gate
+on:
+  push:
+    branches: [research/t21-v28-stage-source-spawn-repair-20261117]
+permissions:
+  contents: read
+jobs:
+  stage-spawn-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Compile genuine stage
+        run: npm run typecheck
+      - name: Real Rapier and Recast source spawn gate tests (NO Chromium)
+        run: npx vitest run src/stage/undertow/UndertowPhase14QSourceSpawnPlan.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnRuntimeQa.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnGateIsolation.test.ts
