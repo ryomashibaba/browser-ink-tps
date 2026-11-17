@@ -75,6 +75,10 @@ export class PaintCoordinator {
       const event: PaintEvent = Object.freeze({ ...request, source, tick });
       const result = this.gameplay.apply(event);
       changedCells += result.changedCells;
+      // Existing QA uses the raster observation to distinguish denied
+      // attempts from repaint. Preserve that diagnostic contract; the
+      // actual GPU queue and last-accepted UI telemetry remain gated below.
+      this.onAcceptedPaint?.(event, result.changedCells, result);
       if (event.source === PaintSource.Cpu) {
         // Count authoritative cell ownership transitions, not just ink
         // requests or projected hits. Includes the legitimate CPU foot.
@@ -101,9 +105,8 @@ export class PaintCoordinator {
       // eligible for visual wetness, even when changedCells is zero.
       if (result.rasterEligibleCells > 0) {
         this.gpu.queue(event, result.paintableRuns);
-        // Report only paintable raster contacts to visual feedback and last
-        // accepted impact telemetry. Same-team restamps are still contacts.
-        this.onAcceptedPaint?.(event, result.changedCells, result);
+        // Same-team restamps still refresh visual wetness, but denied
+        // requests must not masquerade as the last valid paint impact.
         this.lastEvent = event;
         const surface = this.gameplay.getSurface(event.surfaceId);
         if (surface) {
