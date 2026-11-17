@@ -55,6 +55,7 @@ export function b463ReadPreviousSourceRound(
      x.source!=='25/17/26/0'||x.cpuRejoined!==7||
      x.officialScoreable!==0||x.officialWinner!=='NONE'||
      x.localBrowserRecordOnly!==true||x.formal4v4Certified!==false||
+     typeof x.worldOrigin!=='number'||
      !Number.isFinite(x.worldOrigin)||x.worldOrigin<=0||
      x.worldOrigin>=currentWorldOrigin||
      !nonnegativeInteger(x.realNativeTick)||x.realNativeTick!<10800||

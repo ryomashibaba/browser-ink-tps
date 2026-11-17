@@ -23,3 +23,5 @@ jobs:
       - run: npm run typecheck
       - name: Run genuine V28 ROUND and adjacent SOURCE tests
         run: npx vitest run src/app/B389NativeSourceRoundReplay.test.ts src/app/B463SourceReplayMemory.test.ts src/app/NativeSourceRoundActionWindow.test.ts src/app/B207SourceCombatRound.test.ts src/app/B473RealSourceCombatLifeReadout.test.ts
+
+# Rerun after correcting optional origin and typed tuple guards.

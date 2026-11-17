@@ -37,7 +37,7 @@ describe('T21 V28 native 180s action authority and 150-tick human return',()=>{
   expect(nativeSourceHumanRespawnElapsedTicks(600,750)).toBe(150);
   // Paused frames do not advance the native tick counter.
   expect(nativeSourceHumanRespawnElapsedTicks(600,749)).toBe(149);
-  for(const [death,now] of [[-1,0],[5,4],[4,4.5],[4,NaN]]){
+  for(const [death,now] of [[-1,0],[5,4],[4,4.5],[4,NaN]] as const){
    expect(()=>nativeSourceHumanRespawnElapsedTicks(death,now))
     .toThrow('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
   }
