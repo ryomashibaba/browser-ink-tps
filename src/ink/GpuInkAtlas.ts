@@ -22,6 +22,7 @@ import {
   ShaderMaterial,
   Texture
 } from 'playcanvas';
+import { drainInkBrushBatch, indexInkBrushSurfaces } from '../core/InkBrushHotPath';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
 import { buildInkBrushRasterQuads, type InkBrushQuad } from './InkBrushRasterGeometry';
 import type { PaintRasterRun } from './GameplayInkSystem';
@@ -119,6 +120,7 @@ export class GpuInkAtlas {
   public readonly renderTarget: RenderTarget;
 
   private readonly pending: PendingInkEvent[] = [];
+  private readonly brushSurfaceIndex: ReadonlyMap<string, PaintSurface>;
   private readonly cameraEntity: Entity;
   private readonly batchEntity: Entity;
   private readonly mesh: Mesh;
@@ -147,7 +149,7 @@ export class GpuInkAtlas {
 
   public constructor(
     private readonly app: AppBase,
-    private readonly surfaces: readonly PaintSurface[],
+    surfaces: readonly PaintSurface[],
     atlasSize: number,
     pixelsPerMeter: number,
     gutterPixels: number,
@@ -160,6 +162,8 @@ export class GpuInkAtlas {
       if (!rect) throw new Error(`No atlas allocation for PaintSurface ${surface.id}`);
       surface.atlasRect = rect;
     }
+    // Cache only the stable surface ID -> object; never cache raster authorization.
+    this.brushSurfaceIndex = indexInkBrushSurfaces(surfaces);
 
     this.texture = new Texture(app.graphicsDevice, {
       name: 'PersistentInkAtlas',
@@ -269,37 +273,15 @@ export class GpuInkAtlas {
       return { events: 0, buildMs: 0 };
 
     const started = performance.now();
-    // Uint16 mesh indices require at most 16,383 quads per render.
-    // A paint event may generate multiple authorized row-run quads.
-    const maxQuads = 16_383;
-    const eventBudget = Math.floor(maxEvents);
-    let completedEvents = 0;
-    let remainingQuadBudget = maxQuads;
-    const batch: PendingInkEvent[] = [];
-
-    while (this.pending.length > 0 && completedEvents < eventBudget &&
-           remainingQuadBudget > 0) {
-      const first = this.pending[0]!;
-      const taken = Math.min(remainingQuadBudget, first.paintableRuns.length);
-      batch.push({ event: first.event, paintableRuns: first.paintableRuns.slice(0, taken) });
-      remainingQuadBudget -= taken;
-      if (taken === first.paintableRuns.length) {
-        this.pending.shift();
-        completedEvents += 1;
-      } else {
-        // Continue a very large brush next flush without dropping cells or
-        // overflowing the 16-bit index buffer.
-        this.pending[0] = {
-          event: first.event,
-          paintableRuns: first.paintableRuns.slice(taken)
-        };
-        break;
-      }
-    }
+    // Authoritative row-run order, 16-bit quad limit and event completion are
+    // preserved by the GPU-only batch drain; avoid repeated shifts/slices.
+    const { batch, completedEvents } = drainInkBrushBatch(
+      this.pending, Math.floor(maxEvents), 16_383
+    );
 
     const geometry: Array<{ quad: InkBrushQuad; event: PaintEvent }> = [];
     for (const { event, paintableRuns } of batch) {
-      const surface = this.surfaces.find((candidate) => candidate.id === event.surfaceId);
+      const surface = this.brushSurfaceIndex.get(event.surfaceId);
       if (!surface) continue;
       for (const quad of buildInkBrushRasterQuads(surface, event, paintableRuns)) {
         geometry.push({ quad, event });
