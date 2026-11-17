@@ -3,7 +3,15 @@ import type { PaintEvent, TurfSnapshot } from './types';
 import { SurfaceFlags, Team } from './types';
 import type { PaintSurface } from './PaintSurface';
 
+/** Contiguous authority-approved raster cells, including same-team repaint. */
+export interface PaintRasterRun {
+  row: number;
+  startX: number;
+  endXExclusive: number;
+}
+
 export interface PaintApplyResult {
+  paintableRuns: readonly PaintRasterRun[];
   changedCells: number;
   /** Diagnostics only, computed inside the existing authoritative raster. */
   rasterEligibleCells: number;
@@ -106,7 +114,7 @@ export class GameplayInkSystem {
       !(event.radiusV > 0) ||
       !(event.strength > 0)
     ) {
-      return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
+      return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0, paintableRuns: [] };
     }
 
     const c = Math.cos(event.angle);
@@ -121,7 +129,7 @@ export class GameplayInkSystem {
     const minY = Math.max(0, Math.floor((event.centerV - boundV) / surface.cellSize));
     const maxY = Math.min(surface.heightCells - 1, Math.floor((event.centerV + boundV) / surface.cellSize));
 
-    if (minX > maxX || minY > maxY) return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0 };
+    if (minX > maxX || minY > maxY) return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0, paintableRuns: [] };
 
     let changedCells = 0;
     let rasterEligibleCells = 0;
@@ -129,10 +137,12 @@ export class GameplayInkSystem {
     let testedCells = 0;
     let scoreableAreaMeters2Changed = 0;
     const touchedTiles = new Set<number>();
+    const paintableRuns: PaintRasterRun[] = [];
 
     for (let y = minY; y <= maxY; y += 1) {
       const cellV = (y + 0.5) * surface.cellSize;
       const dy = cellV - event.centerV;
+      let startX = -1;
       for (let x = minX; x <= maxX; x += 1) {
         testedCells += 1;
         const cellU = (x + 0.5) * surface.cellSize;
@@ -141,14 +151,19 @@ export class GameplayInkSystem {
         const ellipseU = dx * c + dy * s;
         const ellipseV = -dx * s + dy * c;
         const normalized = ellipseU * ellipseU * invRadiusUSq + ellipseV * ellipseV * invRadiusVSq;
-        if (normalized > 1) continue;
-
-        if (!surface.isCellActive(x, y)) continue;
         const index = surface.index(x, y);
-        // Per-cell flags can exclude a cell even inside a registered footprint.
-        // Neither ownership nor visual admission may treat it as paintable.
-        if ((surface.flagsGrid[index]! & SurfaceFlags.Paintable) === 0) continue;
-
+        const eligible = normalized <= 1 && surface.isCellActive(x, y) &&
+          (surface.flagsGrid[index]! & SurfaceFlags.Paintable) !== 0;
+        if (!eligible) {
+          if (startX >= 0) {
+            paintableRuns.push({ row: y, startX, endXExclusive: x });
+            startX = -1;
+          }
+          continue;
+        }
+        // Every GPU-drawn cell must come from this authoritative raster.
+        // Runs also include same-team cells so wetness may be refreshed.
+        if (startX < 0) startX = x;
         rasterEligibleCells += 1;
         const oldOwner = surface.ownerGrid[index] as Team;
         if (oldOwner === event.team) {
@@ -170,6 +185,9 @@ export class GameplayInkSystem {
           else this.areaB += area;
         }
       }
+      if (startX >= 0) {
+        paintableRuns.push({ row: y, startX, endXExclusive: maxX + 1 });
+      }
     }
 
     for (const tileIndex of touchedTiles) surface.markTileChanged(tileIndex);
@@ -179,7 +197,8 @@ export class GameplayInkSystem {
       rasterAlreadyTeamOwnedCells,
       testedCells,
       dirtyTilesTouched: touchedTiles.size,
-      scoreableAreaMeters2Changed
+      scoreableAreaMeters2Changed,
+      paintableRuns
     };
   }
 
