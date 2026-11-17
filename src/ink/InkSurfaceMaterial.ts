@@ -23,17 +23,29 @@ void main(void) {
   vWorldPos = world.xyz;
 }`;
 
-const FRAGMENT_GLSL = `
+export const FRAGMENT_GLSL = `
 precision highp float;
 uniform sampler2D uInkAtlas;
 uniform vec4 uAtlasRect;
+uniform vec2 uSurfaceMeters;
+uniform float uInkCellSize;
+uniform float uAtlasTexelSize;
 uniform vec3 uNeutralColor;
 uniform vec3 uTeamAColor;
 uniform vec3 uTeamBColor;
 varying vec2 vUv0;
 varying vec3 vWorldPos;
 void main(void) {
-  vec2 atlasUv = uAtlasRect.xy + vUv0 * uAtlasRect.zw;
+  // Keep bilinear filtering inside each authoritative raster cell:
+  // no color may leak from a neighboring approved cell into a blocked one.
+  vec2 local = clamp(vUv0 * uSurfaceMeters, vec2(0.0), uSurfaceMeters - vec2(1e-5));
+  vec2 cellBegin = floor(local / uInkCellSize) * uInkCellSize;
+  vec2 cellEnd = min(cellBegin + vec2(uInkCellSize), uSurfaceMeters);
+  vec2 minUv = uAtlasRect.xy + (cellBegin / uSurfaceMeters) * uAtlasRect.zw;
+  vec2 maxUv = uAtlasRect.xy + (cellEnd / uSurfaceMeters) * uAtlasRect.zw;
+  vec2 halfPixel = min(vec2(uAtlasTexelSize * 0.5), (maxUv - minUv) * 0.49);
+  vec2 atlasUv = clamp(uAtlasRect.xy + vUv0 * uAtlasRect.zw,
+    minUv + halfPixel, maxUv - halfPixel);
   vec4 ink = texture2D(uInkAtlas, atlasUv);
   float coverage = clamp(ink.g, 0.0, 1.0);
   float wetness = clamp(ink.b, 0.0, 1.0) * coverage;
@@ -64,6 +76,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const FRAGMENT_WGSL = `
 uniform uAtlasRect: vec4f;
+uniform uSurfaceMeters: vec2f;
+uniform uInkCellSize: f32;
+uniform uAtlasTexelSize: f32;
 uniform uNeutralColor: vec3f;
 uniform uTeamAColor: vec3f;
 uniform uTeamBColor: vec3f;
@@ -73,7 +88,18 @@ varying vUv0: vec2f;
 varying vWorldPos: vec3f;
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {
-  let atlasUv = uniform.uAtlasRect.xy + input.vUv0 * uniform.uAtlasRect.zw;
+  let local = clamp(input.vUv0 * uniform.uSurfaceMeters,
+    vec2f(0.0), uniform.uSurfaceMeters - vec2f(1e-5));
+  let cellBegin = floor(local / uniform.uInkCellSize) * uniform.uInkCellSize;
+  let cellEnd = min(cellBegin + vec2f(uniform.uInkCellSize), uniform.uSurfaceMeters);
+  let minUv = uniform.uAtlasRect.xy +
+    (cellBegin / uniform.uSurfaceMeters) * uniform.uAtlasRect.zw;
+  let maxUv = uniform.uAtlasRect.xy +
+    (cellEnd / uniform.uSurfaceMeters) * uniform.uAtlasRect.zw;
+  let halfPixel = min(vec2f(uniform.uAtlasTexelSize * 0.5),
+    (maxUv - minUv) * 0.49);
+  let atlasUv = clamp(uniform.uAtlasRect.xy + input.vUv0 * uniform.uAtlasRect.zw,
+    minUv + halfPixel, maxUv - halfPixel);
   let ink = textureSample(uInkAtlas, uInkAtlasSampler, atlasUv);
   let coverage = clamp(ink.g, 0.0, 1.0);
   let wetness = clamp(ink.b, 0.0, 1.0) * coverage;
@@ -111,6 +137,12 @@ export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture):
     sampleRect.width,
     sampleRect.height
   ]));
+  material.setParameter('uSurfaceMeters', new Float32Array([
+    surface.widthMeters,
+    surface.heightMeters
+  ]));
+  material.setParameter('uInkCellSize', surface.cellSize);
+  material.setParameter('uAtlasTexelSize', 1 / rect.atlasSize);
   material.setParameter('uNeutralColor', new Float32Array(GAME_CONFIG.visual.neutral));
   material.setParameter('uTeamAColor', new Float32Array(GAME_CONFIG.visual.teamA));
   material.setParameter('uTeamBColor', new Float32Array(GAME_CONFIG.visual.teamB));

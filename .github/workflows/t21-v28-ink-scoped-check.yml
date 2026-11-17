@@ -1,0 +1,55 @@
+name: T21 V28 ink scoped type and raster checks
+on:
+  push:
+    branches:
+      - research/t21-v28-ink-20261117
+    paths:
+      - 'src/ink/**'
+      - '.github/workflows/t21-v28-ink-scoped-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-v28-ink-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ink-raster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned direct dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      # npm test without a scope wrongly collects legacy Node test files and
+      # SHA-pinned independent SOURCE gates. Run the ink-owned surface tests
+      # here; retain separate upstream full-suite QA instead of masking holds.
+      - name: Ink raster and adjacent authoritative regression tests
+        run: npx vitest run src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts src/ink/PaintSurface.test.ts src/ink/PaintCoordinatorCpuQa.test.ts
+      - name: Vite browser build preflight (no deploy)
+        run: npm run build -- --base=/browser-ink-tps/
+
+      - name: Isolated real Chromium WebGL2 GPU pixel probe
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5175 --strictPort > /tmp/t21-v28-ink-vite.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:5175/src/ink/InkBrushWebGL2Smoke.html; then break; fi
+            sleep 1
+          done
+          CHROME="$(command -v google-chrome || command -v chromium)"
+          test -n "$CHROME"
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --virtual-time-budget=15000 --dump-dom \
+            http://127.0.0.1:5175/src/ink/InkBrushWebGL2Smoke.html \
+            > /tmp/t21-v28-ink-webgl2.html 2> /tmp/t21-v28-ink-chrome.err || true
+          if ! grep -q "INK_WEBGL2_PASS" /tmp/t21-v28-ink-webgl2.html; then
+            cat /tmp/t21-v28-ink-webgl2.html
+            cat /tmp/t21-v28-ink-chrome.err
+            exit 1
+          fi
+          grep "INK_WEBGL2_PASS" /tmp/t21-v28-ink-webgl2.html
