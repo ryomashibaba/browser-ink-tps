@@ -20,7 +20,7 @@ jobs:
           node-version: '24'
       - name: Install existing exact dependencies
         run: npm install --no-audit --no-fund --no-package-lock
-      - name: Real player HUD, B475 gate, glass/collision visual regression
+      - name: Final HEAD - real aim, original-support warning, B475 HUD and glass regression
         run: npx vitest run src/app/B245SourcePresentation.test.ts src/app/B480FocusedSourcePracticeCss.test.ts src/app/B475RealFrontlineReadyChallenge.test.ts src/app/B476OriginalFrontlineObjectiveLayout.test.ts src/app/B250SourceStageReadability.test.ts src/app/UndertowF3PlayableHud.test.ts src/app/B364RealSourceCrosshair.test.ts
       - name: Full TypeScript check and Vite production bundle
         run: npm run build -- --base=/browser-ink-tps/
