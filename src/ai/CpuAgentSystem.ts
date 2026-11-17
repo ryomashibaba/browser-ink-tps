@@ -1263,7 +1263,7 @@ export class CpuAgentSystem {
               ?.isLiveRejoinedSourceCpu?.(bot.id)===false;
             const physical=this.phase14qGroundCollision
               ?.sourceFootSupport?.(bot.id,bot.position);
-            const maxFootBand=firstDrop?.25:.20;
+            const maxFootBand=firstDrop ? 0.25 : 0.20;
             const footSupported=!!physical&&
               this.stage.solids.some(s=>s.id===physical.solidId)&&
               Math.abs(physical.point.y-bot.position.y)<=maxFootBand+1e-6;
