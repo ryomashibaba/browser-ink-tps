@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {b207CombatRoundUrl} from './B207SourceCombatRound';
 import {b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {DEFAULT_WEAPON_ID,WEAPON_ORDER} from '../weapons/WeaponCatalog';
+import {sourceCanonicalPlayableMode,sourceFinishedReplayHref} from './SourcePlayPortal';
 describe('B207 real native 180s combat world selection',()=>{
  it('starts an original source-only human combat round, never scoreable',()=>{
   const q=new URL(b207CombatRoundUrl('https://example.org/game')).searchParams;
@@ -41,5 +42,22 @@ describe('B207 real native 180s combat world selection',()=>{
  });
  it('fails closed for non-browser navigation URLs',()=>{
   expect(()=>b207CombatRoundUrl('javascript:alert(1)')).toThrow('B207_INVALID_NAVIGATION_ORIGIN');
+ });
+ it('normalizes real index.html game entry so 180s TIME_UP has a working next match',()=>{
+  for(const id of [DEFAULT_WEAPON_ID,WEAPON_ORDER[3]]){
+   const u=new URL(b207CombatRoundUrl(
+    'https://example.org/browser-ink-tps/index.html?oldQa=1#legacy',id));
+   expect(u.pathname).toBe('/browser-ink-tps/');
+   expect(u.searchParams.has('oldQa')).toBe(false);
+   expect(sourceCanonicalPlayableMode(u.href)).toBe('combat');
+   const fresh=sourceFinishedReplayHref({
+    href:u.href,weaponId:id,matchState:'TIME_UP',stopped:false,
+    pointerLocked:false,originalSolids:25,originalPaint:17,
+    originalLinks:26,scoreable:0,finishedVisible:true,canClick:true
+   });
+   expect(fresh).not.toBeNull();
+   expect(sourceCanonicalPlayableMode(fresh!)).toBe('combat');
+   expect(new URL(fresh!).pathname).toBe('/browser-ink-tps/');
+  }
  });
 });

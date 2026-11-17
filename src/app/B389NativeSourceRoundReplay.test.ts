@@ -69,4 +69,20 @@ describe('T21 V28 native SOURCE circuit replay lifecycle',()=>{
   expect(u.hash).toBe('');
   expect(sourceCanonicalPlayableMode(next!)).toBe('circuit');
  });
+ it('rejects mixed QA/production or duplicate circuit weapon boot authority',()=>{
+  const selected=new URL(b384SourceCircuitHref(circuit,true,WEAPON_ORDER[2])!);
+  expect(b389NativeBootWeapon(selected.searchParams)).toBe(WEAPON_ORDER[2]);
+  for(const extra of [
+   ['production','1'],['scoreable','1'],
+   ['t21QaInput','deterministic'],
+   ['t21W10B389',WEAPON_ORDER[2]],
+   ['t21W10B441','sourceFrontline']
+  ] as const){
+   const mutated=new URL(selected);
+   mutated.searchParams.append(extra[0],extra[1]);
+   expect(b389NativeBootWeapon(mutated.searchParams)).toBeNull();
+  }
+  // Browser can still start with the genuine default loadout.
+  expect(b389NativeBootWeapon(new URL(circuit).searchParams)).toBeNull();
+ });
 });

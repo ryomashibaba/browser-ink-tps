@@ -10,7 +10,13 @@ export function b207CombatRoundUrl(current:string,weaponId?:string):string{
   throw Error('B207_INVALID_NAVIGATION_ORIGIN');
  if(weaponId!==undefined&&!WEAPON_ORDER.includes(weaponId as WeaponId))
   throw Error('B207_UNKNOWN_NATIVE_SELECTED_WEAPON');
- const next=new URL(old.pathname,old.origin);
+ // The real T21 in-game launcher may be opened as /index.html.
+ // Canonical SOURCE portal modes boot the directory URL, not /index.html:
+ // without normalization, a genuine 180s session reaches TIME_UP but
+ // sourceFinishedReplayAction refuses its otherwise valid replay.
+ const gamePath=old.pathname.endsWith('/index.html')?
+  old.pathname.slice(0,-'index.html'.length):old.pathname;
+ const next=new URL(gamePath,old.origin);
  next.searchParams.set('t21Play','preview');
  next.searchParams.set('t21QaDrive','source');
  next.searchParams.set('t21W10B183','firstDropPlay');

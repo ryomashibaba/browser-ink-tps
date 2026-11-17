@@ -80,5 +80,10 @@ export function b463FormatSourceRoundComparison(
   'CPU INK CELLS '+previous.cpuOriginalInkCells+
   ' → '+current.cpuOriginalInkCells+
   ' ('+delta(current.cpuOriginalInkCells-previous.cpuOriginalInkCells)+')\n'+
+  'HUMAN SPLATS '+previous.humanSplats+' → '+current.humanSplats+
+  ' ('+delta(current.humanSplats-previous.humanSplats)+')\\n'+
+  'HUMAN 150-TICK RETURNS '+previous.humanRespawns+
+  ' → '+current.humanRespawns+
+  ' ('+delta(current.humanRespawns-previous.humanRespawns)+')\\n'+
   'LOCAL TAB DATA ONLY · DIFFERENT MODES ARE NOT RANKED · WINNER NONE';
 }
