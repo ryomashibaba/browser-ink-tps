@@ -1269,9 +1269,10 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
   originalGeometryOrActorWrites:0
  }));
  expect(totalAlreadyRejected).toBe(60);
- // Record the true outcome even when a suspected repair is insufficient.
- // A zero-approval outcome remains a genuine HOLD, not a fabricated PASS.
- // A positive ray-only gate is also NOT a full native KCC path proof.
- expect(totalPostFixApproved).toBeGreaterThanOrEqual(0);
- expect(totalPostFixApproved).toBeLessThanOrEqual(60);
+ // At least one of the 60 historically blocked ORIGINAL routes must
+ // now pass the WHOLE-source route-ray gate, not just an isolated point.
+ // Retain the ten previously observed genuine floor/KCC uncertainties.
+ // Still NEVER certify natural 60Hz CPU traversal or opposing contact.
+ expect(totalPostFixApproved).toBeGreaterThan(0);
+ expect(totalPostFixApproved).toBeLessThan(60);
 });

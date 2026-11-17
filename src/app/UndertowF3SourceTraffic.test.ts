@@ -634,12 +634,15 @@ describe('F3B playable 8-actor original source runtime',()=>{
    expect(realSupport?.solidId).toMatch(/^UndertowT21D:/);
    expect(candidates.length).toBeGreaterThan(1);
    expect(rows.length).toBe(candidates.length+1);
-   // Real Rapier foot fixes only the 1.96mm Recast projection error.
-   // Two ORIGINAL routes still lack supported intermediate ramp height.
+   // The exact SOURCE FloorConcrete03 slope now accepts the previous
+   // two real Recast-interpolated-Y mismatches, only after native nearest
+   // XZ, exact original triangle and Rapier HUMAN 0.25m support PASS.
+   // This reports static route support, NEVER physical B1 KCC arrival.
    expect(rows.filter(x=>x.actualNativeFootApproved).map(x=>x.index))
-    .toEqual([2,3,4,5,6]);
-   expect(rows.every(x=>!x.registeredFullPath&&
-    x.inventedRaisedFootDenied)).toBe(true);
+    .toEqual([0,1,2,3,4,5,6]);
+   // An invented raised physical foot must still be rejected before any
+   // slope re-projection can grant an old-life Crowd goal.
+   expect(rows.every(x=>x.inventedRaisedFootDenied)).toBe(true);
    console.log('P2_B1_GENUINE_80S_REAL_NATIVE_ROUTE_GATE',
     JSON.stringify({observedRun:43573401997,immutablePhysicalFoot:
      [realFoot.x,realFoot.y,realFoot.z],supportId:realSupport?.solidId,
