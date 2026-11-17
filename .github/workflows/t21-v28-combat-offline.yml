@@ -24,4 +24,4 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - run: npm run typecheck
       - name: Real projectile pool and weapon regression tests (no browser)
-        run: npx vitest run src/projectile/NativeSourceGuardProjectileHp.test.ts src/projectile/SourceSplatlingBurstPoolWait.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/NativeSourceHumanPause.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts
+        run: npx vitest run src/projectile/NativeSourceSpecialBlastAndTtl.test.ts src/projectile/NativeSourceGuardProjectileHp.test.ts src/projectile/SourceSplatlingBurstPoolWait.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/NativeSourceHumanPause.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts

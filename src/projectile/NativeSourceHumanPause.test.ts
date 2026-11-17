@@ -87,7 +87,9 @@ describe('native SOURCE real player HP loss and guarded combat reaction',()=>{
   const {game,s,effect,damage}=fixture();
   s.currentHumanGuarding=true;s.guardHp=100;
   s.isGuardBlockingPoint=()=>true;
-  (game as any).applyAreaDamage(new Vec3(0,0,0),2,23,Team.B);
+  // A physical front-side blast is shieldable; a body-centered
+  // blast has no evidenced attack side (tested separately).
+  (game as any).applyAreaDamage(new Vec3(0,0,-1),2,23,Team.B);
   expect(damage).not.toHaveBeenCalled();
   s.currentHumanGuarding=false;
   s.physics.castStageSegment=()=>({distance:.1});
