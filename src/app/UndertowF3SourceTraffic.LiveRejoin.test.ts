@@ -1273,6 +1273,11 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
  // now pass the WHOLE-source route-ray gate, not just an isolated point.
  // Retain the ten previously observed genuine floor/KCC uncertainties.
  // Still NEVER certify natural 60Hz CPU traversal or opposing contact.
- expect(totalPostFixApproved).toBeGreaterThan(0);
- expect(totalPostFixApproved).toBeLessThan(60);
+ // Source-only static path admission on the 60 exact genuine historical
+ // B450 cases: B2=14 and B4=12. A changed native result must be reviewed
+ // rather than silently called playable KCC or certified 4v4.
+ expect(actorReports.B2).toBeDefined();
+ expect(actorReports.B4).toBeDefined();
+ expect(totalPostFixApproved).toBe(26);
+ expect(60-totalPostFixApproved).toBe(34);
 });
