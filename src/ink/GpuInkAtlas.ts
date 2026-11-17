@@ -23,9 +23,8 @@ import {
   Texture
 } from 'playcanvas';
 import { drainInkBrushBatch, indexInkBrushSurfaces } from '../core/InkBrushHotPath';
-import { packInkBrushGpuGroups, type PackedInkGroup } from '../core/InkBrushGpuPacking';
+import { packInkBrushRasterRuns, type InkStreamGroup } from '../core/InkBrushRasterStream';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
-import { buildInkBrushRasterQuads } from './InkBrushRasterGeometry';
 import type { PaintRasterRun } from './GameplayInkSystem';
 import type { PaintSurface } from './PaintSurface';
 import type { PaintEvent } from './types';
@@ -280,18 +279,16 @@ export class GpuInkAtlas {
       this.pending, Math.floor(maxEvents), 16_383
     );
 
-    // Only INK's authoritative row-run geometry is packed. Grouping by
-    // event avoids a temporary {quad,event} allocation for every raster run;
-    // the same event color/wetness is evaluated once for its accepted quads.
-    const groups: PackedInkGroup[] = [];
+    // Render only INK's authoritative runs. Stream these directly into the
+    // identical GPU buffers without temporary per-run quad/vertex objects.
+    const groups: InkStreamGroup[] = [];
     for (const { event, paintableRuns } of batch) {
       const surface = this.brushSurfaceIndex.get(event.surfaceId);
       if (!surface) continue;
-      const quads = buildInkBrushRasterQuads(surface, event, paintableRuns);
-      if (quads.length > 0) groups.push({ event, quads });
+      groups.push({ surface, event, paintableRuns });
     }
 
-    const buffers = packInkBrushGpuGroups(groups);
+    const buffers = packInkBrushRasterRuns(groups);
     if (!buffers) {
       return { events: completedEvents, buildMs: performance.now() - started };
     }
