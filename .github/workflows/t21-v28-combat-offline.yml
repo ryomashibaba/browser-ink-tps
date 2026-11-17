@@ -1,0 +1,27 @@
+name: T21 V28 combat - source projectile offline regression
+on:
+  push:
+    branches:
+      - research/t21-v28-combat-20261117
+    paths:
+      - 'src/projectile/**'
+      - 'src/weapons/**'
+      - '.github/workflows/t21-v28-combat-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combat-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run typecheck
+      - name: Real projectile pool and weapon regression tests (no browser)
+        run: npx vitest run src/projectile/SourceSplatlingBurstPoolWait.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/NativeSourceHumanPause.test.ts src/weapons/B342OriginalMainWeaponContract.test.ts
