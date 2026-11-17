@@ -1,0 +1,42 @@
+name: T21 V28 CPU Issue14 SOURCE-only fast checks
+on:
+  push:
+    branches:
+      - research/t21-v28-cpu-20261117
+    paths:
+      - 'src/ai/CpuAgentSystem.ts'
+      - 'src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts'
+      - 'src/ai/CpuSourceCrowdStallRecovery.ts'
+      - 'src/ai/CpuSourceCrowdStallRecovery.test.ts'
+      - 'src/ai/CpuSourceCrowdStallRecovery.integration.test.ts'
+      - '.github/workflows/t21-v28-cpu-issue14-fast.yml'
+permissions:
+  contents: read
+concurrency:
+  group: t21-v28-cpu-issue14-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cpu-issue14:
+    name: TypeScript + CPU SOURCE real-method regressions (no Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout submitted CPU branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript full-project typecheck
+        run: npm run typecheck
+      - name: Focused CPU source-only regressions
+        run: |
+          npm exec -- vitest run \
+            src/ai/CpuSourceCrowdStallRecovery.test.ts \
+            src/ai/CpuSourceCrowdStallRecovery.integration.test.ts \
+            src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts \
+            src/ai/CpuAgentSystem.SourceGoalPhysicalSupport.test.ts
