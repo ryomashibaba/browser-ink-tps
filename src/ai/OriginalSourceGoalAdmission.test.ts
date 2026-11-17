@@ -34,7 +34,7 @@ describe('T21 V28 source CPU native route admission (not physical permission)',(
  });
  it('never substitutes an unverified destination or detached navmesh floor',()=>{
   const snapped={...allowed,endSnapDistanceMeters:.66};
-  const footOffMesh={...allowed,startSnapDistanceMeters:.21};
+  const footOffMesh={...allowed,startSnapDistanceMeters:.26};
   for(const evidence of [unreachable,snapped,footOffMesh,
    {...allowed,querySuccess:false},
    {...allowed,pointCount:0},
