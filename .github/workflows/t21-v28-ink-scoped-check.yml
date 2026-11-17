@@ -15,7 +15,7 @@ concurrency:
 jobs:
   ink-raster:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,8 +25,10 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: TypeScript typecheck
         run: npm run typecheck
-      - name: Authoritative ink and geometry tests
-        run: npx vitest run src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts src/ink/PaintSurface.test.ts src/ink/PaintCoordinatorCpuQa.test.ts
+      - name: Complete repository unit regression (includes ink tests)
+        run: npm test
+      - name: Vite browser build preflight (no deploy)
+        run: npm run build -- --base=/browser-ink-tps/
 
       - name: Isolated real Chromium WebGL2 GPU pixel probe
         run: |
