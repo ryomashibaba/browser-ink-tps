@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
-import {PlayerController} from './PlayerController';
+import {PlayerController,nativeSourceNextJumpBufferSeconds,
+ nativeSourceWallReleaseVerticalVelocity} from './PlayerController';
 
 // Unit reconstruction of the actual controller methods. No fake SOURCE
 // floor, synthetic navigation links, Chromium pass or official match proof.
@@ -78,4 +79,34 @@ describe('Issue #19: genuine SOURCE player steering without changing T20 or phys
     expect(p.verticalVelocity).toBe(0);
     expect(p.grounded).toBe(true);
   });
+});
+
+describe('Issue #19 SOURCE wall-release and exclusive-motion responsiveness',()=>{
+ it('drops only inherited upward wall-climb drive on Shift release',()=>{
+  expect(nativeSourceWallReleaseVerticalVelocity('SWIM_WALL',5.4)).toBe(0);
+  expect(nativeSourceWallReleaseVerticalVelocity('SURGE_CHARGE',.2)).toBe(0);
+  expect(nativeSourceWallReleaseVerticalVelocity('SWIM_WALL',-3)).toBe(-3);
+  expect(nativeSourceWallReleaseVerticalVelocity('SURGE',8.2)).toBe(8.2);
+  expect(nativeSourceWallReleaseVerticalVelocity('SQUID_ROLL',5.1)).toBe(5.1);
+  expect(nativeSourceWallReleaseVerticalVelocity('HUMAN',8.2)).toBe(8.2);
+ });
+ it('retains valid pre-landing Space until real contact and expires at 100ms',()=>{
+  expect(nativeSourceNextJumpBufferSeconds(0,true,1/60,true,false))
+   .toBeCloseTo(.1);
+  expect(nativeSourceNextJumpBufferSeconds(.1,false,.05,true,false))
+   .toBeCloseTo(.05);
+  expect(nativeSourceNextJumpBufferSeconds(.05,false,.06,true,false))
+   .toBe(0);
+ });
+ it('never carries a Space tap out of dodge/surge/roll or Pointer Lock loss',()=>{
+  expect(nativeSourceNextJumpBufferSeconds(.08,true,1/60,true,true))
+   .toBe(0);
+  expect(nativeSourceNextJumpBufferSeconds(.08,false,1/60,false,false))
+   .toBe(0);
+  expect(nativeSourceNextJumpBufferSeconds(.08,true,1/60,false,false))
+   .toBe(0);
+  // Regained live controls need a genuinely new physical press.
+  expect(nativeSourceNextJumpBufferSeconds(0,false,1/60,true,false))
+   .toBe(0);
+ });
 });
