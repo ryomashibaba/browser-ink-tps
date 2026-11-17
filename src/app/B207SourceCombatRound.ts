@@ -10,12 +10,21 @@ export function b207CombatRoundUrl(current:string,weaponId?:string):string{
   throw Error('B207_INVALID_NAVIGATION_ORIGIN');
  if(weaponId!==undefined&&!WEAPON_ORDER.includes(weaponId as WeaponId))
   throw Error('B207_UNKNOWN_NATIVE_SELECTED_WEAPON');
- // The real T21 in-game launcher may be opened as /index.html.
- // Canonical SOURCE portal modes boot the directory URL, not /index.html:
- // without normalization, a genuine 180s session reaches TIME_UP but
- // sourceFinishedReplayAction refuses its otherwise valid replay.
- const gamePath=old.pathname.endsWith('/index.html')?
-  old.pathname.slice(0,-'index.html'.length):old.pathname;
+ // SOURCE 180s gameplay runs at the game's directory, NEVER inside
+ // the standalone /play-source.html launcher. Earlier B207 accepted the
+ // genuine menu URL as a game entry and would keep loading the MENU with
+ // combat flags, leaving the player without the 7/7 native round.
+ // Likewise /index.html must not stay in the URL: the canonical replay
+ // authority uses the directory path. Retain subdirectory deployments.
+ const entry=old.pathname;
+ if(!entry.endsWith('/')&&!entry.endsWith('/index.html')&&
+    !entry.endsWith('/play-source.html')&&
+    entry.endsWith('.html'))
+  throw Error('B207_UNKNOWN_SOURCE_ENTRY_PAGE');
+ const gamePath=entry.endsWith('/index.html')?
+  entry.slice(0,-'index.html'.length):
+  entry.endsWith('/play-source.html')?
+  entry.slice(0,-'play-source.html'.length):entry;
  const next=new URL(gamePath,old.origin);
  next.searchParams.set('t21Play','preview');
  next.searchParams.set('t21QaDrive','source');
