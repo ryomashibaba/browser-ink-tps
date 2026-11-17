@@ -440,7 +440,12 @@ export class ProjectileSystem {
     if (weaponClass === 'CHARGER' && fireHeld) return 0.66;
     if (weaponClass === 'SPLATLING' && fireHeld) return 0.72;
     if (weaponClass === 'SPLATANA' && fireHeld) return 0.82;
-    if (weaponClass === 'BRELLA' && secondaryHeld) return 0.74;
+    // SOURCE: a physically broken brella is not guarding; holding the
+    // shield button must not continue the movement penalty after HP-zero
+    // guard break. The frozen T20 movement contract stays unchanged.
+    if (weaponClass === 'BRELLA' && secondaryHeld &&
+        (this.nativeSourceHumanPhysicalMode===null ||
+         (this.guardBreakSeconds<=0&&this.guardHp>0))) return 0.74;
     return 1;
   }
 
@@ -497,6 +502,15 @@ export class ProjectileSystem {
     this.stats.playerWeaponAction = 'READY';
     this.stats.playerWeaponGuarding = false;
     this.stats.playerWeaponGuardHp = 100;
+    // A new SOURCE round has no live human physical contact until its
+    // first authoritative PlayerController/ProjectileSystem fixed tick.
+    // Do not reuse previous-round damageability/guarding for a SUB/SPECIAL
+    // area event or a CPU ray queued before the first new native tick.
+    // The fresh player team, body and aim are written by fixedUpdate.
+    if(this.nativeSourceHumanPhysicalMode!==null){
+      this.currentHumanDamageable=false;
+      this.currentHumanGuarding=false;
+    }
   }
 
   public applyExternalAreaDamage(
@@ -2761,6 +2775,11 @@ export class ProjectileSystem {
       attackSide.y=0;
       if(attackSide.lengthSq()<=1e-8)return false;
     }
+    // A contact on the rear HALF of the true physical human body is
+    // never in front of its shield. Legacy T20's -0.10 tolerance let
+    // slightly-rear lateral shots count as blocks. Do not invent a more
+    // specific Nintendo guard cone without original geometry evidence.
+    if(flattened(aimDirection).dot(attackSide)<=0)return false;
     return this.isGuardBlockingPoint(
       playerPosition.clone().add(attackSide),
       playerPosition,aimDirection
