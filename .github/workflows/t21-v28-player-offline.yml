@@ -1,0 +1,32 @@
+name: T21 V28 player - targeted SOURCE input regression
+on:
+  push:
+    branches:
+      - research/t21-v28-player-20261117
+    paths:
+      - 'src/player/PlayerController.ts'
+      - 'src/player/PlayerController.source-player.test.ts'
+      - 'src/camera/ThirdPersonCamera.ts'
+      - 'src/camera/ThirdPersonCamera.test.ts'
+      - '.github/workflows/t21-v28-player-offline.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t21-v28-player-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  player-source-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - run: npm run typecheck
+      - name: Only input, player and camera regressions (no browser, no stage writes)
+        run: npx vitest run src/player/PlayerController.source-player.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/input/PlayerInput.qa.test.ts
