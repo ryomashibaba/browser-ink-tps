@@ -16,6 +16,8 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
+import {shouldRefreshStalledOriginalSourceCrowd}
+ from './CpuSourceCrowdStallRecovery';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity,
  b180OriginalSourceUnownedNeighborAim}
@@ -300,6 +302,11 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Only previously SOURCE-authorized native destinations may be retained. */
   private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
+  /** A genuine 5-second real-foot stall can refresh the passive Recast
+   * steering proxy ONCE per native CPU life, never its Rapier capsule. */
+  private readonly sourceCrowdRefreshedThisLife=new Set<string>();
+  private readonly sourceLastPhysicalBlockedTick=new Map<string,number>();
+  private sourceNativeMotionTick=0;
   private b35OptInNativeRefresh=false;
   private b35RealNativeRequests=0;
   private b35DuplicateNativeRequestsSuppressed=0;
@@ -930,6 +937,9 @@ export class CpuAgentSystem {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
     this.sourceLastAdmittedRouteGoal.clear();
+    this.sourceCrowdRefreshedThisLife.clear();
+    this.sourceLastPhysicalBlockedTick.clear();
+    this.sourceNativeMotionTick=0;
     this.b35LastNativeTarget.clear();
     this.b35RealNativeRequests=0;
     this.b35DuplicateNativeRequestsSuppressed=0;
@@ -1080,6 +1090,8 @@ export class CpuAgentSystem {
     }
 
     this.activeLastTick = true;
+    if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps)
+      this.sourceNativeMotionTick++;
     // The same actual 60Hz player collider mode is passed to the shared
     // Rapier actor registration and the SOURCE-only enemy sight query.
     // Legacy T20/QA sight without B181 keeps its old HUMAN aim baseline.
@@ -1606,6 +1618,12 @@ export class CpuAgentSystem {
       const report = this.qaContinuity.snapshot();
       this.stats.cpuQaSuspectedStalls = report.suspectedStallCount;
       this.stats.cpuQaLongestStationarySeconds = report.longestStallSeconds;
+      // A true supported SOURCE CPU can retain a valid Recast destination
+      // but remain motionless with no KCC rejection: refresh only its
+      // steering proxy once per life, and re-request ONLY source-approved
+      // goals on the next think. This cannot grant physical movement.
+      if(report.suspectedStallCount>0)
+        this.tryRefreshStalledOriginalSourceCrowd(report);
     }
     this.b234ObserveRealCpu();
     this.syncStats();
@@ -1681,6 +1699,73 @@ export class CpuAgentSystem {
       p.z-bot.position.z)>.20)
       throw Error('T21_F2_CROWD_PROXY_REANCHOR_FAILED');
     bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
+    // Actual rejected Rapier/offmesh steps are NOT stale Recast stalls.
+    // Preserve this real blocker evidence for five native seconds so the
+    // separate no-KCC-rejection recovery cannot hide a true collision.
+    if(this.f3dSourceGoals)
+      this.sourceLastPhysicalBlockedTick.set(
+        bot.id,this.sourceNativeMotionTick);
+  }
+
+  /** Native SOURCE-only once-per-life stagnant steering recovery.
+   * This is NOT triggered by a real KCC veto, unsupported floor, expired
+   * goal, high spawn, unjoined life, or a mere Crowd proposal. Never
+   * edits CPU real position, physics, stage, ink, weapons or score. */
+  private tryRefreshStalledOriginalSourceCrowd(
+    report:CpuContinuityReport
+  ):void{
+    if(!this.phase14qF2RecoverableSteps||!this.f3dSourceGoals||
+       this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+      return;
+    for(const actual of report.actors){
+      if(!actual.suspectedNavigationStall)continue;
+      const bot=this.bots.find(b=>b.id===actual.id);
+      const goal=this.sourceLastAdmittedRouteGoal.get(actual.id);
+      if(!bot||!shouldRefreshStalledOriginalSourceCrowd({
+        actualFoot:bot.position,admittedGoal:goal??null,
+        stationarySeconds:actual.stationarySeconds,
+        aliveGroundedPhysicallyRejoined:
+          this.sourceCpuMayStartActions(bot)&&
+          this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true,
+        hasCrowdAgent:bot.agent!==null&&this.qaMotionGoals.has(bot.id),
+        alreadyRefreshedThisLife:
+          this.sourceCrowdRefreshedThisLife.has(bot.id),
+        currentSourceTick:this.sourceNativeMotionTick,
+        lastPhysicalBlockTick:
+          this.sourceLastPhysicalBlockedTick.get(bot.id)??null
+      }))continue;
+      // The Recast nearest polygon cannot certify a floor, and the
+      // actual supported Rapier foot must be on the SAME original level.
+      const support=this.phase14qGroundCollision
+        ?.sourceFootSupport?.(bot.id,bot.position);
+      if(!support||!this.stage.solids.some(s=>s.id===support.solidId)||
+         Math.abs(support.point.y-bot.position.y)>.20)continue;
+      const nav=this.navigation.auditNavMeshProjection(bot.position);
+      if(!nav.success||!nav.nearestPoint||
+         nav.distanceMeters===null||nav.distanceMeters>.20||
+         Math.abs(nav.nearestPoint.y-bot.position.y)>.20)continue;
+      // Route is re-proven from this exact real current Rapier foot.
+      // The OriginalSourceGoalAdmission layer/endpoint veto stays strict
+      // even when a former goal was approved earlier in this life.
+      const route=chooseAuditedOriginalSourceCpuGoal(
+        bot.position,goal!,null,
+        (from,to)=>this.navigation.auditPath(
+          new Vec3(from.x,from.y,from.z),
+          new Vec3(to.x,to.y,to.z)
+        ));
+      if(!route||!bot.agent)continue;
+      bot.agent.teleport(nav.nearestPoint);
+      const anchored=bot.agent.position();
+      if(Math.hypot(anchored.x-bot.position.x,
+        anchored.y-bot.position.y,anchored.z-bot.position.z)>.20)
+        throw Error('T21_V28_CPU_STALL_PROXY_REANCHOR_FAILED');
+      bot.agent.resetMoveTarget();
+      this.b35LastNativeTarget.delete(bot.id);
+      this.qaMotionGoals.delete(bot.id);
+      bot.thinkRemaining=Math.min(
+        bot.thinkRemaining,GAME_CONFIG.cpu.tacticalThinkSeconds*.25);
+      this.sourceCrowdRefreshedThisLife.add(bot.id);
+    }
   }
 
   public setSplatZonesContext(active: boolean, control: Team): void {
@@ -4532,6 +4617,9 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceCrowdRefreshedThisLife.delete(bot.id);
+    this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
     // Only in the original SOURCE game: do not release weapon requests
@@ -4592,6 +4680,9 @@ export class CpuAgentSystem {
     this.nativeSourceSubScanByActor.delete(bot.id);
     this.qaMotionGoals.delete(bot.id);
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.sourceCrowdRefreshedThisLife.delete(bot.id);
+    this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
     this.b178NativeCpuMovementSpeed.delete(bot.id);
     const start = this.spawnPosition(bot.team, bot.slot);
