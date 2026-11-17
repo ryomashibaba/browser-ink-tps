@@ -6,7 +6,8 @@ import {sourceHumanFullRoundPrestartGuard,sourcePlayPortalDestinations,
 import {b245InitialSourceView,b247ShouldCompactSourceRadar,
  b245VisibleNativeSourceRadarCpu,b245ShouldShowSourceCircuitGoal,
  b245SourceFullRoundA1Choice,b245PlayerSightlineCss,
- b245RealFrontlineLiveHudDockCss,b480FocusedSourcePracticeCss,
+ b245RealFrontlineLiveHudDockCss,b245RealFrontlineCombatReadabilityCss,
+ b480FocusedSourcePracticeCss,
  b245NativeStopReason,
  b245LocalSourceBuildProvenance,
  b388VisibleNativeDescentWarning,
@@ -114,6 +115,80 @@ describe('Issue #17 genuine B475 PLAYING camera sightline dock',()=>{
    q.set(key,value);
    expect(b245RealFrontlineLiveHudDockCss('?'+q.toString())).toBe('');
   }
+ });
+});
+
+describe('Issue #17 next lot real B475 combat and original-source sightline clarity',()=>{
+ const url='?t21Play=preview&t21QaDrive=source&'+
+  't21W10B112=humanGround&t21W10B183=firstDropPlay&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline';
+ it('makes the genuine original SOURCE aiming cross visible without inventing hits',()=>{
+  const css=b245RealFrontlineCombatReadabilityCss(url);
+  expect(css).toContain('[data-t21-b245-presentation="PLAYER"]');
+  expect(css).toContain('[data-t21-b338-phase="PLAYING"]');
+  expect(css).toContain(':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])');
+  expect(css).toContain('#t21-f3-b243-source-aim-line > span:first-child');
+  expect(css).toContain('font-size:27px!important');
+  expect(css).toContain('text-shadow:');
+  // Only a real B364 camera ray to an existing ACTIVE original CPU can
+  // change focus glow. This is NOT a landed projectile or CPU HP receipt.
+  expect(css).toContain('[data-t21-b364-mode="REAL_CPU_BODY_CENTER_RAY"]');
+  expect(css).toContain('[data-t21-b364-mode="REAL_CPU_GUARD_CENTER_RAY"]');
+  expect(css).not.toContain('shot-hit-certified="true"');
+  expect(css).not.toContain('#t21-f3-b25-start');
+  expect(css).not.toContain('#t21-f3-b245-view-toggle');
+ });
+ it('moves long existing aim caption past the player body, never hides evidence',()=>{
+  const css=b245RealFrontlineCombatReadabilityCss(url);
+  const target='#t21-f3-b243-source-aim-caption';
+  const start=css.indexOf(target);
+  expect(start).toBeGreaterThan(0);
+  const rule=css.slice(start,css.indexOf('}',start));
+  expect(rule).toContain('top:168px!important');
+  expect(rule).toContain('white-space:normal!important');
+  expect(rule).toContain('max-width:min(360px');
+  expect(rule).toContain('overflow-wrap:break-word!important');
+  expect(css).toContain('@media(max-height:760px)');
+  expect(css).toContain('top:116px!important');
+  expect(css).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+ });
+ it('keeps real HUMAN CPU damage, low HP and genuine allies distinct',()=>{
+  const css=b245RealFrontlineCombatReadabilityCss(url);
+  expect(css).toContain('#t21-f3-b87-hit-confirmation');
+  expect(css).toContain('border:2px solid #a8ffbb!important');
+  expect(css).toContain('#t21-f3-b84-danger');
+  expect(css).toContain('border-left:4px solid #ff9b7e!important');
+  expect(css).toContain('#t21-f3-b113-ground-warning');
+  expect(css).toContain('border:2px solid #ffcb83!important');
+  // Existing warning visibility is still owned by the real KCC/edge gate.
+  expect(css).not.toContain('#t21-f3-b113-ground-warning{display:block');
+  expect(css).toContain('#t21-f3-b286-source-team');
+  expect(css).toContain('#t21-f3-b286-team-counts');
+  expect(css).toContain('#t21-f3-b141-real-ally');
+  expect(css).not.toContain('#t21-f3-b82-splat-notice{display:none');
+  expect(css).not.toMatch(/pointer-events\s*:/);
+  expect(css).not.toMatch(/z-index\s*:/);
+  expect(css).not.toContain('officialWinner');
+  expect(css).not.toContain('scoreable:1');
+ });
+ it('does not touch QA, READY, unrelated playable modes or scoreable experiments',()=>{
+  for(const [key,value] of [
+   ['t21W10B441','none'],['t21W10B192','none'],
+   ['t21W10B203','off'],['t21QaInput','deterministic'],
+   ['t21W10B384','loadoutCircuit'],['t21W10B193','allyCoop'],
+   ['t21Play','production'],['t21QaDrive','lab'],
+   ['production','true'],['scoreable','true'],['t21Presentation','qa']
+  ] as const){
+   const params=new URLSearchParams(url);params.set(key,value);
+   expect(b245RealFrontlineCombatReadabilityCss('?'+params)).toBe('');
+  }
+  const combined=b245RealFrontlineLiveHudDockCss(url)+
+   b245RealFrontlineCombatReadabilityCss(url);
+  expect(combined).not.toContain('#t21-f3-b25-start');
+  expect(combined).not.toContain('#t21-f3-b245-view-toggle');
+  expect(b480FocusedSourcePracticeCss(url))
+   .toContain('right:14px!important;bottom:200px!important');
  });
 });
 
