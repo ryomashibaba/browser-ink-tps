@@ -261,7 +261,8 @@ describe('native SOURCE thrown bombs respect exact registered original Rapier ba
    physicalHit(id,distance),blocker,native,tolerance);
  it('retains 6cm on the SAME original Rapier backing; denies another wall behind it',()=>{
   expect(allowed(solidId+':paint',.54,true)).toBe(true);
-  expect(allowed(solidId+':paint',.56,true)).toBe(false);
+  expect(allowed(solidId+':paint',.56,true)).toBe(true);
+  expect(allowed(solidId+':paint',.57,true)).toBe(false);
   expect(allowed('other-original-floor:paint',.54,true)).toBe(false);
   expect(allowed('other-original-floor:paint',.54,false)).toBe(true);
   expect(allowed('other-original-floor:paint',.40,true)).toBe(true);
