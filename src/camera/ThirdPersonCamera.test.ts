@@ -43,8 +43,9 @@ function harness(storage?:{
  vi.stubGlobal('window',{addEventListener:add(windowListeners),
   location:{search:''},localStorage:storage});
  vi.stubGlobal('document',documentStub);
- const camera=new ThirdPersonCamera(canvas,{} as Entity,[],
-  {} as RapierStagePhysics);
+ const camera=new ThirdPersonCamera(canvas,
+  {setPosition:()=>{},lookAt:()=>{}} as unknown as Entity,[],
+  {castStageSegment:()=>null} as unknown as RapierStagePhysics);
  const key=(code:string)=>{
   const prevented={called:false};
   for(const handler of windowListeners.get('keydown')??[])
@@ -60,6 +61,11 @@ function harness(storage?:{
   for(const handler of documentListeners.get('pointerlockchange')??[])
    handler({});
  };
+ const pointerLockError=()=>{
+  for(const handler of documentListeners.get('pointerlockerror')??[])
+   handler({});
+ };
+ const frame=()=>camera.update(new Vec3(),1/60);
  const wheel=(deltaY:number,deltaMode=0)=>{
   let prevented=false;
   for(const handler of canvasListeners.get('wheel')??[])
@@ -71,7 +77,8 @@ function harness(storage?:{
    handler({button,altKey:false,clientX:0,clientY:0,
     preventDefault:()=>{}});
  };
- return {camera,key,mouse,pointerLock,pointerDown,documentStub,elements,canvas,wheel};
+ return {camera,key,mouse,pointerLock,pointerLockError,pointerDown,
+  frame,documentStub,elements,canvas,wheel};
 }
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -233,6 +240,51 @@ describe('Issue #19 SOURCE browser-consistent wheel response',()=>{
   expect(t20.wheel(3,1)).toBe(true);
   expect(t20.camera.sourcePracticeViewSnapshot().zoomMeters)
    .toBeCloseTo(original*Math.exp(.003),6);
+ });
+});
+
+describe('Issue #19 lot4: visible real SOURCE mouse-lock recovery',()=>{
+ it('keeps failed Promise rejection advice visible during unlocked frames',async()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  Object.defineProperty(h.canvas,'requestPointerLock',{
+   value:()=>Promise.reject(new Error('denied'))});
+  h.pointerDown(0);
+  await Promise.resolve();
+  h.frame();
+  expect(h.elements.at(-1)?.textContent).toContain('MOUSE LOCK NOT GRANTED');
+  expect(h.elements.at(-1)?.hidden).toBe(false);
+  // Successful later click should restore ordinary SOURCE camera hints.
+  Object.defineProperty(h.canvas,'requestPointerLock',{
+   value:()=>Promise.resolve()});
+  h.pointerDown(0);
+  h.documentStub.pointerLockElement=h.canvas;
+  h.pointerLock();
+  h.frame();
+  expect(h.elements.at(-1)?.textContent).toContain('CAMERA');
+  expect(h.elements.at(-1)?.hidden).toBe(false);
+  await Promise.resolve();
+ });
+ it('shows an actionable warning for legacy void API pointerlockerror',()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  const request=vi.fn(()=>undefined);
+  Object.defineProperty(h.canvas,'requestPointerLock',{value:request});
+  h.pointerDown(0);
+  h.pointerLockError();
+  h.frame();
+  expect(request).toHaveBeenCalledOnce();
+  expect(h.elements.at(-1)?.textContent).toContain('CLICK THE GAME VIEW AGAIN');
+  expect(h.elements.at(-1)?.hidden).toBe(false);
+  h.pointerDown(0);
+  expect(request).toHaveBeenCalledTimes(2);
+ });
+ it('does not display an unrelated lock error without a SOURCE request',()=>{
+  const h=harness();h.camera.enableSourcePracticeControls();
+  h.documentStub.pointerLockElement=null;
+  h.pointerLockError();
+  h.frame();
+  expect(h.elements).toHaveLength(0);
  });
 });
 
