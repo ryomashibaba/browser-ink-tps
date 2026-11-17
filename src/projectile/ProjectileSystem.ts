@@ -812,7 +812,10 @@ export class ProjectileSystem {
           }
         } else if (combatKind === 'PLAYER') {
           combatPoint = pointOnSegment(previous, next, combatDistance);
-          if (guarding && this.isGuardBlocking(slot, playerPosition, aimDirection)) {
+          if (guarding && (this.nativeSourceHumanPhysicalMode
+            ? this.isNativeSourceGuardBlockingContact(
+                slot,combatPoint,playerPosition,aimDirection)
+            : this.isGuardBlocking(slot,playerPosition,aimDirection))) {
             this.guardHp = Math.max(0, this.guardHp - slot.damage);
             this.stats.playerWeaponGuardBlocks += 1;
             this.stats.playerWeaponGuardHp = this.guardHp;
@@ -2665,6 +2668,30 @@ export class ProjectileSystem {
     if (meshInstance) {
       meshInstance.material = team === Team.A ? this.materialA : this.materialB;
     }
+  }
+
+  /** Native SOURCE uses the ACTUAL projectile/body contact, not the
+   * previous 60Hz slot position. For a projectile born inside the human
+   * capsule the contact can equal its center: infer its incoming side
+   * from the real projectile velocity instead of granting a free block.
+   * Frozen T20 keeps the original slot-position rule. */
+  private isNativeSourceGuardBlockingContact(
+    slot: ProjectileSlot,
+    contactPoint: Vec3,
+    playerPosition: Vec3,
+    aimDirection: Vec3
+  ): boolean {
+    const attackSide=contactPoint.clone().sub(playerPosition);
+    attackSide.y=0;
+    if(attackSide.lengthSq()<=1e-8){
+      attackSide.copy(slot.velocity).mulScalar(-1);
+      attackSide.y=0;
+      if(attackSide.lengthSq()<=1e-8)return false;
+    }
+    return this.isGuardBlockingPoint(
+      playerPosition.clone().add(attackSide),
+      playerPosition,aimDirection
+    );
   }
 
   private isGuardBlocking(
