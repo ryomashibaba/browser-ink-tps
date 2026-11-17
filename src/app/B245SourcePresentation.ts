@@ -55,9 +55,13 @@ export function b480FocusedSourcePracticeCss(search:string):string{
   '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"]',
   '#t21-f3-b25-paint-run[data-t21-b476-compact="true"]',
   '{display:block!important;}',
-  // The existing F8 button at bottom-left otherwise covers the newly
-  // exposed left-side practice bars. Keep F8 accessible away from them.
-  '#ui-root[data-t21-b245-presentation="PLAYER"][data-t21-b338-phase="PLAYING"]',
+  // Issue #11: B476 places the REAL SOURCE READY B25 start card at
+  // bottom-left (left:12px,bottom:16px,z-index:39), while F8's default
+  // left:14px,bottom:14px,z-index:72 can physically intercept its button.
+  // Move only this real B475 PLAYER F8 toggle off that corner THROUGHOUT
+  // STAGING/READY as well as PLAYING/PAUSE. Do not change button handlers,
+  // pointer events, physics, QA mode or the original 25/17/26/0 stage.
+  '#ui-root[data-t21-b245-presentation="PLAYER"]',
   '#t21-f3-b245-view-toggle',
   '{left:auto!important;right:14px!important;bottom:200px!important;}'
  ].join(' ');
