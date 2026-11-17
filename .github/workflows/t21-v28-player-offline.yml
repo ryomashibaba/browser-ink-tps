@@ -4,6 +4,7 @@ on:
     branches:
       - research/t21-v28-player-20261117
       - research/t21-v28-player-lot2-b817c7ea-20261117
+      - research/t21-v28-player-lot3-5edbc2d0-20261117
     paths:
       - 'src/player/PlayerController.ts'
       - 'src/input/PlayerInput.ts'
