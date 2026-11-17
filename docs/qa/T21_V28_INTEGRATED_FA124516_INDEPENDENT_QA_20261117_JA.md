@@ -6,7 +6,7 @@
 - **QA専用ブランチ**: `research/t21-v28-qa-20261117`。まずソースHEADへfast-forwardし、**ゲーム本体無変更**で1回限りの既存B440 Chromium実行ラッパー `.github/workflows/t21-v28-qa-fa124516-once.yml` を追加。
 - 本文にない試験をPASSとしない。正式QA、main、研究本線、Pages、原作PRIVATEは変更しない。
 - 元ソースHEADの既存GitHub Actions [#44017373705](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/44017373705)：**48ファイル/634 tests PASS、TypeScript/Vite build PASS**。ただし同runの「One real native browser with 7 original CPU and B441 opt-in」は **SKIPPED**。このrunの総合SUCCESSは実ブラウザの成功ではない。
-- 本QAの1回限り真正ブラウザ試験は、別途実行結果が確認されるまで **NOT_RUN / RUN_PENDING (UNKNOWN)** とする。直近の結果はGitHub Actionsで確認する。ユーザーに実機操作を求めない。
+- 本QAの1回限り真正ブラウザ試験は **FAILED_PRESTART**。実行とRAWの詳細は本文末の確定追補を参照。ユーザーに実機操作を求めない。
 
 ## 最重要トリアージと再現方法
 
@@ -58,4 +58,27 @@ npx vitest run src/app/B250SourceStageReadability.test.ts
 
 ## 保護条件
 
-main / 正式QA / Pages / PR#5 / PRIVATE原本 / research本線に書込みなし。SOURCE 25/17/26/0 とscoreable=0を維持。本人操作0、追加課金0、既存同条件Chromium再実行の連発なし。次のQA判断は、**今回の一回実行ログ**だけを証拠として更新する。
+main / 正式QA / Pages / PR#5 / PRIVATE原本 / research本線に書込みなし。SOURCE 25/17/26/0 とscoreable=0を維持。本人操作0、追加課金0、既存同条件Chromium再実行の連発なし。次のQA判断は、**今回の一回実行ログ**だけを証拠として更新する。同一条件の重い再実行禁止。
+
+
+## 2026-11-17 04:33 UTC — 1回だけ真正Chromium実行した確定結果（優先）
+
+- **QA workflow**: [Actions #44017850643](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/44017850643), commit `c50665bb14bdd7e7991c5ee719ff0eef1b5cb645`。このcommitの親が統合対象ソース `fa12451665588f91e190f88fc52f0c16c0d47973` であることをJobの `git rev-parse HEAD^` / `git diff --name-only` で実際に検査、**QA workflowファイル以外の差分0**。
+- **対象**: 本物のヘッドレスLinux Chromium 1600×900 + PlayCanvas / Rapier / Recast SOURCE。ワークフロー既存B440ランナーを呼出。新しいゲーム/CPU操作アルゴリズム・Actor・床・scoreの変更なし。
+- **実際のステップ結果**: source installation PASS、TS/Vite build PASS、**真正B440 trial FAIL（exit 1）**、失敗/HOLD artifact upload PASS。Run全体は **FAILURE**。真正試験はSKIPPEDではなく本当に開始されたが、**試合開始前にHOLD**。この試験をゲームプレイPASSと言わない。
+- **失敗**: `B440_SHORT_REAL_NATIVE_HOLD_UNCLICKABLE_REAL_BUTTON_#t21-f3-b25-start`。RAW `proof.stage='FRESH_NATIVE_SOURCE'`、`verdict='HOLD'`、`before=null`、`after=null`、`b441NativeEvidence=null`。
+- [RAW + スクリーンショット Artifact #14299677710](https://github.com/ryomashibaba/browser-ink-tps/actions/runs/44017850643/artifacts/14299677710)。内容 `b440-short-real-original-human-foot.json`、`source-play-portal-real-chromium.png`、`source-play-selected-ink-saber.png`。zip SHA256 `999716cac68877e5cab8adda44d2bdc3ca274b0301714bfd44e0406586519406`。
+- **限定的な真正確認**：実Chrome CDPで SOURCE portalロード → Ink Saberを人間入力で選択・反映（`realSourcePlayPortal.verdict='PASS_ACTUAL_CDP_SOURCE_LOADOUT_TO_NATIVE_PLAYCANVAS_WEAPON'`） → 各リンクの装備一致 → FRONTLINE項目を実CDPクリックして元25/17/26/0のゲームをSTAGING起動、`cpu.cpu.length=7`、正式スコア0、 `originalWinner NONE` を確認。ここまでは本物のブラウザで観測された **メニュー～起動直前の限定PASS**。
+- **未実行・未観測**：クリックによるB25 ARMED化、実WASD/入力、60Hz進行、物理床と同一画面比較、7CPU移動・実再合流、弾発射/命中/塗装、敵HP0、150tick復活と同一ラウンド再参加、180秒TIME_UP/再戦、正式4v4。これらすべて **NOT_OBSERVED**。7CPU `STAGING` 存在を7CPUの行動PASSへ拡大禁止。
+
+### QA新規P0 バグ候補：リアルSOURCE試合開始ボタンがCDPで押せない
+
+再現：上記Actions #44017850643ワークフローのB440スモークを実行する。元 `scripts/t21-b440-short-native-original-foot.mjs` は実CDPで SOURCE Ink Saber選択とFRONTLINEロード後、歴史的B441-onlyパラメータの元SOURCE世界を再オープンする。 `window.__t21F3.snapshot()` がSTAGING/7CPU/登録25/17/26/0を示すところまでは進むが、`await buttonClick('#t21-f3-b25-start')` にて停止。
+
+判定ロジックは同ランナー `buttonClick()` （約224–234行）。対象ボタンが欠落 / hidden / disabled / `display:none`、またはバウンディング矩形中央 `document.elementFromPoint` のクリック先が別要素、もしくは中心が1600×900外、の**いずれか**である。どれが今回の直接原因かはRAWに座標・hit要素がないため **UNKNOWN**。元ボタンは `src/app/UndertowF3PlayablePreviewApp.ts` の `#t21-f3-b25-start` （約2323行）。CSS `src/app/B245SourcePresentation.ts` にはPLAYING時の練習カード非表示設定があるが、今回STAGINGであったためそれを原因と断定しない。
+
+次の修正担当へ：本体を無根拠に変更せず、次回の**別内容の修正検証時に**対象ボタンの `hidden/disabled/display/visibility/rect/elementFromPoint/hit id/class/z-index/parent` を1回だけREAD-ONLYで取得し、最初の遮蔽要素を特定する。セレクタを別ボタンに差し替えたり、JS `.click()` で物理的に押せないUIを隠蔽することは禁止。**同じ内容の重いChromium試験は再実行しない**。
+
+### スクリーンショットの限界
+
+RAWの2 PNGは SOURCE portalのみ。CI Ubuntuで日本語文字が豆腐（□）のように表示される部分があるが、Chromium Linuxの字体環境差を除外できず、**Windows実機のビジュアル不具合と断定しない**。ゲームプレイ画面のGPU/物理床対応は今回未撮影。
