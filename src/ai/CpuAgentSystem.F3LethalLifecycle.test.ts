@@ -2406,6 +2406,10 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     const midair=new Vec3(0,1,0);
     const makeSurface=(id:string,height:number)=>({
       id,baseFlags:SurfaceFlags.Paintable,
+      widthMeters:1,heightMeters:1,
+      widthCells:1,heightCells:1,cellSize:1,
+      flagsGrid:new Uint16Array([SurfaceFlags.Paintable]),
+      isCellActive:vi.fn(()=>true),index:vi.fn(()=>0),
       projectWorldPoint:vi.fn(()=>({
         inside:true,planeDistance:1-height,u:0,v:0
       })),
@@ -2448,6 +2452,10 @@ describe('F3 real CPU HP-zero is a single immediate source-native splat', () => 
     projectile.nativeSourceHumanPhysicalMode=()=> 'SQUID';
     projectile.surfaces=[{
       id:'BEHIND_ORIGINAL_WALL',baseFlags:SurfaceFlags.Paintable,
+      widthMeters:1,heightMeters:1,
+      widthCells:1,heightCells:1,cellSize:1,
+      flagsGrid:new Uint16Array([SurfaceFlags.Paintable]),
+      isCellActive:vi.fn(()=>true),index:vi.fn(()=>0),
       projectWorldPoint:vi.fn(()=>({
         inside:true,planeDistance:.4,u:0,v:0
       })),
