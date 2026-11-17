@@ -1,5 +1,5 @@
 import { PerformanceStats } from '../core/PerformanceStats';
-import { GameplayInkSystem, type PaintApplyResult } from './GameplayInkSystem';
+import { GameplayInkSystem, type PaintApplyResult, type PaintRasterRun } from './GameplayInkSystem';
 import { GpuInkAtlas } from './GpuInkAtlas';
 import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
 
@@ -23,6 +23,35 @@ export interface PaintRequest {
 export interface PaintTickReport {
   humanScoreableAreaMeters2: number;
   cpuScoreableAreaMeters2ByActor: Readonly<Record<string, number>>;
+}
+
+/**
+ * A full-strength brush overwrite is idempotent only when the *complete*
+ * GPU shader input and the actual CPU-authorized row runs agree. This
+ * compares adjacent GPU submissions within one tick; no unrelated brush
+ * (including an opposing team) may be reordered or dropped.
+ */
+function sameInkGpuOverwrite(
+  before: PaintEvent, beforeRuns: readonly PaintRasterRun[],
+  after: PaintEvent, afterRuns: readonly PaintRasterRun[]
+): boolean {
+  if (before.surfaceId !== after.surfaceId ||
+      before.team !== after.team ||
+      before.centerU !== after.centerU ||
+      before.centerV !== after.centerV ||
+      before.radiusU !== after.radiusU ||
+      before.radiusV !== after.radiusV ||
+      before.angle !== after.angle ||
+      before.strength !== after.strength ||
+      beforeRuns.length !== afterRuns.length) return false;
+
+  for (let i = 0; i < beforeRuns.length; i += 1) {
+    const a = beforeRuns[i]!;
+    const b = afterRuns[i]!;
+    if (a.row !== b.row || a.startX !== b.startX ||
+        a.endXExclusive !== b.endXExclusive) return false;
+  }
+  return true;
 }
 
 export class PaintCoordinator {
@@ -66,6 +95,10 @@ export class PaintCoordinator {
     // and persistent GPU visual ink. Neither side recomputes the impact location.
     const batch = this.requests.splice(0, this.requests.length);
     let changedCells = 0;
+    // Identical GPU overwrites from clustered hits in one tick should not
+    // grow the renderer backlog. This does not deduplicate CPU ownership,
+    // scoring or source diagnostic events.
+    let lastQueuedBrush: { event: PaintEvent; runs: readonly PaintRasterRun[] } | null = null;
     let humanScoreableAreaMeters2 = 0;
     const cpuScoreableAreaMeters2ByActor: Record<string, number> = {};
     for (const request of batch) {
@@ -104,7 +137,13 @@ export class PaintCoordinator {
       // draw a phantom GPU stamp. Repaints on already-owned cells remain
       // eligible for visual wetness, even when changedCells is zero.
       if (result.rasterEligibleCells > 0) {
-        this.gpu.queue(event, result.paintableRuns);
+        if (!lastQueuedBrush || !sameInkGpuOverwrite(
+          lastQueuedBrush.event, lastQueuedBrush.runs,
+          event, result.paintableRuns
+        )) {
+          this.gpu.queue(event, result.paintableRuns);
+          lastQueuedBrush = { event, runs: result.paintableRuns };
+        }
         // Same-team restamps still refresh visual wetness, but denied
         // requests must not masquerade as the last valid paint impact.
         this.lastEvent = event;
