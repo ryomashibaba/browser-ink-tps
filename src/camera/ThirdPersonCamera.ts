@@ -58,6 +58,9 @@ export class ThirdPersonCamera {
   // otherwise update() immediately hid the human-facing retry advice.
   private sourceToastVisibleWhileUnlocked=false;
   private sourceLockRequestPending=false;
+  // Ignore late Promise failures from a superseded/recovered mouse-lock
+  // request. A stale denial must not overwrite a successful camera recapture.
+  private sourceLockRequestToken=0;
   private sourceSmartOcclusionEnabled = false;
   private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
   private readonly alternateCameraPosition=new Vec3();
@@ -442,6 +445,14 @@ export class ThirdPersonCamera {
   }
 
   public getFlatForward(out = new Vec3()): Vec3 {
+    if(this.sourcePracticeControls){
+      // Mousemove updates yaw immediately, while camera.update() may run
+      // only on the next render. SOURCE's real 60Hz player KCC must steer
+      // relative to the *latest* view intent rather than a one-frame-old
+      // forward vector. No actor/collision/nav writes or aim-assist.
+      const yawRadians=this.yaw*Math.PI/180;
+      return out.set(Math.sin(yawRadians),0,-Math.cos(yawRadians));
+    }
     out.set(this.forward.x, 0, this.forward.z);
     if (out.lengthSq() < 1e-8) return out.set(0, 0, -1);
     return out.normalize();
@@ -481,6 +492,7 @@ export class ThirdPersonCamera {
       if(this.sourcePracticeControls&&
          document.pointerLockElement===this.canvas){
         this.sourceLockRequestPending=false;
+        this.sourceLockRequestToken++;
         this.showSourceControlToast(
          'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · SHIFT SQUID · SPACE JUMP');
       }else if(this.sourceControlToast&&!this.sourceToastVisibleWhileUnlocked)
@@ -491,6 +503,7 @@ export class ThirdPersonCamera {
       // this event instead of a Promise rejection. Our request only.
       if(this.sourcePracticeControls&&this.sourceLockRequestPending){
         this.sourceLockRequestPending=false;
+        this.sourceLockRequestToken++;
         this.showSourceControlToast(
          'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
       }
@@ -553,21 +566,26 @@ export class ThirdPersonCamera {
           // Some browsers still return void for requestPointerLock(), rather
           // than a Promise. Calling .catch on void raised after the click and
           // made SOURCE camera re-entry seem broken. Both APIs are supported.
+          const requestToken=++this.sourceLockRequestToken;
           this.sourceLockRequestPending=true;
           try{
             const lock=this.canvas.requestPointerLock();
             if(lock&&typeof lock.catch==='function')
               void lock.catch(()=>{
-                if(document.pointerLockElement!==this.canvas){
-                  this.sourceLockRequestPending=false;
-                  this.showSourceControlToast(
-                   'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
-                }
+                if(requestToken!==this.sourceLockRequestToken||
+                   document.pointerLockElement===this.canvas)return;
+                this.sourceLockRequestPending=false;
+                this.sourceLockRequestToken++;
+                this.showSourceControlToast(
+                 'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
               });
           }catch{
-            this.sourceLockRequestPending=false;
-            this.showSourceControlToast(
-             'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+            if(requestToken===this.sourceLockRequestToken){
+              this.sourceLockRequestPending=false;
+              this.sourceLockRequestToken++;
+              this.showSourceControlToast(
+               'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+            }
           }
         }else{
           // Frozen T20/default pointer-lock semantics stay unchanged.
