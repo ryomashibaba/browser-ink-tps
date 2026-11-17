@@ -110,6 +110,46 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(agent.teleport).not.toHaveBeenCalled();
   expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
  });
+ it('accepts genuine B2/B4 supported ramp feet at .222-.244m without weakening native route gate',()=>{
+  for(const supportDelta of [.22215840578079238,.24438563346862807]){
+   const {cpu,bot,agent,report}=fixture();
+   cpu.phase14qGroundCollision.sourceFootSupport.mockReturnValue({
+    solidId:'ORIGINAL_REGISTERED_SOLID',
+    point:new Vec3(bot.position.x,bot.position.y-supportDelta,bot.position.z)
+   });
+   cpu.tryRefreshStalledOriginalSourceCrowd(report);
+   expect(agent.teleport).toHaveBeenCalledOnce();
+   expect(cpu.navigation.auditPath).toHaveBeenCalledOnce();
+   expect(bot.position).toEqual(new Vec3(0,3,0));
+  }
+ });
+ it('keeps strict Recast start/end layer veto even for physically supported 0.244m feet',()=>{
+  const {cpu,bot,agent,report}=fixture();
+  cpu.phase14qGroundCollision.sourceFootSupport.mockReturnValue({
+   solidId:'ORIGINAL_REGISTERED_SOLID',
+   point:new Vec3(bot.position.x,bot.position.y-.24438563346,bot.position.z)
+  });
+  cpu.navigation.auditPath.mockImplementation((from:Vec3,to:Vec3)=>({
+   querySuccess:true,reachedTarget:true,pointCount:2,
+   nativePathPoints:[from,to],
+   startSnapDistanceMeters:.201,endSnapDistanceMeters:0,
+   endpointErrorMeters:0
+  }));
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(agent.teleport).not.toHaveBeenCalled();
+ });
+ it('rejects >0.25m hit, unregistered original floor and invalid support during stall recovery',()=>{
+  for(const witness of [
+   {solidId:'ORIGINAL_REGISTERED_SOLID',point:new Vec3(0,3-.251,0)},
+   {solidId:'OTHER_FLOOR',point:new Vec3(0,3-.23,0)},
+   {solidId:'ORIGINAL_REGISTERED_SOLID',point:new Vec3(0,NaN,0)}
+  ]){
+   const {cpu,agent,report}=fixture();
+   cpu.phase14qGroundCollision.sourceFootSupport.mockReturnValue(witness);
+   cpu.tryRefreshStalledOriginalSourceCrowd(report);
+   expect(agent.teleport).not.toHaveBeenCalled();
+  }
+ });
  it('never manufactures an alternate registered floor or opposite navmesh layer',()=>{
   const {cpu,agent,report}=fixture();
   cpu.phase14qGroundCollision.sourceFootSupport.mockReturnValue({
