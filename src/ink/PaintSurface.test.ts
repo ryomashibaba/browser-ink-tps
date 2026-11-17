@@ -311,7 +311,8 @@ describe('SOURCE ink projection and hit authority, allocation-aware real contact
 
   it('does not let inconsistent individual cell flags authorize a nonpaintable registered plane', () => {
     const unpaintable = registered('physical-solid-no-paint', SurfaceFlags.Floor);
-    unpaintable.flagsGrid[unpaintable.index(2, 2)] |= SurfaceFlags.Paintable;
+    const cellIndex = unpaintable.index(2, 2);
+    unpaintable.flagsGrid[cellIndex] = (unpaintable.flagsGrid[cellIndex] ?? 0) | SurfaceFlags.Paintable;
     expect(sourceRegisteredPaintCellActive(unpaintable, 2.5, 2.5)).toBe(false);
     const hit = unpaintable.intersectRay(new Vec3(.5, 3, .5), new Vec3(0, -1, 0));
     expect(hit).not.toBeNull();
