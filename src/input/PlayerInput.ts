@@ -3,6 +3,7 @@
 const SOURCE_PRESTART_MOVEMENT_CODES=new Set([
  'KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyF','KeyG'
 ]);
+const SOURCE_MOVEMENT_CODES=new Set(['KeyW','KeyA','KeyS','KeyD']);
 export class PlayerInput {
   private readonly keys = new Set<string>();
   private sourcePrestartBlocked=false;
@@ -12,6 +13,10 @@ export class PlayerInput {
   // SOURCE-only: a real Shift down/up between 60Hz ticks should still be
   // seen once by the next physics step, never as a persistent held key.
   private sourceSquidTapQueued=false;
+  // Genuine SOURCE keydown+keyup entirely between native 60Hz ticks
+  // otherwise vanishes, even though the human actually pressed movement.
+  private readonly sourceMovementTapCodes=new Set<string>();
+  private readonly sourceMoveTickAxes={x:0,y:0};
   private readonly sourcePrestartHeldKeys=new Set<string>();
   // QA-only synthetic axes. Never active during regular Pointer Lock play.
   private qaAxis: Readonly<{x:number;y:number}> | null = null;
@@ -68,9 +73,12 @@ export class PlayerInput {
       const freshPress=!this.keys.has(event.code);
       this.keys.add(event.code);
       if(this.sourceNativeRepeatGuard&&!this.deterministicQaEnabled&&
-         freshPress&&!event.repeat&&
-         (event.code==='ShiftLeft'||event.code==='ShiftRight'))
-        this.sourceSquidTapQueued=true;
+         freshPress&&!event.repeat){
+        if(event.code==='ShiftLeft'||event.code==='ShiftRight')
+          this.sourceSquidTapQueued=true;
+        if(SOURCE_MOVEMENT_CODES.has(event.code))
+          this.sourceMovementTapCodes.add(event.code);
+      }
       if (event.code === 'Space') {
         if (!event.repeat&&(!this.sourceNativeRepeatGuard||freshPress))
           this.jumpQueued = true;
@@ -104,6 +112,7 @@ export class PlayerInput {
       clearPointerState();
       this.jumpQueued = false;
       this.sourceSquidTapQueued = false;
+      this.sourceMovementTapCodes.clear();
       this.subPressedQueued = false;
       this.specialPressedQueued = false;
       this.jumpRequiresRelease = !this.combatInputActive;
@@ -164,6 +173,7 @@ export class PlayerInput {
     if(blocked){
       this.sourceNativeRepeatGuard=true;
       this.sourceSquidTapQueued=false;
+      this.sourceMovementTapCodes.clear();
     }
     if(!blocked)return;
     for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
@@ -190,6 +200,7 @@ export class PlayerInput {
     this.primaryPressAtMs=Number.NaN;
     this.jumpQueued=false;
     this.sourceSquidTapQueued=false;
+    this.sourceMovementTapCodes.clear();
     this.keys.delete('Space');
     // A physical Space keyup (not an automatic key repeat) rearms jump
     // after death; no modification to Rapier, movement, CPU or ink.
@@ -218,6 +229,26 @@ export class PlayerInput {
     return !this.sourcePrestartBlocked&&
       (!this.sourceNativeRepeatGuard||
        document.pointerLockElement===this.canvas);
+  }
+
+  /** Native SOURCE input for exactly one real KCC tick. A fast WASD tap
+   * is not a new floor, path or movement impulse: it supplies genuine
+   * pressed intent to the same existing acceleration and Rapier collision.
+   * The queued event never survives STAGING, lock loss or respawn. The
+   * returned object is reused to avoid per-frame allocations. */
+  public consumeMoveAxesForPlayerTick():Readonly<{x:number;y:number}>{
+    const available=this.sourceLiveInputAvailable;
+    const taps=this.sourceMovementTapCodes;
+    const useTaps=available&&this.sourceNativeRepeatGuard&&
+      !this.deterministicQaEnabled;
+    const has=(code:string):boolean=>
+      this.keys.has(code)||(useTaps&&taps.has(code));
+    this.sourceMoveTickAxes.x=available
+      ? this.qaAxis?.x??(Number(has('KeyD'))-Number(has('KeyA'))):0;
+    this.sourceMoveTickAxes.y=available
+      ? this.qaAxis?.y??(Number(has('KeyW'))-Number(has('KeyS'))):0;
+    taps.clear();
+    return this.sourceMoveTickAxes;
   }
 
   public get moveX(): number {
