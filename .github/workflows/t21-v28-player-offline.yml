@@ -6,6 +6,7 @@ on:
       - research/t21-v28-player-lot2-b817c7ea-20261117
       - research/t21-v28-player-lot3-5edbc2d0-20261117
       - research/t21-v28-player-lot4-e442edb5-20261117
+      - research/t21-v28-player-lot5-e2c8d382-20261117
     paths:
       - 'src/player/PlayerController.ts'
       - 'src/input/PlayerInput.ts'
