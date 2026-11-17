@@ -1,0 +1,29 @@
+name: T21 V28 ink scoped type and raster checks
+on:
+  push:
+    branches:
+      - research/t21-v28-ink-20261117
+    paths:
+      - 'src/ink/**'
+      - '.github/workflows/t21-v28-ink-scoped-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t21-v28-ink-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ink-raster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned direct dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Authoritative ink and geometry tests
+        run: npx vitest run src/ink/InkBrushRasterGeometry.test.ts src/ink/InkPaintAuthority.test.ts src/ink/PaintSurface.test.ts src/ink/PaintCoordinatorCpuQa.test.ts
