@@ -45,6 +45,13 @@ describe('B245 real source PLAYER weapon guidance not clipped',()=>{
   expect(rule).toContain('white-space:normal!important');
   expect(rule).toContain('line-height:1.4!important');
   expect(rule).not.toContain('text-overflow:ellipsis');
+  expect(rule).toContain('font-size:clamp(11px,0.9vw,13px)!important');
+  // The mobile override comes LAST and is restricted to real PLAYER play.
+  const responsive=css.slice(css.lastIndexOf('@media(max-width:720px)'));
+  expect(responsive).toContain('#t21-f3-b338-source-guide');
+  expect(responsive).toContain('font-size:12px!important');
+  expect(responsive).toContain('line-height:1.45!important');
+  expect(responsive).not.toContain('data-t21-b245-presentation="QA"');
   const keyHelp=css.indexOf('#t21-f3-player-key-help');
   expect(keyHelp).toBeGreaterThan(0);
   expect(css.slice(keyHelp,css.indexOf('}',keyHelp)))
