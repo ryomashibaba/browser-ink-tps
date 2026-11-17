@@ -23,8 +23,14 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
    actualOriginalArrivals:3,actualA3Requests:4,a3ResearchSelected:true,
    originalOpponentRoutesCertified:0,originalOfficialScoreable:0,
    officialWinner:'NONE',productionAuthorized:false});
+  expect(v?.lines).toContain('GOAL REQUESTS 12 · REAL ARRIVALS 3');
+  expect(v?.lines).toContain('UNSAFE / UNREACHABLE HELD 125');
+  expect(v?.lines).toContain('OPPONENT PATH UNVERIFIED');
   expect(v?.lines).toContain('REQUEST ≠ ARRIVAL');
-  expect(v?.lines).toContain('0/12');
+  // Historical hardcoded 0/12 route denominator did not match genuine
+  // B487 0/16 queries. No stale hardcoded path result in live B441 text.
+  expect(v?.lines).not.toContain('CROSS-TEAM ROUTES 0/12');
+  expect(v?.lines).not.toContain('0/16');
   expect(v?.lines).not.toContain('TEAM_A_WINS');
  });
  it('shows genuine B441-only source readout without authorizing B448',()=>{
@@ -39,8 +45,23 @@ describe('B464 real player-visible optional native CPU frontline',()=>{
    officialWinner:'NONE'
   });
   expect(v?.lines).toContain('A3 OPTIONAL B448 OFF');
-  expect(v?.lines).toContain('CROSS-TEAM ROUTES 0/12');
+  expect(v?.lines).toContain('OPPONENT PATH UNVERIFIED');
+  expect(v?.lines).toContain('A3 OPTIONAL B448 OFF');
+  expect(v?.lines).not.toContain('0/12');
   expect(v?.lines).not.toContain('TEAM_A_WINS');
+ });
+ it('shows zero actual arrivals as zero, even with real goal requests',()=>{
+  const s=evidence();
+  s.cpu.sourcePatrol.b443FirstActualFrontlineArrivals=0;
+  s.cpu.sourcePatrol.b441ActualGoalRequests=20;
+  s.cpu.sourcePatrol.b441UnsafeOrUnreachableHolds=150;
+  const v=b464RealSourceFrontlineView(s);
+  expect(v).not.toBeNull();
+  expect(v?.lines).toContain('GOAL REQUESTS 20 · REAL ARRIVALS 0');
+  expect(v?.lines).toContain('UNSAFE / UNREACHABLE HELD 150');
+  expect(v?.lines).not.toContain('ARRIVALS 20');
+  expect(v?.originalOpponentRoutesCertified).toBe(0);
+  expect(v?.officialWinner).toBe('NONE');
  });
  it('preserves true STAGING and TIME_UP modes, and stop HOLD',()=>{
   const s=evidence();
