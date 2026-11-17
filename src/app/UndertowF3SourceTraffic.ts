@@ -3368,6 +3368,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.cleared.delete(id);
   this.respawnOriginalDrops.delete(id);
   this.originalSourceRecoveryIntent.delete(id);
+  // A successful native 150-tick respawn starts a DIFFERENT physical
+  // life. B446's old-foot dry probe and B467/B470's later-foot grants
+  // cannot be inherited by the new high-spawn Actor. Original constructor
+  // approvals are stationary SOURCE facts, not a granted NEW-life route:
+  // retain only those vetted immutable candidate endpoints. Every actual
+  // new movement still needs Recast and Rapier approval.
+  this.b446LiveFootProbes.delete(id);
+  this.b467LiveSourceGoals.delete(id);
+  this.b467LastLiveRetryTick.delete(id);
+  this.b470LastNativeRetry.delete(id);
+  const initial=this.b445FrontlineGates.get(id);
+  if(initial)this.b441FrontGoals.set(id,
+   initial.approvedOriginalGoals.map(p=>new Vec3(...p)));
   this.b443OriginalGoalLocks.delete(id);
   this.b442LastApprovedFront.delete(id);
   this.b441OriginalRampGoal?.delete(id);

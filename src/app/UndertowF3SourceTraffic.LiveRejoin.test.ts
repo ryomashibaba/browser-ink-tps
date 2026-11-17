@@ -36,7 +36,10 @@ function fixture(){
   // The snapshot has accumulated additional observational ledgers since
   // this lightweight lifecycle fixture was introduced. Keep them empty,
   // not undefined, so the read-only snapshot can be exercised honestly.
-  b445FrontlineGates:new Map(),b446LiveFootProbes:new Map(),
+  b445FrontlineGates:new Map(),b441FrontGoals:new Map(),
+  b446LiveFootProbes:new Map(),
+  b467LiveSourceGoals:new Map(),b467LastLiveRetryTick:new Map(),
+  b470LastNativeRetry:new Map(),
   b467NativeRetargetWitnesses:[],b467LiveSourceGoals:new Map(),
   b470NativeRetargetWitnesses:[],b442LastApprovedFront:new Map(),
   b471ReadOnlyAllyCoverageOrder:()=>null,
@@ -255,6 +258,62 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   historical.add('B1');
   expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
  });
+ it('a genuinely respawned B2 or A3 loses old-life dynamic fronts but keeps immutable original candidates and living teammates',()=>{
+  for(const id of ['B2','A3'] as const){
+   const {traffic,bots,historical}=fixture();
+   const t:any=traffic;
+   const actor=bots.find(b=>b.id===id)!;
+   const teammateId=id==='B2'?'B3':'A2';
+   const original=new Vec3(0,3.2,id==='B2'?-44:44);
+   const dynamic=new Vec3(2,3.2,id==='B2'?-36:36);
+   const teammateFront=new Vec3(5,3.2,id==='B2'?-42:42);
+   t.b445FrontlineGates.set(id,{
+    approvedOriginalGoals:[[original.x,original.y,original.z]]
+   });
+   t.b441FrontGoals.set(id,[original.clone(),dynamic.clone()]);
+   t.b441FrontGoals.set(teammateId,[teammateFront]);
+   t.b446LiveFootProbes.set(id,{
+    nativeTick:123,firstPassingExistingGoal:[dynamic.x,dynamic.y,dynamic.z],
+    probeOnlyNoActorOrGoalWrites:true
+   });
+   t.b446LiveFootProbes.set(teammateId,{nativeTick:123});
+   t.b467LiveSourceGoals.set(id,{
+    nativeTick:123,actualFoot:[0,3.2,42],
+    actualOriginalSolidId:'ORIGINAL',sourceGoal:[2,3.2,36]
+   });
+   t.b467LastLiveRetryTick.set(id,123);
+   t.b470LastNativeRetry.set(id,123);
+   t.b467LiveSourceGoals.set(teammateId,{nativeTick:123});
+   t.b443OriginalGoalLocks.set(id,{target:dynamic});
+   actor.lifeState='SPLATTED';actor.hp=0;
+   traffic.onNativeSourceCpuRespawn(id);
+   // Old dynamic previous-life routes are not authorized for newborn CPU.
+   expect(t.b441FrontGoals.get(id)).toHaveLength(1);
+   expect(t.b441FrontGoals.get(id)[0].equals(original)).toBe(true);
+   expect(t.b441FrontGoals.get(id)[0]).not.toBe(original);
+   expect(t.b446LiveFootProbes.has(id)).toBe(false);
+   expect(t.b467LiveSourceGoals.has(id)).toBe(false);
+   expect(t.b467LastLiveRetryTick.has(id)).toBe(false);
+   expect(t.b470LastNativeRetry.has(id)).toBe(false);
+   expect(t.b443OriginalGoalLocks.has(id)).toBe(false);
+   // The real 150-tick high spawn is not an instant SOURCE frontline
+   // or 7/7 authorization; it must pass a new physical first drop.
+   actor.lifeState='ACTIVE';actor.hp=100;
+   actor.position.set(0,9,id==='B2'?-42:42);
+   expect(traffic.isLiveRejoinedSourceCpu(id)).toBe(false);
+   expect(traffic.nativeSourceLiveRejoinedIds()).toHaveLength(6);
+   expect(historical.has(teammateId)).toBe(true);
+   expect(t.b441FrontGoals.get(teammateId)[0]).toBe(teammateFront);
+   expect(t.b446LiveFootProbes.has(teammateId)).toBe(true);
+   expect(t.b467LiveSourceGoals.has(teammateId)).toBe(true);
+   // The new life may make a NEW B446 physical-foot probe after it
+   // actually rejoins; no stale cache can suppress that attempt.
+   historical.add(id);
+   expect(traffic.isLiveRejoinedSourceCpu(id)).toBe(true);
+   expect(t.b446LiveFootProbes.has(id)).toBe(false);
+  }
+ });
+
  it('normal real source respawn must earn new physical rejoin',()=>{
   const {traffic,bots,historical}=fixture();
   bots[3]!.lifeState='SPLATTED';bots[3]!.hp=0;
