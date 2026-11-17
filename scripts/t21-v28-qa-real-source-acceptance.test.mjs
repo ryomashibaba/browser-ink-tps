@@ -28,7 +28,10 @@ function originalProof(){
  };
 }
 function withRealK2(p,delta=720){
- p.k2WindowProvenance={nativeTickDelta:delta,browserOriginEqual:true};
+ p.k2WindowProvenance={firstTick:1068,lastTick:1068+delta,
+  nativeTickDelta:delta,browserOriginEqual:true,
+  expectedBrowserOrigin:1794892763088.9,
+  observedBrowserOrigin:1794892763088.9};
  p.k2PerActorNativeShotAndInk={
   source:'25/17/26/0',sameUnmodifiedSourceWorld:true,
   originalActorOrColliderWrites:0,nativeTicksObserved:delta,
@@ -70,9 +73,11 @@ test('one actual CPU without accepted projectile paint cannot produce 7CPU impac
 });
 test('599, origin mismatch and missing live time origin are all fail closed',()=>{
  for(const obj of [
-  {nativeTickDelta:599,browserOriginEqual:true},
-  {nativeTickDelta:720,browserOriginEqual:false},
-  {nativeTickDelta:720}
+  {firstTick:1068,lastTick:1667,nativeTickDelta:599,browserOriginEqual:true,
+   expectedBrowserOrigin:1794892763088.9,observedBrowserOrigin:1794892763088.9},
+  {firstTick:1068,lastTick:1788,nativeTickDelta:720,browserOriginEqual:false,
+   expectedBrowserOrigin:1794892763088.9,observedBrowserOrigin:1794892763089.9},
+  {firstTick:1068,lastTick:1788,nativeTickDelta:720}
  ]){
   const x=withRealK2(originalProof());
   x.k2WindowProvenance=obj;
@@ -94,7 +99,8 @@ test('real CPU sampled movement and stationary B4 are not certified 60Hz KCC',()
 test('malformed or duplicated native frames do not invent position movement',()=>{
  const x=originalProof();
  x.b441NativeEvidence.realFrames.push({tick:1300,
-  physicalFeet:x.b441NativeEvidence.realFrames[0].physicalFeet});
+  physicalFeet:[...x.b441NativeEvidence.realFrames[0].physicalFeet.slice(0,6),
+   x.b441NativeEvidence.realFrames[0].physicalFeet[0]]});
  x.b441NativeEvidence.realFrames[1].physicalFeet[0].foot=[NaN,3,55];
  const v=auditRealSourceB440(x);
  assert.equal(v.nativeCpu.validReadOnlyFootFrames,3);
