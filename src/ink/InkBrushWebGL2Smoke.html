@@ -169,9 +169,9 @@ try {
       vUv0 = aPos;
       vWorldPos = vec3(0.0);
     }`;
-  const surfaceFragment = '#version 300 es\n' +
-    'out vec4 fragColor;\n' +
+  const surfaceFragment = '#version 300 es\nprecision highp float;\nout vec4 fragColor;\n' +
     MATERIAL_FRAGMENT
+      .replace('precision highp float;', '')
       .replaceAll('varying vec2', 'in vec2')
       .replaceAll('varying vec3', 'in vec3')
       .replaceAll('texture2D(', 'texture(')
