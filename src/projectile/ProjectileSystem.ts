@@ -2528,9 +2528,14 @@ export class ProjectileSystem {
     // hemisphere for SUB/SPECIAL blast contacts. The legacy point guard
     // accepts dots down to -0.10; keep that tolerance ONLY for frozen T20.
     // No new shield angle or blast radius is inferred from original data.
+    // Only query forward when a real guard is active. Native CPU blast
+    // and old headless life/cover fixtures do not necessarily carry
+    // a human aim vector, and must still apply authentic HP damage.
     const sourceAreaInFront=this.nativeSourceHumanPhysicalMode===null||
-      flattened(this.currentHumanAimDirection).dot(
-        new Vec3(areaDx,0,areaDz))>0;
+      (this.currentHumanGuarding===true&&
+       !!this.currentHumanAimDirection&&
+       flattened(this.currentHumanAimDirection).dot(
+        new Vec3(areaDx,0,areaDz))>0);
     if (
       this.currentHumanGuarding &&
       sourceAreaHasSide &&
