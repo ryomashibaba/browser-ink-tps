@@ -15,11 +15,17 @@ export interface CpuSourceCrowdStallEvidence {
   readonly currentSourceTick:number;
   readonly lastPhysicalBlockTick:number|null;
 }
-export const SOURCE_CROWD_STALL_SECONDS=5;
+/** 72 genuinely sampled original native ticks without planar progress were
+ * observed for B4. A SOURCE-only early review after 1.2s may refresh
+ * steering; it must never override a real Rapier rejection or route HOLD.
+ * The independent five-second CpuContinuityMonitor QA threshold is unchanged. */
+export const SOURCE_CROWD_STALL_SECONDS=1.2;
+/** Avoid a 60Hz series of costly Recast/Rapier probes after a held audit. */
+export const SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS=90;
 export const SOURCE_CROWD_BLOCK_QUIET_TICKS=300;
 const valid=(p:CpuSourceRecoveryFoot)=>[p.x,p.y,p.z].every(Number.isFinite);
 
-/** Refresh only after five seconds of ACTUAL stationary, with a distant
+/** Refresh after 1.2 seconds of ACTUAL stationary, with a distant
  * previously admitted goal, no recently blocked Rapier/offmesh movement,
  * and no prior refresh in this CPU life. Route and support proof come next. */
 export function shouldRefreshStalledOriginalSourceCrowd(
