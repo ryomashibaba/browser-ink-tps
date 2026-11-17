@@ -101,13 +101,17 @@ describe('T21 V28 continuous ink request provenance and real feedback', () => {
     coordinator.processTick(101);
     expect(coordinator.lastEvent).toBe(first);
     expect([stats.lastPaintWorldX, stats.lastPaintWorldY, stats.lastPaintWorldZ]).toEqual(firstWorld);
-    expect(accepted).toHaveLength(1);
+    // Retain the old diagnostic callback's denied-attempt reporting;
+    // only accepted GPU drawing and last-valid-hit UI telemetry are gated.
+    expect(accepted).toHaveLength(4);
+    expect(accepted.map(x => x.result.rasterEligibleCells)).toEqual([1, 0, 0, 0]);
     expect(gpu.queue).toHaveBeenCalledTimes(1);
 
     // Same-team repaint changes no owner cell, but does refresh wet ink.
     coordinator.enqueue(valid);
     coordinator.processTick(102);
-    expect(accepted.map(x => x.changed)).toEqual([1, 0]);
+    expect(accepted.map(x => x.changed)).toEqual([1, 0, 0, 0, 0]);
+    expect(accepted.at(-1)?.result.rasterAlreadyTeamOwnedCells).toBe(1);
     expect(coordinator.lastEvent?.tick).toBe(102);
     expect(gpu.queue).toHaveBeenCalledTimes(2);
     expect(gameplay.snapshot().totalScoreableArea).toBe(1e-9);
