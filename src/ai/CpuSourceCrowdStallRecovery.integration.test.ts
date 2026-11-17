@@ -95,7 +95,7 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
  it('preserves genuine source splatling charge, paid burst and active guard',()=>{
   for(const situation of ['CHARGE','BURST','GUARD']){
    const {cpu,bot,agent,report}=fixture();
-   bot.weaponChargeSeconds=situation==='CHARGE'?.8:0;
+   bot.weaponChargeSeconds=situation==='CHARGE'?0.8:0;
    bot.weaponBurstShotsRemaining=situation==='BURST'?3:0;
    bot.weaponGuarding=situation==='GUARD';
    cpu.tryRefreshStalledOriginalSourceCrowd(report);
