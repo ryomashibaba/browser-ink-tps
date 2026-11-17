@@ -1,0 +1,66 @@
+name: T21 V28 QA Issue18 one genuine 720 tick CPU/HP gate
+on:
+  push:
+    branches:
+      - research/t21-v28-qa-realplay-lot2-20261117
+    paths:
+      - .github/workflows/t21-v28-qa-realplay-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: t21-v28-qa-realplay-once-20261117
+  cancel-in-progress: false
+jobs:
+  native-source-qa-720:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify exact integrated SOURCE parent and QA-only changes
+        env:
+          PINNED_SOURCE: b817c7eae70038a1b83da77fc8f517b08ea9c0ea
+        run: |
+          git cat-file -e "$PINNED_SOURCE^{commit}"
+          git diff --name-only "$PINNED_SOURCE" HEAD | while IFS= read -r f; do
+            case "$f" in
+              scripts/t21-v28-qa-real-source-acceptance.mjs|scripts/t21-v28-qa-real-source-acceptance.test.mjs|.github/workflows/t21-v28-qa-realplay-once.yml) ;;
+              *) echo "UNAUTHORIZED_SOURCE_CHANGE $f"; exit 1 ;;
+            esac
+          done
+          node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --check scripts/t21-v28-qa-real-source-acceptance.mjs
+      - name: Run QA fail-closed actual-game proof regression
+        run: node --test scripts/t21-v28-qa-real-source-acceptance.test.mjs
+      - name: Install existing SOURCE runtime
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Build exact integrated SOURCE game for Chromium
+        run: npm run build -- --base=/browser-ink-tps/
+      - name: Exactly one genuine original SOURCE Chromium 720-tick session
+        env:
+          T21_B441_SOURCE_FRONTLINE: '1'
+          T21_B441_NATIVE_OBSERVE_TICKS: '720'
+          T21_B440_OUT: /tmp/t21-v28-qa-realplay-b817-once
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Independent proof of actual human shots CPU paint and true first blocker
+        if: always()
+        run: |
+          RAW=/tmp/t21-v28-qa-realplay-b817-once/b440-short-real-original-human-foot.json
+          if test -f "$RAW"; then
+            node scripts/t21-v28-qa-real-source-acceptance.mjs "$RAW" /tmp/t21-v28-qa-realplay-b817-once/qa-real-source-acceptance.json
+          else
+            echo "HOLD: genuine original SOURCE RAW was never created"
+          fi
+      - name: Preserve native original screenshots, raw and QA verdict even on HOLD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-v28-qa-issue18-realplay-b817-one
+          path: /tmp/t21-v28-qa-realplay-b817-once/
+          if-no-files-found: warn
+          retention-days: 14
