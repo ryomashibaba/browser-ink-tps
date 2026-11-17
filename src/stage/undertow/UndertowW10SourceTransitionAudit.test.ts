@@ -64,6 +64,10 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
     expect(evidence.nativeRoute.evaluated).toBe(true);
     expect(evidence.nativeRoute.rapierSamples).toBeGreaterThan(0);
    }
+   expect(evidence.nativePathReached)
+    .toBe(evidence.nativeEndpointAlignment.endpointAligned);
+   expect(evidence.nativeEndpointAlignment.sourceRouteCertified).toBe(false);
+   expect(evidence.nativeEndpointAlignment.runtimePromotionAuthorized).toBe(false);
    expect(evidence.kccCertified).toBe(false);
    expect(evidence.productionAuthorized).toBe(false);
    return {id:route.id,hold:evidence.hold,chord:evidence.chord,
@@ -99,6 +103,8 @@ describe('W10-A original-source floor/Nav triage: never promotes safety',()=>{
    expect(result.nativeRoute.sourceCertified).toBe(false);
    expect(result.nativeRoute.fullTrajectoryReplayed).toBe(false);
    expect(result.nativePathReached).toBe(false);
+   expect(result.nativeEndpointAlignment.endpointAligned).toBe(false);
+   expect(result.nativeEndpointAlignment.sourceRouteCertified).toBe(false);
    expect(result.nativeTerminal).not.toBeNull();
    expect(result.nativeTerminal!.distanceToRequestedDestinationMeters)
     .toBeGreaterThan(0);
