@@ -410,8 +410,13 @@ export class PlayerController {
     this.camera.getFlatForward(this.flatForward);
     this.right.set(-this.flatForward.z, 0, this.flatForward.x);
 
-    const inputX = this.input.moveX;
-    const inputY = this.input.moveY;
+    // Short real WASD taps between 60Hz ticks still influence this
+    // *existing* genuine KCC step. Stale prestart/lock/death events are
+    // discarded by PlayerInput. Legacy T20 uses its unchanged live axes.
+    const sourceAxes=this.nativeSourceGroundInkGuard
+      ? this.input.consumeMoveAxesForPlayerTick():null;
+    const inputX = sourceAxes?sourceAxes.x:this.input.moveX;
+    const inputY = sourceAxes?sourceAxes.y:this.input.moveY;
     this.desired.set(
       this.right.x * inputX + this.flatForward.x * inputY,
       0,
