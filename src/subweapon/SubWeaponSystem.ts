@@ -8,6 +8,7 @@ import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import {sourceRegisteredPaintCellActive,
  sourceRegisteredPaintHitActive,sourceThrownSubPaintBeforeRegisteredSolid,
+ sourceOriginalBlastPaintLineClear,
  type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -423,7 +424,7 @@ export class SubWeaponSystem {
     paintRadius: number
   ): void {
     const innerRadius = Math.max(0.42, paintRadius * 0.52);
-    this.paintWorldStamp(team, center, innerRadius, 2.0);
+    this.paintWorldStamp(team, center, innerRadius, 2.0, center);
 
     const ringRadius = paintRadius * 0.58;
     const count = paintRadius < 1.6 ? 6 : 8;
@@ -434,7 +435,7 @@ export class SubWeaponSystem {
         0,
         Math.sin(angle) * ringRadius
       ));
-      this.paintWorldStamp(team, point, innerRadius * 0.78, 2.2);
+      this.paintWorldStamp(team, point, innerRadius * 0.78, 2.2, center);
     }
   }
 
@@ -442,7 +443,8 @@ export class SubWeaponSystem {
     team: Team.A | Team.B,
     worldPoint: Vec3,
     radius: number,
-    maxPlaneDistance: number
+    maxPlaneDistance: number,
+    originalBlastCenter?:Vec3
   ): boolean {
     let best:
       | { surface: PaintSurface; u: number; v: number; planeDistance: number }
@@ -455,6 +457,16 @@ export class SubWeaponSystem {
           (this.nativeSourceHumanSubBodyContactEnabled &&
            !sourceRegisteredPaintCellActive(surface,projected.u,projected.v)))
         continue;
+      // Only live SOURCE explosions use registered Rapier line of sight
+      // between their physical center and this exact original paint plane.
+      // Avoid the legacy plane-distance-only choice through an opaque wall.
+      if(this.nativeSourceHumanSubBodyContactEnabled&&originalBlastCenter){
+        const backingPoint=surface.localToWorld(projected.u,projected.v);
+        const cover=this.physics.castStageSegment(
+          originalBlastCenter,backingPoint,'ink-projectile');
+        if(!sourceOriginalBlastPaintLineClear(
+          originalBlastCenter,backingPoint,surface,cover))continue;
+      }
       if (!best || projected.planeDistance < best.planeDistance) {
         best = {
           surface,

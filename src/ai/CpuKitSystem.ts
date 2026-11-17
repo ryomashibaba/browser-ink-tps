@@ -12,6 +12,7 @@ import type { GameFeedback } from '../feedback/GameFeedback';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import {sourceRegisteredPaintCellActive,
  sourceRegisteredPaintHitActive,sourceThrownSubPaintBeforeRegisteredSolid,
+ sourceOriginalBlastPaintLineClear,
  type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import {
   PaintEventType,
@@ -594,7 +595,8 @@ export class CpuKitSystem {
       paintRadius,
       2.0,
       type,
-      gaugeEligible
+      gaugeEligible,
+      center
     );
 
     for (let i = 0; i < count; i += 1) {
@@ -611,7 +613,8 @@ export class CpuKitSystem {
         paintRadius * ringPaintScale,
         ringPlaneDistance,
         type,
-        gaugeEligible
+        gaugeEligible,
+        center
       );
     }
   }
@@ -623,7 +626,8 @@ export class CpuKitSystem {
     radius: number,
     maxPlaneDistance: number,
     type: PaintEventType,
-    gaugeEligible: boolean
+    gaugeEligible: boolean,
+    originalBlastCenter?:Vec3
   ): boolean {
     let best:
       | {
@@ -644,6 +648,13 @@ export class CpuKitSystem {
          !sourceRegisteredPaintCellActive(surface,projected.u,projected.v))
       ) {
         continue;
+      }
+      if(this.nativeOriginalSourceCombatantSubContactEnabled&&originalBlastCenter){
+        const backingPoint=surface.localToWorld(projected.u,projected.v);
+        const cover=this.physics.castStageSegment(
+          originalBlastCenter,backingPoint,'ink-projectile');
+        if(!sourceOriginalBlastPaintLineClear(
+          originalBlastCenter,backingPoint,surface,cover))continue;
       }
 
       if (!best || projected.planeDistance < best.planeDistance) {

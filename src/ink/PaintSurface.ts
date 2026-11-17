@@ -86,6 +86,24 @@ export function sourceThrownSubPaintBeforeRegisteredSolid(
   paintHit.distance<=blockerHit.distance+legacyCoplanarToleranceMeters;
 }
 
+/** SOURCE bomb/SPECIAL owner-grid stamps cannot select a PAINT plane
+ * behind a DIFFERENT registered Rapier solid. A terminal collision with
+ * the plane's OWN backing retains the existing 6cm alignment tolerance.
+ * Only the actual registered stage hit is consulted; no source topology,
+ * collider, surface/ownerGrid, actor or scoring is authored. */
+export function sourceOriginalBlastPaintLineClear(
+  origin:Vec3,paintPlanePoint:Vec3,paintSurface:PaintSurface,
+  blocker:{readonly distance:number;readonly solidId?:string}|null
+):boolean{
+ const span=origin.distance(paintPlanePoint);
+ if(!Number.isFinite(span))return false;
+ if(!blocker)return true;
+ if(!Number.isFinite(blocker.distance)||blocker.distance<0)return false;
+ if(blocker.distance>=span-.025)return true;
+ return paintSurface.id===blocker.solidId+':paint'&&
+  blocker.distance>=Math.max(0,span-.06);
+}
+
 export class PaintSurface {
   public readonly ownerGrid: Int8Array;
   public readonly flagsGrid: Uint16Array;
