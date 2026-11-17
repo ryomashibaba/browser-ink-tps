@@ -23,10 +23,10 @@ const finite=(p:OriginalSourceCpuFootPoint):boolean=>
 export function hasRegisteredOriginalSourceCpuRapierFootSupport(
   actualFoot:OriginalSourceCpuFootPoint,
   witness:OriginalSourceCpuFootSupportWitness|null|undefined,
-  registeredOriginalSolidIds:ReadonlySet<string>
+  registeredOriginalSolids:ReadonlyArray<Readonly<{id:string}>>
 ):boolean{
   return finite(actualFoot)&&witness!==null&&witness!==undefined&&
-    !!witness.solidId&&registeredOriginalSolidIds.has(witness.solidId)&&
+    !!witness.solidId&&registeredOriginalSolids.some(s=>s.id===witness.solidId)&&
     finite(witness.point)&&
     Math.abs(witness.point.y-actualFoot.y)<=
       ORIGINAL_SOURCE_CPU_RAPIER_FOOT_SUPPORT_BAND_METERS+1e-6;
