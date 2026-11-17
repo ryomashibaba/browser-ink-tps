@@ -14,7 +14,7 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
   const destination=new Vec3(-4.4,4.55,-45.7);
   const agent={
     position:vi.fn(()=>foot.clone()),
-    requestMoveTarget:vi.fn(),
+    requestMoveTarget:vi.fn(),teleport:vi.fn(),
     resetMoveTarget:vi.fn()
   };
   const bot:any={
@@ -70,6 +70,7 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
   };
   cpu.qaMotionGoals=new Map();
   cpu.sourceLastAdmittedRouteGoal=new Map();
+  cpu.sourceLiveNativeMotionGoal=new Map();
   cpu.sourceCrowdRefreshedThisLife=new Set();
   cpu.sourceLastPhysicalBlockedTick=new Map();
   cpu.sourceLastRecoveryAuditTick=new Map();
@@ -95,6 +96,11 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     expect(agent.requestMoveTarget).toHaveBeenCalledOnce();
     expect(agent.requestMoveTarget).toHaveBeenCalledWith(destination);
     expect(cpu.sourceLastAdmittedRouteGoal.get('B2')).toEqual(destination);
+    expect(cpu.sourceLiveNativeMotionGoal.get('B2')).toEqual({
+      agent,goal:destination
+    });
+    expect(cpu.qaContinuity.observe.mock.lastCall?.[1]?.[0]?.expectsMotion)
+      .toBe(true);
     expect(cpu.qaMotionGoals.get('B2')).toEqual(destination);
     expect(bot.position).toEqual(foot); // actor foot was never invented/moved
     expect(cpu.navigation.auditPath).toHaveBeenCalledOnce();
@@ -114,6 +120,7 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
       expect(agent.requestMoveTarget).not.toHaveBeenCalled();
       expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
       expect(cpu.sourceLastAdmittedRouteGoal.has('B2')).toBe(false);
+      expect(cpu.sourceLiveNativeMotionGoal.has('B2')).toBe(false);
       expect(cpu.qaMotionGoals.has('B2')).toBe(false);
     }
   });
@@ -125,5 +132,59 @@ describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native 
     expect(agent.requestMoveTarget).not.toHaveBeenCalled();
     expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
     expect(cpu.sourceLastAdmittedRouteGoal.has('B2')).toBe(false);
+    expect(cpu.sourceLiveNativeMotionGoal.has('B2')).toBe(false);
   });
+  it('rejects a different-height Crowd endpoint even after TRUE native route audit passes',()=>{
+    const {cpu,bot,agent,foot,tick}=fixture(.23);
+    // Recast closestPoint is a NEW second query, not proof of the
+    // previously audited terminal: wrong vertical layer must HOLD.
+    cpu.navigation.closestPoint=vi.fn((p:Vec3)=>({
+      x:p.x,y:p.y+2.4,z:p.z
+    }));
+    tick();
+    expect(cpu.navigation.auditPath).toHaveBeenCalledOnce();
+    expect(agent.requestMoveTarget).not.toHaveBeenCalled();
+    expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
+    expect(cpu.sourceLastAdmittedRouteGoal.has('B2')).toBe(false);
+    expect(cpu.sourceLiveNativeMotionGoal.has('B2')).toBe(false);
+    expect(cpu.qaContinuity.observe.mock.lastCall?.[1]?.[0]?.expectsMotion)
+      .toBe(false);
+    expect(bot.position).toEqual(foot);
+  });
+  it('after true KCC reset preserves paid ink heading without reporting a live movement stall',()=>{
+    const {cpu,bot,agent,foot,destination,tick}=fixture(.23);
+    tick();
+    expect(cpu.sourceLiveNativeMotionGoal.has('B2')).toBe(true);
+    cpu.reconcileBlockedT21F2CrowdProxy(bot);
+    expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
+    expect(cpu.qaMotionGoals.get('B2')).toEqual(destination);
+    expect(cpu.sourceLiveNativeMotionGoal.has('B2')).toBe(false);
+    // The next physical tick has no fresh authorized move submission;
+    // it MUST NOT count stationary ink aim as pending Crowd movement.
+    bot.thinkRemaining=1;
+    tick();
+    expect(cpu.qaContinuity.observe.mock.lastCall?.[1]?.[0]?.expectsMotion)
+      .toBe(false);
+    expect(bot.position).toEqual(foot);
+  });
+  it('does not misread old-agent native target as current after a real agent replacement',()=>{
+    const {cpu,bot,agent,tick}=fixture(.23);
+    tick();
+    expect(cpu.sourceLiveNativeMotionGoal.get('B2')?.agent).toBe(agent);
+    bot.agent={
+      ...agent,requestMoveTarget:vi.fn(),resetMoveTarget:vi.fn()
+    };
+    bot.thinkRemaining=1;
+    tick();
+    expect(cpu.qaContinuity.observe.mock.lastCall?.[1]?.[0]?.expectsMotion)
+      .toBe(false);
+    expect(bot.agent.requestMoveTarget).not.toHaveBeenCalled();
+    // A later SOURCE think reaudits the genuine physical foot and only
+    // then grants a NEW agent its native movement request.
+    bot.thinkRemaining=0;
+    tick();
+    expect(bot.agent.requestMoveTarget).toHaveBeenCalledOnce();
+    expect(cpu.sourceLiveNativeMotionGoal.get('B2')?.agent).toBe(bot.agent);
+  });
+
 });
