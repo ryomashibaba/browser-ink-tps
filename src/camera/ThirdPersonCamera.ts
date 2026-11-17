@@ -473,7 +473,7 @@ export class ThirdPersonCamera {
       if(this.sourcePracticeControls&&
          document.pointerLockElement===this.canvas)
         this.showSourceControlToast(
-         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · M RADAR · N SOUND');
+         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · SHIFT SQUID · SPACE JUMP');
       else if(this.sourceControlToast)this.sourceControlToast.hidden=true;
     });
     // The Q shoulder button is a VIEW option, never a movement, aim-assist
@@ -530,9 +530,24 @@ export class ThirdPersonCamera {
 
       if (document.pointerLockElement !== this.canvas &&
           sourceNativePointerLockClickAllowed(this.sourcePracticeControls,event.button)) {
-        void this.canvas.requestPointerLock().catch(() => {
-          // Pointer lock can be denied by browser/user policy; keep normal UI usable.
-        });
+        if(this.sourcePracticeControls){
+          // Some browsers still return void for requestPointerLock(), rather
+          // than a Promise. Calling .catch on void raised after the click and
+          // made SOURCE camera re-entry seem broken. Both APIs are supported.
+          try{
+            const lock=this.canvas.requestPointerLock();
+            if(lock&&typeof lock.catch==='function')
+              void lock.catch(()=>{
+                if(document.pointerLockElement!==this.canvas)
+                  this.showSourceControlToast('MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN');
+              });
+          }catch{
+            this.showSourceControlToast('MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN');
+          }
+        }else{
+          // Frozen T20/default pointer-lock semantics stay unchanged.
+          void this.canvas.requestPointerLock().catch(() => {});
+        }
       }
     });
 
