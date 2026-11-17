@@ -2520,12 +2520,21 @@ export class ProjectileSystem {
     // front-shield block solely because the source equals body center.
     // The existing physical radius, true HP and Rapier cover decide it.
     // Frozen T20 retains its historical center-point guard rule.
+    const areaDx=point.x-this.currentHumanPosition.x;
+    const areaDz=point.z-this.currentHumanPosition.z;
     const sourceAreaHasSide=this.nativeSourceHumanPhysicalMode===null||
-      (point.x-this.currentHumanPosition.x)**2+
-      (point.z-this.currentHumanPosition.z)**2>1e-8;
+      areaDx*areaDx+areaDz*areaDz>1e-8;
+    // SOURCE shield protection cannot extend into the physical rear
+    // hemisphere for SUB/SPECIAL blast contacts. The legacy point guard
+    // accepts dots down to -0.10; keep that tolerance ONLY for frozen T20.
+    // No new shield angle or blast radius is inferred from original data.
+    const sourceAreaInFront=this.nativeSourceHumanPhysicalMode===null||
+      flattened(this.currentHumanAimDirection).dot(
+        new Vec3(areaDx,0,areaDz))>0;
     if (
       this.currentHumanGuarding &&
       sourceAreaHasSide &&
+      sourceAreaInFront &&
       this.isGuardBlockingPoint(
         point,
         this.currentHumanPosition,
