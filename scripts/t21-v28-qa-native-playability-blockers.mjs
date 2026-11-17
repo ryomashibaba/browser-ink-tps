@@ -120,7 +120,40 @@ function sampleKcc(kcc,id){
  };
 }
 
-export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null){
+
+/** Actual same-session native counters, not a fabricated 60Hz route.
+ * The beginning must come from the B441 real PLAYING snapshot and the
+ * ending from the SAME real browser SOURCE window. A nonzero delta shows
+ * true work attempted, never that the actor reached an original goal. */
+function kccWindowDelta(before,after,id,firstTick,lastTick){
+ if(!count(firstTick)||!count(lastTick)||lastTick<=firstTick)
+  return {available:false,reason:'NO_SAME_NATIVE_OBSERVATION_INTERVAL'};
+ const pre=sampleKcc(before,id),post=sampleKcc(after,id);
+ if(!pre.available||!post.available)
+  return {available:false,reason:!pre.available?
+   'NO_AUTHENTIC_START_KCC_'+pre.reason:
+   'NO_AUTHENTIC_END_KCC_'+post.reason};
+ const diff={};
+ for(const k of Object.keys(post.counters)){
+  const v=post.counters[k]-pre.counters[k];
+  if(!count(v))return {available:false,
+   reason:'NONMONOTONIC_NATIVE_KCC_COUNTER_'+k};
+  diff[k]=v;
+ }
+ return {
+  available:true,firstNativeTick:firstTick,lastNativeTick:lastTick,
+  intervalNativeTicks:lastTick-firstTick,
+  genuineNativeCounterDeltas:diff,
+  lastNativeRejectCause:post.lastRejectCause,
+  rejectionCauseCounterSnapshot:post.rejectionCauses,
+  lastNativeRecastCandidate:post.lastRecastCandidate,
+  lastNativePhysicalFoot:post.lastNativeRealFoot,
+  actualActorMovementFromCounterAloneCertified:false,
+  noActorOrNavigationWrites:true
+ };
+}
+
+export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null,priorGroundMotion=null){
  if(proof?.schema!=='B440_ORIGINAL_SHORT_CHROMIUM_FOOT_PROOF'||
     proof.source!==SOURCE||!proof.b441NativeEvidence||
     !trace||trace.schema!=='B454_TRUE_60HZ_B2_B4_SOURCE_STATIC_FOOT_TRACE_V1'||
@@ -151,12 +184,32 @@ export function auditSourceRealGameplayBlockers(proof,trace,groundMotion=null){
    gate.actualNativeSourceGoalRequests===0&&
    dry.allOriginalChecksPassed===0&&
    gate.originalIntermediateSupportRejections>0;
+  const kccWindow=kccWindowDelta(priorGroundMotion,groundMotion,id,
+   proof.k2WindowProvenance?.firstTick,
+   proof.k2WindowProvenance?.lastTick);
+  const hasPhysicalKccVeto=kccWindow.available&&
+   kccWindow.genuineNativeCounterDeltas.rapierRejected>0&&
+   kccWindow.genuineNativeCounterDeltas.rapierAcceptedMoving===0;
+  const hasNoCrowdProposals=kccWindow.available&&
+   kccWindow.genuineNativeCounterDeltas.crowdProposals===0&&
+   kccWindow.genuineNativeCounterDeltas.rapierAcceptedMoving===0;
+  const hasActualApprovedGoal=gate.actualStrictOriginalGoals>0&&
+   gate.actualNativeSourceGoalRequests>0;
   byActor[id]={
    nativeFoot:footResult,nativeGoalAdmission:gate,
    trueOriginalFootDryRoute:dry,
    sameRunKccMotion:sampleKcc(groundMotion,id),
+   sameRunKccInterval:kccWindow,
    observedGate:actualGoalAdmissionBlocked?
     'HOLD_STRICT_ORIGINAL_GOALS_ALL_DENIED':
+    hasActualApprovedGoal&&
+     footResult.longestGroundedNearlyStationaryTicks>=300&&
+     hasPhysicalKccVeto?
+     'HOLD_ACTUAL_RAPIER_KCC_VETO_WITH_APPROVED_SOURCE_GOAL':
+    hasActualApprovedGoal&&
+     footResult.longestGroundedNearlyStationaryTicks>=300&&
+     hasNoCrowdProposals?
+     'HOLD_NO_TRUE_CROWD_PROPOSALS_WITH_APPROVED_SOURCE_GOAL':
     footResult.longestGroundedNearlyStationaryTicks>=300?
      'HOLD_GROUNDED_LONG_STALL_CAUSE_UNRESOLVED':
      'HOLD_NO_NATIVE_CAUSE_CERTIFIED',
