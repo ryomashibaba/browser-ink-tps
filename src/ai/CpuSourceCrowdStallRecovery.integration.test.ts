@@ -92,6 +92,17 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
   expect(cpu.phase14qGroundCollision.sourceFootSupport).toHaveBeenCalledTimes(2);
   expect(agent.teleport).not.toHaveBeenCalled();
  });
+ it('preserves genuine source splatling charge, paid burst and active guard',()=>{
+  for(const situation of ['CHARGE','BURST','GUARD']){
+   const {cpu,bot,agent,report}=fixture();
+   bot.weaponChargeSeconds=situation==='CHARGE'?.8:0;
+   bot.weaponBurstShotsRemaining=situation==='BURST'?3:0;
+   bot.weaponGuarding=situation==='GUARD';
+   cpu.tryRefreshStalledOriginalSourceCrowd(report);
+   expect(agent.teleport).not.toHaveBeenCalled();
+   expect(cpu.navigation.auditPath).not.toHaveBeenCalled();
+  }
+ });
  it('never reseeds a real Rapier-blocked actor even after the QA 5s stall',()=>{
   const {cpu,agent,report}=fixture();
   cpu.sourceLastPhysicalBlockedTick.set('B1',590);
