@@ -540,9 +540,18 @@ export class ThirdPersonCamera {
       if (document.pointerLockElement !== this.canvas) return;
       const sensitivity=this.sourcePracticeControls?
        this.sourceAimSensitivityMultiplier:1;
-      this.yaw += event.movementX * 0.22 * sensitivity;
+      // Invalid or pathological mouse deltas can follow Pointer Lock
+      // recapture. Keep genuine SOURCE aim usable without altering T20.
+      if(this.sourcePracticeControls&&
+         (!Number.isFinite(event.movementX)||
+          !Number.isFinite(event.movementY)))return;
+      const moveX=this.sourcePracticeControls
+        ? Math.max(-600,Math.min(600,event.movementX)):event.movementX;
+      const moveY=this.sourcePracticeControls
+        ? Math.max(-600,Math.min(600,event.movementY)):event.movementY;
+      this.yaw += moveX * 0.22 * sensitivity;
       this.pitch = Math.max(-55, Math.min(28,
-       this.pitch - event.movementY * 0.18 * sensitivity *
+       this.pitch - moveY * 0.18 * sensitivity *
         (this.sourcePracticeControls&&this.sourceAimInvertVertical?-1:1)));
     });
 
@@ -551,9 +560,13 @@ export class ThirdPersonCamera {
       // change the player's view or hijack scrolling the visible menu/page.
       // The frozen default T20 camera retains its original wheel behavior.
       if (this.sourcePracticeControls &&
-          document.pointerLockElement !== this.canvas) return;
+          (document.pointerLockElement !== this.canvas ||
+           !Number.isFinite(event.deltaY))) return;
       event.preventDefault();
-      this.distance = Math.max(3.6, Math.min(9.5, this.distance * Math.exp(event.deltaY * 0.001)));
+      // Cap single-event zoom spikes while preserving repeated wheel input.
+      const deltaY=this.sourcePracticeControls
+        ? Math.max(-240,Math.min(240,event.deltaY)):event.deltaY;
+      this.distance = Math.max(3.6, Math.min(9.5, this.distance * Math.exp(deltaY * 0.001)));
     }, { passive: false });
   }
 
