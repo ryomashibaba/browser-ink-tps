@@ -21,6 +21,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,isAbsolute,sep,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {t21QaAuditK2LiveWindow} from './t21-v28-qa-k2-source-window.mjs';
+import {validateB484ModeSpecificHud} from './t21-v28-qa-b484-hud-gate.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -3815,40 +3816,54 @@ async function main(){
   // The PLAYER sees the same genuine second C-order progress in the
   // existing actual browser HUD. Do not dispatch synthetic DOM events or
   // claim a route/arrival from the UI text alone.
-  const playerOrderHud=await until(async()=>evaluate(`(() => {
-   const e=document.querySelector('#t21-f3-b141-real-ally');
-   const n=window.__t21F3?.snapshot?.();
-   const trace=window.__t21F3?.b484ActualA1CKeyFollowThrough?.();
-   if(!e||!n||!trace)return null;
-   return {nativeTick:n.tick,matchState:n.matchState,paused:n.paused,
-    playerVisible:!e.hidden&&getComputedStyle(e).display!=='none',
-    text:e.textContent,
-    originalRouteClaim:e.dataset.t21B141CertifiedRoute,
-    actualOriginalArrivals:e.dataset.t21B471ActualOriginalArrivals,
-    genuineRequests:trace.genuineKeyRequests,
-    currentOrderKeyRequest:trace.currentOrderKeyRequest,
-    currentOrderClosestPhysicalGoalDistanceXZ:
-     trace.currentOrderClosestPhysicalGoalDistanceXZ,
-    nativeCpuRejoins:n.cpu?.physicalRejoins?.length,
-    sourceScoreable:n.sourceScoreablePromotions};
-  })()`),20000,250);
-  if(playerOrderHud?.matchState!=='PLAYING'||
-     playerOrderHud.paused!==false||
-     playerOrderHud.playerVisible!==true||
-     playerOrderHud.originalRouteClaim!=='false'||
-     playerOrderHud.nativeCpuRejoins!==7||
-     playerOrderHud.sourceScoreable!==0||
-     playerOrderHud.genuineRequests!==2||
-     playerOrderHud.currentOrderKeyRequest!==2||
-     !playerOrderHud.text?.includes('A1 C ORDER 2 · ')||
-     !playerOrderHud.text.includes('verified arrivals total ')||
-     !(
-      playerOrderHud.text.includes('this order closest ')||
-      playerOrderHud.text.includes('original goal pending / HOLD')
-     ))
-   fail('B484_GENUINE_SECOND_C_ORDER_PLAYER_HUD_NOT_VERIFIED');
+  // QA #18: a normal PLAYER sees compact B141 text; only F8 QA sees
+  // verbose "A1 C ORDER 2". Do NOT change game HUD or toggle presentation.
+  // Read the real DOM, native B471 counter and current B484 physics inside
+  // one browser JS task, then preserve BEFORE any fail.
+  let playerOrderHud=null,playerOrderHudReadError=null;
+  try{
+   playerOrderHud=await until(async()=>evaluate(`(() => {
+    const e=document.querySelector('#t21-f3-b141-real-ally');
+    const n=window.__t21F3?.snapshot?.();
+    const trace=window.__t21F3?.b484ActualA1CKeyFollowThrough?.();
+    const ui=document.querySelector('#ui-root');
+    if(!e||!n||!trace||!ui)return null;
+    const style=getComputedStyle(e);
+    return {nativeTick:n.tick,matchState:n.matchState,paused:n.paused,
+     presentation:ui.dataset.t21B245Presentation??null,
+     playerVisible:!e.hidden&&style.display!=='none'&&
+      style.visibility!=='hidden',
+     text:e.textContent,
+     originalRouteClaim:e.dataset.t21B141CertifiedRoute,
+     actualOriginalArrivals:e.dataset.t21B471ActualOriginalArrivals,
+     nativeOriginalArrivals:trace.originalB471VerifiedArrivals,
+     genuineRequests:trace.genuineKeyRequests,
+     currentOrderKeyRequest:trace.currentOrderKeyRequest,
+     currentOrderClosestPhysicalGoalDistanceXZ:
+      trace.currentOrderClosestPhysicalGoalDistanceXZ,
+     nativeCpuRejoins:n.cpu?.physicalRejoins?.length,
+     sourceScoreable:n.sourceScoreablePromotions};
+   })()`),20000,250);
+  }catch(error){playerOrderHudReadError=String(error).slice(0,450);}
+  const b484HudGate=validateB484ModeSpecificHud(playerOrderHud);
+  // The original raw is what a human actually saw at failure, never a
+  // reconstructed UI fixture. Fail-closed gate reasons remain observable.
+  proof.b484RealSecondOrderPlayerHudObservation={
+   actualDom:playerOrderHud,readError:playerOrderHudReadError,
+   audit:b484HudGate,realBrowserOrigin:await origin(),
+   routeOrScoreAuthorityChanged:false,actualGameWrites:0};
+  writeFileSync(resolve(out,'b484-real-original-player-hud-dom.json'),
+   JSON.stringify(proof.b484RealSecondOrderPlayerHudObservation,null,2)+'\n');
+  save();
+  console.log('B484_REAL_MODE_SPECIFIC_HUD_AUDIT',
+   JSON.stringify({presentation:b484HudGate.sampledPresentation,
+    verdict:b484HudGate.verdict,holdReasons:b484HudGate.holdReasons,
+    actualOriginalArrivals:b484HudGate.actualOriginalArrivals}));
+  if(b484HudGate.holdReasons.length)
+   fail('B484_GENUINE_SECOND_C_ORDER_HUD_'+b484HudGate.holdReasons.join('__'));
   proof.b484RealSecondOrderPlayerHud={
    ...playerOrderHud,
+   modeSpecificNativeTruth:b484HudGate.verdict,
    genuineChromiumPlayerText:true,perOrderCounterFromNativePhysics:true,
    certifiedOfficialEnemyEngagement:false,
    certifiedOriginalCrossTeamPath:false,officialWinner:'NONE'};
