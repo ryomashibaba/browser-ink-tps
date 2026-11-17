@@ -1,4 +1,7 @@
 import {Vec3} from 'playcanvas';
+import {rasterizeStageFootprint} from '../StageFootprint';
+import {PLAYER_CHARACTER_PHYSICS} from '../../player/PlayerCharacterPhysics';
+import {SurfaceFlags} from '../../ink/types';
 import {beforeAll,describe,expect,it} from 'vitest';
 import {initializeRapier,RapierStagePhysics} from '../../physics/RapierStagePhysics';
 import {initializeRecastNavigation,RecastStageNavigation}
@@ -7,7 +10,8 @@ import {PerformanceStats} from '../../core/PerformanceStats';
 import {undertowT21dConnectivityQaStage}
  from './UndertowSpillwayConnectivityQa';
 import {originalNativeLandingFootReprojection,
- originalNativeRampFootReprojection}
+ originalNativeRampFootReprojection,
+ originalNativeRightLowFootReprojection}
  from './UndertowOriginalNativeLandingFootReprojection';
 
 beforeAll(async()=>await Promise.all([
@@ -134,5 +138,61 @@ describe('Issue #13 original mirrored FloorConcrete03 ramp native Y recheck',()=
   })} as unknown as RecastStageNavigation;
   expect(originalNativeRampFootReprojection(
    stage,physics,wrongLayer,raw,-1)).toBeNull();
+ });
+});
+
+describe('STAGE #13 registered right-low source floor native-Y reconciliation',()=>{
+ it('rechecks both already-visible original 4.5m floor masks using real Rapier/Recast',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  for(const sign of [1,-1] as const){
+   const id='UndertowT21D:right-low-team-'+(sign===1?'a':'b');
+   const solid=stage.solids.find(s=>s.id===id)!;
+   const raster=rasterizeStageFootprint(
+    solid.size[0],solid.size[2],solid.footprint!);
+   const rects=[...raster.rectangles].sort((a,b)=>
+    b.widthMeters*b.depthMeters-a.widthMeters*a.depthMeters);
+   let sample:{x:number;y:number;z:number}|null=null;
+   for(const rect of rects){
+    const x=solid.center[0]-solid.size[0]*.5+rect.centerU;
+    const z=solid.center[2]-solid.size[2]*.5+rect.centerV;
+    const actual=nav.auditNavMeshProjection(new Vec3(x,4.95,z));
+    const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    const hit=physics.castCharacterFootSupport(
+     new Vec3(x,4.95+offset,z),offset,'HUMAN');
+    const p=actual.nearestPoint;
+    if(actual.success&&hit?.solidId===id&&p&&
+       Math.hypot(p.x-x,p.z-z)<=.01&&
+       p.y-hit.point.y>=0&&p.y-hit.point.y<=.25){
+     sample={x,y:4.95,z};break;
+    }
+   }
+   expect(sample,id).not.toBeNull();
+   const proof=originalNativeRightLowFootReprojection(
+    stage,physics,nav,sample!,sign);
+   expect(proof?.originalSolidId).toBe(id);
+   expect(proof!.physicalFloorY).toBeCloseTo(4.5,4);
+   expect(proof!.actualPhysicalGapMeters).toBeGreaterThanOrEqual(0);
+   expect(proof!.actualPhysicalGapMeters).toBeLessThanOrEqual(.25);
+   expect(sample!.y-proof!.physicalFloorY).toBeGreaterThan(.25);
+   expect(proof!.projectionXZErrorMeters).toBeLessThanOrEqual(.01);
+   expect(proof!.newTerrainAuthorized).toBe(false);
+   expect(proof!.newOffmeshLinkAuthorized).toBe(false);
+   expect(proof!.realKccRouteCertified).toBe(false);
+   expect(originalNativeRightLowFootReprojection(
+    stage,physics,nav,sample!,sign===1?-1:1)).toBeNull();
+   expect(originalNativeRightLowFootReprojection(
+    stage,physics,nav,{...sample!,x:NaN},sign)).toBeNull();
+   const wrongNav={auditNavMeshProjection:()=>({
+    success:true,nearestPoint:new Vec3(sample!.x+.05,4.6,sample!.z),
+    distanceMeters:.05})} as unknown as RecastStageNavigation;
+   expect(originalNativeRightLowFootReprojection(
+    stage,physics,wrongNav,sample!,sign)).toBeNull();
+  }
+  expect([stage.solids.length,stage.paintSurfaces.length,
+    stage.navigationLinks?.length]).toEqual([25,17,26]);
+  expect(stage.paintSurfaces.filter(s=>(s.flags&SurfaceFlags.Scoreable)!==0))
+   .toHaveLength(0);
  });
 });
