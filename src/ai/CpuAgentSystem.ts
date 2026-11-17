@@ -16,6 +16,8 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
+import {isAlignedOriginalSourceCrowdTarget}
+ from './OriginalSourceCrowdTargetAlignment';
 import {shouldRefreshStalledOriginalSourceCrowd,
  deferSourceCrowdSteeringForCommittedWeapon,
  SOURCE_CROWD_STALL_SECONDS,
@@ -307,6 +309,12 @@ export class CpuAgentSystem {
   private readonly qaMotionGoals = new Map<string, Vec3>();
   /** Only previously SOURCE-authorized native destinations may be retained. */
   private readonly sourceLastAdmittedRouteGoal = new Map<string, Vec3>();
+  /** A requested Crowd target is NOT the same as a SOURCE-authorized
+   * original paint heading. Only record an actual native request with
+   * its current Recast agent; KCC veto and target reset clear it. */
+  private readonly sourceLiveNativeMotionGoal = new Map<string,{
+    agent:CrowdAgent;goal:Vec3
+  }>();
   /** A genuine source 1.2-second real-foot stall can refresh passive Recast
    * steering proxy ONCE per native CPU life, never its Rapier capsule. */
   private readonly sourceCrowdRefreshedThisLife=new Set<string>();
@@ -948,6 +956,7 @@ export class CpuAgentSystem {
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
     this.sourceLastAdmittedRouteGoal.clear();
+    this.sourceLiveNativeMotionGoal.clear();
     this.sourceCrowdRefreshedThisLife.clear();
     this.sourceLastPhysicalBlockedTick.clear();
     this.sourceLastRecoveryAuditTick.clear();
