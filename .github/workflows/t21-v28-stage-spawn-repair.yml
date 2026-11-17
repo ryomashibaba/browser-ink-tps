@@ -19,4 +19,4 @@ jobs:
       - name: Compile genuine stage
         run: npm run typecheck
       - name: Real Rapier and Recast source spawn gate tests (NO Chromium)
-        run: npx vitest run src/stage/undertow/UndertowPhase14QSourceSpawnPlan.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnRuntimeQa.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnGateIsolation.test.ts
+        run: npx vitest run src/stage/undertow/UndertowPhase14QSourceSpawnPlan.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnRuntimeQa.test.ts

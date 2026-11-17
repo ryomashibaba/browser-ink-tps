@@ -12,7 +12,7 @@ import {undertowT21dConnectivityQaStage}
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
 import {planSourceSupportedT21QaSpawnSlots,
- withProvisionalT21QaSpawnMetadata}
+ originalHighSpawnNativeConnection,withProvisionalT21QaSpawnMetadata}
  from './UndertowPhase14QSourceSpawnPlan';
 
 beforeAll(async()=>{await Promise.all([
@@ -74,5 +74,98 @@ describe('T21 QA spawn provenance and eight-actor upper island allocation',()=>{
   expect(()=>withProvisionalT21QaSpawnMetadata(
    PRODUCTION_STAGE_DEFINITION,plan)).toThrow(
     'T21_QA_SPAWN_METADATA_MUST_NOT_PROMOTE');
+ });
+});
+
+describe('T21 SOURCE native clearance vs real Rapier high-floor top',()=>{
+ it('accepts 4+4 real native high-island spawn positions despite Recast +0.10m clearance, keeping 17 HUMAN perimeter support probes',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const plan=planSourceSupportedT21QaSpawnSlots(stage,nav,physics);
+  for(const [side,spawn,slots] of [
+   ['positive-z',stage.metadata.teamASpawn,plan.teamASlots],
+   ['negative-z',stage.metadata.teamBSpawn,plan.teamBSlots]
+  ] as const){
+   const floorId='UndertowT21D:spawn-high-'+side;
+   const floor=stage.solids.find(s=>s.id===floorId)!;
+   const floorTop=floor.center[1]+floor.size[1]*.5;
+   expect(floorTop).toBe(7.5);
+   expect(slots).toHaveLength(4);
+   for(const foot of slots){
+    const nativeY=foot[1];
+    // The 10cm delta seen on true CI is a REAL Recast clearance, not
+    // a nonexistent physical ground or a failed HUMAN floor support.
+    expect(nativeY-floorTop).toBeGreaterThan(.08);
+    expect(nativeY-floorTop).toBeLessThan(.16);
+    expect(originalHighSpawnNativeConnection(nav,
+     [spawn[0],nativeY,spawn[2]],foot)).toBe(true);
+    for(let i=0;i<16;i++){
+     const a=2*Math.PI*i/16;
+     const hit=physics.castCharacterFootSupport(new Vec3(
+      foot[0]+Math.cos(a)*.285,foot[1],foot[2]+Math.sin(a)*.285
+     ),0,'HUMAN');
+     expect(hit?.solidId).toBe(floorId);
+     expect(hit?.point.y).toBeCloseTo(floorTop,2);
+    }
+   }
+  }
+  expect(plan.qaOnly).toBe(true);
+  expect(plan.releaseAuthorized).toBe(false);
+  expect(stage.solids).toBe(frozen.solids);
+  expect(stage.paintSurfaces).toBe(frozen.paintSurfaces);
+  expect(stage.navigationLinks).toBe(frozen.navigationLinks);
+  expect([stage.solids.length,stage.paintSurfaces.length,stage.navigationLinks?.length])
+   .toEqual([25,17,26]);
+ });
+});
+
+describe('T21 actual SOURCE QA spawn admission fail-closed paths',()=>{
+ it('rejects a native point echo when original Recast projection failed',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const nav={
+   auditNavMeshProjection:vi.fn(()=>({
+    success:false,nearestPoint:null,distanceMeters:null
+   }))
+  } as unknown as RecastStageNavigation;
+  expect(()=>planSourceSupportedT21QaSpawnSlots(
+   stage,nav,{} as RapierStagePhysics
+  )).toThrow('T21_QA_SOURCE_SPAWN_ORIGINAL_POINT_NOT_NAVIGABLE_positive-z');
+ });
+ it('allows same-high native routes only when both real directions reach their original endpoints',()=>{
+  const from=[0,7.5,0] as const,to=[.82,7.5,0] as const;
+  const path=(a:Vec3,b:Vec3)=>({
+   startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   querySuccess:true,pointCount:2,
+   nativePathPoints:[{x:a.x,y:a.y,z:a.z},{x:b.x,y:b.y,z:b.z}],
+   endpointErrorMeters:0,reachedTarget:true
+  });
+  const nav={
+   auditPath:vi.fn((a:Vec3,b:Vec3)=>path(a,b))
+  } as unknown as RecastStageNavigation;
+  expect(originalHighSpawnNativeConnection(nav,from,to)).toBe(true);
+  expect((nav.auditPath as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+  let calls=0;
+  vi.spyOn(nav,'auditPath').mockImplementation((a,b)=>{
+   calls++;
+   return {...path(a,b),reachedTarget:calls===1};
+  });
+  expect(originalHighSpawnNativeConnection(nav,from,to)).toBe(false);
+ });
+ it('rejects a projected route that detours through a lower source floor',()=>{
+  const nav={
+   auditPath:vi.fn((a:Vec3,b:Vec3)=>({
+    startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+    querySuccess:true,pointCount:3,
+    nativePathPoints:[
+     {x:a.x,y:a.y,z:a.z},
+     {x:(a.x+b.x)/2,y:3,z:(a.z+b.z)/2},
+     {x:b.x,y:b.y,z:b.z}
+    ],endpointErrorMeters:0,reachedTarget:true
+   }))
+  } as unknown as RecastStageNavigation;
+  expect(originalHighSpawnNativeConnection(
+   nav,[0,7.5,0],[.82,7.5,0]
+  )).toBe(false);
  });
 });

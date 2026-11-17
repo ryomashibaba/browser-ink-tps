@@ -1,5 +1,5 @@
 import {Vec3} from 'playcanvas';
-import type {StageDefinition,StageVector3} from '../StageDefinition';
+import {stageSolidCollisionEnabled,type StageDefinition,type StageVector3} from '../StageDefinition';
 import type {RecastStageNavigation} from '../../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../../physics/RapierStagePhysics';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -17,6 +17,20 @@ export interface SourceSpawnPlan{
 }
 const MIN_ACTOR_SEPARATION=.70;
 const FOOT_RADIUS=.285;
+const SOURCE_NATIVE_SNAP_LIMIT_METERS=.16;
+const SOURCE_HIGH_LEVEL_TOLERANCE_METERS=.11;
+// Native Recast sits ~0.10 m ABOVE the registered Rapier slab top. Compare
+// actual hits with the source collider's top, not with the Recast clearance Y.
+const REGISTERED_SOURCE_TOP_TOLERANCE_METERS=.025;
+const RECAST_FOOT_CLEARANCE_LIMIT_METERS=.16;
+// HUMAN capsule-radius perimeter on the actual frozen SOURCE footprint.
+const HUMAN_FOOT_RING_OFFSETS: readonly (readonly [number,number])[] = [
+ [0,0],
+ ...Array.from({length:16},(_,i) => {
+  const a=2*Math.PI*i/16;
+  return [Math.cos(a)*FOOT_RADIUS,Math.sin(a)*FOOT_RADIUS] as const;
+ })
+];
 const OBSERVATION_OFFSETS:readonly (readonly [number,number])[]=[
  [0,0],[.82,0],[-.82,0],[0,.82],[0,-.82],
  [.82,.82],[.82,-.82],[-.82,.82],[-.82,-.82],
@@ -25,6 +39,36 @@ const OBSERVATION_OFFSETS:readonly (readonly [number,number])[]=[
  [.82,1.64],[-.82,1.64],[.82,-1.64],[-.82,-1.64],
  [1.64,1.64],[-1.64,1.64],[1.64,-1.64],[-1.64,-1.64]
 ];
+
+/**
+ * A native nearest-point snap is NOT a route. QA spawn candidates must
+ * belong to the same actual Recast high-source island both ways, without
+ * an off-mesh descent to a lower floor. This authorizes no extra navigation.
+ */
+export function originalHighSpawnNativeConnection(
+ nav:RecastStageNavigation,from:StageVector3,to:StageVector3
+):boolean{
+ if(![...from,...to].every(Number.isFinite)||
+    Math.abs(from[1]-to[1])>SOURCE_HIGH_LEVEL_TOLERANCE_METERS)
+   return false;
+ for(const [start,end] of [[from,to],[to,from]] as const){
+  const path=nav.auditPath(new Vec3(...start),new Vec3(...end),
+   SOURCE_NATIVE_SNAP_LIMIT_METERS);
+  const terminal=path.nativePathPoints[path.nativePathPoints.length-1];
+  if(!path.querySuccess||!path.reachedTarget||!terminal||
+     path.pointCount!==path.nativePathPoints.length||
+     path.startSnapDistanceMeters>SOURCE_NATIVE_SNAP_LIMIT_METERS||
+     path.endSnapDistanceMeters>SOURCE_NATIVE_SNAP_LIMIT_METERS||
+     path.endpointErrorMeters>SOURCE_NATIVE_SNAP_LIMIT_METERS||
+     Math.hypot(terminal.x-end[0],terminal.y-end[1],terminal.z-end[2])>
+      SOURCE_NATIVE_SNAP_LIMIT_METERS||
+     path.nativePathPoints.some(p=>!Number.isFinite(p.x)||
+      !Number.isFinite(p.y)||!Number.isFinite(p.z)||
+      Math.abs(p.y-from[1])>SOURCE_HIGH_LEVEL_TOLERANCE_METERS))
+   return false;
+ }
+ return true;
+}
 
 /**
  * T21 original-source-only QA spawn slot proposal. Never edits the immutable
@@ -46,35 +90,53 @@ export function planSourceSupportedT21QaSpawnSlots(
 
  const slots=(side:'positive-z'|'negative-z',original:StageVector3)=>{
   const floorId='UndertowT21D:spawn-high-'+side;
-  if(!stage.solids.some(s=>s.id===floorId))
+  const floor=stage.solids.find(s=>s.id===floorId);
+  if(!floor||!floor.footprint||!stageSolidCollisionEnabled(floor))
    throw Error('T21_QA_SOURCE_SPAWN_ORIGINAL_SOLID_MISSING_'+side);
-  const native=navigation.closestPoint(new Vec3(...original));
-  if(Math.hypot(native.x-original[0],native.z-original[2])>.5)
+  const sourceFloorTopY=floor.center[1]+floor.size[1]*.5;
+  if(!Number.isFinite(sourceFloorTopY)||
+     Math.abs(original[1]-sourceFloorTopY)>REGISTERED_SOURCE_TOP_TOLERANCE_METERS)
+   throw Error('T21_QA_SOURCE_SPAWN_ORIGINAL_FLOOR_Y_DRIFT_'+side);
+  const originProjection=navigation.auditNavMeshProjection(new Vec3(...original));
+  const native=originProjection.nearestPoint;
+  if(!originProjection.success||!native||
+     originProjection.distanceMeters===null||
+     Math.hypot(native.x-original[0],native.z-original[2])>.5||
+     Math.abs(native.y-original[1])>SOURCE_HIGH_LEVEL_TOLERANCE_METERS)
    throw Error('T21_QA_SOURCE_SPAWN_ORIGINAL_POINT_NOT_NAVIGABLE_'+side);
   const found:StageVector3[]=[];
   // Pure source-ground probes. Candidate offsets are only a deterministic
   // search order, not an authored piece of terrain or a new spawn rule.
   const supported=(x:number,y:number,z:number)=>{
-   for(const [ox,oz] of [
-    [0,0],[FOOT_RADIUS,0],[-FOOT_RADIUS,0],
-    [0,FOOT_RADIUS],[0,-FOOT_RADIUS],
-    [FOOT_RADIUS*.72,FOOT_RADIUS*.72],
-    [-FOOT_RADIUS*.72,-FOOT_RADIUS*.72]
-   ] as readonly (readonly [number,number])[]){
-    const start=new Vec3(x+ox,y+.70,z+oz);
-    const end=new Vec3(x+ox,y-.70,z+oz);
-    const hit=physics.castStageSegment(start,end,'ink-projectile');
-    if(hit?.solidId!==floorId)return false;
+   // Recast's walkable poly is intentionally offset from the physical top.
+   // A 0.10m clearance is not missing floor. Reject a different level.
+   if(!Number.isFinite(y)||
+      Math.abs(y-sourceFloorTopY)>RECAST_FOOT_CLEARANCE_LIMIT_METERS)
+    return false;
+   for(const [ox,oz] of HUMAN_FOOT_RING_OFFSETS){
+    // Query original HUMAN character-support collision, not a projectile
+    // ray which can disagree with the character collider mode.
+    const hit=physics.castCharacterFootSupport(
+     new Vec3(x+ox,y,z+oz),0,'HUMAN');
+    if(hit?.solidId!==floorId||
+       Math.abs(hit.point.y-sourceFloorTopY)>
+        REGISTERED_SOURCE_TOP_TOLERANCE_METERS)
+      return false;
    }
    return true;
   };
   for(const [ox,oz] of OBSERVATION_OFFSETS){
    const x=native.x+ox,z=native.z+oz;
-   const nav=navigation.closestPoint(new Vec3(x,native.y,z));
-   const sourceProjection=Math.hypot(nav.x-x,nav.y-native.y,nav.z-z);
-   if(sourceProjection>.16)continue;
-   if(Math.abs(nav.y-native.y)>.11)continue;
+   const projected=navigation.auditNavMeshProjection(new Vec3(x,native.y,z));
+   const nav=projected.nearestPoint;
+   // closestPoint() echoes its input on a failed Recast query; never turn
+   // that echo into a certified spawn location.
+   if(!projected.success||!nav||projected.distanceMeters===null||
+      projected.distanceMeters>SOURCE_NATIVE_SNAP_LIMIT_METERS)continue;
+   if(Math.abs(nav.y-native.y)>SOURCE_HIGH_LEVEL_TOLERANCE_METERS)continue;
    if(!supported(nav.x,nav.y,nav.z))continue;
+   if(!originalHighSpawnNativeConnection(navigation,
+       [native.x,native.y,native.z],[nav.x,nav.y,nav.z]))continue;
    if(found.some(p=>Math.hypot(p[0]-nav.x,p[2]-nav.z)<
       MIN_ACTOR_SEPARATION))continue;
    found.push([nav.x,nav.y,nav.z]);
