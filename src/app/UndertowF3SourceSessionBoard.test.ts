@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {sourceSessionSummary,type SourceSessionMetrics,B387RoundMilestones} from './UndertowF3SourceSessionBoard';
+import {nativeSourceHumanRespawnElapsedTicks} from './NativeSourceRoundActionWindow';
 const input=():SourceSessionMetrics=>({
  matchState:'STAGING',timeRemainingSeconds:180,tick:0,
  originalSourceSolids:25,originalPaintSurfaces:17,originalSourceNavigationLinks:26,
@@ -156,7 +157,7 @@ describe('B387 genuine native 180s source history',()=>{
   expect(h.observe(f)).toMatchObject({realClearedLives:1,
    currentLifeClear:false,nativeHumanAlive:false,
    realNativeDeathWitnesses:1,real150TickReturns:0});
-  f.tick=1151;f.alive=true;f.respawns=1;f.drop=false;
+  f.tick=1152;f.alive=true;f.respawns=1;f.drop=false;
   f.c.status='WAIT_FIRST_DROP';f.c.sourceLocalPlayClear=false;
   expect(h.observe(f)).toMatchObject({realClearedLives:1,
    currentLifeClear:false,lastTrueWeapon:'twin-comets'});
@@ -193,7 +194,7 @@ describe('B387 genuine native 180s source history',()=>{
     enabled:true,valid:true,realClearedLives:1,currentLifeClear:false,
     currentLifeIndex:1,lastObservedNativeTick:10800,
     nativeHumanAlive:true,realNativeDeathWitnesses:1,real150TickReturns:1,
-    lastNativeDeathTick:null,lastNativeReturnTick:1151,
+    lastNativeDeathTick:null,lastNativeReturnTick:1152,
     lastTrueClearTick:1900,lastTrueWeapon:'twin-comets',
     lastTruePostDropCells:65,sourceScoreable:0,enemyRoutesCertified:0,
     officialWinner:'NONE',productionAuthorized:false}
@@ -204,6 +205,43 @@ describe('B387 genuine native 180s source history',()=>{
    officialWinner:'NONE'});
   s.b387RealRoundMilestones!.sourceScoreable=1 as 0;
   expect(()=>sourceSessionSummary(s)).toThrow('B387_UNTRUSTED_ROUND_MILESTONE');
+ });
+});
+
+describe('T21 V28 same real 150 native-tick respawn authority for game and round history',()=>{
+ const base=()=>({tick:600,respawns:0,stage:[25,17,26,0],
+  playing:true,alive:true,weapon:'twin-comets',drop:false,
+  c:{status:'WAIT_FIRST_DROP',sourceLocalPlayClear:false,
+   actualOriginalRampTouched:false,
+   actualOriginalRaisedFootColliderId:null,
+   realPostDropHumanImpactChangedCells:0,genuineGroundedTravelMeters:0,
+   naturalCrossTeamRouteProven:false,sourceScoreablePromotions:0,
+   officialWinner:'NONE'}});
+ it('never certifies a 149-tick return which the actual game has not completed',()=>{
+  const f=base(),real=new B387RoundMilestones();
+  expect(real.observe(f).valid).toBe(true);
+  f.tick=610;f.alive=false;
+  expect(real.observe(f)).toMatchObject({valid:true,lastNativeDeathTick:610,
+   real150TickReturns:0});
+  f.tick=759;
+  expect(nativeSourceHumanRespawnElapsedTicks(610,f.tick)).toBe(149);
+  expect(real.observe(f).real150TickReturns).toBe(0);
+  // A counter forged one tick early is not an authenticated native return.
+  f.alive=true;f.respawns=1;
+  expect(real.observe({...f,tick:760})).toMatchObject({
+   valid:false,real150TickReturns:0
+  });
+ });
+ it('accepts the same exact 150-tick return as native gameplay, not wall time',()=>{
+  const f=base(),real=new B387RoundMilestones();
+  real.observe(f);f.tick=610;f.alive=false;
+  real.observe(f);f.tick=759;real.observe(f);
+  f.tick=760;f.alive=true;f.respawns=1;
+  expect(nativeSourceHumanRespawnElapsedTicks(610,760)).toBe(150);
+  expect(real.observe(f)).toMatchObject({
+   valid:true,real150TickReturns:1,lastNativeReturnTick:760,
+   currentLifeIndex:1,currentLifeClear:false
+  });
  });
 });
 
@@ -225,13 +263,13 @@ describe('B391 real 150-native-tick human life continuity',()=>{
    currentLifeClear:false,nativeHumanAlive:false,realNativeDeathWitnesses:1,
    real150TickReturns:0,lastNativeDeathTick:1100});
   f.tick=1248;f.alive=false;expect(h.observe(f).valid).toBe(true);
-  f.tick=1249;f.alive=true;f.respawns=1;f.drop=false;
+  f.tick=1250;f.alive=true;f.respawns=1;f.drop=false;
   f.c.status='WAIT_FIRST_DROP';f.c.sourceLocalPlayClear=false;
   const returned=h.observe(f);
   expect(returned).toMatchObject({valid:true,realClearedLives:1,
    currentLifeClear:false,nativeHumanAlive:true,
    realNativeDeathWitnesses:1,real150TickReturns:1,
-   lastNativeReturnTick:1249,currentLifeIndex:1});
+   lastNativeReturnTick:1250,currentLifeIndex:1});
  });
  it('refuses fake return without a genuine HP-zero trace or too early',()=>{
   for(const extra of [0,148]){

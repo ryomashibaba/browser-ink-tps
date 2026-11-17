@@ -43,7 +43,7 @@ export class B387RoundMilestones{
   // No arbitrary increment to the respawn counter may establish a return.
   const returned=f.respawns===this.life+1;
   if(returned&&(!f.alive||this.alive||this.deathNativeTick===null||
-     f.tick-this.deathNativeTick<149)||
+     f.tick-this.deathNativeTick<150)||
      !returned&&this.tick>=0&&!this.alive&&f.alive){
    this.valid=false;return this.snapshot();
   }
