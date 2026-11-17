@@ -322,3 +322,47 @@ test('QA-only deterministic source input keeps its existing authoritative axis',
  expect([input.moveX,input.moveY]).toEqual([-.4,1]);
  input.clearQaAxis();
 });
+
+test('SOURCE rejects stale WASD, squid, jump and buttons before pointerlockchange arrives',()=>{
+ const {input,canvas,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keydown',{code:'ShiftLeft',repeat:false});
+ emit('window','keydown',{code:'Space',repeat:false});
+ emit('window','keydown',{code:'KeyF',repeat:false});
+ emit('window','keydown',{code:'KeyG',repeat:false});
+ emit('canvas','pointerdown',{button:0});
+ emit('canvas','pointerdown',{button:2});
+ expect(input.sourceLiveInputAvailable).toBe(true);
+ expect([input.moveY,input.squidHeld,input.jumpHeld,input.fireHeld])
+  .toEqual([1,true,true,true]);
+ // Pointer Lock may be revoked before the browser dispatches its event.
+ Object.defineProperty(document,'pointerLockElement',{value:null,writable:true});
+ expect(input.sourceLiveInputAvailable).toBe(false);
+ expect([input.moveX,input.moveY,input.squidHeld,input.jumpHeld,
+  input.fireHeld,input.secondaryHeld,input.consumeJump(),
+  input.consumeSquidHeldForPlayerTick(),input.consumePrimaryPressed(),
+  input.consumeSecondaryPressed(),input.consumeSubPressed(),
+  input.consumeSpecialPressed()])
+  .toEqual([0,0,false,false,false,false,false,false,false,false,false,false]);
+ emit('window','pointerlockchange');
+ Object.defineProperty(document,'pointerLockElement',{value:canvas,writable:true});
+ expect([input.moveY,input.squidHeld,input.jumpHeld]).toEqual([0,false,false]);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ expect(input.moveY).toBe(1);
+});
+
+test('SOURCE ignores shortcut-modified motion but keeps ordinary fresh controls',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyW',repeat:false,ctrlKey:true});
+ emit('window','keydown',{code:'ShiftLeft',repeat:false,altKey:true});
+ emit('window','keydown',{code:'Space',repeat:false,metaKey:true});
+ expect([input.moveY,input.squidHeld,input.consumeJump()]).toEqual([0,false,false]);
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keydown',{code:'ShiftLeft',repeat:false});
+ emit('window','keydown',{code:'Space',repeat:false});
+ expect([input.moveY,input.squidHeld,input.consumeJump()]).toEqual([1,true,true]);
+});

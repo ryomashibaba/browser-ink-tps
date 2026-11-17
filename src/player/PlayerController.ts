@@ -44,6 +44,26 @@ export function nativeSourcePhysicallyContactedInk(
   return relation;
  return relation==='OWN'||relation==='ENEMY'?'NONE':relation;
 }
+/** Letting go of Shift on a real ink wall must not inherit the prior
+ * wall-climb drive into uncommanded airborne ascent. Genuine SURGE has its
+ * own motion branch and is intentionally unaffected. */
+export function nativeSourceWallReleaseVerticalVelocity(
+ previousState:PlayerLocomotionState,velocity:number
+):number{
+ return (previousState==='SWIM_WALL'||previousState==='SURGE_CHARGE')&&
+   velocity>0?0:velocity;
+}
+
+/** SOURCE-only short pre-landing Space buffer, never a second authority
+ * for ground contact. A lock loss or exclusive move consumes the intent. */
+export function nativeSourceNextJumpBufferSeconds(
+ previous:number,jumpPressed:boolean,dt:number,
+ liveInput:boolean,exclusiveAction:boolean
+):number{
+ if(!liveInput||exclusiveAction)return 0;
+ return jumpPressed?0.10:Math.max(0,previous-dt);
+}
+
 /** Real SOURCE only: an optical/nearby paint surface cannot grant
  * OWN/ENEMY resource or squid ground speed when a DIFFERENT registered
  * 25-solid Rapier floor supports the character. No new collision. */
@@ -409,8 +429,17 @@ export class PlayerController {
     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
     // No extra ground/coyote-time/stepping or changes to frozen T20.
     if (this.nativeSourceGroundInkGuard) {
-      this.sourceJumpBufferSeconds = jumpPressed
-        ? 0.10 : Math.max(0, this.sourceJumpBufferSeconds - dt);
+      // A pointer-lock drop makes old Space intent invalid even if the
+      // browser has not delivered pointerlockchange yet.
+      // Space during exclusive Dualies/dodge, squid-roll or surge cannot
+      // become a delayed unrelated grounded jump when that action ends.
+      const exclusiveAction=this.weaponDodgeQueued||
+        this.weaponDodgeStartupSeconds>0||this.weaponDodgeRemainingSeconds>0||
+        this.weaponDodgeMoveLockSeconds>0||
+        this.squidRollRemainingSeconds>0||this.surgeRemainingSeconds>0;
+      this.sourceJumpBufferSeconds=nativeSourceNextJumpBufferSeconds(
+        this.sourceJumpBufferSeconds,jumpPressed,dt,
+        this.input.sourceLiveInputAvailable,exclusiveAction);
     }
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
 
@@ -603,6 +632,9 @@ export class PlayerController {
         }
       }
     } else {
+      if(this.nativeSourceGroundInkGuard)
+        this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
+          this.locomotionState,this.verticalVelocity);
       this.setMode('HUMAN');
       this.locomotionState = 'HUMAN';
       this.wallSurfaceId = '-';
