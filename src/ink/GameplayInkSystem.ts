@@ -121,8 +121,24 @@ export class GameplayInkSystem {
     const s = Math.sin(event.angle);
     const boundU = Math.abs(c) * event.radiusU + Math.abs(s) * event.radiusV;
     const boundV = Math.abs(s) * event.radiusU + Math.abs(c) * event.radiusV;
-    const invRadiusUSq = 1 / (event.radiusU * event.radiusU);
-    const invRadiusVSq = 1 / (event.radiusV * event.radiusV);
+    const radiusUSq = event.radiusU * event.radiusU;
+    const radiusVSq = event.radiusV * event.radiusV;
+    // A finite input alone is insufficient: squaring a tiny radius can
+    // underflow to zero and squaring a giant radius can overflow. The old
+    // inverse then generated 0 * Infinity = NaN, accidentally authorizing
+    // raster cells the ellipse did not contain. Fail closed, without
+    // creating a substitute stroke or changing real weapon dimensions.
+    if (!(radiusUSq > 0) || !(radiusVSq > 0) ||
+        !Number.isFinite(radiusUSq) || !Number.isFinite(radiusVSq) ||
+        !Number.isFinite(boundU) || !Number.isFinite(boundV) ||
+        !Number.isFinite(event.centerU - boundU) ||
+        !Number.isFinite(event.centerU + boundU) ||
+        !Number.isFinite(event.centerV - boundV) ||
+        !Number.isFinite(event.centerV + boundV)) {
+      return { changedCells: 0, rasterEligibleCells: 0, rasterAlreadyTeamOwnedCells: 0, testedCells: 0, dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0, paintableRuns: [] };
+    }
+    const invRadiusUSq = 1 / radiusUSq;
+    const invRadiusVSq = 1 / radiusVSq;
 
     const minX = Math.max(0, Math.floor((event.centerU - boundU) / surface.cellSize));
     const maxX = Math.min(surface.widthCells - 1, Math.floor((event.centerU + boundU) / surface.cellSize));
@@ -152,7 +168,8 @@ export class GameplayInkSystem {
         const ellipseV = -dx * s + dy * c;
         const normalized = ellipseU * ellipseU * invRadiusUSq + ellipseV * ellipseV * invRadiusVSq;
         const index = surface.index(x, y);
-        const eligible = normalized <= 1 && surface.isCellActive(x, y) &&
+        const eligible = Number.isFinite(normalized) && normalized <= 1 &&
+          surface.isCellActive(x, y) &&
           (surface.flagsGrid[index]! & SurfaceFlags.Paintable) !== 0;
         if (!eligible) {
           if (startX >= 0) {

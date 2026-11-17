@@ -125,6 +125,70 @@ describe('T21 V28 continuous ink request provenance and real feedback', () => {
     expect(accepted[0]?.event.tick).toBe(202);
   });
 
+  it('coalesces 120 identical same-tick visual overwrites but still performs every authoritative CPU paint request', () => {
+    const { surface, gameplay, stats, gpu, accepted, coordinator, request } = fixture();
+    for (let n = 0; n < 120; n += 1) {
+      coordinator.enqueue({
+        ...request(1.5), source: PaintSource.Cpu,
+        actorId: n % 2 ? 'A1' : 'A2'
+      });
+    }
+    coordinator.processTick(300);
+    expect(accepted).toHaveLength(120);
+    expect(accepted.reduce((n, entry) => n + entry.changed, 0)).toBe(1);
+    expect(stats.cpuInkCellsChanged).toBe(1);
+    expect(gpu.queue).toHaveBeenCalledTimes(1);
+    expect(coordinator.lastEvent?.tick).toBe(300);
+    expect(surface.ownerGrid[surface.index(1, 1)]).toBe(Team.A);
+    expect(gameplay.snapshot()).toMatchObject({ areaA: 0, areaB: 0 });
+    // A new tick may legitimately redraw its wetness. The optimization
+    // must never cancel all future updates at this approved patch.
+    coordinator.enqueue(request(1.5));
+    coordinator.processTick(301);
+    expect(gpu.queue).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not coalesce opposing overwrites, different wetness or disjoint brush positions', () => {
+    const { surface, gpu, accepted, coordinator, request } = fixture();
+    coordinator.enqueue(request(1.5, Team.A));
+    coordinator.enqueue(request(1.5, Team.A)); // redundant GPU stamp
+    coordinator.enqueue(request(1.5, Team.B)); // must paint B
+    coordinator.enqueue(request(1.5, Team.A)); // must repaint A
+    coordinator.enqueue({ ...request(1.5), strength: 0.5 }); // visible wetness differs
+    coordinator.enqueue(request(2.5)); // different actual authorized cell
+    coordinator.processTick(400);
+    expect(gpu.queue).toHaveBeenCalledTimes(5);
+    expect(accepted).toHaveLength(6);
+    expect(accepted.map(x => x.changed)).toEqual([1, 0, 1, 1, 0, 1]);
+    expect(surface.ownerGrid[surface.index(1, 1)]).toBe(Team.A);
+    expect(surface.ownerGrid[surface.index(2, 1)]).toBe(Team.A);
+  });
+
+  it('rejects underflow and overflow brush radii rather than creating unbounded ownership', () => {
+    const { surface, gpu, coordinator, accepted, request } = fixture();
+    const malformed = [
+      { radiusU: 1e-200 },
+      { radiusV: 1e-200 },
+      { radiusU: 1e200 },
+      { radiusV: 1e200 },
+      { centerU: 1e308, radiusU: 1e308 },
+      { centerV: -1e308, radiusV: 1e308 }
+    ];
+    for (const overrides of malformed) coordinator.enqueue({
+      ...request(1.5), ...overrides
+    });
+    coordinator.processTick(500);
+    expect(gpu.queue).not.toHaveBeenCalled();
+    expect(accepted).toHaveLength(malformed.length);
+    expect(accepted.every(x => x.result.rasterEligibleCells === 0)).toBe(true);
+    expect([...surface.ownerGrid].every(owner => owner === Team.Neutral)).toBe(true);
+    expect(coordinator.lastEvent).toBeNull();
+    coordinator.enqueue(request(1.5));
+    coordinator.processTick(501);
+    expect(surface.ownerGrid[surface.index(1, 1)]).toBe(Team.A);
+    expect(gpu.queue).toHaveBeenCalledTimes(1);
+  });
+
   it('does not interpret outside-surface UVs as valid edge paint impacts', () => {
     const { surface } = fixture();
     expect(sourceRegisteredPaintCellActive(surface, 0.5, 0.5)).toBe(true);
