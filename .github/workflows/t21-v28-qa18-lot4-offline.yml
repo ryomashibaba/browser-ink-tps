@@ -7,6 +7,7 @@ on:
       - .github/workflows/t21-v28-qa18-lot4-offline.yml
 permissions:
   contents: read
+  actions: read
 jobs:
   independent-realplay-diagnostics:
     runs-on: ubuntu-latest
@@ -37,3 +38,35 @@ jobs:
       - name: Run independent actual-source goal denial and prior B484 B367 QA regressions
         run: |
           node --test scripts/t21-v28-qa-native-playability-blockers.test.mjs scripts/t21-v28-qa-b484-hud-gate.test.mjs scripts/t21-v28-qa-real-hp-witness.test.mjs scripts/t21-v28-qa-real-b2b4-diff.test.mjs
+      - name: Read archived *genuine* original RAW without new Chromium
+        uses: actions/download-artifact@v4
+        with:
+          name: t21-v28-qa18-post-cpu-b484-original-once
+          repository: ryomashibaba/browser-ink-tps
+          run-id: 44035240101
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/t21-v28-qa18-archived-source
+      - name: Verify B2/B4 actual Rapier rejection and F4 0/16 from archived RAW
+        run: |
+          DIR=/tmp/t21-v28-qa18-archived-source
+          node scripts/t21-v28-qa-native-playability-blockers.mjs \
+            "$DIR/b440-short-real-original-human-foot.json" \
+            "$DIR/b454-native-b2-b4-physical-60hz.json" \
+            "$DIR/qa-issue18-lot4-replayed-gameplay-blockers.json"
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import {readFileSync} from "node:fs";
+            const a=JSON.parse(readFileSync("/tmp/t21-v28-qa18-archived-source/qa-issue18-lot4-replayed-gameplay-blockers.json"));
+            assert.equal(a.actualCrossTeamNativePathPairs,0);
+            assert.equal(a.genuineHumanCpuHpHits,0);
+            assert.equal(a.result,"HOLD_REAL_NATIVE_4V4_AND_HP_CHAIN");
+            for(const id of ["B2","B4"]){
+             const x=a.byActor[id];
+             assert.equal(x.observedGate,"HOLD_STRICT_ORIGINAL_GOALS_ALL_DENIED");
+             assert.equal(x.nativeGoalAdmission.runtimeNoOriginalGoal,44);
+             assert.equal(x.nativeGoalAdmission.actualNativeSourceGoalRequests,0);
+             assert.equal(x.trueOriginalFootDryRoute.firstDeniedCauses.NATIVE_PATH_RAPIER_HEIGHT_MISMATCH,30);
+             assert.equal(x.nativeFoot.allRegisteredOriginalFloorSupported,true);
+            }
+            console.log("QA18_GENUINE_ARCHIVED_RAW_CAUSAL_GATE_PASS_NO_NEW_BROWSER");
+          '
