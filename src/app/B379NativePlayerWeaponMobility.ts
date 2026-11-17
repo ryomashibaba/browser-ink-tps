@@ -13,17 +13,29 @@ export function applyB379NativePlayerWeaponMobility(input:{
  readonly weapons:PhysicalWeaponRuntime;readonly humanAlive:boolean;
  readonly realPointerLocked:boolean;readonly sourceRoundPhase:string;
  readonly stopped:boolean;
-}):{readonly movementMultiplier:number;readonly realDodgeAccepted:boolean}{
+ /** Only the user-selected genuine 180-second original SOURCE round. */
+ readonly canonicalSourceRound?:boolean;
+}):{readonly movementMultiplier:number;readonly realDodgeAccepted:boolean;
+ readonly realBrellaGuardTap:boolean}{
  // Consume a queued right-click even during death/timeout; no stale dodge.
  const secondaryPress=input.input.consumeSecondaryPressed();
  const eligible=input.humanAlive&&input.realPointerLocked&&!input.stopped&&
   (input.sourceRoundPhase==='STAGING'||input.sourceRoundPhase==='PLAYING');
+ // A physical right-click can start AND finish between two 60Hz
+ // ticks. B379 already consumes that edge for DUALIES, so the actual
+ // BRELLA shield otherwise never sees a sub-frame tap. Respect one
+ // native tick ONLY in genuine SOURCE, without synthesizing a hold,
+ // carrying input across pause/splat, or changing frozen T20/QA.
+ const realBrellaGuardTap=Boolean(
+  eligible&&input.canonicalSourceRound&&secondaryPress&&
+  !input.input.secondaryHeld&&
+  input.weapons.currentPlayerWeapon.weaponClass==='BRELLA');
  const movementMultiplier=eligible?
   input.weapons.getMovementMultiplier(input.input.fireHeld,
-   input.input.secondaryHeld):1;
+   input.input.secondaryHeld||realBrellaGuardTap):1;
  input.player.setWeaponMoveMultiplier(movementMultiplier);
  const realDodgeAccepted=Boolean(eligible&&secondaryPress&&
   input.weapons.currentPlayerWeapon.weaponClass==='DUALIES'&&
   input.player.requestWeaponDodge());
- return {movementMultiplier,realDodgeAccepted};
+ return {movementMultiplier,realDodgeAccepted,realBrellaGuardTap};
 }
