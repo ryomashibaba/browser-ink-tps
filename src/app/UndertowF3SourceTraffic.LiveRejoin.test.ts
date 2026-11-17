@@ -1216,7 +1216,7 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
  for(const [id,foot] of Object.entries(historicalFeet)){
   let reached=0,fullRouteApproved=0,endpointsSafe=0,withoutFootGateApproved=0;
   const admitted: number[]=[];
-  const stillHeld: Array<{candidate:number;cause:string;pathPoints:number;firstDenied?:unknown;nativeStartDifference?:number}>=[];
+  const stillHeld: Array<{candidate:number;cause:string;pathPoints:number;firstDenied?:unknown;nativeStartDifference?:number|null}>=[];
   for(let k=0;k<pinnedLattice.length;k++){
    const [col,row]=pinnedLattice[k]!;
    const goal=new Vec3(-6.185263365007792+1.4*col,
