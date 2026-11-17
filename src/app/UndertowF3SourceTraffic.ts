@@ -56,6 +56,8 @@ import type {SourceSpawnPlan}
  from '../stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {planT21F2SourceDropRoutes,type T21F2RoutePlan}
  from '../stage/undertow/UndertowF2SourceDropRoutes';
+import {originalNativeLandingFootReprojection}
+ from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
 
 export interface F3TrafficCpu{
  id:string;team:Team.A|Team.B;position:Vec3;agent:CrowdAgent|null;
@@ -755,6 +757,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(![point.x,point.y,point.z].every(Number.isFinite)||
       point.z*sideSign<33||point.y<2.5||point.y>5.5)return false;
    if(this.hasSourceFootSupport(point))return true;
+   // An original native Recast polyline LINEAR Y is not its closest
+   // original NavMesh Y at the same source XZ. Recover only the pinned
+   // mirrored first-drop landing face if genuine HUMAN Rapier floor support
+   // at native projected Y is within the unchanged 0.25m threshold.
+   // No source position, Actor, NavLink, physical step or scoring changes.
+   if(this.nav&&originalNativeLandingFootReprojection(
+     this.stage,this.physics!,this.nav,point,
+     sideSign===1?1:-1))return true;
    // A real B2 Ramp KCC foot remains supported, but Recast can float
    // 25.897cm above original registered ramp collision. Never promote
    // that NAV height as a CPU foot or relax the actual 25cm PHYSICAL

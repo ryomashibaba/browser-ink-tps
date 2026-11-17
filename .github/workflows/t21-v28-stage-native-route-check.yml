@@ -1,0 +1,22 @@
+name: T21 V28 stage native landing route lightweight proof
+on:
+  push:
+    branches: [research/t21-v28-stage-true-recast-floor-route-20261117]
+permissions:
+  contents: read
+jobs:
+  stage-native-route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: TypeScript native stage and real source traffic compile
+        run: npm run typecheck
+      - name: Real Rapier Recast original landing and existing SOURCE traffic regression (no Chromium)
+        run: npx vitest run src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/app/UndertowF3SourceTraffic.test.ts
