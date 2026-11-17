@@ -22,6 +22,7 @@ import {resolve,isAbsolute,sep,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {t21QaAuditK2LiveWindow} from './t21-v28-qa-k2-source-window.mjs';
 import {validateB484ModeSpecificHud} from './t21-v28-qa-b484-hud-gate.mjs';
+import {classifyRealNativeHpSnapshot} from './t21-v28-qa-real-hp-witness.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -3813,6 +3814,43 @@ async function main(){
    nativeActorPositionWrites:0,originalRouteAuthorizationChanged:false,
    officialWinner:'NONE'};
   save();
+  // QA #18: save ACTUAL native projectile-HP provenance before the HUD
+  // gate can HOLD. This read-only query must never create a damage event,
+  // a CPU splat, an artificial respawn or a fake cross-team encounter.
+  const realCombatFrame=await snap();
+  authority(realCombatFrame);
+  const realHpProof=classifyRealNativeHpSnapshot(realCombatFrame);
+  const realCombatEvidence={
+   originalSourceSolids:realCombatFrame.originalSourceSolids,
+   originalPaintSurfaces:realCombatFrame.originalPaintSurfaces,
+   originalSourceNavigationLinks:realCombatFrame.originalSourceNavigationLinks,
+   sourceScoreablePromotions:realCombatFrame.sourceScoreablePromotions,
+   productionAuthorized:realCombatFrame.productionAuthorized,
+   unrestricted4v4Certified:realCombatFrame.unrestricted4v4Certified,
+   stopReason:realCombatFrame.stopReason,tick:realCombatFrame.tick,
+   matchState:realCombatFrame.matchState,
+   cpu:{physicalRejoins:realCombatFrame.cpu.physicalRejoins,
+    cpu:realCombatFrame.cpu.cpu.map(a=>({
+     id:a.id,lifeState:a.lifeState,hp:a.hp,rejoined:a.rejoined,
+     physicalFoot:a.physicalFoot}))},
+   humanCpuDirectHits:realCombatFrame.humanCpuDirectHits,
+   humanCpuDirectSplats:realCombatFrame.humanCpuDirectSplats,
+   cpuSplats:realCombatFrame.cpuSplats,
+   cpuRespawns:realCombatFrame.cpuRespawns,
+   humanSplats:realCombatFrame.humanSplats,
+   humanRespawns:realCombatFrame.humanRespawns,
+   b367RealCpuLifecycleEvidence:
+    realCombatFrame.b367RealCpuLifecycleEvidence
+  };
+  proof.qaIssue18RealNativeHpWitness=realHpProof;
+  writeFileSync(resolve(out,'qa-issue18-real-native-hp-splat-raw.json'),
+   JSON.stringify({snapshot:realCombatEvidence,audit:realHpProof,
+    realBrowserOrigin:await origin(),actualGameWrites:0},null,2)+'\n');
+  save();
+  console.log('QA_ISSUE18_REAL_NATIVE_HP_WITNESS',
+   JSON.stringify({verdict:realHpProof.verdict,
+    actualHpEvents:realHpProof.actualHpLossEvents.length,
+    sameActor150TickRespawnCertified:false}));
   // The PLAYER sees the same genuine second C-order progress in the
   // existing actual browser HUD. Do not dispatch synthetic DOM events or
   // claim a route/arrival from the UI text alone.
