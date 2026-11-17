@@ -11,6 +11,9 @@ const genuine=p=>p?.schema===
  'B454_TRUE_60HZ_B2_B4_SOURCE_STATIC_FOOT_TRACE_V1'&&
  p.source===source&&p.originalWinner==='NONE'&&
  p.originalPathAuthorizationChanged===false&&
+ p.originalKccOrGameWrites===0&&
+ p.continuousCapsuleContactCertified===false&&
+ p.b2b4FrontlineGoalCertified===false&&
  p.originalSourceGeometryWrites===0&&p.actorWrites===0&&
  p.nativeClockWrites===0&&p.scoreWrites===0&&
  Number.isFinite(p.browserWorldOrigin)&&p.browserWorldOrigin>0&&
@@ -77,8 +80,9 @@ export function compareRealOriginalB2B4CpuMobility(before,after){
    beforeLongestStationaryNativeTicks:priorStill,
    afterLongestStationaryNativeTicks:latestStill,
    stationaryReductionNativeTicks:priorStill-latestStill,
-   actualMovementImprovementCertified:
+   stationaryReductionObservedInThisWindow:
     priorStill>latestStill&&firstDifference!==null,
+   fullGameplayMovementImprovementCertified:false,
    movementIdenticalThisObservedWindow:equal===ticks.length,
    originalRapierSupportedAtEveryComparedTick:true,
    collisionOrNavAuthorityWrites:0
@@ -91,7 +95,7 @@ export function compareRealOriginalB2B4CpuMobility(before,after){
   newBrowserOrigin:after.browserWorldOrigin,
   byCpu,
   overallVerdict:same?'HOLD_NO_OBSERVED_B2_B4_PHYSICAL_MOBILITY_CHANGE':
-   'OBSERVED_REAL_FOOT_DIFFERENCE_CHECK_STALL_REDUCTION_PER_ACTOR',
+   'OBSERVED_REAL_FOOT_DIFFERENCE_REQUIRE_GAMEPLAY_CONFIRMATION',
   originalScoreable:0,originalF4ConnectedCertified:false,
   actualEnemyHpSplatRespawnCertified:false,
   simulatedActorMovement:0,formal4v4Certified:false
