@@ -1253,13 +1253,29 @@ export class CpuAgentSystem {
           // foot is necessary before requesting Crowd movement. Keep the
           // existing KCC veto as the sole per-step physical authority.
           if(sourceGoal&&this.phase14qF2RecoverableSteps){
-            const admitted=chooseAuditedOriginalSourceCpuGoal(
-              bot.position,this.goal,
-              this.sourceLastAdmittedRouteGoal.get(bot.id)??null,
-              (from,to)=>this.navigation.auditPath(
-                new Vec3(from.x,from.y,from.z),
-                new Vec3(to.x,to.y,to.z)
-              ));
+            // The current SOURCE foot must still have a real registered
+            // static Rapier support; navmesh snapping cannot manufacture a
+            // different original floor. A current-life unrejoined high
+            // spawn alone may use the existing .25m F2 start band.
+            const rejoined=this.f3dSourceGoals
+              ?.isLiveRejoinedSourceCpu?.(bot.id)===true;
+            const firstDrop=this.f3dSourceGoals
+              ?.isLiveRejoinedSourceCpu?.(bot.id)===false;
+            const physical=this.phase14qGroundCollision
+              ?.sourceFootSupport?.(bot.id,bot.position);
+            const maxFootBand=firstDrop?.25:.20;
+            const footSupported=!!physical&&
+              this.stage.solids.some(s=>s.id===physical.solidId)&&
+              Math.abs(physical.point.y-bot.position.y)<=maxFootBand+1e-6;
+            const admitted=footSupported?
+              chooseAuditedOriginalSourceCpuGoal(
+                bot.position,this.goal,
+                rejoined?this.sourceLastAdmittedRouteGoal.get(bot.id)??null:null,
+                (from,to)=>this.navigation.auditPath(
+                  new Vec3(from.x,from.y,from.z),
+                  new Vec3(to.x,to.y,to.z)
+                ),{allowOriginalFirstDropStartSnap:firstDrop}
+              ):null;
             if(admitted){
               this.goal.set(admitted.point.x,admitted.point.y,
                 admitted.point.z);
