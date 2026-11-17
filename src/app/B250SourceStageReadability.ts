@@ -208,16 +208,20 @@ export function installB250SourceView(app:AppBase,camera:Entity,
    const originals=entity.render?.meshInstances;
    if(!originals||originals.length!==1)
     throw Error('B250_GLASS_ORIGINAL_SINGLE_MESH_REQUIRED_'+s.id);
+   const originalMesh=originals[0]!.mesh;
+   const originalMaterial=originals[0]!.material;
+   if(!originalMesh||!originalMaterial)
+    throw Error('B250_GLASS_ORIGINAL_RESOURCE_MISSING_'+s.id);
    // Existing visual SOURCE vertices only; collision triangles retain the
    // original material. The excluded 8 per side become faint optical-only.
    const registered=new MeshInstance(
-    b250ExactSourceMesh(app,glass.registered),originals[0]!.material);
+    b250ExactSourceMesh(app,glass.registered),originalMaterial);
    const ghost=new MeshInstance(
     b250ExactSourceMesh(app,glass.opticalOnly),b250OpticalOnlyMaterial());
    // Cloning a MeshInstance keeps the ORIGINAL mesh/material alive while
    // its old component-owned instance is replaced (and destroyed).
    // This is the exact pre-split visual, not inferred walkable geometry.
-   const original=new MeshInstance(originals[0]!.mesh,originals[0]!.material);
+   const original=new MeshInstance(originalMesh,originalMaterial);
    entity.render!.meshInstances=[original,registered,ghost];
    ghost.castShadows=false; // optical-only faces cannot cast solid shadows
    glassBindings.push({original,registered,ghost});
