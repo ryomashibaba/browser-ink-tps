@@ -18,5 +18,7 @@ jobs:
       - run: npm install --no-audit --no-fund --no-package-lock
       - name: TypeScript native stage and real source traffic compile
         run: npm run typecheck
-      - name: Real Rapier Recast original landing and existing SOURCE traffic regression (no Chromium)
-        run: npx vitest run src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/app/UndertowF3SourceTraffic.test.ts
+      - name: Real native landing / gameplay gate / genuine existing SOURCE spawns (no Chromium)
+        run: npx vitest run src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/app/UndertowF3NativeLandingRouteAdmission.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnPlan.test.ts src/stage/undertow/UndertowPhase14QSourceSpawnRuntimeQa.test.ts src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts
+      - name: Existing real 7CPU original SOURCE traffic/drop and B2-B4 route regression
+        run: npx vitest run src/app/UndertowF3SourceTraffic.test.ts -t 'native 7-CPU drop safety|audits genuine B2 B3 B4 90-second'
