@@ -172,6 +172,75 @@ export function b245RealFrontlineLiveHudDockCss(search:string):string{
   '}'
  ].join('');
 }
+/**
+ * Issue #17 next lot: genuine Chrome SOURCE PLAYING evidence shows the small
+ * centre '+' over a bright original floor and the lengthy B243 caption
+ * crossing the player's silhouette. The genuine native B87 direct-HP
+ * receipt and B286 squad counts are equally easy to confuse with neutral
+ * paint/aim hints. These are strictly presentation changes to existing
+ * native DOM nodes; NEVER fabricate aim, damage, CPU contacts or walkability.
+ *
+ * The earlier B475 B476 live compact gate is reused verbatim: no styling
+ * before the real match, during F8 QA, while paused/unlocked or in another
+ * source/production mode. F4/25-17-26-0 authorities remain unchanged.
+ */
+export function b245RealFrontlineCombatReadabilityCss(search:string):string{
+ const q=new URLSearchParams(search);
+ if(!b475RealFrontlineReadyMode(q)||q.has('production')||
+    q.has('scoreable')||q.get('t21Presentation')==='qa')return '';
+ const live='#ui-root[data-t21-b245-presentation="PLAYER"]'+
+  '[data-t21-b338-phase="PLAYING"]'+
+  ':has(#t21-f3-b25-paint-run[data-t21-b476-compact="true"])';
+ return [
+  // Aiming: visible over both the pale physically registered spawn floor
+  // and dark original stage void. Do not turn a ray into a hit reticle.
+  live+' #t21-f3-b243-source-aim-line > span:first-child',
+  '{font-size:27px!important;line-height:26px!important;'+
+   'text-shadow:-1px -1px 0 #08212e,1px -1px 0 #08212e,'+
+   '-1px 1px 0 #08212e,1px 1px 0 #08212e,'+
+   '0 0 7px #031620!important;}',
+  // Genuine centre-ray CPU (not a shot hit) is guarded amber vs body cyan.
+  // These data values come only from B364's actual original Rapier ray.
+  live+' #t21-f3-b243-source-aim-line'+
+   '[data-t21-b364-mode="REAL_CPU_BODY_CENTER_RAY"] > span:first-child',
+  '{filter:drop-shadow(0 0 4px rgba(89,255,215,.86))!important;}',
+  live+' #t21-f3-b243-source-aim-line'+
+   '[data-t21-b364-mode="REAL_CPU_GUARD_CENTER_RAY"] > span:first-child',
+  '{filter:drop-shadow(0 0 4px rgba(255,191,96,.92))!important;}',
+  // Move the ACTUAL B243 paint/CPU centre-ray caption beneath the real
+  // player silhouette instead of across its torso. Keep "NO HIT" text.
+  live+' #t21-f3-b243-source-aim-caption',
+  '{top:168px!important;max-width:min(360px,calc(100vw - 36px))!important;'+
+   'width:max-content!important;white-space:normal!important;'+
+   'overflow-wrap:break-word!important;line-height:1.5!important;'+
+   'text-align:center!important;box-shadow:0 3px 11px #001c!important;}',
+  // B87 is the independent genuine HUMAN-origin CPU HP ledger, not B364
+  // aim or B481 ownerGrid paint. Make its conditional hit receipt distinct.
+  live+' #t21-f3-b87-hit-confirmation',
+  '{border:2px solid #a8ffbb!important;color:#e4ffed!important;'+
+   'background:rgba(7,58,42,.94)!important;'+
+   'box-shadow:0 0 10px rgba(75,255,154,.26)!important;}',
+  // Native low HP / enemy-ink warning remains visible and legible, never
+  // suppress its actual data or alter its trigger.
+  live+' #t21-f3-b84-danger',
+  '{border-left:4px solid #ff9b7e!important;'+
+   'font-size:12px!important;line-height:1.45!important;}',
+  // Top-left B286 counts describe ACTUAL 3 allies / 4 opponents, not
+  // cross-team detection or path reachability. B141 ally text is separate.
+  live+' #t21-f3-b286-source-team',
+  '{border-left:4px solid #56e1ec!important;}',
+  live+' #t21-f3-b286-team-counts',
+  '{font-size:13px!important;letter-spacing:.15px!important;}',
+  live+' #t21-f3-b141-real-ally',
+  '{border-left:3px solid #7ddbd4!important;}',
+  // Avoid large reticle-caption overlays in narrow windows without
+  // moving HUD controls or B25/F8 buttons. Data stays unchanged.
+  '@media(max-height:760px){',
+  live+' #t21-f3-b243-source-aim-caption',
+  '{top:116px!important;max-width:min(290px,calc(100vw - 36px))!important;}',
+  '}'
+ ].join('');
+}
 export function installB245SourcePresentation(
  ui:HTMLElement,onViewChange:()=>void
 ):void {
@@ -233,6 +302,8 @@ export function installB245SourcePresentation(
  // #17: authentic B475 live compact HUD shifts off center at roomy
  // viewports; READY START, F8 QA, collision and native values untouched.
  style.textContent+=b245RealFrontlineLiveHudDockCss(window.location.search);
+ // #17 next lot: original-source aim, true damage and squad clarity only.
+ style.textContent+=b245RealFrontlineCombatReadabilityCss(window.location.search);
  ui.appendChild(style);
  const button=document.createElement('button');
  button.id='t21-f3-b245-view-toggle';
