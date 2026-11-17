@@ -150,6 +150,8 @@ export class ProjectileSystem {
   // Default null preserves every T20 and historical opt-in QA hit rule.
   private nativeSourceHumanPhysicalMode:(()=>PlayerMode)|null=null;
   private nativeHumanDamageCueFrame=-1;
+  /** Actual SOURCE HUMAN splash HP feedback, at most once per native tick. */
+  private nativeSourceHumanSplashCueFrame=-1;
   private playerWeaponId: WeaponId = DEFAULT_WEAPON_ID;
 
   public constructor(
@@ -469,6 +471,8 @@ export class ProjectileSystem {
     this.b348LastPitch=0;
     this.b351TrueDamageCues=0;
     this.b367NativeFrame=0;
+    this.nativeHumanDamageCueFrame=-1;
+    this.nativeSourceHumanSplashCueFrame=-1;
     this.b367RealHumanCpuHits=0;
     this.b367PhysicalEvents.length=0;
     for (const slot of this.slots) this.deactivate(slot);
@@ -2322,7 +2326,9 @@ export class ProjectileSystem {
       slot.sourceKind === 'HUMAN' ? PaintSource.Human : PaintSource.Cpu;
 
     if (slot.blastRadius > 0 && slot.blastDamage > 0) {
-      this.applyAreaDamage(point, slot.blastRadius, slot.blastDamage, slot.team);
+      this.applyAreaDamage(point,slot.blastRadius,slot.blastDamage,
+        slot.team,undefined,false,
+        slot.sourceKind==='HUMAN'?slot.weaponId:undefined);
       this.paintWorldStamp(
         slot.team,
         point,
@@ -2390,7 +2396,9 @@ export class ProjectileSystem {
       burst.seconds -= dt;
       if (burst.seconds > 0) continue;
 
-      this.applyAreaDamage(burst.point, burst.radius, burst.damage, burst.team);
+      this.applyAreaDamage(burst.point,burst.radius,burst.damage,
+        burst.team,undefined,false,
+        burst.source===PaintSource.Human?burst.weaponId:undefined);
       this.paintWorldStamp(
         burst.team,
         burst.point,
@@ -2431,7 +2439,9 @@ export class ProjectileSystem {
     damage: number,
     team: Team.A | Team.B,
     sourceMeleeOrigin?:Vec3,
-    sourceHumanMelee=false
+    sourceHumanMelee=false,
+    /** Real HUMAN MAIN projectile explosion or STRINGER fuse only. */
+    sourceHumanExplosiveWeaponId?:WeaponId
   ): void {
     // In the selected 25/17/26/0 physical SOURCE round, real Rapier
     // cover blocks blast HP too, not only melee HP. This reads existing
@@ -2443,9 +2453,24 @@ export class ProjectileSystem {
     // Only the four canonical 25/17/26/0 physical SOURCE rounds enable
     // the real shared CPU Rapier-capsule hit shape. All other hit modes
     // retain the historical center approximation.
+    // CpuAgentSystem increments this ONLY on actual enemy CPU HP loss,
+    // after the real capsule/life, team, guard and Rapier cover gates.
+    // Its returned hit count can include absorbed guard impacts, so
+    // NEVER use that count to authorize a hit confirmation.
+    const realHitsBefore=this.stats.cpuCombatHits;
     this.cpuAgents.applyAreaDamage(point,radius,damage,team,meleeClear,
       this.nativeSourceHumanPhysicalMode!==null,
       sourceHumanMelee&&!!meleeClear&&team===this.currentHumanTeam);
+    if(this.nativeSourceHumanPhysicalMode!==null&&
+       sourceHumanExplosiveWeaponId!==undefined&&
+       team===this.currentHumanTeam&&
+       Number.isFinite(realHitsBefore)&&
+       this.stats.cpuCombatHits>realHitsBefore&&
+       this.nativeSourceHumanSplashCueFrame!==this.b367NativeFrame){
+      this.nativeSourceHumanSplashCueFrame=this.b367NativeFrame;
+      this.feedback.confirmedHumanCpuDamage(team,point,
+        weaponProfile(sourceHumanExplosiveWeaponId));
+    }
     this.combatTargets.applyAreaDamage(point, radius, damage, team);
 
     if (
