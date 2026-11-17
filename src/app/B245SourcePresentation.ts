@@ -131,7 +131,13 @@ export function b245PlayerSightlineCss(search:string):string{
   '{margin-top:4px!important;}',
   on+'#t21-f3-b195-native-coop[data-t21-b411-active="true"]'+
    '[data-t21-b195-real-source-clear="true"] #t21-f3-b417-paint-contest',
-  '{margin-top:5px!important;}'
+  '{margin-top:5px!important;}',
+  // Append after normal font size: a narrow native PLAYER viewport should
+  // never clip or shrink the selected weapon's real B338 control guide.
+  '@media(max-width:720px){',
+  on+'#t21-f3-b338-source-guide',
+  '{font-size:12px!important;line-height:1.45!important;}',
+  '}'
  ].join('');
 }
 export function installB245SourcePresentation(
@@ -169,12 +175,6 @@ export function installB245SourcePresentation(
   // Keyboard focus must be visible without obscuring original floor cues.
   '#ui-root #t21-f3-b245-view-toggle:focus-visible',
   '{outline:3px solid #fff0a5;outline-offset:3px;}',
-  // Preserve legible native weapon controls on smaller real-play windows.
-  '@media(max-width:720px){',
-  '#ui-root[data-t21-b245-presentation="PLAYER"]',
-  '[data-t21-b338-phase="PLAYING"] #t21-f3-b338-source-guide',
-  '{font-size:12px!important;line-height:1.45!important;}',
-  '}',
   '#ui-root[data-t21-b245-presentation="QA"] #t21-f3-b245-view-toggle',
   '{left:225px;}',
   '@media(max-width:620px){',
