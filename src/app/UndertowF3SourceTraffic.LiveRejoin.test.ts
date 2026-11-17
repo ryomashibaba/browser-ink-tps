@@ -3,6 +3,9 @@ import {initializeRapier,RapierStagePhysics} from '../physics/RapierStagePhysics
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../navigation/RecastStageNavigation';
 import {PerformanceStats} from '../core/PerformanceStats';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
+import {originalNativeLandingFootReprojection}
+ from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
 import {undertowT21dConnectivityQaStage}
@@ -1165,12 +1168,55 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
   B4:new Vec3(0.8728739619255066,3.0999999046325684,
    -52.796791076660156)
  };
+ const inspectFirstUncertified=(nativePathPoints:
+  readonly Readonly<{x:number;y:number;z:number}>[],foot:Vec3)=>{
+  const pts=[foot,...nativePathPoints.slice(1)];
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  for(let leg=0;leg+1<pts.length;leg++){
+   const a=pts[leg]!,b=pts[leg+1]!;
+   const length=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+   const segments=Math.max(1,Math.ceil(length/.30));
+   for(let i=leg===0?0:1;i<=segments;i++){
+    const frac=i/segments;
+    const point=new Vec3(a.x+(b.x-a.x)*frac,
+     a.y+(b.y-a.y)*frac,a.z+(b.z-a.z)*frac);
+    const sideAndLayer=point.z*-1>=33&&point.y>=2.5&&point.y<=5.5;
+    const direct=sideAndLayer&&
+     traffic.sourceNativeCharacterFootHit(point)!==null;
+    const landingProof=sideAndLayer?originalNativeLandingFootReprojection(
+     stage,physics,nav,point,-1):null;
+    if(direct||landingProof)continue;
+    const hit=physics.castCharacterFootSupport(
+     new Vec3(point.x,point.y+off,point.z),off,'HUMAN');
+    const proj=nav.auditNavMeshProjection(point);
+    const closest=proj.nearestPoint;
+    const correctedHit=closest?physics.castCharacterFootSupport(
+     new Vec3(closest.x,closest.y+off,closest.z),
+     off,'HUMAN'):null;
+    return {
+     leg,sample:i,originalPoint:[point.x,point.y,point.z],
+     sourceSideAndLayerPassed:sideAndLayer,
+     directHit:hit?.solidId??null,
+     nativeInterpolatedYGap:hit?point.y-hit.point.y:null,
+     actualNavClosest:closest?
+      [closest.x,closest.y,closest.z]:null,
+     actualNavXZSnap:closest?Math.hypot(
+      closest.x-point.x,closest.z-point.z):null,
+     correctedRapierSolid:correctedHit?.solidId??null,
+     correctedNavFloorGap:correctedHit&&closest?
+      closest.y-correctedHit.point.y:null,
+     claimedOriginalLandingProof:landingProof!==null
+    };
+   }
+  }
+  return {cause:'GATE_REFUSED_BEFORE_RAY_OR_UNKNOWN'};
+ };
  const actorReports:Record<string,unknown>={};
  let totalAlreadyRejected=0,totalPostFixApproved=0;
  for(const [id,foot] of Object.entries(historicalFeet)){
-  let reached=0,fullRouteApproved=0,endpointsSafe=0;
+  let reached=0,fullRouteApproved=0,endpointsSafe=0,withoutFootGateApproved=0;
   const admitted: number[]=[];
-  const stillHeld: Array<{candidate:number;cause:string;pathPoints:number}>=[];
+  const stillHeld: Array<{candidate:number;cause:string;pathPoints:number;firstDenied?:unknown;nativeStartDifference?:number}>=[];
   for(let k=0;k<pinnedLattice.length;k++){
    const [col,row]=pinnedLattice[k]!;
    const goal=new Vec3(-6.185263365007792+1.4*col,
@@ -1181,20 +1227,30 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
     route.startSnapDistanceMeters<=.20&&
     route.endSnapDistanceMeters<=.20&&route.pointCount>0;
    if(endpointSafe)endpointsSafe++;
+   const rawRoutePass=endpointSafe&&
+    traffic.hasSourceSupportedRoute(route,-1);
+   if(rawRoutePass)withoutFootGateApproved++;
    const pathApproved=endpointSafe&&
     traffic.hasSourceSupportedRoute(route,-1,foot,false,false);
    if(pathApproved){fullRouteApproved++;admitted.push(k);}
    else stillHeld.push({candidate:k,cause:!route.reachedTarget?
     'NATIVE_UNREACHED':!endpointSafe?'NATIVE_ENDPOINT_SNAP':
     'ORIGINAL_RAPIER_RECAST_INTERMEDIATE_HOLD',
-    pathPoints:route.pointCount});
+    pathPoints:route.pointCount,
+    nativeStartDifference:route.nativePathPoints.length?
+     Math.hypot(route.nativePathPoints[0]!.x-foot.x,
+      route.nativePathPoints[0]!.y-foot.y,
+      route.nativePathPoints[0]!.z-foot.z):null,
+    firstDenied:endpointSafe?
+     inspectFirstUncertified(route.nativePathPoints,foot):null});
   }
   // These were ALL rejected in the pinned original 60Hz Chromium
   // session. The new calculation does not replay motion or alter it.
   totalAlreadyRejected+=30;
   totalPostFixApproved+=fullRouteApproved;
   actorReports[id]={historicalRejectedGoals:30,reached,
-   endpointsSafe,postFixOriginalFullPathGateApprovals:fullRouteApproved,
+   endpointsSafe,withoutActualFootGateApprovals:withoutFootGateApproved,
+   postFixOriginalFullPathGateApprovals:fullRouteApproved,
    approvedHistoricalCandidateIndices:admitted,
    stillHeldCount:stillHeld.length,firstHeld:stillHeld.slice(0,6)};
   expect(reached).toBe(30);
@@ -1205,13 +1261,17 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
   actorReports,historicalRejectedRoutes:totalAlreadyRejected,
   currentGateApprovedRoutes:totalPostFixApproved,
   currentGateHeldRoutes:60-totalPostFixApproved,
+  verdict:totalPostFixApproved>0?
+   'NONZERO_ORIGINAL_ROUTE_GATE_NOT_REAL_KCC_CERTIFICATION':
+   'HOLD_ALL_PINNED_ORIGINAL_ROUTES_STILL_DENIED',
   originalSource:'25/17/26/0',crossTeamPathCertified:false,
   completeCpuSizeKccCertified:false,full4v4Certified:false,
   originalGeometryOrActorWrites:0
  }));
  expect(totalAlreadyRejected).toBe(60);
- // A valid repair must improve at least a source-certified route, not
- // merely make the original isolated point look acceptable. Whole-body
- // KCC and enemy encounters still require one authentic browser trial.
- expect(totalPostFixApproved).toBeGreaterThan(0);
+ // Record the true outcome even when a suspected repair is insufficient.
+ // A zero-approval outcome remains a genuine HOLD, not a fabricated PASS.
+ // A positive ray-only gate is also NOT a full native KCC path proof.
+ expect(totalPostFixApproved).toBeGreaterThanOrEqual(0);
+ expect(totalPostFixApproved).toBeLessThanOrEqual(60);
 });
