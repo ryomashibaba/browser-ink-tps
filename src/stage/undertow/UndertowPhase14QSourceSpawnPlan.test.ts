@@ -12,7 +12,7 @@ import {undertowT21dConnectivityQaStage}
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
 import {planSourceSupportedT21QaSpawnSlots,
- withProvisionalT21QaSpawnMetadata}
+ originalHighSpawnNativeConnection,withProvisionalT21QaSpawnMetadata}
  from './UndertowPhase14QSourceSpawnPlan';
 
 beforeAll(async()=>{await Promise.all([
@@ -74,5 +74,55 @@ describe('T21 QA spawn provenance and eight-actor upper island allocation',()=>{
   expect(()=>withProvisionalT21QaSpawnMetadata(
    PRODUCTION_STAGE_DEFINITION,plan)).toThrow(
     'T21_QA_SPAWN_METADATA_MUST_NOT_PROMOTE');
+ });
+});
+
+describe('T21 actual SOURCE QA spawn admission fail-closed paths',()=>{
+ it('rejects a native point echo when original Recast projection failed',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const nav={
+   auditNavMeshProjection:vi.fn(()=>({
+    success:false,nearestPoint:null,distanceMeters:null
+   }))
+  } as unknown as RecastStageNavigation;
+  expect(()=>planSourceSupportedT21QaSpawnSlots(
+   stage,nav,{} as RapierStagePhysics
+  )).toThrow('T21_QA_SOURCE_SPAWN_ORIGINAL_POINT_NOT_NAVIGABLE_positive-z');
+ });
+ it('allows same-high native routes only when both real directions reach their original endpoints',()=>{
+  const from=[0,7.5,0] as const,to=[.82,7.5,0] as const;
+  const path=(a:Vec3,b:Vec3)=>({
+   startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+   querySuccess:true,pointCount:2,
+   nativePathPoints:[{x:a.x,y:a.y,z:a.z},{x:b.x,y:b.y,z:b.z}],
+   endpointErrorMeters:0,reachedTarget:true
+  });
+  const nav={
+   auditPath:vi.fn((a:Vec3,b:Vec3)=>path(a,b))
+  } as unknown as RecastStageNavigation;
+  expect(originalHighSpawnNativeConnection(nav,from,to)).toBe(true);
+  expect((nav.auditPath as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+  let calls=0;
+  vi.spyOn(nav,'auditPath').mockImplementation((a,b)=>{
+   calls++;
+   return {...path(a,b),reachedTarget:calls===1};
+  });
+  expect(originalHighSpawnNativeConnection(nav,from,to)).toBe(false);
+ });
+ it('rejects a projected route that detours through a lower source floor',()=>{
+  const nav={
+   auditPath:vi.fn((a:Vec3,b:Vec3)=>({
+    startSnapDistanceMeters:0,endSnapDistanceMeters:0,
+    querySuccess:true,pointCount:3,
+    nativePathPoints:[
+     {x:a.x,y:a.y,z:a.z},
+     {x:(a.x+b.x)/2,y:3,z:(a.z+b.z)/2},
+     {x:b.x,y:b.y,z:b.z}
+    ],endpointErrorMeters:0,reachedTarget:true
+   }))
+  } as unknown as RecastStageNavigation;
+  expect(originalHighSpawnNativeConnection(
+   nav,[0,7.5,0],[.82,7.5,0]
+  )).toBe(false);
  });
 });
