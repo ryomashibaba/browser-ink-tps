@@ -95,6 +95,8 @@ export class PlayerController {
   private inkRelation: InkRelation = 'NONE';
   private grounded = false;
   private verticalVelocity = 0;
+  // SOURCE only: preserve a short pre-landing Space press until real KCC contact.
+  private sourceJumpBufferSeconds = 0;
   private team: Team.A | Team.B = Team.A;
   private wallSurfaceId = '-';
   private squidRollRemainingSeconds = 0;
@@ -331,6 +333,7 @@ export class PlayerController {
     this.velocity.set(0, 0, 0);
     this.desired.set(0, 0, 0);
     this.verticalVelocity = 0;
+    this.sourceJumpBufferSeconds = 0;
     this.grounded = false;
     this.wallSurfaceId = '-';
     this.squidRollRemainingSeconds = 0;
@@ -397,6 +400,13 @@ export class PlayerController {
     if (this.desired.lengthSq() > 1) this.desired.normalize();
 
     const jumpPressed = this.input.consumeJump();
+    // A genuine Space tap one fixed tick before landing used to disappear.
+    // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
+    // No extra ground/coyote-time/stepping or changes to frozen T20.
+    if (this.nativeSourceGroundInkGuard) {
+      this.sourceJumpBufferSeconds = jumpPressed
+        ? 0.10 : Math.max(0, this.sourceJumpBufferSeconds - dt);
+    }
     this.squidRollTurnWindowSeconds = Math.max(0, this.squidRollTurnWindowSeconds - dt);
 
     const dodgeStartupWasActive = this.weaponDodgeStartupSeconds > 0;
@@ -506,6 +516,9 @@ export class PlayerController {
     } else if (this.input.squidHeld) {
       this.setMode('SQUID');
       const wall = this.findOwnWallSample(bodyPosition);
+      // A wall swim/charge owns its Space semantics; do not carry a floor
+      // jump tap into a later unrelated ground contact.
+      if (wall) this.sourceJumpBufferSeconds = 0;
       if (wall && (this.input.jumpHeld || this.surgeChargeSeconds > 0)) {
         if (this.input.jumpHeld) {
           this.input.consumeJump();
@@ -756,14 +769,36 @@ export class PlayerController {
     const accel = this.desired.lengthSq() > 0
       ? acceleration
       : GAME_CONFIG.player.decelerationMetersPerSecond2;
+    if (this.nativeSourceGroundInkGuard) {
+      // Legacy component-wise acceleration could gain sqrt(2) more speed
+      // per tick while steering diagonally. SOURCE uses a single planar
+      // acceleration budget while preserving all configured top speeds.
+      const dx = desiredX - this.velocity.x;
+      const dz = desiredZ - this.velocity.z;
+      const change = Math.hypot(dx, dz);
+      const allowed = accel * dt;
+      if (change > allowed && change > 0) {
+        const ratio = allowed / change;
+        this.velocity.x += dx * ratio;
+        this.velocity.z += dz * ratio;
+      } else {
+        this.velocity.x = desiredX;
+        this.velocity.z = desiredZ;
+      }
+      return;
+    }
     this.velocity.x = moveToward(this.velocity.x, desiredX, accel * dt);
     this.velocity.z = moveToward(this.velocity.z, desiredZ, accel * dt);
   }
 
   private tryJump(jumpPressed: boolean, jumpSpeed: number): void {
-    if (!jumpPressed || !this.grounded) return;
+    if (!this.grounded ||
+        (!jumpPressed &&
+         !(this.nativeSourceGroundInkGuard && this.sourceJumpBufferSeconds > 0)))
+      return;
     this.verticalVelocity = jumpSpeed;
     this.grounded = false;
+    this.sourceJumpBufferSeconds = 0;
   }
 
   private applyGravity(dt: number): void {
@@ -802,6 +837,7 @@ export class PlayerController {
     this.verticalVelocity = tuning.squidRollUpSpeedMetersPerSecond;
     this.squidRollRemainingSeconds = tuning.squidRollDurationSeconds;
     this.squidRollTurnWindowSeconds = 0;
+    this.sourceJumpBufferSeconds = 0;
     this.locomotionState = 'SQUID_ROLL';
     this.grounded = false;
     this.setSnapToGround(false);
