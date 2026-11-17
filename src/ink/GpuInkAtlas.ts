@@ -22,10 +22,11 @@ import {
   ShaderMaterial,
   Texture
 } from 'playcanvas';
+import { indexInkBrushSurfaces, type IndexedInkBrushRect } from '../core/InkBrushSurfaceIndex';
 import { allocateSurfaceAtlas } from './AtlasAllocator';
-import { brushClipRect, localMetersToBrushAtlas } from './AtlasCoordinates';
+import { localMetersToBrushAtlas } from './AtlasCoordinates';
 import type { PaintSurface } from './PaintSurface';
-import { Team, type PaintEvent } from './types';
+import { Team, type AtlasRect, type PaintEvent } from './types';
 
 const BRUSH_VERTEX_GLSL = `
 attribute vec3 vertex_position;
@@ -113,6 +114,7 @@ export class GpuInkAtlas {
   public readonly renderTarget: RenderTarget;
 
   private readonly pending: PaintEvent[] = [];
+  private readonly brushSurfaceIndex: ReadonlyMap<string, IndexedInkBrushRect<AtlasRect> | null>;
   private readonly cameraEntity: Entity;
   private readonly batchEntity: Entity;
   private readonly mesh: Mesh;
@@ -154,6 +156,8 @@ export class GpuInkAtlas {
       if (!rect) throw new Error(`No atlas allocation for PaintSurface ${surface.id}`);
       surface.atlasRect = rect;
     }
+    // Per-GpuInkAtlas lifetime: surface IDs and allocated rectangles are stable.
+    this.brushSurfaceIndex = indexInkBrushSurfaces(surfaces);
 
     this.texture = new Texture(app.graphicsDevice, {
       name: 'PersistentInkAtlas',
@@ -276,9 +280,9 @@ export class GpuInkAtlas {
     let vertexBase = 0;
 
     for (const event of batch) {
-      const surface = this.surfaces.find((candidate) => candidate.id === event.surfaceId);
-      const rect = surface?.atlasRect;
-      if (!surface || !rect) continue;
+      const cached = this.brushSurfaceIndex.get(event.surfaceId);
+      const rect = cached?.rect;
+      if (!rect) continue;
 
       const center = localMetersToBrushAtlas(rect, event.centerU, event.centerV);
       const centerX = center.x;
@@ -289,7 +293,7 @@ export class GpuInkAtlas {
       const s = Math.sin(event.angle);
       const corners: readonly [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
       const brushUvs: readonly [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
-      const clip = brushClipRect(rect);
+      const clip = cached!.clip;
       const rectMinX = clip.minX;
       const rectMinY = clip.minY;
       const rectMaxX = clip.maxX;
