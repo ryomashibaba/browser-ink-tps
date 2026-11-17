@@ -231,14 +231,21 @@ export class CpuKitSystem {
         continue;
       }
 
+      // Same SOURCE-only terminal flight fraction as the actual human
+      // SUB: no phantom full-tick travel and no missed last-frame Rapier
+      // contact. Frozen T20 CPU kits retain their previous TTL behavior.
+      const terminalSourceFlight=this.nativeOriginalSourceCombatantSubContactEnabled&&
+        slot.ttl>0&&slot.ttl<=dt;
+      const flightDt=this.nativeOriginalSourceCombatantSubContactEnabled?
+        Math.min(dt,Math.max(0,slot.ttl)):dt;
       slot.ttl -= dt;
-      if (slot.ttl <= 0) {
+      if (slot.ttl <= 0 && !terminalSourceFlight) {
         this.explodeBomb(slot, profile);
         continue;
       }
 
-      slot.velocity.y -= profile.gravityMetersPerSecond2 * dt;
-      this.delta.copy(slot.velocity).mulScalar(dt);
+      slot.velocity.y -= profile.gravityMetersPerSecond2 * flightDt;
+      this.delta.copy(slot.velocity).mulScalar(flightDt);
       const next = slot.position.clone().add(this.delta);
 
       const paintHit = this.findNearestSurfaceHit(slot.position, next);
@@ -288,6 +295,10 @@ export class CpuKitSystem {
       }
 
       slot.position.copy(next);
+      if(terminalSourceFlight){
+        this.explodeBomb(slot,profile);
+        continue;
+      }
       slot.entity.setPosition(slot.position);
     }
   }
@@ -303,6 +314,12 @@ export class CpuKitSystem {
 
     if (profile.detonateOnImpact) {
       this.explodeBomb(slot, profile);
+      return;
+    }
+    if(this.nativeOriginalSourceCombatantSubContactEnabled&&slot.ttl<=0){
+      // The genuine final native flight fraction cannot start a fresh
+      // fuse on contact after its measured lifetime has expired.
+      this.explodeBomb(slot,profile);
       return;
     }
 

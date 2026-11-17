@@ -196,14 +196,22 @@ export class SubWeaponSystem {
         continue;
       }
 
+      // Genuine SOURCE: a TTL shorter than this 60Hz tick still has
+      // physical flight time. Query original Rapier/paint/actors over ONLY
+      // that remaining fraction before the terminal explosion. Legacy
+      // T20 keeps its former immediate expiry at the previous position.
+      const terminalSourceFlight=this.nativeSourceHumanSubBodyContactEnabled&&
+        slot.ttl>0&&slot.ttl<=dt;
+      const flightDt=this.nativeSourceHumanSubBodyContactEnabled?
+        Math.min(dt,Math.max(0,slot.ttl)):dt;
       slot.ttl -= dt;
-      if (slot.ttl <= 0) {
+      if (slot.ttl <= 0 && !terminalSourceFlight) {
         this.explode(slot, profile, 'FLIGHT_TTL');
         continue;
       }
 
-      slot.velocity.y -= profile.gravityMetersPerSecond2 * dt;
-      this.delta.copy(slot.velocity).mulScalar(dt);
+      slot.velocity.y -= profile.gravityMetersPerSecond2 * flightDt;
+      this.delta.copy(slot.velocity).mulScalar(flightDt);
       const next = slot.position.clone().add(this.delta);
 
       const paintHit = this.findNearestSurfaceHit(slot.position, next);
@@ -263,6 +271,10 @@ export class SubWeaponSystem {
       }
 
       slot.position.copy(next);
+      if(terminalSourceFlight){
+        this.explode(slot,profile,'FLIGHT_TTL');
+        continue;
+      }
       slot.entity.setPosition(slot.position);
     }
   }
@@ -303,6 +315,13 @@ export class SubWeaponSystem {
 
     if (profile.detonateOnImpact) {
       this.explode(slot, profile, 'CONTACT_IMPACT');
+      return;
+    }
+    // A real SOURCE bomb that meets the original wall during its FINAL
+    // TTL fraction explodes at that actual contact, never silently
+    // starts a new fuse after its genuine flight budget is exhausted.
+    if(this.nativeSourceHumanSubBodyContactEnabled&&slot.ttl<=0){
+      this.explode(slot,profile,'FLIGHT_TTL');
       return;
     }
 

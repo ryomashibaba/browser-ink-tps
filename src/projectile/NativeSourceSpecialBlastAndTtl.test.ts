@@ -4,6 +4,8 @@ import {Team} from '../ink/types';
 import {PlayerResources} from '../combat/PlayerResources';
 import type {PerformanceStats} from '../core/PerformanceStats';
 import {ProjectileSystem} from './ProjectileSystem';
+import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
+import {CpuKitSystem} from '../ai/CpuKitSystem';
 
 /** Call production physical damage and source 60Hz projectile methods.
  * Isolated stage/CPU adapters are NOT an invented native gameplay round. */
@@ -199,4 +201,74 @@ describe('native SOURCE real SUB/SPECIAL area damage and guard direction',()=>{
     expect(f.stats.playerDamageTaken).toBe(100);
     expect(f.stats.cpuPlayerHits).toBe(2);
   });
+});
+
+describe('native SOURCE thrown human/CPU bombs resolve REAL final TTL fraction',()=>{
+ const dt=1/60,ttl=.004,speed=12;
+ type Kind='HUMAN'|'CPU';
+ const make=(kind:Kind,source:boolean,solidAt:number|null)=>{
+  const bomb:any={
+   active:true,landed:false,subId:'pulse-bomb',
+   team:kind==='HUMAN'?Team.A:Team.B,actorId:'B1',
+   ttl,fuseSeconds:1,position:new Vec3(),previousPosition:new Vec3(),
+   velocity:new Vec3(0,0,speed),
+   contactKind:'NONE',contactSourceId:null,contactPoint:null,
+   entity:{setPosition:vi.fn()}
+  };
+  const physical=vi.fn((_a:Vec3,to:Vec3)=>solidAt!==null&&
+    to.z>=solidAt?{distance:solidAt,
+     point:new Vec3(0,0,solidAt),solidId:'ORIGINAL_WALL'}:null);
+  const receiver:any=Object.create(
+   kind==='HUMAN'?SubWeaponSystem.prototype:CpuKitSystem.prototype);
+  receiver.bombs=[bomb];receiver.delta=new Vec3();
+  receiver.physics={castStageSegment:physical};
+  receiver.findNearestSurfaceHit=vi.fn(()=>null);
+  receiver.cpuAgents={findNearestCombatHit:vi.fn(()=>null)};
+  receiver.nativeSourceHumanSubBodyContactEnabled=kind==='HUMAN'&&source;
+  receiver.nativeOriginalSourceCombatantSubContactEnabled=
+    kind==='CPU'&&source;
+  receiver.projectiles={findNativeSourceHumanPhysicalHit:vi.fn(()=>null)};
+  const burst=vi.fn();
+  receiver.explode=burst;receiver.explodeBomb=burst;
+  receiver.feedback={subFuse:vi.fn()};
+  const tick=()=>kind==='HUMAN'?
+    (SubWeaponSystem.prototype.fixedUpdate.call(receiver,dt)):
+    (CpuKitSystem.prototype as unknown as {
+      updateBombs:(this:CpuKitSystem,dt:number)=>void
+    }).updateBombs.call(receiver,dt);
+  return {bomb,receiver,physical,burst,tick};
+ };
+ for(const kind of ['HUMAN','CPU'] as const){
+  it(kind+' reaches only remaining TTL flight distance and bursts at real endpoint',()=>{
+   const x=make(kind,true,null);
+   x.tick();
+   expect(x.physical).toHaveBeenCalledOnce();
+   expect(x.bomb.position.z).toBeCloseTo(speed*ttl,6);
+   expect(x.bomb.position.z).toBeLessThan(speed*dt);
+   expect(x.burst).toHaveBeenCalledOnce();
+   if(kind==='HUMAN')expect(x.burst.mock.calls[0]![2]).toBe('FLIGHT_TTL');
+  });
+  it(kind+' hits the original wall inside the last TTL fraction and bursts THERE',()=>{
+   const x=make(kind,true,.035);
+   x.tick();
+   expect(x.physical).toHaveBeenCalledOnce();
+   expect(x.bomb.position.z).toBeCloseTo(.035,6);
+   expect(x.bomb.landed).toBe(false);
+   expect(x.burst).toHaveBeenCalledOnce();
+   if(kind==='HUMAN'){
+    expect(x.bomb.contactKind).toBe('RAPIER_STAGE_SOLID');
+    expect(x.bomb.contactSourceId).toBe('ORIGINAL_WALL');
+    expect(x.burst.mock.calls[0]![2]).toBe('FLIGHT_TTL');
+   }
+  });
+  it(kind+' does not reach a physical wall beyond remaining TTL; legacy T20 unchanged',()=>{
+   const native=make(kind,true,.06);native.tick();
+   expect(native.bomb.position.z).toBeCloseTo(.048,6);
+   expect(native.burst).toHaveBeenCalledOnce();
+   const legacy=make(kind,false,.035);legacy.tick();
+   expect(legacy.bomb.position.z).toBe(0);
+   expect(legacy.physical).not.toHaveBeenCalled();
+   expect(legacy.burst).toHaveBeenCalledOnce();
+  });
+ }
 });
