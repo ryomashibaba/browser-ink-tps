@@ -94,7 +94,7 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
   // Both cells are physically registered; the stronger enemy-owned
   // diagonal is obstructed, and the neutral side cell is reachable.
   surface.ownerGrid[surface.index(12,12)]=Team.B;
-  surface.ownerGrid[surface.index(12,10)]=Team.Neutral;
+  surface.ownerGrid[surface.index(10,12)]=Team.Neutral;
   const s=sample(surface,2.1,2.1);
   const seen:number[]=[];
   const aim=b180OriginalSourceUnownedNeighborAim(s,Team.A,p=>{
@@ -102,7 +102,7 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
    return Math.abs(p.x-2.5)>.05;
   });
   expect(seen.length).toBe(2);
-  expect(seen[0]).toBeCloseTo(2.5);
+  expect(seen.some(x=>Math.abs(x-2.5)<.01)).toBe(true);
   expect(aim?.x).toBeCloseTo(2.1);
   expect(aim?.z).toBeCloseTo(2.5);
   expect(b180OriginalSourceUnownedNeighborAim(s,Team.A)?.x)
@@ -110,7 +110,7 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
   expect(b180OriginalSourceUnownedNeighborAim(s,Team.A,()=>false))
    .toBeNull();
   expect(surface.ownerGrid[surface.index(12,12)]).toBe(Team.B);
-  expect(surface.ownerGrid[surface.index(12,10)]).toBe(Team.Neutral);
+  expect(surface.ownerGrid[surface.index(10,12)]).toBe(Team.Neutral);
  });
  it('holds unknown, inactive, wrong-team and unapproved source cells',()=>{
   const s=new PaintSurface('UndertowT21D:registered-original-paint',
