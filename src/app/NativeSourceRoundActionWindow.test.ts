@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {nativeSourceCpuCanStartActionsBeforeTickEnd,
- nativeSourceRoundActionWindow,nativeSourceHumanRespawnElapsedTicks}
+ nativeSourceRoundActionWindow,nativeSourceHumanRespawnElapsedTicks,
+ nativeSourceReviewRestoredPaused}
  from './NativeSourceRoundActionWindow';
 
 describe('T21 V28 native 180s action authority and 150-tick human return',()=>{
@@ -47,5 +48,37 @@ describe('T21 V28 native 180s action authority and 150-tick human return',()=>{
    expect(()=>nativeSourceHumanRespawnElapsedTicks(death,now))
     .toThrow('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
   }
+ });
+});
+
+
+describe('native SOURCE review cameras never restart the 180s clock without real mouse lock',()=>{
+ const base={previouslyPaused:false,canonicalNativeSourceRound:true,
+  everLockedRealPointer:true,pointerLocked:false,
+  matchState:'PLAYING',stopped:false};
+ it('keeps genuine native 180s physics stopped after an unlocked survey/gallery exit',()=>{
+  expect(nativeSourceReviewRestoredPaused(base)).toBe(true);
+  expect(nativeSourceReviewRestoredPaused({...base,matchState:'STAGING'}))
+   .toBe(true);
+  expect(nativeSourceReviewRestoredPaused({...base,matchState:'TIME_UP'}))
+   .toBe(true);
+  expect(nativeSourceReviewRestoredPaused({...base,stopped:true,
+   pointerLocked:true})).toBe(true);
+ });
+ it('permits play only with real lock and an actual active phase',()=>{
+  expect(nativeSourceReviewRestoredPaused({...base,pointerLocked:true}))
+   .toBe(false);
+  expect(nativeSourceReviewRestoredPaused({...base,
+   pointerLocked:true,matchState:'STAGING'})).toBe(false);
+  expect(nativeSourceReviewRestoredPaused({...base,
+   previouslyPaused:true,pointerLocked:true})).toBe(true);
+ });
+ it('leaves first READY and T20/QA review-pause behavior intact',()=>{
+  expect(nativeSourceReviewRestoredPaused({...base,
+   everLockedRealPointer:false})).toBe(false);
+  expect(nativeSourceReviewRestoredPaused({...base,
+   canonicalNativeSourceRound:false})).toBe(false);
+  expect(nativeSourceReviewRestoredPaused({...base,
+   canonicalNativeSourceRound:false,previouslyPaused:true})).toBe(true);
  });
 });

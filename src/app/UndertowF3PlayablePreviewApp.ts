@@ -150,7 +150,8 @@ import {describeB141RealOriginalAlly,b141PlayerAllyHudLine}
 import {createF3SourceSessionBoard} from './UndertowF3SourceSessionBoard';
 import {nativeSourceRoundActionWindow,nativeSourceCpuCanStartActionsBeforeTickEnd,
  nativeSourceCpuKitRuntimeAuthorized,
- nativeSourceHumanRespawnElapsedTicks} from './NativeSourceRoundActionWindow';
+ nativeSourceHumanRespawnElapsedTicks,nativeSourceReviewRestoredPaused}
+ from './NativeSourceRoundActionWindow';
 import {applyB379NativePlayerWeaponMobility} from './B379NativePlayerWeaponMobility';
 import {createB160SourceCpuActivityView}
  from './B160SourceCpuActivityView';
@@ -1788,6 +1789,7 @@ export class UndertowF3PlayablePreviewApp{
     return;
    }
    if(!this.stopReason&&this.matchState!=='TIME_UP'&&
+      !this.survey.snapshot().active&&this.galleryIndex<0&&
       (this.b203FullRound||
        this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
     void this.canvas.requestPointerLock();
@@ -2461,6 +2463,14 @@ export class UndertowF3PlayablePreviewApp{
     // A delayed lock after blur must not resume an unfocused window.
     if(document.hidden||!document.hasFocus()||this.stopReason||
        this.matchState==='TIME_UP'){
+     document.exitPointerLock();return;
+    }
+    // A stray lock event during a survey/gallery must NOT run genuine
+    // Rapier/HP/ink/180s behind the non-game camera.
+    if(this.survey.snapshot().active||this.galleryIndex>=0){
+     this.paused=true;
+     if(this.nativeLiveSourcePrestart&&this.b203EverLockedRealPointer)
+      this.resumeAfterRealPointerLock=true;
      document.exitPointerLock();return;
     }
     this.b203EverLockedRealPointer=true;
@@ -4927,7 +4937,7 @@ export class UndertowF3PlayablePreviewApp{
    this.familyGallery.close();
    this.galleryIndex=-1;
    this.playerCameraEntity.enabled=true;
-   this.paused=this.galleryWasPaused;
+   this.restoreNativeSourceReviewPause(this.galleryWasPaused);
   }else{
    if(this.galleryIndex===-1){
     this.galleryWasPaused=this.paused;
@@ -4946,12 +4956,30 @@ export class UndertowF3PlayablePreviewApp{
   this.canvas.dataset.t21F3kShowroom=this.galleryIndex<0?'CLOSED':'OPEN';
   this.refresh();
  }
+ private restoreNativeSourceReviewPause(previouslyPaused:boolean):void{
+  const pointerLocked=document.pointerLockElement===this.canvas;
+  this.paused=nativeSourceReviewRestoredPaused({
+   previouslyPaused,
+   canonicalNativeSourceRound:this.nativeLiveSourcePrestart,
+   everLockedRealPointer:this.b203EverLockedRealPointer,
+   pointerLocked,matchState:this.matchState,
+   stopped:!!this.stopReason
+  });
+  // When review ends unlocked, only reacquiring the real pointer lock
+  // resumes this SAME world; no implicit native tick or actor reset.
+  if(this.paused&&!previouslyPaused&&
+     this.nativeLiveSourcePrestart&&this.b203EverLockedRealPointer&&
+     !pointerLocked&&!this.stopReason&&
+     this.matchState!=='TIME_UP')
+    this.resumeAfterRealPointerLock=true;
+ }
  private toggleSurvey(){
   if(this.galleryIndex>=0)return;
   const wasSurvey=this.survey.snapshot().active;
   if(!wasSurvey)this.surveyWasPaused=this.paused;
   const now=this.survey.cycle();
-  this.paused=now.active?true:this.surveyWasPaused;
+  if(now.active)this.paused=true;
+  else this.restoreNativeSourceReviewPause(this.surveyWasPaused);
   this.panel.style.display=now.active?'none':'';
   this.surveyButton.textContent=now.active
    ?'SURVEY: '+now.view+' · next (V)'

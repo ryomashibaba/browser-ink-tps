@@ -81,3 +81,23 @@ export function nativeSourceHumanRespawnElapsedTicks(
   throw Error('T21_SOURCE_HUMAN_RESPAWN_INVALID_NATIVE_TICK');
  return nowNativeTick-lethalNativeTick;
 }
+
+
+/** Preserve an actual original SOURCE 180s world across review cameras:
+ * merely closing survey/gallery cannot resume Rapier, ink or the match clock
+ * if the player has not reacquired the ORIGINAL canvas Pointer Lock.
+ * Legacy T20 and deliberate QA keep their historical pause semantics. */
+export function nativeSourceReviewRestoredPaused(input:{
+ readonly previouslyPaused:boolean;
+ readonly canonicalNativeSourceRound:boolean;
+ readonly everLockedRealPointer:boolean;
+ readonly pointerLocked:boolean;
+ readonly matchState:string;
+ readonly stopped:boolean;
+}):boolean{
+ if(input.previouslyPaused)return true;
+ if(!input.canonicalNativeSourceRound||
+    !input.everLockedRealPointer)return false;
+ return !input.pointerLocked||input.stopped||
+  !['STAGING','PLAYING'].includes(input.matchState);
+}
