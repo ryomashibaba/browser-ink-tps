@@ -210,11 +210,17 @@ describe('SOURCE registered Rapier cover governs genuine melee HP contact',()=>{
   expect(x.damage).toEqual({cpu:0,human:0});
   expect(x.actor.stats).toEqual({cpuPlayerHits:0});
  });
- it('allows real clear stage LOS and near-target wall contacts',()=>{
-  for(const distance of [null,.99] as const){
-   const x=fixture();x.state.block=distance;x.swing();
-   expect(x.damage).toEqual({cpu:1,human:1});
-  }
+ it('only authorizes actual actor HP when the original Rapier ray reaches its body',()=>{
+  // CPU actual torso is .90m away; HUMAN actual body is 1.00m away.
+  // A different original solid 1cm before a body is NOT paint backing.
+  const clear=fixture();clear.state.block=null;clear.swing();
+  expect(clear.damage).toEqual({cpu:1,human:1});
+  const wall=fixture();wall.state.block=.89;wall.swing();
+  expect(wall.damage).toEqual({cpu:0,human:0});
+  const between=fixture();between.state.block=.99;between.swing();
+  expect(between.damage).toEqual({cpu:1,human:0});
+  const after=fixture();after.state.block=1;after.swing();
+  expect(after.damage).toEqual({cpu:1,human:1});
  });
  it('leaves non-SOURCE T20 melee rules unchanged',()=>{
   const x=fixture();x.actor.nativeSourceHumanPhysicalMode=null;x.swing();
