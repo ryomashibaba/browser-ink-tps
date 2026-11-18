@@ -90,3 +90,21 @@ export function b483MayRequestTrueFrontlineA1Order(input:{
   b483ClassicPracticeAllowsLiveA1Order(
    input.practiceVariant,input.practiceStatus);
 }
+
+/** A physical KeyC press may arm one genuine native A1 instruction.
+ * Browser keyboard auto-repeat is NOT another player intent; and a
+ * completed/idle B193 60s ALLY_SYNC practice does not own new C orders.
+ * This is an INPUT gate only. B471 still validates the actual 60Hz
+ * human/A1 Rapier feet, current 7/7 CPU and full Recast/Rapier path.
+ * Existing B441 repeat permissions remain independently under B485.
+ */
+export function b483MayDispatchPhysicalPlayerCPress(x:Readonly<{
+ code:string;repeat:boolean;coOpSelected:boolean;
+ fullRound:boolean;practiceVariant:string;practiceStatus:string;
+ frontlineReady:boolean;
+}>):boolean{
+ if(x.code!=='KeyC'||x.repeat)return false;
+ return (x.coOpSelected&&x.fullRound&&
+  x.practiceVariant==='ALLY_SYNC'&&x.practiceStatus==='RUNNING')||
+  x.frontlineReady;
+}

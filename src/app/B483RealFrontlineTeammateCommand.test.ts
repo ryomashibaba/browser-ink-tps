@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {b483RealFrontlineTeammateCommandSelected as selected,
  b483MayRequestTrueFrontlineA1Order as may,
  b483ClassicPracticeAllowsLiveA1Order as practiceAllowsA1,
- b483OriginalAllyCommandFeedback as feedback}
+ b483OriginalAllyCommandFeedback as feedback,
+ b483MayDispatchPhysicalPlayerCPress as physicalPress}
  from './B483RealFrontlineTeammateCommand';
 import {sourcePlayPortalDestinations,sourcePlayFrontlineResearchUrl}
  from './SourcePlayPortal';
@@ -81,5 +82,40 @@ describe('B483 live native B441 A1 command, reuses B471 existing authority',()=>
    {practiceStatus:'ARMED'}, {practiceStatus:'IDLE'},
    {practiceStatus:'ABORTED'}
   ])expect(may({...frame(),...delta})).toBe(false);
+ });
+});
+
+describe('real SOURCE physical C key, not OS repeat or completed practice, owns A1 orders',()=>{
+ const coop={code:'KeyC',repeat:false,coOpSelected:true,
+  fullRound:true,practiceVariant:'ALLY_SYNC',practiceStatus:'RUNNING',
+  frontlineReady:false};
+ it('accepts exactly the physical press, never held-key auto-repeat',()=>{
+  expect(physicalPress(coop)).toBe(true);
+  for(const mode of [
+   coop,
+   {...coop,coOpSelected:false,frontlineReady:true,
+    practiceVariant:'CLASSIC',practiceStatus:'RUNNING'}
+  ]){
+   expect(physicalPress({...mode,repeat:false})).toBe(true);
+   expect(physicalPress({...mode,repeat:true})).toBe(false);
+   expect(physicalPress({...mode,code:'KeyR'})).toBe(false);
+  }
+ });
+ it('does not falsely arm C after 60s ALLY_SYNC completion or while still staging',()=>{
+  for(const practiceStatus of ['IDLE','ARMED','CLEAR','TIME_UP','ABORTED']){
+   expect(physicalPress({...coop,practiceStatus})).toBe(false);
+  }
+  expect(physicalPress({...coop,fullRound:false})).toBe(false);
+  expect(physicalPress({...coop,coOpSelected:false})).toBe(false);
+  expect(physicalPress({...coop,practiceVariant:'CLASSIC'})).toBe(false);
+ });
+ it('preserves B441 CLASSIC live cooperation after independent 60s challenge ends',()=>{
+  const frontline={...coop,coOpSelected:false,
+   practiceVariant:'CLASSIC',frontlineReady:true};
+  expect(physicalPress({...frontline,practiceStatus:'RUNNING'})).toBe(true);
+  expect(physicalPress({...frontline,practiceStatus:'CLEAR'})).toBe(true);
+  expect(physicalPress({...frontline,practiceStatus:'TIME_UP'})).toBe(true);
+  expect(physicalPress({...frontline,frontlineReady:false})).toBe(false);
+  expect(physicalPress({...frontline,repeat:true})).toBe(false);
  });
 });
