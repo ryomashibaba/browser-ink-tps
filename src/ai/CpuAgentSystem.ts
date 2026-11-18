@@ -3201,9 +3201,11 @@ export class CpuAgentSystem {
     // neighboring CELL of that same original registered PaintSurface.
     // No additional shot, in-place paint, route, physics or score authority.
     if(paint.owner===bot.team){
-      const neighbor=b180OriginalSourceUnownedNeighborAim(paint,bot.team);
-      if(neighbor&&this.cpuTargetInRange(bot,neighbor,profile)&&
-         this.b216OriginalSourceTurfSightClear(bot,neighbor)){
+      const neighbor=b180OriginalSourceUnownedNeighborAim(
+       paint,bot.team,candidate=>
+        this.cpuTargetInRange(bot,candidate,profile)&&
+        this.b216OriginalSourceTurfSightClear(bot,candidate));
+      if(neighbor){
         this.sourceCommittedPaintAims.set(bot.id,{
           weaponId:bot.weaponId,target:neighbor.clone()
         });
@@ -3801,9 +3803,14 @@ export class CpuAgentSystem {
       if(sample.owner===bot.team&&opportunity<=0)continue;
       if(this.b180OriginalPatchAimEnabled&&opportunity<=0)continue;
       if(sample.owner!==bot.team)this.b64CandidatesUnowned++;
+      const currentProfile=weaponProfile(bot.weaponId);
       const ownedNeighbor=this.b180OriginalPatchAimEnabled&&
        sample.owner===bot.team?
-       b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+       b180OriginalSourceUnownedNeighborAim(sample,bot.team,
+        aim=>this.cpuTargetInRange(bot,aim,currentProfile)&&
+         (currentProfile.weaponClass!=='BRUSH'||
+          horizontalDistanceSq(bot.position,aim)<=2.45*2.45)&&
+         this.b216OriginalSourceTurfSightClear(bot,aim)):null;
       // The actual 9-cell patch can contain unowned corners beyond
       // the weapon's real paint radius. Do not shoot at an OWN center.
       if(this.b180OriginalPatchAimEnabled&&sample.owner===bot.team&&
@@ -3812,7 +3819,6 @@ export class CpuAgentSystem {
        sample.surface.localToWorld(sample.u,sample.v);
       // Reject out-of-range genuine paint before choosing it, not AFTER
       // the aim is selected: a nearer audited source pixel may still fire.
-      const currentProfile=weaponProfile(bot.weaponId);
       if(!this.cpuTargetInRange(bot,sourcePoint,currentProfile)||
          (currentProfile.weaponClass==='BRUSH'&&
           horizontalDistanceSq(bot.position,sourcePoint)>2.45*2.45))
@@ -3820,7 +3826,11 @@ export class CpuAgentSystem {
       // B216's already registered native Rapier foot + fire-line veto
       // also applies to the existing frontal B64 source aim. Seek another
       // REAL candidate instead of spending ink into original cover.
-      if(!this.b216OriginalSourceTurfSightClear(bot,sourcePoint))continue;
+      // A candidate selected by the optional predicate has already
+      // passed the SAME genuine Rapier sight gate. Normal non-OWN
+      // source paint continues to use the existing single ray check.
+      if(!ownedNeighbor&&
+         !this.b216OriginalSourceTurfSightClear(bot,sourcePoint))continue;
       if(!this.b180OriginalPatchAimEnabled){
         this.b64CandidatesChosen++;
         return sourcePoint;

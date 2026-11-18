@@ -86,6 +86,32 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
   expect(surface.ownerGrid[surface.index(12,12)]).toBe(Team.A);
   expect(ink.snapshot().percentA).toBe(0); // no official scoring
  });
+ it('tries another real original cell when the preferred one has no physical shot',()=>{
+  const surface=new PaintSurface('UndertowT21D:registered-original-paint',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   4,4,.2,SurfaceFlags.Paintable|SurfaceFlags.Floor,4);
+  surface.ownerGrid.fill(Team.A);
+  // Both cells are physically registered; the stronger enemy-owned
+  // diagonal is obstructed, and the neutral side cell is reachable.
+  surface.ownerGrid[surface.index(12,12)]=Team.B;
+  surface.ownerGrid[surface.index(12,10)]=Team.Neutral;
+  const s=sample(surface,2.1,2.1);
+  const seen:number[]=[];
+  const aim=b180OriginalSourceUnownedNeighborAim(s,Team.A,p=>{
+   seen.push(p.x);
+   return Math.abs(p.x-2.5)>.05;
+  });
+  expect(seen.length).toBe(2);
+  expect(seen[0]).toBeCloseTo(2.5);
+  expect(aim?.x).toBeCloseTo(2.1);
+  expect(aim?.z).toBeCloseTo(2.5);
+  expect(b180OriginalSourceUnownedNeighborAim(s,Team.A)?.x)
+   .toBeCloseTo(2.5); // unchanged no-filter preference
+  expect(b180OriginalSourceUnownedNeighborAim(s,Team.A,()=>false))
+   .toBeNull();
+  expect(surface.ownerGrid[surface.index(12,12)]).toBe(Team.B);
+  expect(surface.ownerGrid[surface.index(12,10)]).toBe(Team.Neutral);
+ });
  it('holds unknown, inactive, wrong-team and unapproved source cells',()=>{
   const s=new PaintSurface('UndertowT21D:registered-original-paint',
    new Vec3(),new Vec3(1,0,0),new Vec3(0,0,1),

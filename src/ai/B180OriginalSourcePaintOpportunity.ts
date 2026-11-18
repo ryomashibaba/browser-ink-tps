@@ -45,7 +45,12 @@ export function b180OriginalSourcePatchOpportunity(
  * The existing real weapon-range and native Rapier sight gates must still
  * approve the aim in CpuAgentSystem; never authorizes terrain or a hit. */
 export function b180OriginalSourceUnownedNeighborAim(
- sample:GameplayInkSample,botTeam:Team.A|Team.B
+ sample:GameplayInkSample,botTeam:Team.A|Team.B,
+ // Optional genuine weapon-range + Rapier cover predicate. When the
+ // first unowned ORIGINAL cell is blocked, keep seeking another actual
+ // same-surface cell rather than returning an unusable combat aim.
+ // The caller still owns every native aim, ink and projectile authority.
+ canAim?:(aim:Vec3)=>boolean
 ):Vec3|null{
  const s=sample.surface;
  if(sample.owner!==botTeam||!s.id.startsWith('UndertowT21D:')||
@@ -74,6 +79,7 @@ export function b180OriginalSourceUnownedNeighborAim(
    // An active raster cell may touch a clipped polygon but have its
    // CENTER outside the exact original footprint. Never aim there.
    if(!s.projectWorldPoint(aim).inside)continue;
+   if(canAim&&!canAim(aim))continue;
    const priority=owner===Team.Neutral?1:2;
    const distanceSq=dx*dx+dy*dy;
    if(!best||priority>best.priority||
