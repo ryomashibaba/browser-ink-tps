@@ -49,6 +49,7 @@ jobs:
       - name: Drive actual source Chrome (short B415 or full B390)
         env:
           T21_B390_TRUE_180S: ${{ contains(github.event.head_commit.message, '[b415-short]') && '0' || '1' }}
+          T21_B390_CORE_180S: ${{ contains(github.event.head_commit.message, '[p1-core-180s-once]') && '1' || '0' }}
           T21_B415_SHORT_CANONICAL: ${{ contains(github.event.head_commit.message, '[b415-short]') && '1' || '0' }}
           T21_P1_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[p1-own-once]') && '1' || '0' }}
           T21_P2_COMBAT_TWIN_180_REPLAY_ONCE: ${{ contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && '1' || '0' }}

@@ -133,7 +133,7 @@ export function b390ActualSourceOwnSteerKey(body,target,yaw,blocked=[]){
 }
 
 export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
- fail,report,persist,picture,clickButton}){
+ fail,report,persist,picture,clickButton,coreOnly=false}){
  const began=Date.now(),maxWallMs=62*60*1000;
  // One explicit P1 milestone: existing real CDP user inputs in the SAME
  // B385 Twin Comets + Snap Bomb + 180s + replay SOURCE world. No fake ink.
@@ -155,7 +155,7 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
    noGameplayWrites:true});
   persist();
  }
- const opening={phase:'B390_TRUE_180S_STARTED',tick:done.tick,
+ const opening={phase:'B390_TRUE_180S_STARTED',coreOnly,tick:done.tick,
   trueTimeRemaining:done.timeRemainingSeconds,
   physicalHumanShots:done.shotsFired,
   actualCpuShots:done.cpuSourceTurfShots,
@@ -687,7 +687,12 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
      u.source!=='REAL_HUMAN_ORIGINAL_PAINT_EVENT'||
      u.originalOnly!==true||u.scoreable!==0||
      ints.some(x=>!Number.isSafeInteger(x)||x<0)||
-     u.humanExplosions<2||u.b41Explosions!==u.humanExplosions||
+     // CORE does not simulate F/sub use; strict zero is a measured
+     // absence, not a B395 positive sub-chain certificate.
+     (coreOnly?(u.humanExplosions!==0||u.stamps!==0||
+       u.changedEvents!==0||u.zeroChangedStamps!==0||
+       u.changedCells!==0):u.humanExplosions<2)||
+     u.b41Explosions!==u.humanExplosions||
      u.stamps!==u.changedEvents+u.zeroChangedStamps||
      u.changedCells<u.changedEvents||
      u.hudExplosions!==String(u.b41Explosions)||
@@ -755,17 +760,20 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
  console.log('B400_NATIVE_180S_END_SCREEN_SOURCE_GRID_PASS',
   JSON.stringify(report.phases.at(-1)));
  report.phases.push({
-  phase:'B395_REAL_180S_HUMAN_SUB_SOURCE_PAINT_FINAL_RECAP',
+  phase:coreOnly?'B390_CORE_180S_SUB_NOT_EXERCISED':
+   'B395_REAL_180S_HUMAN_SUB_SOURCE_PAINT_FINAL_RECAP',
   source:'25/17/26/0',
   nativeExplosions:b395RealEnd.b41Explosions,
   realOriginalPaintStamps:b395RealEnd.stamps,
   changedOriginalCells:b395RealEnd.changedCells,
   zeroChangedOriginalStamps:b395RealEnd.zeroChangedStamps,
   exactNativeToPlayerEndDom:true,
+  subChainCertified:!coreOnly,
   sourceScoreable:0,cpuHitCertified:false,gameplayWrites:0
  });
  persist();
- console.log('B395_REAL_180S_HUMAN_SUB_RESULT',
+ console.log(coreOnly?'B390_CORE_NO_SUB_CHAIN_CLAIM':
+  'B395_REAL_180S_HUMAN_SUB_RESULT',
   JSON.stringify(report.phases.at(-1)));
  const terminal={phase:'B390_GENUINE_180S_TIME_UP',
   realNativeTick:final.tick,realElapsedNativeSeconds:180,
@@ -808,8 +816,11 @@ export async function b390RunTrue180({done,original,state,evalPage,cmd,until,
   ...replay,gameStateInherited:false,realUserClick:true});persist();
  console.log('B390_REAL_TIMEUP_REPLAY',JSON.stringify(replay));
  await picture('b390-real-same-kit-new-180s-ready');
- report.outcome='PASS_B390_TRUE_12_WEAPON_180S_TIMEUP_AND_REPLAY';
- report.note='True native 180s after original 3/3, final 7 CPU, user-clicked TIME_UP same-kit replay. Natural opponent routes, original score, official 4v4 and production HOLD.';
+ report.outcome=coreOnly?'PASS_B390_CORE_REAL_180S_TIMEUP_REPLAY_NO_SUB_CHAIN':
+  'PASS_B390_TRUE_12_WEAPON_180S_TIMEUP_AND_REPLAY';
+ report.note=coreOnly?
+  'Genuine original 3/3, native 180s, final 7 CPU, fresh same-weapon replay. F-key/B395 sub-chain NOT tested; cross-team paths, official score and formal 4v4 remain HOLD.':
+  'True native 180s after original 3/3, final 7 CPU, user-clicked TIME_UP same-kit replay. Natural opponent routes, original score, official 4v4 and production HOLD.';
  persist();
  return {terminal,replay};
 }

@@ -1518,6 +1518,32 @@ async function run(){
   physicalTravel:c.genuineGroundedTravelMeters,
   actualCpuRejoins:done.cpu.physicalRejoins.length,
   liveHud:hud,officialScoreable:0,winner:'NONE'});
+ // B390 CORE: verify the complete real 180s round directly after the
+ // genuine original first-drop, raised KCC, 3/3 ink and 7 CPU proof.
+ // Do NOT silently treat neutral-foot idle ink as a refill. The separate
+ // B385 F-key/Snap Bomb test remains untouched for its own acceptance.
+ if(process.env.T21_B390_CORE_180S==='1'){
+  if(process.env.T21_B390_TRUE_180S!=='1')
+   fail('B390_CORE_REQUIRES_TRUE_NATIVE_180S');
+  const live=original(await state(),'B390_CORE_AFTER_GENUINE_3_OF_3');
+  if(live.matchState!=='PLAYING'||live.paused||live.stopReason||
+     live.tick<done.tick||live.b387RealRoundMilestones?.realClearedLives!==1||
+     live.cpu.physicalRejoins.length!==7||
+     live.b381RealNativeDodge.realWeapon!=='twin-comets')
+   fail('B390_CORE_GENUINE_SOURCE_BOUNDARY',{
+    tick:live.tick,phase:live.matchState,paused:live.paused,
+    clears:live.b387RealRoundMilestones?.realClearedLives,
+    cpu:live.cpu.physicalRejoins.length});
+  report.phases.push({phase:'B390_CORE_GENUINE_3_OF_3_TO_180S',
+   originalSource:'25/17/26/0',nativeTick:live.tick,
+   physicalCpu:7,actualHumanShots:live.shotsFired,
+   actualChangedHumanCells:live.b23HumanInkFeedback.humanChangedCells,
+   artificialTimeOrPhysicsWrites:0,subChainCertified:false});
+  persist();
+  await b390RunTrue180({done:live,original,state,evalPage,cmd,until,
+   fail,report,persist,picture,clickButton,coreOnly:true});
+  return;
+ }
  // B385 true F-key sub-weapon vertical slice. Actual Twin Comets kit
  // equips Snap Bomb (native catalog cost 45 ink); no physics or tank writes.
  const nativeSubReady=await until(async()=>{
