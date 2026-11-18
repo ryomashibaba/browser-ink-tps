@@ -1,5 +1,4 @@
 import './styles.css';
-import { InkLabApp } from './app/InkLabApp';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#app-canvas');
 const uiRoot = document.querySelector<HTMLElement>('#ui-root');
@@ -165,6 +164,7 @@ async function boot(): Promise<void> {
     await UndertowVisualReviewApp.boot(appCanvas, appUiRoot);
     return;
   }
+  const { InkLabApp } = await import('./app/InkLabApp');
   await InkLabApp.boot(appCanvas, appUiRoot);
 }
 
