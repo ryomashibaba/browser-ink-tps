@@ -541,6 +541,54 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   expect(simulatedUnblocked).toEqual(candidates[1]);
   expect(Array.from(floor.ownerGrid)).toEqual(before);
  });
+ it('retains lateral original cells at almost identical range when one sight line is covered',()=>{
+  const floor=make();floor.ownerGrid.fill(Team.B);
+  // Both existing quarter-meter original cells are in sector 8 at
+  // nearly the same radius (~6m), but 1.58m apart sideways.
+  // The previous radial-only criterion silently returned ONE cell.
+  const a=[64,41] as const,b=[62,47] as const;
+  floor.ownerGrid[floor.index(...a)]=Team.Neutral;
+  floor.ownerGrid[floor.index(...b)]=Team.Neutral;
+  const before=Array.from(floor.ownerGrid);
+  const actual=gridCandidates([floor],{x:0,y:3,z:0},Team.B,9.5);
+  expect(actual).toHaveLength(2);
+  const cells=actual.map(target=>{
+   const uv=floor.projectWorldPoint(target);
+   return [Math.floor(uv.u/floor.cellSize),
+    Math.floor(uv.v/floor.cellSize)];
+  });
+  expect(cells).toEqual([b,a]); // closer first, then lateral alternative
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+  // Test the REAL CpuAgentSystem target-selection method, not just
+  // candidate generation. Shot permission is still withheld by a
+  // simulated SOURCE Rapier validator until the second ray is accepted.
+  const stage=undertowT21dConnectivityQaStage();
+  const ink=new GameplayInkSystem();ink.registerSurface(floor);
+  const bot={id:'B1',team:Team.B,weaponId:'pulse-sprayer',
+   position:new Vec3(0,3,0),agent:{},lifeState:'ACTIVE',
+   mobilityState:'GROUND'};
+  const system:any=Object.create(CpuAgentSystem.prototype);
+  system.stage=stage;system.gameplayInk=ink;
+  system.p2OuterOriginalBackfill=true;
+  system.f3dSourceGoals={isLiveRejoinedSourceCpu:()=>true};
+  system.phase14qGroundCollision={sourceFootSupport:()=>({
+   solidId:stage.solids[0]!.id,point:bot.position.clone()})};
+  const checked:Vec3[]=[];
+  system.b216SourceStageAimValidated=(_m:unknown,target:Vec3)=>{
+   checked.push(target.clone());
+   return target.distance(actual[1]!)<.001;
+  };
+  system.b215SelectedBattlePaintPacing=false;
+  system.b216OriginalTurfSightChecks=0;
+  system.b216OriginalTurfCoverVetoes=0;
+  const approved=system.chooseB216OriginalUnpaintedGridAim(bot);
+  expect(approved).toEqual(actual[1]); // first blocked, second allowed
+  expect(checked).toHaveLength(2);
+  expect(checked[0]).toEqual(actual[0]);
+  expect(checked[1]).toEqual(actual[1]);
+  expect(system.b216OriginalTurfCoverVetoes).toBe(1);
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+ });
  it('preserves throwable unpainted cells behind too-close same-sector ink',()=>{
   const floor=make();floor.ownerGrid.fill(Team.B);
   // Both cells are genuine original registered ownerGrid entries and

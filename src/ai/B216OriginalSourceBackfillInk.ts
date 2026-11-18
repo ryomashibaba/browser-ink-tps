@@ -154,8 +154,9 @@ export function b216RealSourcePaintShotLineClear(x:{
  * patches between its 16 rays. These are untrusted *proposals*, not
  * projectiles, score, actor movement or new stage geometry.
  *
- * One nearest candidate per 16 physical directions and two distance
- * bands bounds downstream genuine Rapier shot-line checks to <=32.
+ * Two spatially distinct candidates per 16 physical directions and two
+ * distance bands bound real Rapier shot-line checks to <=64. A nearby
+ * covered cell must not mask a lateral gap at almost identical range.
  */
 export function b216OriginalUnpaintedGridCandidates(
  surfaces:readonly PaintSurface[],foot:B216SourcePoint,team:Team.A|Team.B,
@@ -171,9 +172,13 @@ export function b216OriginalUnpaintedGridCandidates(
  // different already-registered unpainted cell in that same sector.
  // The caller independently checks true Rapier support, native weapon
  // range and registered projectile line of sight before any paid shot.
+ // Keep four extremal actual cells per bucket during the single raster
+ // scan. Emit at most TWO: nearest plus the farthest physically separate
+ // original cell, even if both are nearly the same distance away.
+ type Candidate={distanceSq:number;point:Vec3;angle:number};
  const picked=new Map<number,{
-  nearest:{distanceSq:number;point:Vec3};
-  farthest:{distanceSq:number;point:Vec3};
+  nearest:Candidate;farthest:Candidate;
+  left:Candidate;right:Candidate;
  }>();
  for(const surface of surfaces){
   if(!surface.id.startsWith('UndertowT21D:')||
@@ -219,27 +224,39 @@ export function b216OriginalUnpaintedGridCandidates(
     const angle=(Math.atan2(dz,dx)+Math.PI)/(2*Math.PI);
     const sector=Math.min(15,Math.floor(angle*16));
     const key=sector+(distanceSq>25?16:0);
-    const current={distanceSq,point};
+    const current={distanceSq,point,angle};
     const previous=picked.get(key);
     if(!previous){
-     picked.set(key,{nearest:current,farthest:current});
+     picked.set(key,{nearest:current,farthest:current,
+      left:current,right:current});
     }else{
      if(distanceSq<previous.nearest.distanceSq)
       previous.nearest=current;
      if(distanceSq>previous.farthest.distanceSq)
       previous.farthest=current;
+     if(angle<previous.left.angle)previous.left=current;
+     if(angle>previous.right.angle)previous.right=current;
     }
    }
   }
  }
- // Distinct near/far original cells (at least .9m radial separation)
- // give the next genuine Rapier ray a different shot opportunity.
- // At most 16 sectors x 2 radial bands x 2 cells = 64 proposals.
- // No proposal itself authorizes physics, ink, or a scoreable surface.
- return [...picked.values()].flatMap(bucket=>
-  Math.sqrt(bucket.farthest.distanceSq)-
-   Math.sqrt(bucket.nearest.distanceSq)>=.9?
-   [bucket.nearest,bucket.farthest]:[bucket.nearest])
-  .sort((x,y)=>x.distanceSq-y.distanceSq)
-  .map(x=>x.point);
+ // A 0.9m PLANAR separation, including lateral direction, is enough
+ // to offer a different original projectile sight line. Selecting the
+ // farthest radial cell alone misses real around-cover paint at the same
+ // distance. Limit each of 32 buckets to two proposals; nothing here
+ // grants a shot, physical move, new cell or score.
+ return [...picked.values()].flatMap(bucket=>{
+  const {nearest}=bucket;
+  let second:Candidate|null=null,separationSq=.9*.9;
+  for(const candidate of [bucket.farthest,bucket.left,bucket.right]){
+   const dx=candidate.point.x-nearest.point.x;
+   const dz=candidate.point.z-nearest.point.z;
+   const planar=dx*dx+dz*dz;
+   if(planar>separationSq){
+    separationSq=planar;
+    second=candidate;
+   }
+  }
+  return second?[nearest,second]:[nearest];
+ }).sort((x,y)=>x.distanceSq-y.distanceSq).map(x=>x.point);
 }
