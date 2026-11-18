@@ -32,6 +32,23 @@ async function boot(): Promise<void> {
     return;
   }
   if (new URL(window.location.href).searchParams.get('t21Play') === 'preview') {
+    // Give the player a visible, non-interactive boot state while the
+    // now lazy-loaded genuine Rapier/Recast SOURCE world initializes.
+    // Do not preload the unrelated InkLab or mutate native game state.
+    const sourceBootStarted=performance.now();
+    const loading=document.createElement('div');
+    loading.id='t21-source-boot-status';
+    loading.setAttribute('role','status');
+    loading.setAttribute('aria-live','polite');
+    loading.textContent='Preparing the 3D SOURCE match…';
+    loading.style.cssText='position:fixed;left:50%;top:50%;'+
+     'transform:translate(-50%,-50%);padding:16px 24px;'+
+     'border:1px solid #7595a8;border-radius:12px;'+
+     'background:#111d2d;color:#f2f8fd;'+
+     'font:600 14px/1.5 system-ui,sans-serif;'+
+     'pointer-events:none;z-index:2147483000';
+    document.body.appendChild(loading);
+    try {
     const { UndertowF3PlayablePreviewApp } = await import('./app/UndertowF3PlayablePreviewApp');
     await UndertowF3PlayablePreviewApp.boot(appCanvas, appUiRoot);
     // B478: B464 read-only overlay is available for B441 with or
@@ -146,7 +163,14 @@ async function boot(): Promise<void> {
        return game?.snapshot();
       });
     }
+    // The measured interval begins after main.ts itself has loaded.
+    // This is not network page-load time or an FPS measurement.
+    appCanvas.dataset.t21SourceJsBootMs=
+     String(Math.max(0,Math.round(performance.now()-sourceBootStarted)));
     return;
+    } finally {
+      loading.remove();
+    }
   }
   if (['phase14i','phase14k','phase14l','phase14p'].includes(new URL(window.location.href).searchParams.get('t21Qa') ?? '')) {
     const { UndertowPhase14IRealCrowdVisualQaApp } = await import('./app/UndertowPhase14IRealCrowdVisualQaApp');
