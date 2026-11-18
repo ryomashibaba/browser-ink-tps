@@ -40,6 +40,19 @@ describe('read-only CPU continuity witness',()=>{
     expect(report.actors[0]?.actualTravelMeters).toBeCloseTo(0.2);
     expect(report.actors[0]?.peakStationarySeconds).toBeGreaterThan(5);
   });
+  it('excludes the splat/respawn reposition while retaining real movement in each life',()=>{
+    const probe=new CpuContinuityMonitor();
+    probe.observe(1/60,[sample()]);
+    probe.observe(1/60,[sample({x:3})]);
+    probe.observe(1/60,[sample({x:3,lifeState:'SPLATTED',
+      mobilityState:'SPLATTED',hasAgent:false,expectsMotion:false})]);
+    probe.observe(1/60,[sample({x:80,y:20,lifeState:'SPLATTED',
+      mobilityState:'SPLATTED',hasAgent:false,expectsMotion:false})]);
+    probe.observe(1/60,[sample({x:80,y:20})]);
+    expect(probe.snapshot().actors[0]?.actualTravelMeters).toBe(3);
+    probe.observe(1/60,[sample({x:80.2,y:20})]);
+    expect(probe.snapshot().actors[0]?.actualTravelMeters).toBeCloseTo(3.2);
+  });
   it('does not create CPU motion, counts, paint, kit actions, or position mutation',()=>{
     const input=Object.freeze(sample());
     const probe=new CpuContinuityMonitor();

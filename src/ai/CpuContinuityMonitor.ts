@@ -59,9 +59,13 @@ export class CpuContinuityMonitor {
       };
       const dx=s.x-a.lastX,dy=s.y-a.lastY,dz=s.z-a.lastZ;
       const travel=Math.hypot(dx,dy,dz);
+      const previousFrameWasActive=existing?.lifeState==='ACTIVE';
       a.lastX=s.x;a.lastY=s.y;a.lastZ=s.z;
       a.lifeState=s.lifeState;a.mobilityState=s.mobilityState;
-      a.actualTravelMeters+=travel;
+      // Splat/respawn relocations are not Rapier-approved CPU travel.
+      // Continue counting real first-drop and grounded steps in one life.
+      if(previousFrameWasActive&&s.lifeState==='ACTIVE')
+        a.actualTravelMeters+=travel;
       if(s.lifeState==='ACTIVE' && s.mobilityState==='GROUND' &&
          s.hasAgent && s.expectsMotion &&
          travel/dt<MIN_EXPECTED_METERS_PER_SECOND){
