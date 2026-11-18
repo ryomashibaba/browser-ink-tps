@@ -68,8 +68,7 @@ describe('canonical SOURCE uses five-ray forensic detail only when physically ne
   expect(due[0]).toBe(true);
   expect(due[1]).toBe(false);
   expect(due[6]).toBe(true);
-  // Only the supplementary four rays are skipped on 50 supported ticks.
-  expect(50*4).toBe(200);
+  // Every skipped sample still observes native centre support in App.
  });
  it('never decimates five rays during unsafe support, actual fall or explicit QA',()=>{
   const b=stable(121); // normally skipped when truly grounded
