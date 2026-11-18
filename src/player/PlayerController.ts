@@ -98,6 +98,41 @@ export function nativeSourceInkOnRegisteredFoot(
  return relation;
 }
 
+/** SOURCE human steering only: after an ACTUAL Rapier KCC obstruction,
+ * stop feeding the PRE-collision horizontal velocity into the next 60Hz
+ * acceleration step. Otherwise repeated blocked W input leaves an invisible
+ * full-speed drive into the wall, and turning away feels stuck.
+ *
+ * This is NOT a translation, collision override or artificial acceleration.
+ * Only the existing KCC-approved XZ displacement can become next-tick
+ * momentum. A 1.6cm discrepancy avoids rounding/slope noise. Genuine
+ * roll/surge/dodge/wall-swim impulses keep their original exclusive motion.
+ * Legacy T20 and non-colliding SOURCE footsteps remain unchanged.
+ */
+export function nativeSourceReconcileKccPlanarVelocity(
+ velocity:Vec3, accepted:Readonly<{x:number;z:number}>,dt:number,
+ computedContacts:number,state:PlayerLocomotionState,source:boolean
+):boolean{
+ if(!source||!Number.isFinite(dt)||dt<=0||dt>0.05||
+    !Number.isSafeInteger(computedContacts)||computedContacts<1||
+    (state!=='HUMAN'&&state!=='SQUID_DRY'&&state!=='SWIM_GROUND')||
+    ![velocity.x,velocity.z,accepted.x,accepted.z].every(Number.isFinite))
+  return false;
+ const requestedX=velocity.x*dt,requestedZ=velocity.z*dt;
+ if(Math.hypot(requestedX-accepted.x,requestedZ-accepted.z)<=0.016)
+  return false;
+ const requestedLength=Math.hypot(requestedX,requestedZ);
+ // KCC may resolve a penetration, but never allow it to create velocity
+ // exceeding actual attempted human propulsion.
+ if(requestedLength<1e-6)return false;
+ const acceptedLength=Math.hypot(accepted.x,accepted.z);
+ const factor=acceptedLength>requestedLength?
+  requestedLength/acceptedLength:1;
+ velocity.x=accepted.x/dt*factor;
+ velocity.z=accepted.z/dt*factor;
+ return true;
+}
+
 interface OwnWallSample {
   sample: GameplayInkSample;
   outward: Vec3;
@@ -711,6 +746,12 @@ export class PlayerController {
     );
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
+    // Actual original Rapier KCC walls / teammates decide next-tick
+    // momentum; no XZ motion is added or moved outside a registered solid.
+    nativeSourceReconcileKccPlanarVelocity(
+      this.velocity,corrected,dt,this.character.numComputedCollisions(),
+      this.locomotionState,this.nativeSourceGroundInkGuard
+    );
 
     this.body.setNextKinematicTranslation({
       x: bodyPosition.x + corrected.x,

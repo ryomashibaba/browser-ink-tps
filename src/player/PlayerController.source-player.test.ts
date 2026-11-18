@@ -1,8 +1,10 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
+import RAPIER from '@dimforge/rapier3d-compat';
 import {Vec3} from 'playcanvas';
 import {PlayerController,nativeSourceNextJumpBufferSeconds,
  nativeSourceWallReleaseVerticalVelocity,nativeSourceWallSurgeRequested,
- nativeSourceSquidRollJumpRequested} from './PlayerController';
+ nativeSourceSquidRollJumpRequested,
+ nativeSourceReconcileKccPlanarVelocity} from './PlayerController';
 
 // Unit reconstruction of the actual controller methods. No fake SOURCE
 // floor, synthetic navigation links, Chromium pass or official match proof.
@@ -160,5 +162,63 @@ describe('Issue #19 native SOURCE: short Space survives real squid actions',()=>
   expect(nativeSourceSquidRollJumpRequested(false,true,denied)).toBe(false);
   const dodge=nativeSourceNextJumpBufferSeconds(.06,true,1/60,true,true);
   expect(nativeSourceSquidRollJumpRequested(false,true,dodge)).toBe(false);
+ });
+});
+
+
+describe('SOURCE wall steering follows REAL Rapier KCC displacement',()=>{
+ beforeAll(async()=>{await RAPIER.init();});
+ it('removes blocked forward carryover while retaining legal slide on real KCC wall',()=>{
+  const world=new RAPIER.World({x:0,y:0,z:0});
+  try{
+   world.createCollider(RAPIER.ColliderDesc.cuboid(.08,2,2)
+    .setTranslation(.44,0,0));
+   const body=world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0,0,0));
+   const actor=world.createCollider(RAPIER.ColliderDesc.capsule(.25,.18),body);
+   world.step(); // real Rapier broadphase, no synthetic motion result
+   const kcc=world.createCharacterController(.025);
+   kcc.computeColliderMovement(actor,{x:.30,y:0,z:.10});
+   const accepted=kcc.computedMovement();
+   expect(kcc.numComputedCollisions()).toBeGreaterThan(0);
+   expect(accepted.x).toBeLessThan(.27);
+   const velocity=new Vec3(6,0,2);
+   expect(nativeSourceReconcileKccPlanarVelocity(
+    velocity,accepted,.05,kcc.numComputedCollisions(),'HUMAN',true)).toBe(true);
+   expect(velocity.x).toBeCloseTo(accepted.x/.05,3);
+   expect(velocity.z).toBeCloseTo(accepted.z/.05,3);
+   expect(Math.hypot(velocity.x,velocity.z))
+    .toBeLessThanOrEqual(Math.hypot(6,2)+1e-6);
+   // The same legal requested displacement, if not blocked, is unchanged.
+   const open=new Vec3(6,0,2);
+   expect(nativeSourceReconcileKccPlanarVelocity(
+    open,{x:.30,z:.10},.05,0,'HUMAN',true)).toBe(false);
+   expect(open.x).toBe(6);expect(open.z).toBe(2);
+  }finally{world.free();}
+ });
+ it('never changes T20, verified surge/roll/dodge, or innocent source motion',()=>{
+  for(const state of ['SURGE','SQUID_ROLL','DUALIE_DODGE',
+   'SWIM_WALL','SURGE_CHARGE'] as const){
+   const v=new Vec3(6,0,0);
+   expect(nativeSourceReconcileKccPlanarVelocity(
+    v,{x:0,z:0},.05,2,state,true)).toBe(false);
+   expect(v.x).toBe(6);
+  }
+  const t20=new Vec3(6,0,0);
+  expect(nativeSourceReconcileKccPlanarVelocity(
+   t20,{x:0,z:0},.05,2,'HUMAN',false)).toBe(false);
+  expect(t20.x).toBe(6);
+  const almost=new Vec3(6,0,0);
+  expect(nativeSourceReconcileKccPlanarVelocity(
+   almost,{x:.29,z:0},.05,1,'SWIM_GROUND',true)).toBe(false);
+  expect(almost.x).toBe(6);
+  const noContact=new Vec3(6,0,0);
+  expect(nativeSourceReconcileKccPlanarVelocity(
+   noContact,{x:0,z:0},.05,0,'HUMAN',true)).toBe(false);
+  expect(noContact.x).toBe(6);
+  const falsePush=new Vec3(0,0,0);
+  expect(nativeSourceReconcileKccPlanarVelocity(
+   falsePush,{x:.3,z:0},.05,1,'HUMAN',true)).toBe(false);
+  expect(falsePush.x).toBe(0);
  });
 });
