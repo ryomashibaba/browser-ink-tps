@@ -213,14 +213,14 @@ jobs:
           path: /tmp/t21-b493-kcc-report.json
           if-no-files-found: warn
           retention-days: 14
-      # B494: read the same original Chromium A1/B2/B4 native 60Hz feet.
+      # B494: independently replay the later Nov17 720tick true same-world 3CPU native feet.
       # No new browser, stage permission, artificial actor or navigation.
       - name: Download immutable genuine A1 B2 B4 same-world native foot traces
         if: ${{ contains(github.event.head_commit.message, '[b494-continuous-shared]') }}
         uses: actions/download-artifact@v4
         with:
           name: b441-true-native-source-frontline-short
-          run-id: 43140584988
+          run-id: 44058508758
           github-token: ${{ github.token }}
           path: /tmp/t21-b494-source-evidence
       - name: Integrate three original-sized Rapier CPU capsules without per-frame reseeding
@@ -230,7 +230,7 @@ jobs:
           T21_B494_REPORT_PATH: /tmp/t21-b494-continuous-3cpu.json
         run: |
           npx vitest run src/stage/undertow/UndertowB494SameWorldThreeCpuContinuousKcc.test.ts
-          node -e "const d=require('/tmp/t21-b494-continuous-3cpu.json');if(d.source!=='25/17/26/0'||d.continuousStepsPerCpu!==671||d.eachFrameReanchoredToActualFoot||d.naturalOpposingRoutesAuthorized!==0)process.exit(1);console.log('B494_BOUNDED_CONTINUOUS_3CPU_DIAGNOSTIC_SAVED')"
+          node -e "const d=require('/tmp/t21-b494-continuous-3cpu.json');if(d.source!=='25/17/26/0'||d.continuousStepsPerCpu!==635||d.nativeLastTick!==1788||d.eachFrameReanchoredToActualFoot||d.naturalOpposingRoutesAuthorized!==0)process.exit(1);console.log('B494_BOUNDED_CONTINUOUS_3CPU_DIAGNOSTIC_SAVED')"
       - name: Archive B494 3CPU continuous KCC result from pinned genuine RAW
         if: ${{ contains(github.event.head_commit.message, '[b494-continuous-shared]') && always() }}
         uses: actions/upload-artifact@v4
