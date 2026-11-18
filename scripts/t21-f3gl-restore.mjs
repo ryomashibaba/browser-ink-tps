@@ -2,7 +2,7 @@
  * T21 locally restored optical Temple01 stage: F3G/F3I/F3K/F3L only.
  * Raw original OBJ, MTL and textures stay on this machine; never commit,
  * push, publish, or treat a visible face as an original gameplay collider.
- * Opt-in from PLAY_ORIGINAL_STAGE_WINDOWS.cmd, never the normal launcher.
+ * Opt-in from PLAY_ORIGINAL_STAGE_WINDOWS.cmd or\n * PLAY_SOURCE_WITH_ORIGINAL_VISUALS_WINDOWS.cmd. The default launcher\n * never downloads original assets.
  */
 import {createHash} from 'node:crypto';
 import {readFile,writeFile,mkdtemp,mkdir,rm,rename,stat} from 'node:fs/promises';

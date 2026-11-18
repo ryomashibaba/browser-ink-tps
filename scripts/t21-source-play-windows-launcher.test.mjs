@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 const root=resolve(import.meta.dirname,'..');
 const batch=readFileSync(resolve(root,'PLAY_SOURCE_WINDOWS.cmd'),'utf8');
+const visualPlay=readFileSync(resolve(root,'PLAY_SOURCE_WITH_ORIGINAL_VISUALS_WINDOWS.cmd'),'utf8');
 const portal=readFileSync(resolve(root,'play-source.html'),'utf8');
 const vite=readFileSync(resolve(root,'vite.config.ts'),'utf8');
 const packageFile=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8'));
@@ -41,4 +42,29 @@ test('no unintended LAN/production/GitHub/actor permissions in launcher',()=>{
  assert.match(batch,/call npm\.cmd install --no-audit --no-fund --no-package-lock/);
  assert.match(batch,/:DEPS_READY/);
  assert.match(batch,/if errorlevel 1 goto :FAIL/g);
+});
+
+
+test('one-click verified original UV is the SAME genuine four-mode SOURCE game, not static showroom',()=>{
+ assert.match(visualPlay,/set "T21_LOCAL_ORIGINAL_PLAY=1"/);
+ assert.match(visualPlay,/set "T21_LOCAL_ORIGINAL_REVIEW=0"/);
+ assert.match(visualPlay,/call "%~dp0PLAY_SOURCE_WINDOWS\.cmd"/);
+ assert.match(batch,/if \/I "%T21_LOCAL_ORIGINAL_PLAY%"=="1" \(/);
+ assert.match(batch,/if \/I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" goto :FAIL/);
+ const restoration=batch.match(/node scripts\/t21-f3gl-restore\.mjs/g)??[];
+ assert.equal(restoration.length,2);
+ assert.match(batch,/call npm\.cmd run preview -- --host 127\.0\.0\.1 --port 4173 --strictPort --base=\/browser-ink-tps\/ --open=\/browser-ink-tps\/play-source\.html/);
+ // Browser code already upgrades an ordinary live game to original F3L
+ // only AFTER hash-authorized original visual manifests and mesh loading.
+ const app=readFileSync(resolve(root,
+  'src/app/UndertowF3PlayablePreviewApp.ts'),'utf8');
+ assert.match(app,/void this\.loadAvailableNativeOriginalOptics\(\)/);
+ assert.match(app,/await loadF3lTexturedSource\(this\.app\)/);
+ assert.match(app,/setNativeVerifiedOpticalScene\(true\)/);
+ const local=readFileSync(resolve(root,'scripts/t21-f3gl-restore.mjs'),'utf8');
+ assert.match(local,/PINNED_TEMPLE01_SHA256/);
+ assert.match(local,/verifyLocalPack\(staging\)/);
+ assert.match(local,/stagePlayableAuthority:'NONE'/);
+ assert.doesNotMatch(visualPlay,/\bgit\s+(?:push|merge|reset|checkout|rebase|pull|fetch)\b/i);
+ assert.doesNotMatch(visualPlay,/--host\s+0\.0\.0\.0/);
 });

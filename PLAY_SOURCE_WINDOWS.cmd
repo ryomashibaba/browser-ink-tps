@@ -62,11 +62,20 @@ call npm.cmd ls --depth=0 --offline >nul 2>nul
 if errorlevel 1 goto :FAIL
 :DEPS_READY
 
-REM Explicit opt-in review launcher ONLY: verified original F3G/F3L data.
-REM Normal SOURCE play never downloads or promotes original assets.
+REM Only an explicitly selected local optical variant may restore original
+REM F3L data. Normal SOURCE play is still entirely offline/no download.
+REM All original model/texture files remain local and must pass pinned SHA.
+REM A visual pack is NEVER gameplay collision, navigation, ink or score.
 if /I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" (
   echo.
-  echo Preparing verified original visual stage locally. No physical floor additions.
+  echo Preparing verified original STAGE REVIEW optics only.
+  node scripts/t21-f3gl-restore.mjs
+  if errorlevel 1 goto :FAIL
+)
+if /I "%T21_LOCAL_ORIGINAL_PLAY%"=="1" (
+  if /I "%T21_LOCAL_ORIGINAL_REVIEW%"=="1" goto :FAIL
+  echo.
+  echo Preparing verified original UV optics for real SOURCE game.
   node scripts/t21-f3gl-restore.mjs
   if errorlevel 1 goto :FAIL
 )
