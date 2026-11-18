@@ -3129,6 +3129,66 @@ async function main(){
    sourceCpuHitsObservedNotRequired:shot.humanCpuDirectHits,
    officialWinner:'NONE'};
   save();
+  // The real player has already walked (W), fired genuine paint, and
+  // completed C -> real A1 arrival -> C. Exercise actual D then A with
+  // native 60Hz input and original KCC, in THIS same seven-CPU browser.
+  // Never insert a simulated wall, force actor positions or mint ink.
+  // Straight open-floor reversing verifies source human steering remains
+  // usable after the Rapier blocked-velocity reconciliation; it does NOT
+  // by itself certify that a wall was contacted in this browser run.
+  const realTurnStart=await snap();authority(realTurnStart);
+  const originalFoot=foot(realTurnStart);
+  const sourceYaw=realTurnStart.cameraSourcePractice?.yawDegrees;
+  if(!trueOriginalFoot(originalFoot)||realTurnStart.player?.mode!=='HUMAN'||
+     !Number.isFinite(sourceYaw)||!await locked()||
+     realTurnStart.cpu?.physicalRejoins?.length!==7)
+   fail('SOURCE_REAL_HUMAN_DIRECTION_TURN_PRECONDITION');
+  const yaw=sourceYaw*Math.PI/180;
+  const right=[Math.cos(yaw),Math.sin(yaw)];
+  const realDirection=async(key,code,vk,ticks)=>{
+   const initial=await snap();authority(initial);
+   const v={key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk};
+   let down=false,final=null;
+   try{
+    await cdp('Input.dispatchKeyEvent',{type:'keyDown',...v});down=true;
+    final=await until(async()=>{
+     const n=await snap();authority(n);
+     if(n.stopReason||n.paused||n.matchState!=='PLAYING'||
+        n.player?.mode!=='HUMAN'||n.cpu.physicalRejoins.length!==7||
+        !await locked()||!trueOriginalFoot(foot(n))||
+        foot(n).originalSolid!==originalFoot.originalSolid)
+      fail('SOURCE_HUMAN_REAL_DIRECTION_LOST_ORIGINAL_KCC_SUPPORT');
+     return n.tick>=initial.tick+ticks?n:null;
+    },90000,125);
+   }finally{
+    if(down)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...v});
+   }
+   const from=initial.player.position,to=final.player.position;
+   const dx=to[0]-from[0],dz=to[2]-from[2];
+   return {firstTick:initial.tick,lastTick:final.tick,
+    key:code,bodyBefore:from,bodyAfter:to,
+    distanceXZ:Math.hypot(dx,dz),signedRightMeters:dx*right[0]+dz*right[1],
+    physicalOriginalSupport:foot(final).originalSolid,
+    realSevenCpu:final.cpu.physicalRejoins.length,
+    realPointerLocked:await locked()};
+  };
+  const realD=await realDirection('d','KeyD',68,16);
+  const realA=await realDirection('a','KeyA',65,44);
+  const turns={realD,realA,yawDegrees:sourceYaw,
+   trueRapierKccSource:originalFoot.originalSolid,
+   source:'25/17/26/0',sameNativeBrowserWorld:
+    await origin()===proof.browserOrigin,
+   nativeActorWrites:0,nativePhysicsWrites:0,
+   syntheticHumanMoveCommands:0,
+   realWallCollisionCertified:false,
+   officialCrossTeamConnectivityCertified:false,
+   officialWinner:'NONE'};
+  proof.realNativeHumanReverseSteering=turns;save();
+  console.log('B440_REAL_HUMAN_KCC_REVERSAL',JSON.stringify(turns));
+  if(realD.signedRightMeters<.09||realA.signedRightMeters>-.09||
+     !turns.sameNativeBrowserWorld||
+     !Number.isFinite(realD.distanceXZ)||!Number.isFinite(realA.distanceXZ))
+   fail('SOURCE_REAL_HUMAN_REVERSE_INPUT_NOT_PHYSICALLY_RESPONSIVE');
  }
  if(b441Experiment){
   // B441 has to prove the actual SOURCE CPU goal selector, not merely
