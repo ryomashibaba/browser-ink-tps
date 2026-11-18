@@ -22,3 +22,30 @@ export function b485MayIssueNativeA1OriginalOrder(input:Readonly<{
  return input.lastOrder==='ARRIVED'||input.lastOrder==='HOLD'||
   input.lastOrder==='EXPIRED';
 }
+
+/** Real player-C A1 original-foot arrival: for 120 native ticks veto
+ * replacement patrol ONLY while the previous approved ORIGINAL goal
+ * and the real KCC foot still share registered Rapier support.
+ * No path/agent/paint/collider/score authority is supplied here. */
+export function b485MayDwellAtTrueOriginalA1Arrival(x:Readonly<{
+ nativeTick:number;arrivalTick:number;goal:readonly number[];
+ physicalFoot:readonly number[];originalSource:readonly number[];
+ enabled:boolean;orderStatus:B485TrueAllyOrderState;
+ practiceRunning:boolean;rejoined:boolean;aliveGrounded:boolean;
+ realFootSupported:boolean;originalGoalSupported:boolean;
+}>):boolean{
+ if(!x.enabled||!x.practiceRunning||!x.rejoined||
+    !x.aliveGrounded||!x.realFootSupported||!x.originalGoalSupported||
+    x.orderStatus!=='ARRIVED'||!Number.isSafeInteger(x.nativeTick)||
+    !Number.isSafeInteger(x.arrivalTick)||x.arrivalTick<0||
+    x.nativeTick<x.arrivalTick||x.nativeTick-x.arrivalTick>=120||
+    x.originalSource.length!==4||
+    x.originalSource.some((n,i)=>n!==[25,17,26,0][i])||
+    x.goal.length!==3||x.physicalFoot.length!==3||
+    !x.goal.every(Number.isFinite)||!x.physicalFoot.every(Number.isFinite))
+   return false;
+ return x.goal[2]>=33&&
+  Math.abs(x.physicalFoot[1]-x.goal[1])<=.25&&
+  Math.hypot(x.physicalFoot[0]-x.goal[0],
+             x.physicalFoot[2]-x.goal[2])<=1.5;
+}

@@ -1281,3 +1281,29 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
  expect(totalPostFixApproved).toBe(26);
  expect(60-totalPostFixApproved).toBe(34);
 });
+
+describe('SOURCE player-C A1 arrival does not immediately restore unrelated Crowd patrol',()=>{
+ it('holds real supported original foot without any synthetic goal/pose/ink',()=>{
+  const {traffic,bots}=fixture();
+  const x:any=traffic;
+  const foot=new Vec3(-.25,3.1,52.15);
+  bots[0]!.position.copy(foot);
+  x.patrolGoals.set('A1',[new Vec3(-1,3.1,54)]);
+  x.stage={solids:Array(25).fill({id:'original'}),
+   paintSurfaces:Array(17).fill({flags:0}),
+   navigationLinks:Array(26).fill({})};
+  x.b471ArrivedOriginalDwell={
+   goal:new Vec3(-.3513,3.1,52.1272),arrivalTick:1254
+  };
+  x.b471OrderStatus='ARRIVED';x.b137NativeTick=1260;
+  x.b171AllySyncPracticeRunning=true;
+  x.enableB137OriginalAllyRally=true;x.enableB150AllySupportInk=true;
+  x.enableB192HumanCombat=false;x.enableOriginalSourceBattleRecovery=false;
+  x.hasSourceFootSupport=()=>true;
+  x.nav={auditPath:()=>{throw Error('NO_NEW_CROWD_ROUTE_ON_DWELL')}};
+  const out=new Vec3(999,999,999);
+  expect(traffic.chooseSourceGoal('A1',foot,out)).toBe(false);
+  expect([out.x,out.y,out.z]).toEqual([999,999,999]);
+  expect(x.b471ArrivedOriginalDwell.arrivalTick).toBe(1254);
+ });
+});

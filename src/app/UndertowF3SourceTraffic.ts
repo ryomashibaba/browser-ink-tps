@@ -44,7 +44,8 @@ import {decideB443OriginalFrontHold} from './B443OriginalFrontHold';
 import {b450FirstSourceDenial,type B450FailedOriginalGoal}
  from './B450OriginalRouteWitness';
 import {B454NativeSourceFootRecorder} from './B454NativeSourceFootTrace';
-import {b485MayIssueNativeA1OriginalOrder} from './B485RealRepeatA1Command';
+import {b485MayIssueNativeA1OriginalOrder,
+ b485MayDwellAtTrueOriginalA1Arrival} from './B485RealRepeatA1Command';
 import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import {B486NativeSourceEncounterTrace} from './B486NativeSourceEncounterTrace';
 import {b487ActualOriginalCrossTeamTopology} from './B487TrueOriginalCrossTeamTopology';
@@ -472,6 +473,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private b471ActualNativeGoalRequests=0;
  private b471RejectedOriginalRoutes=0;
  private b471ActualOriginalArrivals=0;
+ /** Last actual original SOURCE A1 C-order arrival: old physical goal
+  * and real native tick. This is not a new Crowd navigation request. */
+ private b471ArrivedOriginalDwell:{
+  goal:Vec3;arrivalTick:number
+ }|null=null;
  /** Genuine Recast/Rapier approvals for OWN-center goals with fresh SOURCE
   * neighbor ink. Never a claimed ink impact or official Turf score. */
  private b471ApprovedOriginalNeighborhoodInkGoals=0;
@@ -1046,6 +1052,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b485LastRealB441KeyTick=this.b137NativeTick;
   }
   this.b471GenuineKeyRequests++;
+  // A new REAL player key ends the prior completed-order dwell. Existing
+  // strict repeat and source permissions were checked above.
+  this.b471ArrivedOriginalDwell=null;
   const ally=this.bots.find(x=>x.id==='A1');
   const foot=ally?.position;
   const human=this.b137ActualHumanFoot;
@@ -1567,6 +1576,35 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // wounded CPU can safely resume. An actually reachable OWN retreat
   // takes priority over player-directed movement; no actor is moved by
   // this decision and the original Recast/Rapier path gates still apply.
+  // Real Chromium B484: user-ordered A1 reached within 0.103m of its
+  // ORIGINAL goal but ordinary patrol immediately returned it >3m away.
+  // For at most 120 genuine 60Hz ticks after actual B471 arrival, let
+  // CpuAgentSystem use its existing resetMoveTarget() instead of issuing
+  // a different patrol request. A1 still uses normal real weapons/ink.
+  if(id==='A1'&&this.b471ArrivedOriginalDwell){
+   const dwell=this.b471ArrivedOriginalDwell;
+   const supported=bot.lifeState==='ACTIVE'&&
+    bot.mobilityState==='GROUND'&&
+    this.physicallyRejoined.has('A1');
+   if(supported&&b485MayDwellAtTrueOriginalA1Arrival({
+    nativeTick:this.b137NativeTick,arrivalTick:dwell.arrivalTick,
+    goal:[dwell.goal.x,dwell.goal.y,dwell.goal.z],
+    physicalFoot:[realFoot.x,realFoot.y,realFoot.z],
+    originalSource:[this.stage.solids.length,
+     this.stage.paintSurfaces.length,
+     this.stage.navigationLinks?.length??0,
+     this.stage.paintSurfaces.filter(p=>
+      (p.flags&SurfaceFlags.Scoreable)!==0).length],
+    enabled:this.enableB137OriginalAllyRally&&
+     this.enableB150AllySupportInk,
+    orderStatus:this.b471OrderStatus,
+    practiceRunning:this.b171AllySyncPracticeRunning,
+    rejoined:supported,aliveGrounded:supported,
+    realFootSupported:this.hasSourceFootSupport(realFoot),
+    originalGoalSupported:this.hasSourceFootSupport(dwell.goal)
+   }))return false;
+   this.b471ArrivedOriginalDwell=null;
+  }
   // B471: PLAYER-C-key native co-op. Rank ALREADY-vetted original
   // A1 SOURCE patrol feet by true OwnerGrid ink; never invent a point.
   // Request goal from real A1 foot ONLY after original Recast + Rapier
@@ -1635,6 +1673,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
          this.hasSourceFootSupport(playerOrder.goal)&&
          Math.abs(realFoot.y-playerOrder.goal.y)<=.25){
        this.b471ActualOriginalArrivals++;
+       this.b471ArrivedOriginalDwell={
+        goal:playerOrder.goal.clone(),arrivalTick:this.b137NativeTick
+       };
        this.b471OrderStatus='ARRIVED';
        this.b471SourceDecision='ORIGINAL_ARRIVAL';
       }else{
@@ -3105,6 +3146,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      this.b143ApprovedNativeAllyGoal=null;
      if(this.b471AllyOrder){
       this.b471AllyOrder=null;
+      this.b471ArrivedOriginalDwell=null;
       this.b471OrderStatus='HOLD';
       this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
      }
