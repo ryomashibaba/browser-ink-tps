@@ -158,6 +158,17 @@ export function b245PlayerSightlineCss(search:string):string{
    'max-width:min(340px,calc(100vw - 32px))!important;'+
    'white-space:normal!important;overflow-wrap:anywhere!important;'+
    'text-align:center!important;line-height:1.5!important;}',
+  // Real 1600x900 B385 PLAYING capture: the native HP/ink/weapon card
+  // covered the upper-middle camera sightline. Dock it at top-left on
+  // all ordinary SOURCE rounds, not only the separately opted-in B475
+  // research path. STAGING/READY, pause and F8 QA keep their layout.
+  // Existing later B475 live dock remains the more specific override for
+  // its native ally-at-top-left arrangement; no game state is touched.
+  '@media(min-width:1100px) and (min-height:700px){',
+  on+'#t21-f3-practice-hud',
+  '{left:14px!important;top:14px!important;right:auto!important;'+
+   'transform:none!important;}',
+  '}',
   // Append after normal font size: a narrow native PLAYER viewport should
   // never clip or shrink the selected weapon's real B338 control guide.
   '@media(max-width:720px){',
