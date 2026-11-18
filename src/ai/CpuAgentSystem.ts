@@ -3935,6 +3935,10 @@ export class CpuAgentSystem {
       const sample=this.gameplayInk.sampleWorld(this.samplePoint,
        .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
       if(!sample||sample.surface.isScoreable)continue;
+      // Compare actual ownerGrid opportunity before querying up to eight
+      // costly native Rapier shot rays from the same SOURCE patch.
+      const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
+      if(value<=opportunity)continue;
       const ownedNeighbor=sample.owner===bot.team?
        visibleOwnNeighbor(sample,.35,false):null;
       if(sample.owner===bot.team&&!ownedNeighbor)continue;
@@ -3944,8 +3948,6 @@ export class CpuAgentSystem {
          Math.abs(candidate.y-bot.position.y)>.35||
          !this.cpuTargetInRange(
            bot,candidate,weaponProfile(bot.weaponId)))continue;
-      const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
-      if(value<=opportunity)continue;
       // OWN neighbors have already passed the exact live Rapier shot ray
       // in visibleOwnNeighbor. An unowned center still gets its old ray.
       if(!ownedNeighbor){
@@ -3980,6 +3982,8 @@ export class CpuAgentSystem {
         if(!sample||sample.surface.isScoreable)continue;
         this.selectedSourceVerticalCandidateMatches=
          (this.selectedSourceVerticalCandidateMatches??0)+1;
+        const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
+        if(value<=opportunity)continue;
         const neighbor=sample.owner===bot.team?
          visibleOwnNeighbor(sample,2,true):null;
         if(sample.owner===bot.team&&!neighbor)continue;
@@ -3989,8 +3993,6 @@ export class CpuAgentSystem {
            Math.abs(candidate.y-bot.position.y)>2||
            !this.cpuTargetInRange(bot,candidate,
              weaponProfile(bot.weaponId)))continue;
-        const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
-        if(value<=opportunity)continue;
         if(!neighbor){
          this.b216RealOriginalFloorSightChecks++;
          if(!this.b216SourceStageAimValidated(muzzle,candidate,bot.position)){
