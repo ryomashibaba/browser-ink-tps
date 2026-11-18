@@ -572,7 +572,8 @@ describe('B379 real weapon movement and dualie right-click',()=>{
   for(const invalid of [{humanAlive:false},{realPointerLocked:false},
     {sourceRoundPhase:'TIME_UP'},{sourceRoundPhase:'UNKNOWN'},{stopped:true}]){
    const d=rig('CHARGER');d.fire();d.right();
-   expect(d.apply(invalid)).toEqual({movementMultiplier:1,realDodgeAccepted:false});
+   expect(d.apply(invalid)).toEqual({movementMultiplier:1,realDodgeAccepted:false,
+     realBrellaGuardTap:false});
    expect(d.dodgeCount()).toBe(0);
    expect(d.movements).toEqual([1]);
   }
