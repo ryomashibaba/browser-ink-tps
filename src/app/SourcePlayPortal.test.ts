@@ -1,4 +1,6 @@
 import {describe,it,expect} from 'vitest';
+// @ts-ignore Node-only HTML source contract for the existing SOURCE menu.
+import {readFileSync} from 'node:fs';
 import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
@@ -659,5 +661,35 @@ describe('SOURCE key R: native game gets only authentic CLEAR / fall STOP',()=>{
    {href:modes.coop+'&t21QaInput=deterministic'},
    {href:modes.coop+'&cpuWarp=1'}
   ])expect(sourceNativeReplayOwnsKeyR({...v,...change})).toBe(false);
+ });
+});
+
+
+describe('genuine SOURCE launch menu remains readable without platform Japanese glyphs',()=>{
+ it('shows English-first bilingual play modes, camera controls and truth-in-scoring without CDN assets',()=>{
+  const html=readFileSync(new URL('../../play-source.html',import.meta.url),'utf8');
+  for(const literal of [
+   '180s SOURCE GAME / 原作SOURCEで180秒プレイ',
+   'A1 CO-OP / A1と協力してSOURCEを塗る',
+   'CPU COMBAT RESEARCH / 実CPU戦闘研究モード',
+   'Camera settings / プレイ前のカメラ設定',
+   'Mouse sensitivity / マウス感度',
+   'Invert Y / 上下反転',
+   'Verified scope / 現在の認証範囲',
+   'Opposing routes 0/16',
+   'Fan research practice, not an official game.',
+   'no external API, additional payment or data upload needed'
+  ])expect(html).toContain(literal);
+  expect(html).toContain('"Noto Sans CJK JP"');
+  expect(html).toContain('font-family:var(--source-ui-font)');
+  // No unexpected external requests or external font/license dependency.
+  expect(html).not.toMatch(/fonts\\.googleapis|fonts\\.gstatic|https:\\/\\/.*\\.woff/);
+  for(const id of [
+   'play-circuit','play-coop','play-combat','play-combat-frontline',
+   'source-weapon-preselect','source-camera-sensitivity',
+   'source-camera-invert','source-camera-shoulder','source-camera-reset'
+  ])expect(html).toContain('id="'+id+'"');
+  expect(html).toContain('data-scoreable="0"');
+  expect(html).toContain('src="/src/source-play-main.ts"');
  });
 });
