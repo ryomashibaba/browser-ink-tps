@@ -2444,8 +2444,13 @@ export class ProjectileSystem {
     const distance=from.distance(to);
     if(distance<=1e-8)return true;
     const block=this.physics.castStageSegment(from,to,'ink-projectile');
+    // A Rapier hit 1cm before the actual actor body is real wall cover,
+    // NOT the actor's own paint-plane backing. Unlike paint stamps,
+    // genuine SOURCE melee / explosion HP has no plane-alignment permit.
+    // Preserve an unobstructed ray and a stage contact AT/AFTER the
+    // physical body, while failing closed on all earlier registered solids.
     return !block||Number.isFinite(block.distance)&&
-      block.distance>=Math.max(0,distance-.025);
+      block.distance>=distance;
   }
 
   private applyAreaDamage(

@@ -188,6 +188,27 @@ describe('native SOURCE real SUB/SPECIAL area damage and guard direction',()=>{
     expect(f.stats.cpuPlayerHits).toBe(0);
     expect(f.cues).not.toHaveBeenCalled();
   });
+  it('blocks true SOURCE blast HP when real original wall is just 1cm before human body',()=>{
+    const near=physicalCombat({guard:false});
+    near.state.physics.castStageSegment=vi.fn(()=>({
+      distance:.99,solidId:'UndertowT21D:other-original-wall'
+    }));
+    near.blast(new Vec3(0,0,-1),30,2);
+    expect(near.resources.currentHp).toBe(100);
+    expect(near.stats.playerDamageTaken).toBe(0);
+    expect(near.stats.cpuPlayerHits).toBe(0);
+    expect(near.cues).not.toHaveBeenCalled();
+    const clear=physicalCombat({guard:false});
+    clear.blast(new Vec3(0,0,-1),30,2);
+    expect(clear.resources.currentHp).toBe(70);
+    expect(clear.stats.playerDamageTaken).toBe(30);
+    expect(clear.stats.cpuPlayerHits).toBe(1);
+    // Frozen T20 never adopted this SOURCE-only collision veto.
+    const t20=physicalCombat({source:false,guard:false});
+    t20.state.physics.castStageSegment=vi.fn(()=>({distance:.99}));
+    t20.blast(new Vec3(0,0,-1),30,2);
+    expect(t20.resources.currentHp).toBe(70);
+  });
   it('retains actual layered SUB damage and never counts damage beyond HP zero',()=>{
     const f=physicalCombat({guard:false});
     const center=new Vec3(0,0,-1);
