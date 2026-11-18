@@ -61,6 +61,54 @@ interface CpuDriftStorm {
   pulseCooldown: number;
 }
 
+
+/** Bounded ballistic aim for an ALREADY-authorized original unpainted
+ * SOURCE turf cell. The real thrown SUB still uses its catalog speed,
+ * initial upward boost, gravity, 60Hz semi-implicit integration and
+ * original Rapier/world contact; this NEVER authorizes collision/paint.
+ * No solution => preserve the ordinary original throw exactly. */
+export function nativeOriginalSourceTurfSubBallisticAim(
+ origin:Vec3,target:Vec3,profile:SubWeaponProfile,dt=1/60
+):Vec3|null{
+ const speed=profile.throwSpeedMetersPerSecond;
+ const gravity=profile.gravityMetersPerSecond2;
+ const boost=profile.upwardBoostMetersPerSecond;
+ const maxTime=profile.maxFlightSeconds;
+ const dx=target.x-origin.x,dy=target.y-origin.y,dz=target.z-origin.z;
+ const horizontalSq=dx*dx+dz*dz;
+ if(![speed,gravity,boost,maxTime,dt,dx,dy,dz].every(Number.isFinite)||
+    speed<=0||gravity<=0||maxTime<=dt||dt<=0||
+    horizontalSq<.01)return null;
+ // Fixed-speed muzzle direction plus the existing separate upward
+ // boost. The +dt term models the REAL native vY -= g*dt followed
+ // by position += vY*dt, instead of inventing a different flight.
+ const residual=(t:number)=>{
+  const nativeY=dy/t+gravity*(t+dt)*.5-boost;
+  return horizontalSq/(t*t)+nativeY*nativeY-speed*speed;
+ };
+ let prevT=dt,prev=residual(prevT);
+ for(let n=2;n<=Math.floor(maxTime/dt);n++){
+  const t=n*dt,next=residual(t);
+  if(prev>0&&next<=0){
+   let lo=prevT,hi=t;
+   for(let i=0;i<22;i++){
+    const mid=(lo+hi)*.5;
+    if(residual(mid)>0)lo=mid;
+    else hi=mid;
+   }
+   const flight=(lo+hi)*.5;
+   const aim=new Vec3(dx/flight/speed,
+    (dy/flight+gravity*(flight+dt)*.5-boost)/speed,
+    dz/flight/speed);
+   return aim.lengthSq()>1e-8&&
+    [aim.x,aim.y,aim.z].every(Number.isFinite)?
+    aim.normalize():null;
+  }
+  prev=next;prevT=t;
+ }
+ return null;
+}
+
 export class CpuKitSystem {
   private readonly bombs: CpuBombSlot[] = [];
   private readonly scheduledStrikes: CpuScheduledStrike[] = [];
@@ -190,6 +238,15 @@ export class CpuKitSystem {
 
     const origin = request.position.clone();
     origin.y += GAME_CONFIG.cpu.muzzleHeightMeters;
+    // Only a true SOURCE-floor-targeted paid bomb gets physically
+    // compensated for its catalog upward boost and gravity. Enemy
+    // throws, T20, manually staged QA, and unverified trajectory
+    // solutions retain the exact legacy projectile direction.
+    const sourceTurfBallistic=request.sourceTurfSubAim&&
+      this.nativeOriginalSourceCombatantSubContactEnabled?
+      nativeOriginalSourceTurfSubBallisticAim(
+       origin,request.target,profile):null;
+    if(sourceTurfBallistic)aim.copy(sourceTurfBallistic);
 
     slot.active = true;
     slot.landed = false;

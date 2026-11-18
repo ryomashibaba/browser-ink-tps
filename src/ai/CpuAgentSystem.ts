@@ -89,6 +89,10 @@ export type CpuKitRequest =
       target: Vec3;
       direction: Vec3;
       subId: SubWeaponId;
+      /** Existing paid SUB targeting a REAL registered original unowned
+       * SOURCE floor cell; not a combat target or new paint authority.
+       * A physically thrown bomb still resolves native Rapier collisions. */
+      sourceTurfSubAim?: true;
       /** SOURCE-only precharge lock: restore only if this paid SUB never
        * reaches the real physics effect engine and no later ink spend is
        * observed. Never used to waive a death or accepted weapon cooldown. */
@@ -2901,7 +2905,7 @@ export class CpuAgentSystem {
     const direction=target.clone().sub(bot.position);
     if(direction.lengthSq()<=1e-8)return false;
     direction.normalize();
-    return this.queueCpuPaidSub(bot,subId,target,direction);
+    return this.queueCpuPaidSub(bot,subId,target,direction,true);
   }
 
   /** Preserve exactly the former T20/ordinary SOURCE main->kit order
@@ -2925,7 +2929,7 @@ export class CpuAgentSystem {
   /** Shared SUB charge transaction: physical bomb pool, ink, cooldown,
    * real collision and rejected-request refund remain unchanged. */
   private queueCpuPaidSub(bot:CpuBot,subId:SubWeaponId,
-    target:Vec3,direction:Vec3):boolean{
+    target:Vec3,direction:Vec3,originalFloorAim=false):boolean{
     const profile=subWeaponProfile(subId);
     if(bot.subCooldownSeconds>0||
        bot.ink+1e-6<profile.inkCost||
@@ -2940,6 +2944,11 @@ export class CpuAgentSystem {
       kind:'SUB',sourceId:bot.id,team:bot.team,
       position:bot.position.clone(),target:target.clone(),
       direction:direction.clone(),subId,
+      sourceTurfSubAim:originalFloorAim&&
+        this.b215SelectedBattlePaintPacing&&
+        this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
+        this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'?
+        true:undefined,
       sourceSubRecovery:this.f3dSourceGoals&&
         this.phase14qF2RecoverableSteps&&
         this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'?{
@@ -3058,7 +3067,8 @@ export class CpuAgentSystem {
       return;
     }
 
-    this.queueCpuPaidSub(bot,kit.sub,target,direction);
+    this.queueCpuPaidSub(bot,kit.sub,target,direction,
+      !!actualSourceSubPaintAim&&!combatTarget);
   }
 
   private rollbackRejectedKitRequest(
