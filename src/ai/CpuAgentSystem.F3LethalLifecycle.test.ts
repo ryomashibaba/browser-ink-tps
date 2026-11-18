@@ -2963,7 +2963,7 @@ describe('selected SOURCE genuine STRINGER/SPLATANA charge target continuity',()
 
 describe('true SOURCE original unpainted-floor SUB ballistic launch',()=>{
  it('keeps the catalog throw speed / upward boost and lands near the ORIGINAL target at 60Hz',()=>{
-  for(const subId of ['splat-bomb','burst-bomb','suction-bomb'] as const){
+  for(const subId of ['pulse-bomb','snap-bomb','anchor-bomb'] as const){
    const profile=subWeaponProfile(subId);
    const origin=new Vec3(0,3.7,0);
    const target=new Vec3(5,3,0);
@@ -2989,7 +2989,7 @@ describe('true SOURCE original unpainted-floor SUB ballistic launch',()=>{
   }
  });
  it('fails closed for an unreachable or invalid turf target and preserves legacy throws',()=>{
-  const profile=subWeaponProfile('splat-bomb');
+  const profile=subWeaponProfile('pulse-bomb');
   const foot=new Vec3(0,3.7,0);
   expect(nativeOriginalSourceTurfSubBallisticAim(
    foot,new Vec3(500,3,0),profile)).toBeNull();
@@ -3002,18 +3002,18 @@ describe('true SOURCE original unpainted-floor SUB ballistic launch',()=>{
   system.b215SelectedBattlePaintPacing=true;
   system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
   system.stage.metadata.id='undertow-t21d-partial-connectivity-qa';
-  system.queueCpuPaidSub(bot,'splat-bomb',new Vec3(5,3,0),
+  system.queueCpuPaidSub(bot,'pulse-bomb',new Vec3(5,3,0),
    new Vec3(1,0,0),true);
   expect(system.pendingKitRequests[0]?.sourceTurfSubAim).toBe(true);
   expect(system.pendingKitRequests).toHaveLength(1);
   // A normal enemy SUB throw keeps the pre-existing trajectory.
-  system.queueCpuPaidSub(bot,'splat-bomb',new Vec3(5,3,0),
+  system.queueCpuPaidSub(bot,'pulse-bomb',new Vec3(5,3,0),
    new Vec3(1,0,0),false);
   // SOURCE turf flag must not appear on any attack against a real actor.
   expect(system.pendingKitRequests[0]?.sourceTurfSubAim).toBe(true);
   const old=fixture(false);
   old.bot.ink=100;old.bot.subCooldownSeconds=0;
-  old.system.queueCpuPaidSub(old.bot,'splat-bomb',new Vec3(5,3,0),
+  old.system.queueCpuPaidSub(old.bot,'pulse-bomb',new Vec3(5,3,0),
    new Vec3(1,0,0),true);
   expect(old.system.pendingKitRequests[0]?.sourceTurfSubAim).toBeUndefined();
  });
