@@ -3293,7 +3293,12 @@ export class CpuAgentSystem {
     const p2ChargeInProgress=
       (profile.weaponClass==='CHARGER'&&bot.weaponChargeSeconds>0)||
       (profile.weaponClass==='SPLATLING'&&
-       (bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0));
+       (bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0))||
+      // Selected SOURCE STRINGER/SPLATANA have native held charges too;
+      // never run expensive dry-grid scans while the shot is charging.
+      (this.b215SelectedBattlePaintPacing&&
+       (profile.weaponClass==='STRINGER'||
+        profile.weaponClass==='SPLATANA')&&bot.weaponChargeSeconds>0);
     // Genuine P2 180s RAW: B1 had 9,913 weapon-ready NO-AIM checks
     // despite full ink and no original sight veto. Sparse source-foot
     // samples can miss a different original unowned floor patch.
@@ -3327,25 +3332,38 @@ export class CpuAgentSystem {
         }
       }
     }
-    // An actual original-floor aim is held ONLY while a real charger is
-    // charging or a splatling is charging/bursting. Never preserve combat
-    // enemy coordinates, and drop stale aims on a fresh life or weapon.
+    // A STRINGER or SPLATANA needs several true 60Hz ticks to charge.
+    // User-selected SOURCE only: retain and independently revalidate its
+    // REAL source floor aim through changing/no new raster proposals.
+    // No enemy target, phantom shot, extra ink or unapproved path is held.
+    // Charger/Splatling and all other game modes keep their old policy.
+    const selectedSourceChargeWeapon=this.b215SelectedBattlePaintPacing&&
+      (profile.weaponClass==='STRINGER'||profile.weaponClass==='SPLATANA');
     const chargedSourceWeapon=canTurfPaint&&
-      (profile.weaponClass==='CHARGER'||profile.weaponClass==='SPLATLING');
-    const continuingCharge=profile.weaponClass==='CHARGER'
-      ? bot.weaponChargeSeconds>0
-      : bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0;
+      (profile.weaponClass==='CHARGER'||
+       profile.weaponClass==='SPLATLING'||selectedSourceChargeWeapon);
+    const continuingCharge=bot.weaponChargeSeconds>0||
+      (profile.weaponClass==='SPLATLING'&&bot.weaponBurstShotsRemaining>0);
     if(!chargedSourceWeapon||hasCombatInRange){
       this.sourceCommittedPaintAims.delete(bot.id);
-    }else if(turfTarget){
-      this.sourceCommittedPaintAims.set(bot.id,{
-        weaponId:bot.weaponId,target:turfTarget.clone()
-      });
-    }else if(continuingCharge){
-      turfTarget=this.revalidateSourceCommittedPaintAim(bot,profile);
-      if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
     }else{
-      this.sourceCommittedPaintAims.delete(bot.id);
+      // Genuine charged STRINGER/SPLATANA should not turn towards a newly
+      // found lateral patch mid-shot. Keep the previous aim only while
+      // current ownerGrid, range, original foot and stage ray still pass.
+      if(selectedSourceChargeWeapon&&continuingCharge){
+        const retained=this.revalidateSourceCommittedPaintAim(bot,profile);
+        if(retained)turfTarget=retained;
+      }
+      if(turfTarget){
+        this.sourceCommittedPaintAims.set(bot.id,{
+          weaponId:bot.weaponId,target:turfTarget.clone()
+        });
+      }else if(continuingCharge){
+        turfTarget=this.revalidateSourceCommittedPaintAim(bot,profile);
+        if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
+      }else{
+        this.sourceCommittedPaintAims.delete(bot.id);
+      }
     }
     // Observe only already-computed real SOURCE weapon-ready decisions.
     // No additional ink, ray, Crowd, geometry or actor operation.

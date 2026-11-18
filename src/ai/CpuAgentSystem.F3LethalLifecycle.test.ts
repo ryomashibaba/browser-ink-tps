@@ -2869,3 +2869,94 @@ describe('genuine SOURCE CPU sight follows the real human collider mode',()=>{
   expect(body.y).toBe(4.2);
  });
 });
+
+describe('selected SOURCE genuine STRINGER/SPLATANA charge target continuity',()=>{
+ for(const weaponId of ['chord-stringer','ink-saber'] as const){
+  it('finishes an actual paid charge despite raster aim switching or disappearing: '+weaponId,()=>{
+   const {system,bot}=fixture(true);
+   bot.weaponId=weaponId;bot.hp=100;bot.ink=100;
+   bot.position.set(0,3,0);bot.weaponFacing=new Vec3(1,0,0);
+   bot.weaponChargeSeconds=0;bot.weaponBurstShotsRemaining=0;
+   bot.weaponBurstCooldown=0;bot.weaponRollPaintCooldown=0;
+   bot.weaponGuardHp=100;bot.weaponGuardBreakSeconds=0;
+   bot.fireRemaining=0;bot.inkRecoveryLockSeconds=0;
+   system.stats.cpuShots=0;system.stats.cpuSourceTurfShots=0;
+   system.phase14qF2RecoverableSteps=true;
+   system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+   system.b215SelectedBattlePaintPacing=true;
+   system.b64InkAngleSweepEnabled=false;
+   system.p2OuterOriginalBackfill=false;
+   system.qaTurfShotCooldown=new Map([['B1',0]]);
+   system.qaTurfShotsByActor=new Map();
+   system.b216SourceStageAimValidated=vi.fn(()=>true);
+   system.sampleRegisteredSourceFoot=vi.fn(()=>({
+    owner:Team.B,surface:{isScoreable:false}
+   }));
+   system.gameplayInk={sampleWorld:vi.fn(()=>({
+    surface:{isScoreable:false},owner:Team.Neutral
+   }))};
+   system.b216OriginalTurfSightChecks=0;
+   system.b216OriginalTurfCoverVetoes=0;
+   system.chooseCombatTarget=vi.fn(()=>null);
+   const original=new Vec3(2,3,0),other=new Vec3(1.7,3,1.6);
+   let proposal:Vec3|null=original;
+   system.chooseOriginalSourceTurfTarget=vi.fn(()=>proposal);
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+   expect(bot.weaponChargeSeconds).toBeGreaterThan(0);
+   expect(system.sourceCommittedPaintAims.get('B1')?.target)
+    .toEqual(original);
+   proposal=other; // new visual patch must not redirect a live charge
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+   expect(system.sourceCommittedPaintAims.get('B1')?.target)
+    .toEqual(original);
+   proposal=null; // physical floor aim stays valid between scan misses
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+   expect(bot.weaponChargeSeconds).toBeGreaterThan(2/60);
+   expect(system.pendingShots).toHaveLength(0);
+   for(let tick=0;tick<50&&system.pendingShots.length===0;tick++)
+    system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+   // A true charged source request: queue/ink payment via real method,
+   // not a fabricated projectile, GPU ink, score or actor foot.
+   expect(system.pendingShots).toHaveLength(1);
+   expect(system.pendingShots[0]?.weaponId).toBe(weaponId);
+   expect(system.pendingShots[0]?.target).toEqual(original);
+   expect(bot.ink).toBeLessThan(100);
+   expect(system.stats.cpuShots).toBe(1);
+  });
+  it('fails closed when the current ORIGINAL stage ray invalidates its stored aim: '+weaponId,()=>{
+   const {system,bot}=fixture(true);
+   bot.weaponId=weaponId;bot.hp=100;bot.ink=100;
+   bot.position.set(0,3,0);bot.weaponFacing=new Vec3(1,0,0);
+   bot.weaponChargeSeconds=.16;bot.weaponBurstShotsRemaining=0;
+   bot.weaponBurstCooldown=0;bot.weaponRollPaintCooldown=0;
+   bot.weaponGuardHp=100;bot.weaponGuardBreakSeconds=0;
+   bot.fireRemaining=0;
+   system.phase14qF2RecoverableSteps=true;
+   system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+   system.b215SelectedBattlePaintPacing=true;
+   system.p2OuterOriginalBackfill=false;
+   system.b64InkAngleSweepEnabled=false;
+   system.qaTurfShotCooldown=new Map([['B1',0]]);
+   system.qaTurfShotsByActor=new Map();
+   system.b216SourceStageAimValidated=vi.fn(()=>false);
+   system.sampleRegisteredSourceFoot=vi.fn(()=>({
+    owner:Team.B,surface:{isScoreable:false}
+   }));
+   system.gameplayInk={sampleWorld:vi.fn(()=>({
+    surface:{isScoreable:false},owner:Team.Neutral
+   }))};
+   system.b216OriginalTurfSightChecks=0;
+   system.b216OriginalTurfCoverVetoes=0;
+   system.sourceCommittedPaintAims=new Map([['B1',{
+    weaponId,target:new Vec3(2,3,0)
+   }]]);
+   system.chooseOriginalSourceTurfTarget=vi.fn(()=>null);
+   system.chooseCombatTarget=vi.fn(()=>null);
+   system.updateCpuWeapon(bot,1/60,Team.A,new Vec3(),true);
+   expect(bot.weaponChargeSeconds).toBe(0);
+   expect(system.sourceCommittedPaintAims.has('B1')).toBe(false);
+   expect(system.pendingShots).toHaveLength(0);
+   expect(bot.ink).toBe(100);
+  });
+ }
+});
