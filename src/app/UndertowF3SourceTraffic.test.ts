@@ -175,6 +175,81 @@ describe('F3B playable 8-actor original source runtime',()=>{
   expect(goal.equals(commandedFoot)).toBe(true);
   expect(fake.originalSourceRecoveryIntent.has('A1')).toBe(false);
  });
+
+ it('real original Rapier A1 co-op C order cannot be replaced mid-Recast, but can reissue after completion',()=>{
+  // Unlike a pure command predicate, this calls the actual traffic method
+  // with a genuine 25-solid SOURCE Rapier world and an observed
+  // real-Chromium A1 floor position. No actor/world is advanced or moved.
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(DT,stage);
+  try{
+   physics.step();
+   const realOriginalA1Foot=new Vec3(.70249,3.1,55.30735);
+   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   const originalHit=physics.castCharacterFootSupport(
+    new Vec3(realOriginalA1Foot.x,realOriginalA1Foot.y+offset,
+     realOriginalA1Foot.z),offset,'HUMAN');
+   expect(originalHit?.solidId).toMatch(/^UndertowT21D:/);
+   const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+   const a1={id:'A1',team:Team.A,lifeState:'ACTIVE',
+    mobilityState:'GROUND',hp:100,position:realOriginalA1Foot,
+    agent:null};
+   Object.assign(source,{
+    stage,physics,sourceInk:{},bots:[a1],
+    physicallyRejoined:new Set(['A1']),
+    b137NativeTick:1200,
+    b137ActualHumanFoot:realOriginalA1Foot.clone(),
+    b137HumanFootValid:true,
+    b171AllySyncPracticeRunning:true,
+    enableB137OriginalAllyRally:true,
+    enableB150AllySupportInk:true,
+    b471AllyOrder:null,b471ArrivedOriginalDwell:null,
+    b471OrderStatus:'OFF',b471SourceDecision:'NOT_REQUESTED',
+    b471GenuineKeyRequests:0,
+    b485LastRealB441KeyTick:null,sourceEndpointProbes:0
+   });
+   expect(source.b471RequestTruePlayerOriginalAllyCoverage(false))
+    .toBe(true);
+   const inFlight=source.b471AllyOrder;
+   expect(inFlight.requestedTick).toBe(1200);
+   expect(source.b471GenuineKeyRequests).toBe(1);
+   source.b137NativeTick=1201;
+   expect(source.b471RequestTruePlayerOriginalAllyCoverage(false))
+    .toBe(false);
+   expect(source.b471AllyOrder).toBe(inFlight);
+   expect(source.b471GenuineKeyRequests).toBe(1);
+   source.b471OrderStatus='MOVING';
+   source.b471SourceDecision='ORIGINAL_GOAL_GRANTED';
+   inFlight.goal=new Vec3(0.3107475,3.1,56.453831);
+   source.b137NativeTick=1202;
+   expect(source.b471RequestTruePlayerOriginalAllyCoverage(false))
+    .toBe(false);
+   expect(source.b471AllyOrder.goal.equals(inFlight.goal)).toBe(true);
+   expect(source.b471OrderStatus).toBe('MOVING');
+   expect(source.b471SourceDecision).toBe('ORIGINAL_GOAL_GRANTED');
+   expect(source.b471GenuineKeyRequests).toBe(1);
+   // Actual B471 arrival, path loss and expiry have already ended
+   // the in-flight source order. A SECOND genuine key may arm anew.
+   source.b471AllyOrder=null;
+   source.b471OrderStatus='ARRIVED';
+   source.b471SourceDecision='ORIGINAL_ARRIVAL';
+   source.b471ArrivedOriginalDwell={
+    goal:inFlight.goal.clone(),arrivalTick:1203
+   };
+   source.b137NativeTick=1204;
+   expect(source.b471RequestTruePlayerOriginalAllyCoverage(false))
+    .toBe(true);
+   expect(source.b471GenuineKeyRequests).toBe(2);
+   expect(source.b471OrderStatus).toBe('REQUESTED');
+   expect(source.b471ArrivedOriginalDwell).toBeNull();
+   expect(source.b471AllyOrder?.requestedTick).toBe(1204);
+   expect(stage.solids).toHaveLength(25);
+   expect(stage.paintSurfaces).toHaveLength(17);
+   expect(stage.navigationLinks).toHaveLength(26);
+   expect(stage.paintSurfaces.every(p=>
+    (p.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
+  }finally{physics.world.free()}
+ });
  for(const humanWalkTicks of [0,28,60,120,180,240])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
