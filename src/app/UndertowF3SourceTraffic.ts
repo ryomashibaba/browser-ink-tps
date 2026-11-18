@@ -59,7 +59,8 @@ import type {SourceSpawnPlan}
 import {planT21F2SourceDropRoutes,type T21F2RoutePlan}
  from '../stage/undertow/UndertowF2SourceDropRoutes';
 import {originalNativeLandingFootReprojection,
- originalNativeRampFootReprojection}
+ originalNativeRampFootReprojection,
+ originalNativeRightLowFootReprojection}
  from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
 
 export interface F3TrafficCpu{
@@ -778,6 +779,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // at native projected Y is within the unchanged 0.25m threshold.
    // No source position, Actor, NavLink, physical step or scoring changes.
    if(this.nav&&originalNativeLandingFootReprojection(
+     this.stage,this.physics!,this.nav,point,
+     sideSign===1?1:-1))return true;
+   // Only the registered ORIGINAL right-low 4.5m floor; no new path,
+   // NavLink, CPU movement or unverified middle crossing is authorized.
+   if(this.nav&&originalNativeRightLowFootReprojection(
      this.stage,this.physics!,this.nav,point,
      sideSign===1?1:-1))return true;
    // The same straight polyline can also rise well above the exact

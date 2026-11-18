@@ -1,0 +1,22 @@
+name: T21 V28 STAGE right-low real native floor lightweight QA
+on:
+  push:
+    branches: [research/t21-v28-stage-right-low-native-foot-20261117]
+permissions:
+  contents: read
+jobs:
+  stage-real-floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund --no-package-lock
+      - name: Typecheck source
+        run: npm run typecheck
+      - name: Genuine Rapier and Recast registered floor tests
+        run: npx vitest run src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/stage/undertow/UndertowOriginalFootEdgeAudit.test.ts
