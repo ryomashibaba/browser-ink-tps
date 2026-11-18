@@ -20,6 +20,7 @@ import {isAlignedOriginalSourceCrowdTarget}
  from './OriginalSourceCrowdTargetAlignment';
 import {shouldRefreshStalledOriginalSourceCrowd,
  deferSourceCrowdSteeringForCommittedWeapon,
+ sourceCrowdSecondRefreshEarned,
  SOURCE_CROWD_STALL_SECONDS,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
@@ -322,6 +323,10 @@ export class CpuAgentSystem {
   /** A genuine source 1.2-second real-foot stall can refresh passive Recast
    * steering proxy ONCE per native CPU life, never its Rapier capsule. */
   private readonly sourceCrowdRefreshedThisLife=new Set<string>();
+  /** Actual original KCC foot/tick at each approved passive Recast reset. */
+  private readonly sourceCrowdRecoveryFoot=new Map<string,{
+   foot:Vec3;tick:number;count:number
+  }>();
   private readonly sourceLastPhysicalBlockedTick=new Map<string,number>();
   /** Source-only expensive failed recovery probes are bounded to 90 ticks. */
   private readonly sourceLastRecoveryAuditTick=new Map<string,number>();
@@ -962,6 +967,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.clear();
     this.sourceLiveNativeMotionGoal.clear();
     this.sourceCrowdRefreshedThisLife.clear();
+    this.sourceCrowdRecoveryFoot.clear();
     this.sourceLastPhysicalBlockedTick.clear();
     this.sourceLastRecoveryAuditTick.clear();
     this.sourceNativeMotionTick=0;
@@ -1663,6 +1669,8 @@ export class CpuAgentSystem {
       this.observeSourceGroundStep(bot,'KCC_APPROVED',accepted);
       this.f3dSourceGoals?.noteRealSourceKccApprovedStep?.(
         bot.id,bot.position,accepted);
+      // The real source KCC just approved this registered-floor step.
+      this.noteSourceCrowdPhysicallyApprovedTravel(bot,accepted);
       bot.position.set(accepted.x,accepted.y,accepted.z);
       this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
       if(realTeammateSlide)this.observeSourceGroundStep(
@@ -1795,7 +1803,28 @@ export class CpuAgentSystem {
         bot.id,this.sourceNativeMotionTick);
   }
 
-  /** Native SOURCE-only once-per-life stagnant steering recovery.
+  /** KCC/registered floor is already approved by the genuine native loop.
+   * This never moves the real foot. A later distinct 2m trip earns only
+   * ONE additional strictly reaudited passive Recast refresh. */
+  private noteSourceCrowdPhysicallyApprovedTravel(
+   bot:CpuBot,accepted:Readonly<{x:number;y:number;z:number}>
+  ):void{
+   if(!this.phase14qF2RecoverableSteps||!this.f3dSourceGoals||
+      !this.sourceCrowdRefreshedThisLife.has(bot.id))return;
+   const prior=this.sourceCrowdRecoveryFoot.get(bot.id);
+   if(!prior)return;
+   if(sourceCrowdSecondRefreshEarned({
+    refreshTick:prior.tick,nowTick:this.sourceNativeMotionTick,
+    refreshCount:prior.count,refreshFoot:prior.foot,
+    approvedFoot:accepted,realKccApproved:true,
+    groundedAndRejoined:bot.lifeState==='ACTIVE'&&
+     bot.mobilityState==='GROUND'&&bot.agent!==null&&
+     this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true
+   }))
+    this.sourceCrowdRefreshedThisLife.delete(bot.id);
+  }
+
+  /** SOURCE-only two-per-life physical stall steering recovery.
    * This is NOT triggered by a real KCC veto, unsupported floor, expired
    * goal, high spawn, unjoined life, or a mere Crowd proposal. Never
    * edits CPU real position, physics, stage, ink, weapons or score. */
@@ -1880,6 +1909,11 @@ export class CpuAgentSystem {
       bot.thinkRemaining=Math.min(
         bot.thinkRemaining,GAME_CONFIG.cpu.tacticalThinkSeconds*.25);
       this.sourceCrowdRefreshedThisLife.add(bot.id);
+      const prior=this.sourceCrowdRecoveryFoot.get(bot.id);
+      this.sourceCrowdRecoveryFoot.set(bot.id,{
+       foot:bot.position.clone(),tick:this.sourceNativeMotionTick,
+       count:(prior?.count??0)+1
+      });
     }
   }
 
@@ -4760,6 +4794,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
+    this.sourceCrowdRecoveryFoot.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
@@ -4826,6 +4861,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
+    this.sourceCrowdRecoveryFoot.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);

@@ -23,6 +23,7 @@ function fixture(){
   solids:[{id:'ORIGINAL_REGISTERED_SOLID'}]};
  cpu.sourceNativeMotionTick=600;
  cpu.sourceCrowdRefreshedThisLife=new Set<string>();
+ cpu.sourceCrowdRecoveryFoot=new Map();
  cpu.sourceLastPhysicalBlockedTick=new Map<string,number>();
  cpu.sourceLastRecoveryAuditTick=new Map<string,number>();
  cpu.sourceLastAdmittedRouteGoal=new Map([['B1',goal]]);
@@ -236,5 +237,55 @@ describe('T21 V28 CPU actual method: bounded real-foot SOURCE steering recovery'
    cpu.tryRefreshStalledOriginalSourceCrowd(report);
    expect(agent.teleport).not.toHaveBeenCalled();
   }
+ });
+});
+
+describe('SOURCE later CPU stall can refresh again only after native KCC travel',()=>{
+ it('second original-route audit requires true same-layer movement; third always denied',()=>{
+  const {cpu,bot,agent,report,goal}=fixture();
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(cpu.sourceCrowdRecoveryFoot.get('B1').count).toBe(1);
+  cpu.sourceNativeMotionTick=779;
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:2.1,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
+  cpu.sourceNativeMotionTick=780;
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:1.99,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:2.1,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(false);
+  // The actual loop feeds this after Rapier KCC; the fixture only
+  // verifies state transitions, not a new natural in-browser movement.
+  bot.position.set(2.1,3,0);
+  agent.position.mockImplementation(()=>bot.position.clone());
+  cpu.phase14qGroundCollision.sourceFootSupport.mockImplementation(
+   (_id:string,foot:Vec3)=>({
+    solidId:'ORIGINAL_REGISTERED_SOLID',point:foot.clone()
+   }));
+  cpu.navigation.auditNavMeshProjection.mockImplementation((foot:Vec3)=>({
+   success:true,nearestPoint:{x:foot.x,y:foot.y,z:foot.z},
+   distanceMeters:0
+  }));
+  cpu.sourceLiveNativeMotionGoal.set('B1',{agent,goal:goal.clone()});
+  report.actors[0].stationarySeconds=1.3;
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  expect(agent.teleport).toHaveBeenCalledTimes(2);
+  expect(cpu.sourceCrowdRecoveryFoot.get('B1').count).toBe(2);
+  cpu.sourceNativeMotionTick=1200;
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:5,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
+ });
+ it('never rearms after unrejoined, splat or a different height',()=>{
+  const {cpu,bot,report}=fixture();
+  cpu.tryRefreshStalledOriginalSourceCrowd(report);
+  cpu.sourceNativeMotionTick=900;
+  cpu.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:2.5,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
+  cpu.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:2.5,y:4,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
+  bot.lifeState='SPLATTED';
+  cpu.noteSourceCrowdPhysicallyApprovedTravel(bot,{x:2.5,y:3,z:0});
+  expect(cpu.sourceCrowdRefreshedThisLife.has('B1')).toBe(true);
  });
 });

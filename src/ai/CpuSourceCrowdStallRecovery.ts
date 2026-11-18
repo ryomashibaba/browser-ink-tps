@@ -67,3 +67,23 @@ export function shouldRefreshStalledOriginalSourceCrowd(
     return false;
   return true;
 }
+
+/** Only real, same-height, physically approved movement can rearm a LAST
+ * SOURCE Crowd steering refresh. This does not move CPU, register floors,
+ * authorize paths, create shots, or imply a cross-team connection. */
+export const SOURCE_CROWD_SECOND_REARM_TICKS=180;
+export const SOURCE_CROWD_SECOND_REARM_METERS=2;
+export function sourceCrowdSecondRefreshEarned(x:{
+ refreshTick:number;nowTick:number;refreshCount:number;
+ refreshFoot:CpuSourceRecoveryFoot;approvedFoot:CpuSourceRecoveryFoot;
+ groundedAndRejoined:boolean;realKccApproved:boolean;
+}):boolean{
+ return x.groundedAndRejoined&&x.realKccApproved&&x.refreshCount===1&&
+  Number.isSafeInteger(x.refreshTick)&&x.refreshTick>=0&&
+  Number.isSafeInteger(x.nowTick)&&
+  x.nowTick-x.refreshTick>=SOURCE_CROWD_SECOND_REARM_TICKS&&
+  valid(x.refreshFoot)&&valid(x.approvedFoot)&&
+  Math.abs(x.approvedFoot.y-x.refreshFoot.y)<=.30&&
+  Math.hypot(x.approvedFoot.x-x.refreshFoot.x,
+   x.approvedFoot.z-x.refreshFoot.z)>=SOURCE_CROWD_SECOND_REARM_METERS;
+}

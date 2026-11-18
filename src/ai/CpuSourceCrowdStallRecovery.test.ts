@@ -4,6 +4,7 @@ import {shouldRefreshStalledOriginalSourceCrowd as should,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS,
  SOURCE_COMMITTED_WEAPON_STEERING_GRACE_SECONDS,
  deferSourceCrowdSteeringForCommittedWeapon,
+ sourceCrowdSecondRefreshEarned,
  type CpuSourceCrowdStallEvidence} from './CpuSourceCrowdStallRecovery';
 const live:CpuSourceCrowdStallEvidence={
  actualFoot:{x:1,y:3,z:1},admittedGoal:{x:8,y:3,z:1},
@@ -66,5 +67,24 @@ describe('SOURCE native charged-weapon idle: steering-only unlock',()=>{
    lastPhysicalBlockTick:590,currentSourceTick:600})).toBe(false);
   expect(should({...live,stationarySeconds:9.62,
    lastPhysicalBlockTick:null,currentSourceTick:600})).toBe(true);
+ });
+});
+
+describe('SOURCE physical Crowd rearm after genuine original KCC progress',()=>{
+ const ok={
+  refreshTick:600,nowTick:780,refreshCount:1,
+  refreshFoot:{x:0,y:3,z:0},approvedFoot:{x:2,y:3,z:0},
+  groundedAndRejoined:true,realKccApproved:true
+ };
+ it('allows second and only second after 180 ticks and 2m in same layer',()=>{
+  expect(sourceCrowdSecondRefreshEarned(ok)).toBe(true);
+  for(const denial of [
+   {nowTick:779},{approvedFoot:{x:1.99,y:3,z:0}},
+   {approvedFoot:{x:2,y:3.31,z:0}},
+   {refreshCount:2},{refreshCount:0},
+   {groundedAndRejoined:false},{realKccApproved:false},
+   {nowTick:NaN},{refreshTick:-1},
+   {approvedFoot:{x:NaN,y:3,z:0}}
+  ])expect(sourceCrowdSecondRefreshEarned({...ok,...denial})).toBe(false);
  });
 });
