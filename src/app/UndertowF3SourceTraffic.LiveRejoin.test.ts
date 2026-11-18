@@ -582,6 +582,7 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
   patrolGoals:new Map([['B1',[old,alternative]]]),
   patrolIndex:new Map([['B1',0]]),realKccRejectedSteps:new Map(),
   realKccBTeamRecoveryAnchor:new Map(),
+  originalSourceFailedAlternateHold:new Map(),b137NativeTick:1000,
   hasSourceFootSupport:()=>true,hasSourceSupportedRoute:()=>strict,
   nav:{auditPath:(from:Vec3,to:Vec3)=>({
    reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
@@ -605,9 +606,22 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
  expect(out.equals(new Vec3(9,9,9))).toBe(true);
  expect(bot.position.equals(foot)).toBe(true);
  expect(source.patrolIndex.get('B1')).toBe(0);
+ // Genuine 90-KCC rejection with no safe existing alternative creates
+ // a HALF-SECOND real native hold. Repeated 0.28s AI think must not
+ // re-submit the same obstructed goal before fresh physical evidence.
+ const hold=source.originalSourceFailedAlternateHold.get('B1');
+ expect(hold?.retryAtTick).toBe(1030);
+ expect(hold?.foot.equals(foot)).toBe(true);
  strict=true;
  for(let n=0;n<90;n++)source.noteRealSourceKccRejectedStep('B1',foot);
+ source.b137NativeTick=1029;
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(false);
+ expect(source.patrolIndex.get('B1')).toBe(0);
+ expect(source.originalSourceFailedAlternateHold.has('B1')).toBe(true);
+ expect(bot.position.equals(foot)).toBe(true);
+ source.b137NativeTick=1030;
  expect(source.chooseSourceGoal('B1',foot,out)).toBe(true);
+ expect(source.originalSourceFailedAlternateHold.has('B1')).toBe(false);
  expect(out.equals(alternative)).toBe(true);
  expect(source.patrolIndex.get('B1')).toBe(1);
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);

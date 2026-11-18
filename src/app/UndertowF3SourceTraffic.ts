@@ -410,6 +410,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * every new candidate must independently pass strict source+Recast gates.
   * This ledger can NEVER approve a step, original face, or cross-team route. */
  private readonly realKccRejectedSteps=new Map<string,number>();
+ /** A failed ALTERNATIVE after 90 genuine Rapier rejects must not cause
+  * the original rejected target to be resubmitted on every 0.28s think.
+  * Hold briefly (30 advancing native ticks) before another fully audited
+  * original route trial. No Actor, path, physics, clock or floor changes. */
+ private readonly originalSourceFailedAlternateHold=new Map<string,{
+  foot:Vec3;retryAtTick:number
+ }>();
  /** Genuine B3 #43667197355 and B2/B4 native actor-contact evidence:
   * accepted <=3cm Rapier foot jitter must not erase repeated KCC
   * refusals. Keep the true B-team foot anchor until >=25cm of
@@ -2764,6 +2771,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    if(releasedTrueKccFront){this.heldRequests++;return false;}
   }
   if(this.tryOriginalRampLocalRecovery(id,realFoot,out))return true;
+  // A 90+ real KCC-veto stall without ANY safe alternative used to
+  // fall back to exactly the blocked native target at the next think.
+  // Give teammates/the original Recast Crowd time to clear without
+  // fabricating an alternate route or repeatedly paying costly audits.
+  // A genuinely moved real foot cancels the hold immediately.
+  const noAlternate=this.originalSourceFailedAlternateHold?.get(id);
+  if(noAlternate){
+   const moved=Math.hypot(realFoot.x-noAlternate.foot.x,
+    realFoot.z-noAlternate.foot.z)>=.25;
+   if(moved||!Number.isSafeInteger(this.b137NativeTick)||
+      this.b137NativeTick>=noAlternate.retryAtTick)
+    this.originalSourceFailedAlternateHold?.delete(id);
+   else{
+    this.heldRequests++;return false;
+   }
+  }
   const active=this.patrolIndex.get(id)??-1;
   // Unlike the legacy B34 stationary inference, this is triggered only by
   // 90 genuine KCC-denied grounded steps. Ordinary FIXED patrol and F2
@@ -2968,6 +2991,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Recast accepted it. If no strict alternate exists, retain the real
   // CPU foot and retry the previous FIXED patrol on the next think cycle.
   if(kccBlockedAlternative){
+   // Failed native alternative is NOT proof that the obstruction is gone.
+   // Keep the real Actor exactly at its last Rapier-approved foot and
+   // delay re-requesting the old rejected goal for only half a second.
+   // The next attempt still needs a true original Recast route and KCC.
+   if(Number.isSafeInteger(this.b137NativeTick)&&
+      this.b137NativeTick>=0)
+    this.originalSourceFailedAlternateHold?.set(id,{
+     foot:realFoot.clone(),retryAtTick:this.b137NativeTick+30
+    });
    this.realKccRejectedSteps.delete(id);
    this.realKccBTeamRecoveryAnchor?.delete(id);
   }
@@ -3170,6 +3202,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.respawnOriginalDrops.delete(bot.id);
     this.patrolIndex.set(bot.id,-1);
     this.realKccRejectedSteps.delete(bot.id);
+    this.originalSourceFailedAlternateHold?.delete(bot.id);
     this.realKccBTeamRecoveryAnchor?.delete(bot.id);
     this.p2BTeamDroughtFoot.delete(bot.id);
     this.p2BTeamLastFullRouteAuditTick.delete(bot.id);
@@ -3515,6 +3548,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.b441OriginalRampLastAuditTick?.delete(id);
   this.patrolIndex.set(id,-1);
   this.realKccRejectedSteps.delete(id);
+  this.originalSourceFailedAlternateHold?.delete(id);
   this.realKccBTeamRecoveryAnchor?.delete(id);
   this.realKccB4Unsupported?.delete(id);
   this.realKccB3Unsupported?.delete(id);
