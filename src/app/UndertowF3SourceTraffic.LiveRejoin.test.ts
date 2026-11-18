@@ -626,6 +626,25 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
  expect(source.patrolIndex.get('B1')).toBe(1);
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);
  expect(source.realKccBTeamRecoveryAnchor.has('B1')).toBe(false);
+ // If a NEW KCC stall cannot find an approved alternate, 26cm of
+ // real-foot horizontal progress cancels that 30-tick retry hold early.
+ // The fixture changes only its mocked observed foot; the production
+ // decision still requires original native path + Rapier authorization.
+ source.b137NativeTick=1100;
+ source.patrolIndex.set('B1',0);
+ source.realKccRejectedSteps.set('B1',90);
+ strict=false;out.set(9,9,9);
+ expect(source.chooseSourceGoal('B1',foot,out)).toBe(false);
+ expect(source.originalSourceFailedAlternateHold.has('B1')).toBe(true);
+ const physicallyProgressedFoot=new Vec3(foot.x+.26,foot.y,foot.z);
+ bot.position.copy(physicallyProgressedFoot);
+ source.b137NativeTick=1101;
+ strict=true;
+ expect(source.chooseSourceGoal('B1',physicallyProgressedFoot,out))
+  .toBe(true);
+ expect(source.originalSourceFailedAlternateHold.has('B1')).toBe(false);
+ expect(out.equals(old)).toBe(true);
+ bot.position.copy(foot);
  // A genuine 26cm Rapier-approved XZ step DOES end B1's stall.
  for(let n=0;n<9;n++)source.noteRealSourceKccRejectedStep('B1',foot);
  source.noteRealSourceKccApprovedStep('B1',foot,
