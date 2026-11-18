@@ -1293,7 +1293,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      !this.hasSourceFootSupport(actualFoot))return;
   this.realKccRejectedSteps.set(id,Math.min(180,
    (this.realKccRejectedSteps.get(id)??0)+1));
-  if((id==='B2'||id==='B3'||id==='B4')&&
+  // B1 also needs B2/B3/B4's genuine physical XZ progress witness:
+  // a 2.5cm vertical/ramp jitter is not a 25cm real recovery.
+  if((id==='B1'||id==='B2'||id==='B3'||id==='B4')&&
      this.enableB441SourceFrontline&&
      this.realKccBTeamRecoveryAnchor){
    const anchor=this.realKccBTeamRecoveryAnchor.get(id);
@@ -1412,11 +1414,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(Math.hypot(previousFoot.x-acceptedFoot.x,
      previousFoot.y-acceptedFoot.y,
      previousFoot.z-acceptedFoot.z)>=.025){
-   // B3's previous 2.5cm single-step reset counted 0.05m of 50-second
-   // jitter as continuous recovery. Only REAL KCC-grounded 25cm XZ
-   // progress from the first genuine denied SOURCE step clears its
-   // stalled-ramp witness. Other actors retain their original behavior.
-   const anchor=(id==='B2'||id==='B3'||id==='B4')&&
+   // B1-B4: only TRUE KCC-grounded 25cm XZ progress from the first
+   // denied SOURCE foot clears a stalled-ramp witness. Tiny slope Y
+   // corrections, 3cm jitter and Crowd proxy motion are not recovery.
+   // Other actors and non-B441 modes keep their original behavior.
+   const anchor=(id==='B1'||id==='B2'||id==='B3'||id==='B4')&&
     this.enableB441SourceFrontline?
     this.realKccBTeamRecoveryAnchor?.get(id):null;
    if(anchor&&Math.hypot(

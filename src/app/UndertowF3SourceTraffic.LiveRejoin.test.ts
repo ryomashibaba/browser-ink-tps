@@ -514,13 +514,22 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
   b467LiveSourceGoals:new Map(),
   patrolGoals:new Map([['B1',[old,alternative]]]),
   patrolIndex:new Map([['B1',0]]),realKccRejectedSteps:new Map(),
+  realKccBTeamRecoveryAnchor:new Map(),
   hasSourceFootSupport:()=>true,hasSourceSupportedRoute:()=>strict,
   nav:{auditPath:(from:Vec3,to:Vec3)=>({
    reachedTarget:true,startSnapDistanceMeters:0,endSnapDistanceMeters:0,
    nativePathPoints:[from.clone(),to.clone()]
   })},realGoalRequests:0,heldRequests:0
  });
- for(let n=0;n<89;n++)source.noteRealSourceKccRejectedStep('B1',foot);
+ // Controlled native-foot fixture, not a real-Chromium movement claim:
+ // 3cm XZ + 2cm Y KCC jitter must not erase a genuine B1 stall.
+ for(let n=0;n<89;n++){
+  source.noteRealSourceKccRejectedStep('B1',foot);
+  source.noteRealSourceKccApprovedStep('B1',foot,
+   new Vec3(foot.x+.03,foot.y+.02,foot.z));
+ }
+ expect(source.realKccRejectedSteps.get('B1')).toBe(89);
+ expect(source.realKccBTeamRecoveryAnchor.get('B1')?.equals(foot)).toBe(true);
  expect(source.chooseSourceGoal('B1',foot,out)).toBe(true);
  expect(out.equals(old)).toBe(true);
  source.noteRealSourceKccRejectedStep('B1',foot);
@@ -535,6 +544,13 @@ it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()
  expect(out.equals(alternative)).toBe(true);
  expect(source.patrolIndex.get('B1')).toBe(1);
  expect(source.realKccRejectedSteps.has('B1')).toBe(false);
+ expect(source.realKccBTeamRecoveryAnchor.has('B1')).toBe(false);
+ // A genuine 26cm Rapier-approved XZ step DOES end B1's stall.
+ for(let n=0;n<9;n++)source.noteRealSourceKccRejectedStep('B1',foot);
+ source.noteRealSourceKccApprovedStep('B1',foot,
+  new Vec3(foot.x+.26,foot.y,foot.z));
+ expect(source.realKccRejectedSteps.has('B1')).toBe(false);
+ expect(source.realKccBTeamRecoveryAnchor.has('B1')).toBe(false);
  expect(bot.position.equals(foot)).toBe(true);
 });
 
