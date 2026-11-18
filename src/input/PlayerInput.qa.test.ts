@@ -582,3 +582,29 @@ test('selected SOURCE F/G release previous-life key state without late kit inten
  expect([input.consumeSubPressed(),input.consumeSpecialPressed()])
   .toEqual([true,true]);
 });
+test('genuine SOURCE shortcut-modified mouse clicks never fire or arm a right-click action',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ const initialPrimarySequence=input.primaryPressSequence;
+ for(const modifier of [{altKey:true},{ctrlKey:true},{metaKey:true}]){
+  emit('canvas','pointerdown',{button:0,...modifier});
+  emit('canvas','pointerup',{button:0});
+  emit('canvas','pointerdown',{button:2,...modifier});
+  emit('canvas','pointerup',{button:2});
+  expect([input.fireHeld,input.secondaryHeld,input.consumePrimaryPressed(),
+   input.consumeSecondaryPressed()]).toEqual([false,false,false,false]);
+ }
+ expect(input.primaryPressSequence).toBe(initialPrimarySequence);
+ // A later genuine unmodified click still reaches the same native KCC,
+ // real projectile and BRELLA/DUALIES action paths exactly once.
+ emit('canvas','pointerdown',{button:0});
+ emit('canvas','pointerup',{button:0});
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ expect([input.consumePrimaryPressed(),input.consumeSecondaryPressed()])
+  .toEqual([true,true]);
+ expect([input.consumePrimaryPressed(),input.consumeSecondaryPressed()])
+  .toEqual([false,false]);
+ expect(input.primaryPressSequence).toBe(initialPrimarySequence+1);
+});

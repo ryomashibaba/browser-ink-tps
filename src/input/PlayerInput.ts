@@ -146,6 +146,12 @@ export class PlayerInput {
 
     canvas.addEventListener('pointerdown', (event) => {
       if(this.sourcePrestartBlocked)return;
+      // Genuine SOURCE mouse shortcuts are not weapon inputs. Keyboard
+      // shortcut-modified WASD/F/G is already ignored above, but modified
+      // left/right clicks must likewise never fire, dodge or raise a shield.
+      // T20 and explicit deterministic QA preserve their previous behavior.
+      if(this.sourceNativeRepeatGuard &&
+         (event.altKey||event.ctrlKey||event.metaKey))return;
       // The first left click is reserved for acquiring pointer lock.
       // Fire only once the game already owns the mouse.
       if (
