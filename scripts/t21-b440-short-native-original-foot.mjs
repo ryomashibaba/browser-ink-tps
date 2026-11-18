@@ -25,6 +25,7 @@ import {validateB484ModeSpecificHud} from './t21-v28-qa-b484-hud-gate.mjs';
 import {classifyRealNativeHpSnapshot} from './t21-v28-qa-real-hp-witness.mjs';
 import {auditSourceRealGameplayBlockers} from './t21-v28-qa-native-playability-blockers.mjs';
 import {sampleRealSourceCombat,auditRealSourceCombatFrames} from './t21-v28-qa-native-combat-window.mjs';
+import {auditLiveA3SourceGoalEvidence} from './t21-native-a3-front-evidence.mjs';
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
@@ -4377,12 +4378,17 @@ async function main(){
    evidence.closestOriginalApprovedGoalMeters=
     a3.minimumObservedGoalDistanceMeters;
    evidence.realApprovedGoalSamples=a3.closestObservationCount;
-   evidence.verifiedSourceOnlyGoalPass=
-    evidence.enabled===true&&
-    evidence.actualOriginalGoalsAuthorized===1&&
-    evidence.actualNativeGoalRequests>0&&
-    a3.closestObservationCount>0&&
-    Number.isFinite(displacement)&&displacement>.5;
+   // A3 may already have strictly authorized B445 SOURCE goals.
+   // B448's fresh-goal fallback runs ONLY when that original list is empty.
+   // Real KCC movement and genuine native requests are still mandatory.
+   const a3InitialGate=proof.b441NativeEvidence.b445LastOriginalGateByCpu
+    ?.find(g=>g.id==='A3');
+   const a3Audit=auditLiveA3SourceGoalEvidence({
+    source:proof.b441NativeEvidence.source,
+    evidence,initialGate:a3InitialGate,observed:a3
+   });
+   evidence.verifiedSourceOnlyGoalPass=a3Audit.pass;
+   evidence.originalApprovedGoalBasis=a3Audit.basis;
    if(!evidence.verifiedSourceOnlyGoalPass)
     fail('B448_REAL_A3_NATIVE_ORIGINAL_GOAL_OR_MOVEMENT_HOLD');
   }

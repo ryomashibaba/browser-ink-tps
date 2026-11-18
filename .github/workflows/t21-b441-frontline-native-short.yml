@@ -7,6 +7,8 @@ on:
       - 'scripts/f4_phive_original_collision_probe.py'
       - 'scripts/test_f4_phive_original_collision_probe.py'
       - 'scripts/t21-b440-short-native-original-foot.mjs'
+      - 'scripts/t21-native-a3-front-evidence.mjs'
+      - 'scripts/t21-native-a3-front-evidence.test.mjs'
       - 'scripts/t21-b492-source-height-isolation.mjs'
       - 'scripts/t21-b492-source-height-isolation.test.mjs'
       - 'src/stage/undertow/UndertowB493OriginalCpuKccReplay.test.ts'
@@ -446,6 +448,7 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[k3-one-world]') }}
         run: |
           node --check scripts/t21-b440-short-native-original-foot.mjs
+          node --test scripts/t21-native-a3-front-evidence.test.mjs
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
           node --check scripts/t21-b452-native-foot-vs-recast-audit.mjs
           node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs
