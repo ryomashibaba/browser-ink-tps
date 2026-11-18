@@ -44,8 +44,11 @@ export function b485MayDwellAtTrueOriginalA1Arrival(x:Readonly<{
     x.goal.length!==3||x.physicalFoot.length!==3||
     !x.goal.every(Number.isFinite)||!x.physicalFoot.every(Number.isFinite))
    return false;
- return x.goal[2]>=33&&
-  Math.abs(x.physicalFoot[1]-x.goal[1])<=.25&&
-  Math.hypot(x.physicalFoot[0]-x.goal[0],
-             x.physicalFoot[2]-x.goal[2])<=1.5;
+ // Length and finiteness have been checked above; TS with
+ // noUncheckedIndexedAccess still needs explicit element refinement.
+ const gx=x.goal[0]!,gy=x.goal[1]!,gz=x.goal[2]!;
+ const fx=x.physicalFoot[0]!,fy=x.physicalFoot[1]!,
+  fz=x.physicalFoot[2]!;
+ return gz>=33&&Math.abs(fy-gy)<=.25&&
+  Math.hypot(fx-gx,fz-gz)<=1.5;
 }
