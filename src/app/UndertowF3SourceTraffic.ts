@@ -1037,6 +1037,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  b471RequestTruePlayerOriginalAllyCoverage(
   b485StrictActualB441Repeat=false
  ):boolean{
+  // The same genuine native A1 cannot own two player-issued ORIGINAL
+  // destination checks at once. B193 previously overwrote REQUESTED or
+  // MOVING orders on a second *physical* C tap, even after OS autorepeat
+  // was removed. Keep that real in-flight command/counters/foot intact;
+  // a fresh C press is legal again only after B471 itself has ended it.
+  // B441 also retains its independent 30-tick B485 terminal cooldown.
+  if(this.b471AllyOrder)return false;
   // Separate B193 ALLY_SYNC retains its identical original B471 flow.
   // Only B441 real player commands enforce a 30-tick completed-order
   // cooldown. A key while MOVING cannot overwrite genuine A1 motion.
