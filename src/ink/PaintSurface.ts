@@ -264,7 +264,7 @@ export class PaintSurface {
    * Canonical world -> PaintSurface conversion.
    * Gameplay sampling and hit resolution must use this instead of duplicating basis math.
    */
-  public projectWorldPoint(point: Vec3): SurfaceProjection {
+  public projectWorldPoint(point: Vec3, out?: SurfaceProjection): SurfaceProjection {
     // Original basis projection in scalar form avoids allocating a Vec3
     // for every sampled registered floor. This is a hot path for SOURCE
     // CPU ink searches and the player's authentic Rapier-supported foot.
@@ -278,18 +278,24 @@ export class PaintSurface {
     const v = dx * this.vAxis.x + dy * this.vAxis.y +
       dz * this.vAxis.z + this.heightMeters * 0.5;
     const epsilon = 1e-4;
-    return {
-      u,
-      v,
-      signedPlaneDistance,
-      planeDistance: Math.abs(signedPlaneDistance),
-      inside:
-        u >= -epsilon &&
-        v >= -epsilon &&
-        u <= this.widthMeters + epsilon &&
-        v <= this.heightMeters + epsilon &&
-        (!this.footprint || pointInStageFootprint(u, v, this.footprint))
-    };
+    const planeDistance = Math.abs(signedPlaneDistance);
+    const inside =
+      u >= -epsilon &&
+      v >= -epsilon &&
+      u <= this.widthMeters + epsilon &&
+      v <= this.heightMeters + epsilon &&
+      (!this.footprint || pointInStageFootprint(u, v, this.footprint));
+    // Only the SOURCE sampling hot path supplies a reusable result.
+    // All existing callers still receive an independent projection object.
+    if (out) {
+      out.u = u;
+      out.v = v;
+      out.signedPlaneDistance = signedPlaneDistance;
+      out.planeDistance = planeDistance;
+      out.inside = inside;
+      return out;
+    }
+    return { u, v, signedPlaneDistance, planeDistance, inside };
   }
 
   public assertCoordinateRoundTrip(tolerance = 1e-5): number {

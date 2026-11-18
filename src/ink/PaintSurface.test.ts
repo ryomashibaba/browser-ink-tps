@@ -676,3 +676,65 @@ describe('original SOURCE sampling hot-path conservative culling',()=>{
   }
  });
 });
+
+
+describe('SOURCE 180s continuous actor ink hot path', () => {
+  it('keeps each true foot sample independent while reusing internal projection storage', () => {
+    const ink = new GameplayInkSystem();
+    const first = new PaintSurface('registered-source-left',
+      new Vec3(0, 3, 0), new Vec3(1, 0, 0), new Vec3(0, 0, 1),
+      4, 4, .25, SurfaceFlags.Paintable | SurfaceFlags.Floor, 8);
+    const second = new PaintSurface('registered-source-right',
+      new Vec3(8, 3, 0), new Vec3(1, 0, 0), new Vec3(0, 0, 1),
+      4, 4, .25, SurfaceFlags.Paintable | SurfaceFlags.Floor, 8);
+    ink.registerSurface(first);
+    ink.registerSurface(second);
+    const leftFoot = first.localToWorld(1.25, 1.75);
+    const rightFoot = second.localToWorld(3.25, 2.25);
+    const independent = first.projectWorldPoint(leftFoot);
+    const scratch = { u: -1, v: -1, signedPlaneDistance: -1,
+      planeDistance: -1, inside: false };
+    expect(first.projectWorldPoint(leftFoot, scratch)).toBe(scratch);
+    expect(scratch).toEqual(independent);
+    const left = ink.sampleWorld(leftFoot, .4, SurfaceFlags.Paintable);
+    const right = ink.sampleWorld(rightFoot, .4, SurfaceFlags.Paintable);
+    expect(left?.surface).toBe(first);
+    expect(right?.surface).toBe(second);
+    expect(left).toMatchObject({
+      surface: first, u: 1.25, v: 1.75, owner: Team.Neutral
+    });
+    expect(right).toMatchObject({
+      surface: second, u: 3.25, v: 2.25, owner: Team.Neutral
+    });
+    expect(left).not.toBe(right);
+    expect(independent).toEqual(first.projectWorldPoint(leftFoot));
+    expect(ink.snapshot().areaA).toBe(0);
+    expect(ink.snapshot().areaB).toBe(0);
+  });
+
+  it('does not leak dirty-tile decisions between consecutive real ink hits', () => {
+    const ink = new GameplayInkSystem();
+    const floor = new PaintSurface('registered-unscored-ink',
+      new Vec3(0, 0, 0), new Vec3(1, 0, 0), new Vec3(0, 0, 1),
+      4, 4, 1, SurfaceFlags.Paintable | SurfaceFlags.Floor, 2);
+    ink.registerSurface(floor);
+    const hit = (tick: number, centerU: number, team: Team.A | Team.B) =>
+      ink.apply({
+        tick, source: PaintSource.Human, team, surfaceId: floor.id,
+        centerU, centerV: .5, radiusU: .45, radiusV: .45,
+        angle: 0, strength: 1, type: PaintEventType.Impact
+      });
+    const first = hit(1, .5, Team.A);
+    expect([first.changedCells, first.dirtyTilesTouched]).toEqual([1, 1]);
+    const repaint = hit(2, .5, Team.A);
+    expect([repaint.changedCells, repaint.dirtyTilesTouched]).toEqual([0, 0]);
+    const other = hit(3, 2.5, Team.B);
+    expect([other.changedCells, other.dirtyTilesTouched]).toEqual([1, 1]);
+    const override = hit(4, .5, Team.B);
+    expect([override.changedCells, override.dirtyTilesTouched]).toEqual([1, 1]);
+    expect(floor.ownerGrid[floor.index(0, 0)]).toBe(Team.B);
+    expect(floor.ownerGrid[floor.index(2, 0)]).toBe(Team.B);
+    expect(ink.snapshot().areaA).toBe(0);
+    expect(ink.snapshot().areaB).toBe(0);
+  });
+});

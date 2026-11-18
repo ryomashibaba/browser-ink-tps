@@ -1,7 +1,7 @@
 import { Vec3 } from 'playcanvas';
 import type { PaintEvent, TurfSnapshot } from './types';
 import { SurfaceFlags, Team } from './types';
-import type { PaintSurface } from './PaintSurface';
+import type { PaintSurface, SurfaceProjection } from './PaintSurface';
 
 /** Contiguous authority-approved raster cells, including same-team repaint. */
 export interface PaintRasterRun {
@@ -38,6 +38,14 @@ export class GameplayInkSystem {
   private readonly sampleBounds: Array<{
     surface: PaintSurface; radiusMeters: number
   }> = [];
+  // One synchronous 60Hz foot sample uses this for all nearby SOURCE planes.
+  // Never expose the scratch; public sampleWorld returns a fresh final value.
+  private readonly sampleProjection: SurfaceProjection = {
+    u: 0, v: 0, signedPlaneDistance: 0, planeDistance: 0, inside: false
+  };
+  // One authoritative brush is fully processed before the next. Avoid a new
+  // Set for every real CPU/HUMAN ink hit over a continuous 180s match.
+  private readonly touchedTilesScratch = new Set<number>();
   private areaA = 0;
   private areaB = 0;
   private totalScoreableArea = 0;
@@ -76,7 +84,12 @@ export class GameplayInkSystem {
     excludedFlags = 0,
     acceptSurface?: (surface: PaintSurface) => boolean
   ): GameplayInkSample | null {
-    let best: GameplayInkSample | null = null;
+    let bestSurface: PaintSurface | null = null;
+    let bestOwner = Team.Neutral;
+    let bestFlags = 0;
+    let bestU = 0;
+    let bestV = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const {surface,radiusMeters} of this.sampleBounds) {
       if (acceptSurface && !acceptSurface(surface)) continue;
@@ -92,7 +105,7 @@ export class GameplayInkSystem {
         const limit=radiusMeters+maxPlaneDistance;
         if (dx*dx+dy*dy+dz*dz>limit*limit) continue;
       }
-      const projected = surface.projectWorldPoint(point);
+      const projected = surface.projectWorldPoint(point, this.sampleProjection);
       if (projected.planeDistance > maxPlaneDistance || !projected.inside) continue;
 
       const u = Math.min(surface.widthMeters, Math.max(0, projected.u));
@@ -105,19 +118,20 @@ export class GameplayInkSystem {
       const cellFlags = surface.flagsGrid[index] ?? 0;
       if (cellFlags === 0 || (cellFlags & requiredFlags) !== requiredFlags ||
           (cellFlags & excludedFlags) !== 0) continue;
-      const candidate: GameplayInkSample = {
-        surface,
-        owner: surface.ownerGrid[index] as Team,
-        flags: cellFlags,
-        u,
-        v,
-        planeDistance: projected.planeDistance
-      };
-
-      if (!best || candidate.planeDistance < best.planeDistance) best = candidate;
+      if (!bestSurface || projected.planeDistance < bestDistance) {
+        bestSurface = surface;
+        bestOwner = surface.ownerGrid[index] as Team;
+        bestFlags = cellFlags;
+        bestU = u;
+        bestV = v;
+        bestDistance = projected.planeDistance;
+      }
     }
 
-    return best;
+    return bestSurface
+      ? { surface: bestSurface, owner: bestOwner, flags: bestFlags,
+          u: bestU, v: bestV, planeDistance: bestDistance }
+      : null;
   }
 
   public apply(event: PaintEvent): PaintApplyResult {
@@ -177,7 +191,8 @@ export class GameplayInkSystem {
     let rasterAlreadyTeamOwnedCells = 0;
     let testedCells = 0;
     let scoreableAreaMeters2Changed = 0;
-    const touchedTiles = new Set<number>();
+    const touchedTiles = this.touchedTilesScratch;
+    touchedTiles.clear();
     const paintableRuns: PaintRasterRun[] = [];
 
     for (let y = minY; y <= maxY; y += 1) {
