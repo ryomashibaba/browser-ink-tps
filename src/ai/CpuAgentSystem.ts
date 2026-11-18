@@ -7,7 +7,7 @@ import {decorateB248Actor} from '../app/B248SourceActorVisuals';
 import { PLAYER_CHARACTER_PHYSICS } from '../player/PlayerCharacterPhysics';
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
-import type { GameplayInkSystem } from '../ink/GameplayInkSystem';
+import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
 import type { PaintCoordinator } from '../ink/PaintCoordinator';
 import { PaintEventType, PaintSource, SurfaceFlags, Team } from '../ink/types';
 import { CpuTacticalDirector, type CpuRole } from './CpuTacticalDirector';
@@ -3894,6 +3894,27 @@ export class CpuAgentSystem {
     if(proposals.length===0)return null;
     const muzzle={x:bot.position.x,
       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:bot.position.z};
+    const profile=weaponProfile(bot.weaponId);
+    // B180's first genuine unowned neighbor need not have a usable
+    // source-stage firing line. Backfill is a bounded, weapon-ready fallback:
+    // try other ACTIVE cells on the SAME original PaintSurface, not a new
+    // projectile, floor, nav link or false HP contact. Reject each candidate
+    // through the existing range + registered Rapier first-blocker checks.
+    const visibleOwnNeighbor=(sample:GameplayInkSample,
+      maxHeightDifference:number,vertical:boolean):Vec3|null=>
+      b180OriginalSourceUnownedNeighborAim(sample,bot.team,aim=>{
+       if(![aim.x,aim.y,aim.z].every(Number.isFinite)||
+          Math.abs(aim.y-bot.position.y)>maxHeightDifference||
+          !this.cpuTargetInRange(bot,aim,profile))return false;
+       this.b216RealOriginalFloorSightChecks++;
+       if(this.b216SourceStageAimValidated!(muzzle,aim,bot.position))
+        return true;
+       if(vertical)this.selectedSourceVerticalSightVetoes=
+        (this.selectedSourceVerticalSightVetoes??0)+1;
+       if(this.b215SelectedBattlePaintPacing)
+        this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
+       return false;
+      });
     let best:Vec3|null=null,opportunity=0;
     let bestReachedGoalShortRadius=false;
     let bestCenterAlreadyOwned=false;
@@ -3915,7 +3936,7 @@ export class CpuAgentSystem {
        .28,SurfaceFlags.Paintable,SurfaceFlags.Wall);
       if(!sample||sample.surface.isScoreable)continue;
       const ownedNeighbor=sample.owner===bot.team?
-       b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+       visibleOwnNeighbor(sample,.35,false):null;
       if(sample.owner===bot.team&&!ownedNeighbor)continue;
       const candidate=ownedNeighbor??
        sample.surface.localToWorld(sample.u,sample.v);
@@ -3925,15 +3946,16 @@ export class CpuAgentSystem {
            bot,candidate,weaponProfile(bot.weaponId)))continue;
       const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
       if(value<=opportunity)continue;
-      this.b216RealOriginalFloorSightChecks++;
-      if(!this.b216SourceStageAimValidated(muzzle,candidate,
-        bot.position)){
-        // The frontal sight-veto counter cannot see this independent
-        // ORIGINAL physical-foot backfill check. Attribute its rejection
-        // to this actual CPU without altering the ray or target decision.
+      // OWN neighbors have already passed the exact live Rapier shot ray
+      // in visibleOwnNeighbor. An unowned center still gets its old ray.
+      if(!ownedNeighbor){
+       this.b216RealOriginalFloorSightChecks++;
+       if(!this.b216SourceStageAimValidated(muzzle,candidate,
+          bot.position)){
         if(this.b215SelectedBattlePaintPacing)
           this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
         continue;
+       }
       }
       best=candidate;opportunity=value;
       bestReachedGoalShortRadius=proposed.radiusMeters===1.7;
@@ -3959,7 +3981,7 @@ export class CpuAgentSystem {
         this.selectedSourceVerticalCandidateMatches=
          (this.selectedSourceVerticalCandidateMatches??0)+1;
         const neighbor=sample.owner===bot.team?
-         b180OriginalSourceUnownedNeighborAim(sample,bot.team):null;
+         visibleOwnNeighbor(sample,2,true):null;
         if(sample.owner===bot.team&&!neighbor)continue;
         const candidate=neighbor??floor.localToWorld(sample.u,sample.v);
         if(![candidate.x,candidate.y,candidate.z]
@@ -3969,13 +3991,15 @@ export class CpuAgentSystem {
              weaponProfile(bot.weaponId)))continue;
         const value=b180OriginalSourcePatchOpportunity(sample,bot.team);
         if(value<=opportunity)continue;
-        this.b216RealOriginalFloorSightChecks++;
-        if(!this.b216SourceStageAimValidated(muzzle,candidate,bot.position)){
-         this.selectedSourceVerticalSightVetoes=
-          (this.selectedSourceVerticalSightVetoes??0)+1;
-         if(this.b215SelectedBattlePaintPacing)
-          this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
-         continue;
+        if(!neighbor){
+         this.b216RealOriginalFloorSightChecks++;
+         if(!this.b216SourceStageAimValidated(muzzle,candidate,bot.position)){
+          this.selectedSourceVerticalSightVetoes=
+           (this.selectedSourceVerticalSightVetoes??0)+1;
+          if(this.b215SelectedBattlePaintPacing)
+           this.b215ReadOnlyInkRow(bot.id).backfillStageSightVetoes++;
+          continue;
+         }
         }
         best=candidate;opportunity=value;
         bestWasRegisteredDifferentHeight=true;

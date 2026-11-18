@@ -14,6 +14,8 @@ on:
       # Original-source CPU life, F2 re-entry and physical HP changes
       # must re-run the SAME genuine native 180s world, not unit QA alone.
       - 'src/app/UndertowF3SourceTraffic.ts'
+      # Real CPU weapon/paint aim changes need the same native round.
+      - 'src/ai/CpuAgentSystem.ts'
       - 'src/app/B367RealCpuCombatTimeline.ts'
       - 'src/app/B367RealCpuCombatTimeline.test.ts'
       - 'src/projectile/ProjectileSystem.ts'
