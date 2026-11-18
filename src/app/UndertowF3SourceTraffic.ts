@@ -1691,6 +1691,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
        this.b471SourceDecision='ORIGINAL_ARRIVAL_UNSUPPORTED';
       }
       this.b471AllyOrder=null;
+      // An actual arrival OR unsupported arrival terminates the current
+      // native goal decision. Otherwise the normal patrol below could
+      // immediately supersede the genuine C-key order before A1's next
+      // 120-tick Rapier-supported dwell check. A false result causes
+      // CpuAgentSystem to reset its previous native Crowd target.
+      return false;
      }else{
       const path=this.nav.auditPath(realFoot,playerOrder.goal);
       if(this.hasSourceFootSupport(realFoot)&&
@@ -1705,6 +1711,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
       this.b471RejectedOriginalRoutes++;
       this.b471AllyOrder=null;this.b471OrderStatus='HOLD';
       this.b471SourceDecision='ORIGINAL_PATH_LOST';
+      // Do not replace a failed original path with a different patrol
+      // target during this same tactical decision.
+      return false;
      }
     }
    }

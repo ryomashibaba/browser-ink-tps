@@ -250,6 +250,59 @@ describe('F3B playable 8-actor original source runtime',()=>{
     (p.flags&SurfaceFlags.Scoreable)===0)).toBe(true);
   }finally{physics.world.free()}
  });
+ it('stops the same native Crowd decision on a genuinely supported A1 C-order arrival, then preserves original dwell',()=>{
+  const stage=undertowT21dConnectivityQaStage();
+  const physics=new RapierStagePhysics(DT,stage);
+  try{
+   physics.step();
+   // Previously observed real-Chromium A1 SOURCE foot. A completed
+   // physical order is allowed to end at the actual grounded foot.
+   // This is a source-decision regression, not a new route certificate.
+   const foot=new Vec3(.70249,3.1,55.30735);
+   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+   expect(physics.castCharacterFootSupport(
+    new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN')?.solidId)
+    .toMatch(/^UndertowT21D:/);
+   const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+   Object.assign(source,{
+    stage,physics,sourceInk:{},
+    bots:[{id:'A1',team:Team.A,position:foot,
+     lifeState:'ACTIVE',mobilityState:'GROUND',hp:100}],
+    freeCombat:true,respawnOriginalDrops:new Set(),
+    physicallyRejoined:new Set(['A1']),
+    patrolGoals:new Map([['A1',[foot.clone()]]]),
+    originalSourceRecoveryIntent:new Set(),
+    b443OriginalGoalLocks:new Map(),b442LastApprovedFront:new Map(),
+    b137NativeTick:1200,b171AllySyncPracticeRunning:true,
+    enableB137OriginalAllyRally:true,
+    enableB150AllySupportInk:true,enableB192HumanCombat:false,
+    enableOriginalSourceBattleRecovery:false,
+    b471AllyOrder:{requestedTick:1190,goal:foot.clone(),
+     realAllyFootAtApproval:foot.clone()},
+    b471ArrivedOriginalDwell:null,b471OrderStatus:'MOVING',
+    b471SourceDecision:'ORIGINAL_GOAL_GRANTED',
+    b471ActualOriginalArrivals:0,sourceEndpointProbes:0,
+    nav:{auditPath:()=>({reachedTarget:false,
+     startSnapDistanceMeters:0,endSnapDistanceMeters:0})}
+   });
+   const output=new Vec3(91,92,93);
+   expect(source.chooseSourceGoal('A1',foot,output)).toBe(false);
+   expect(output.equals(new Vec3(91,92,93))).toBe(true);
+   expect(source.b471AllyOrder).toBeNull();
+   expect(source.b471OrderStatus).toBe('ARRIVED');
+   expect(source.b471ActualOriginalArrivals).toBe(1);
+   expect(source.b471ArrivedOriginalDwell.goal.equals(foot)).toBe(true);
+   source.b137NativeTick=1201;
+   expect(source.chooseSourceGoal('A1',foot,output)).toBe(false);
+   expect(source.b471OrderStatus).toBe('ARRIVED');
+   expect(source.b471ActualOriginalArrivals).toBe(1);
+   expect(stage.solids).toHaveLength(25);
+   expect(stage.paintSurfaces).toHaveLength(17);
+   expect(stage.navigationLinks).toHaveLength(26);
+   expect(stage.paintSurfaces.some(s=>
+    (s.flags&SurfaceFlags.Scoreable)!==0)).toBe(false);
+  }finally{physics.world.free()}
+ });
  for(const humanWalkTicks of [0,28,60,120,180,240])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{
