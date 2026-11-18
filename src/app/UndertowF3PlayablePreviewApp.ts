@@ -163,7 +163,8 @@ import {W10B62NativeSessionEvidence} from './UndertowF3NativeSessionEvidence';
 import {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
 import {W10B112HumanGroundLedger,
  b112NativeHumanKeysEvidenceAllowed} from './W10B112HumanGroundLedger';
-import {auditB114OriginalFootprint} from './W10B114OriginalFootprintAudit';
+import {auditB114OriginalFootprint,b114NeedsFullOriginalPerimeterWitness}
+ from './W10B114OriginalFootprintAudit';
 import {inspectB120OriginalFirstDropBoundary} from './W10B120OriginalSourceBoundary';
 import {sourceNativeInputProjection,sourceNativeEditingHotkeyTarget}
  from './SourceNativeInputProjection';
@@ -6053,7 +6054,23 @@ export class UndertowF3PlayablePreviewApp{
       gapMeters:support?Number((bodyFootY-support.point.y).toFixed(6)):null
      };
      const mode=this.player.currentMode;
-     const sourceFootprint=auditB114OriginalFootprint({
+     // B114 perimeter rays are forensic, not Rapier KCC input. The real
+     // centre ray and every 60Hz body/ground/keyboard witness remain intact.
+     // At an unsafe original edge or on loss of ground, recover all five
+     // native rays this very tick; explicitly selected QA is unchanged.
+     const fullPerimeter=b114NeedsFullOriginalPerimeterWitness({
+      tick:frame,
+      canonicalLivePlaying:this.nativeLiveSourcePrestart&&
+       this.nativeVerifiedStageVisualEligible&&
+       this.matchState==='PLAYING'&&!this.paused&&!this.stopReason,
+      realKccGrounded:this.stats.playerGrounded,
+      centerSourceSolidId:centerSupport.sourceSolidId,
+      centerFootGapMeters:centerSupport.gapMeters,
+      knownOriginalEdgeRisk:this.p1LowerEdgeRisk!==null||
+       (this.p1LiveLocalRampCue!==null&&
+        this.p1LiveLocalRampCue.state!=='OFF')
+     });
+     const sourceFootprint=fullPerimeter?auditB114OriginalFootprint({
       tick:frame,body:[physical.x,physical.y,physical.z],mode,
       capsuleRadiusMeters:mode==='HUMAN'?
        PLAYER_CHARACTER_PHYSICS.humanRadiusMeters:
@@ -6067,7 +6084,7 @@ export class UndertowF3PlayablePreviewApp{
        return {sourceSolidId:hit?.solidId??null,
         gapMeters:hit?Number((bodyFootY-hit.point.y).toFixed(6)):null};
       }
-     });
+     }):undefined;
      this.b112GroundLedger.observe({
       tick:frame,center:[physical.x,physical.y,physical.z],
       grounded:this.stats.playerGrounded,mode,

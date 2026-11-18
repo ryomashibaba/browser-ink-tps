@@ -85,3 +85,25 @@ export function auditB114OriginalFootprint(args:{
   originalFloorHoleCertified:false,genuineCapsuleContactCertified:false
  };
 }
+
+/**
+ * Normal canonical SOURCE game: keep a genuine registered CENTER support
+ * ray on EVERY physics tick, but the four forensic perimeter rays only
+ * need a 100ms sample when the actual KCC is safely grounded. Return to
+ * five native Rapier rays IMMEDIATELY for unknown support, a drop/airborne
+ * foot or a previously observed original edge. Explicit QA and any other
+ * SOURCE/non-SOURCE paths keep their existing full-rate five-ray audit.
+ * This is read-only sampling, not a collision, path or floor permission.
+ */
+export function b114NeedsFullOriginalPerimeterWitness(x:{
+ tick:number;canonicalLivePlaying:boolean;realKccGrounded:boolean;
+ centerSourceSolidId:string|null;centerFootGapMeters:number|null;
+ knownOriginalEdgeRisk:boolean;
+}):boolean{
+ if(!x.canonicalLivePlaying||!Number.isSafeInteger(x.tick)||x.tick<0||
+  !x.realKccGrounded||!x.centerSourceSolidId||
+  x.centerFootGapMeters===null||!Number.isFinite(x.centerFootGapMeters)||
+  Math.abs(x.centerFootGapMeters)>.12||x.knownOriginalEdgeRisk)
+  return true;
+ return x.tick%6===0;
+}

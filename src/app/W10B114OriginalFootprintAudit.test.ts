@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {auditB114OriginalFootprint,type B114RayContact}
+import {auditB114OriginalFootprint,b114NeedsFullOriginalPerimeterWitness,
+ type B114RayContact}
  from './W10B114OriginalFootprintAudit';
 const none:B114RayContact={sourceSolidId:null,gapMeters:null};
 function audit(center:B114RayContact,probe:(dx:number,dz:number)=>B114RayContact,
@@ -50,5 +51,36 @@ describe('W10-B114 authentic KCC-width source-foot evidence',()=>{
    body:[0,NaN,0],mode:'HUMAN',capsuleRadiusMeters:.4,
    center:none,originalRapierProbe:()=>none}))
    .toThrow('B114_INVALID_GENUINE_SOURCE_FOOTPRINT_INPUT');
+ });
+});
+
+
+describe('canonical SOURCE uses five-ray forensic detail only when physically needed',()=>{
+ const stable=(tick:number)=>({
+  tick,canonicalLivePlaying:true,realKccGrounded:true,
+  centerSourceSolidId:'UndertowT21D:first-drop-landing-positive-z',
+  centerFootGapMeters:.025,knownOriginalEdgeRisk:false
+ });
+ it('preserves 60Hz original center ray and samples additional four rays at 10Hz',()=>{
+  const due=Array.from({length:60},(_,i)=>
+   b114NeedsFullOriginalPerimeterWitness(stable(120+i)));
+  expect(due.filter(Boolean)).toHaveLength(10);
+  expect(due[0]).toBe(true);
+  expect(due[1]).toBe(false);
+  expect(due[6]).toBe(true);
+  // Only the supplementary four rays are skipped on 50 supported ticks.
+  expect(50*4).toBe(200);
+ });
+ it('never decimates five rays during unsafe support, actual fall or explicit QA',()=>{
+  const b=stable(121); // normally skipped when truly grounded
+  for(const changed of [
+   {canonicalLivePlaying:false},{realKccGrounded:false},
+   {centerSourceSolidId:null},{centerSourceSolidId:''},
+   {centerFootGapMeters:null},{centerFootGapMeters:.121},
+   {centerFootGapMeters:-.121},{centerFootGapMeters:NaN},
+   {knownOriginalEdgeRisk:true},{tick:-1},{tick:1.5}
+  ])expect(b114NeedsFullOriginalPerimeterWitness({...b,...changed})).toBe(true);
+  expect(b114NeedsFullOriginalPerimeterWitness(b)).toBe(false);
+  expect(b114NeedsFullOriginalPerimeterWitness(stable(126))).toBe(true);
  });
 });
