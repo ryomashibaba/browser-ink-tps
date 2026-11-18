@@ -4794,7 +4794,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
-    this.sourceCrowdRecoveryFoot.delete(bot.id);
+    this.sourceCrowdRecoveryFoot?.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
@@ -4861,7 +4861,7 @@ export class CpuAgentSystem {
     this.sourceLastAdmittedRouteGoal.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
-    this.sourceCrowdRecoveryFoot.delete(bot.id);
+    this.sourceCrowdRecoveryFoot?.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
