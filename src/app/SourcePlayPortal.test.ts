@@ -695,3 +695,24 @@ describe('genuine SOURCE launch menu remains readable without platform Japanese 
   expect(html).toContain('src="/src/source-play-main.ts"');
  });
 });
+
+
+describe('real native SOURCE B389 replay uses live registered surface scoreability',()=>{
+ it('both actual F3 replay paths forward measured scoreable surfaces',()=>{
+  const source=readFileSync(
+   new URL('./UndertowF3PlayablePreviewApp.ts',import.meta.url),'utf8');
+  const starts=[...source.matchAll(
+   /b389NativeNewRoundHref\(window\.location\.href,\{/g
+  )].map(m=>m.index!);
+  expect(starts).toHaveLength(2);
+  for(const start of starts){
+   const end=source.indexOf('});',start);
+   expect(end).toBeGreaterThan(start);
+   const call=source.slice(start,end);
+   expect(call).toContain('sourceBoundary:[');
+   expect(call).toContain(
+    'this.b45SourceSurfaces.filter(s=>s.isScoreable).length');
+   expect(call).not.toMatch(/navigationLinks\?\.length\?\?0,\s*0\]/);
+  }
+ });
+});

@@ -5297,7 +5297,8 @@ export class UndertowF3PlayablePreviewApp{
      weaponId:this.projectiles.currentPlayerWeapon.id,
      sourceBoundary:[this.rawStage.solids.length,
       this.rawStage.paintSurfaces.length,
-      this.rawStage.navigationLinks?.length??0,0]
+      this.rawStage.navigationLinks?.length??0,
+      this.b45SourceSurfaces.filter(s=>s.isScoreable).length]
     });
     if(url)window.location.assign(url);
    }
@@ -5322,7 +5323,8 @@ export class UndertowF3PlayablePreviewApp{
     weaponId:this.projectiles.currentPlayerWeapon.id,
     sourceBoundary:[this.rawStage.solids.length,
      this.rawStage.paintSurfaces.length,
-     this.rawStage.navigationLinks?.length??0,0]
+     this.rawStage.navigationLinks?.length??0,
+      this.b45SourceSurfaces.filter(s=>s.isScoreable).length]
    });
    if(url){window.location.assign(url);return}
   }
