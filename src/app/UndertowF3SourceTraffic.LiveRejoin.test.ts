@@ -495,6 +495,73 @@ describe('native physically vetoed original CPU goal escape',()=>{
  });
 });
 
+
+it('clears stale B1-B4 real-KCC denial after accumulated 25cm movement in true sub-2.5cm steps',()=>{
+ // Controlled original-actor 60Hz KCC witness: no actor is teleported
+ // by the SOURCE authority, no route or unsupported floor is created.
+ for(const id of ['B1','B2','B3','B4']){
+  const foot=new Vec3(-6,4.6,-48);
+  const bot={id,team:Team.B,position:foot.clone(),agent:{},
+   mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+  Object.assign(source,{
+   stage:{metadata:{id:'undertow-t21d-partial-connectivity-qa'}},
+   bots:[bot],enableB441SourceFrontline:true,
+   physicallyRejoined:new Set([id]),realKccRejectedSteps:new Map(),
+   realKccBTeamRecoveryAnchor:new Map(),
+   realKccLastActorBlocker:new Map(),
+   realKccB4Unsupported:new Map(),
+   hasSourceFootSupport:()=>true
+  });
+  source.noteRealSourceKccRejectedStep(id,foot);
+  expect(source.realKccRejectedSteps.get(id)).toBe(1);
+  expect(source.realKccBTeamRecoveryAnchor.get(id)?.equals(foot))
+   .toBe(true);
+  let previous=foot.clone();
+  // The zero-motion KCC acceptance cannot clear the denial.
+  source.noteRealSourceKccApprovedStep(id,previous,previous);
+  expect(source.realKccRejectedSteps.get(id)).toBe(1);
+  for(let n=1;n<=12;n++){
+   const next=new Vec3(foot.x+n*.0225,foot.y,foot.z);
+   expect(next.distance(previous)).toBeLessThan(.025);
+   bot.position.copy(next); // controlled fixture's observed physical foot
+   source.noteRealSourceKccApprovedStep(id,previous,next);
+   if(n<=11){
+    expect(source.realKccRejectedSteps.get(id)).toBe(1);
+    expect(source.realKccBTeamRecoveryAnchor.has(id)).toBe(true);
+   }else{
+    // 12 * 0.0225 = 0.27m actual XZ: genuine progress, not jitter.
+    expect(source.realKccRejectedSteps.has(id)).toBe(false);
+    expect(source.realKccBTeamRecoveryAnchor.has(id)).toBe(false);
+   }
+   previous=next;
+  }
+  source.noteRealSourceKccRejectedStep(id,previous);
+  expect(source.realKccRejectedSteps.get(id)).toBe(1);
+  expect(source.realKccBTeamRecoveryAnchor.get(id)?.equals(previous))
+   .toBe(true);
+ }
+});
+it('preserves legacy actor 2.5cm reset gate outside the original B-team KCC witness',()=>{
+ const foot=new Vec3(0,3,40);
+ const bot={id:'A3',team:Team.A,position:foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ Object.assign(source,{stage:{metadata:{
+  id:'undertow-t21d-partial-connectivity-qa'}},bots:[bot],
+  enableB441SourceFrontline:true,
+  physicallyRejoined:new Set(['A3']),
+  realKccRejectedSteps:new Map(),hasSourceFootSupport:()=>true
+ });
+ source.noteRealSourceKccRejectedStep('A3',foot);
+ source.noteRealSourceKccApprovedStep('A3',foot,
+  new Vec3(foot.x+.0225,foot.y,foot.z));
+ expect(source.realKccRejectedSteps.get('A3')).toBe(1);
+ source.noteRealSourceKccApprovedStep('A3',foot,
+  new Vec3(foot.x+.03,foot.y,foot.z));
+ expect(source.realKccRejectedSteps.has('A3')).toBe(false);
+});
+
 it('B441 B1 real KCC-stall tries only another strictly checked ORIGINAL path',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
  const foot=new Vec3(0,3.2,-40),old=new Vec3(0,3.2,-46),

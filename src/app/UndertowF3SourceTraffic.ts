@@ -1411,23 +1411,28 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(![previousFoot.x,previousFoot.y,previousFoot.z,
     acceptedFoot.x,acceptedFoot.y,acceptedFoot.z].every(Number.isFinite))
    return;
-  if(Math.hypot(previousFoot.x-acceptedFoot.x,
-     previousFoot.y-acceptedFoot.y,
-     previousFoot.z-acceptedFoot.z)>=.025){
-   // B1-B4: only TRUE KCC-grounded 25cm XZ progress from the first
-   // denied SOURCE foot clears a stalled-ramp witness. Tiny slope Y
-   // corrections, 3cm jitter and Crowd proxy motion are not recovery.
-   // Other actors and non-B441 modes keep their original behavior.
-   const anchor=(id==='B1'||id==='B2'||id==='B3'||id==='B4')&&
-    this.enableB441SourceFrontline?
-    this.realKccBTeamRecoveryAnchor?.get(id):null;
-   if(anchor&&Math.hypot(
-      acceptedFoot.x-anchor.x,acceptedFoot.z-anchor.z)<.25)return;
-   this.realKccRejectedSteps.delete(id);
-   this.realKccLastActorBlocker?.delete(id);
-   this.realKccB4Unsupported?.delete(id);
-   this.realKccBTeamRecoveryAnchor?.delete(id);
-  }
+  const stepMeters=Math.hypot(
+   previousFoot.x-acceptedFoot.x,
+   previousFoot.y-acceptedFoot.y,
+   previousFoot.z-acceptedFoot.z);
+  // B1-B4: a REAL series of sub-2.5cm Rapier-approved steps can
+  // exceed the 25cm horizontal recovery threshold (e.g. enemy-ink
+  // movement at 1.35m/s / 60Hz = 2.25cm/tick). The old per-frame
+  // 2.5cm gate stopped the cumulative check from EVER running.
+  // The anchor exists only after a genuine original-foot KCC rejection;
+  // tiny jitter/vertical adjustments and zero-motion calls still cannot
+  // erase that episode. Other actors retain the prior 2.5cm rule.
+  const anchor=(id==='B1'||id==='B2'||id==='B3'||id==='B4')&&
+   this.enableB441SourceFrontline?
+   this.realKccBTeamRecoveryAnchor?.get(id):null;
+  if(anchor){
+   if(stepMeters<=1e-6||Math.hypot(
+     acceptedFoot.x-anchor.x,acceptedFoot.z-anchor.z)<.25)return;
+  }else if(stepMeters<.025)return;
+  this.realKccRejectedSteps.delete(id);
+  this.realKccLastActorBlocker?.delete(id);
+  this.realKccB4Unsupported?.delete(id);
+  this.realKccBTeamRecoveryAnchor?.delete(id);
  }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
