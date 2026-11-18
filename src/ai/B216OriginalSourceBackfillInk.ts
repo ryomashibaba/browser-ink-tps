@@ -166,7 +166,15 @@ export function b216OriginalUnpaintedGridCandidates(
     weaponRangeMeters<1.3||minimumTargetMeters<1||
     minimumTargetMeters>weaponRangeMeters)return [];
  const radius=Math.min(12,weaponRangeMeters);
- const picked=new Map<number,{distanceSq:number;point:Vec3}>();
+ // Bound actual original-cell candidates to at most TWO per angular
+ // sector and near/far band. A blocked closest cell must not mask a
+ // different already-registered unpainted cell in that same sector.
+ // The caller independently checks true Rapier support, native weapon
+ // range and registered projectile line of sight before any paid shot.
+ const picked=new Map<number,{
+  nearest:{distanceSq:number;point:Vec3};
+  farthest:{distanceSq:number;point:Vec3};
+ }>();
  for(const surface of surfaces){
   if(!surface.id.startsWith('UndertowT21D:')||
      surface.isScoreable||
@@ -211,13 +219,27 @@ export function b216OriginalUnpaintedGridCandidates(
     const angle=(Math.atan2(dz,dx)+Math.PI)/(2*Math.PI);
     const sector=Math.min(15,Math.floor(angle*16));
     const key=sector+(distanceSq>25?16:0);
+    const current={distanceSq,point};
     const previous=picked.get(key);
-    if(!previous||distanceSq<previous.distanceSq)
-     picked.set(key,{distanceSq,point});
+    if(!previous){
+     picked.set(key,{nearest:current,farthest:current});
+    }else{
+     if(distanceSq<previous.nearest.distanceSq)
+      previous.nearest=current;
+     if(distanceSq>previous.farthest.distanceSq)
+      previous.farthest=current;
+    }
    }
   }
  }
- return [...picked.values()]
+ // Distinct near/far original cells (at least .9m radial separation)
+ // give the next genuine Rapier ray a different shot opportunity.
+ // At most 16 sectors x 2 radial bands x 2 cells = 64 proposals.
+ // No proposal itself authorizes physics, ink, or a scoreable surface.
+ return [...picked.values()].flatMap(bucket=>
+  Math.sqrt(bucket.farthest.distanceSq)-
+   Math.sqrt(bucket.nearest.distanceSq)>=.9?
+   [bucket.nearest,bucket.farthest]:[bucket.nearest])
   .sort((x,y)=>x.distanceSq-y.distanceSq)
   .map(x=>x.point);
 }

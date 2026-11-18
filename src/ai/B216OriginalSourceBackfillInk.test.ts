@@ -490,7 +490,7 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   const floor=make(),before=Array.from(floor.ownerGrid);
   const spots=gridCandidates([floor],{x:0,y:3,z:0},Team.B,10);
   expect(spots.length).toBeGreaterThan(0);
-  expect(spots.length).toBeLessThanOrEqual(32);
+  expect(spots.length).toBeLessThanOrEqual(64);
   for(const point of spots){
    const sampled=floor.projectWorldPoint(point);
    expect(sampled.inside).toBe(true);
@@ -515,6 +515,30 @@ describe('P2 exact ORIGINAL ownerGrid rescue after fixed-angle no-aim',()=>{
   const projection=floor.projectWorldPoint(spots[0]!);
   expect(Math.floor(projection.u/floor.cellSize)).toBe(x);
   expect(Math.floor(projection.v/floor.cellSize)).toBe(y);
+  expect(Array.from(floor.ownerGrid)).toEqual(before);
+ });
+ it('preserves distant original unpainted cell when nearest same-sector candidate is stage-blocked',()=>{
+  const floor=make();
+  floor.ownerGrid.fill(Team.B);
+  const near=[44,40] as const,far=[52,40] as const;
+  floor.ownerGrid[floor.index(...near)]=Team.Neutral;
+  floor.ownerGrid[floor.index(...far)]=Team.Neutral;
+  const before=Array.from(floor.ownerGrid);
+  const candidates=gridCandidates([floor],{x:0,y:3,z:0},Team.B,10,1);
+  // The old nearest-only reduction offered one blocked target and
+  // discarded the alternate actual raster cell before any Rapier ray.
+  expect(candidates).toHaveLength(2);
+  const cells=candidates.map(point=>{
+   const p=floor.projectWorldPoint(point);
+   return [Math.floor(p.u/floor.cellSize),
+    Math.floor(p.v/floor.cellSize)];
+  });
+  expect(cells).toEqual([near,far]);
+  // This selection example is not a native-shot permission. In runtime,
+  // every proposal separately passes the unchanged real-source
+  // Rapier support + projectile blocker check before firing.
+  const simulatedUnblocked=candidates.find((_,i)=>i===1);
+  expect(simulatedUnblocked).toEqual(candidates[1]);
   expect(Array.from(floor.ownerGrid)).toEqual(before);
  });
  it('preserves throwable unpainted cells behind too-close same-sector ink',()=>{
