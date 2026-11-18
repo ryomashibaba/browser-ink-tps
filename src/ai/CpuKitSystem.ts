@@ -109,6 +109,14 @@ export function nativeOriginalSourceTurfSubBallisticAim(
  return null;
 }
 
+/** The same physically bounded SUB ballistics can aim a genuine SOURCE
+ * human camera reticle. This is trajectory calculation ONLY: it does
+ * not authorize a floor, enemy, hit, score or paint. The real human SUB
+ * and the CPU SUB both resolve through original Rapier every native tick.
+ * Caller must opt in only when the camera target is canonical SOURCE. */
+export const nativeSourceSubBallisticAim=
+ nativeOriginalSourceTurfSubBallisticAim;
+
 export class CpuKitSystem {
   private readonly bombs: CpuBombSlot[] = [];
   private readonly scheduledStrikes: CpuScheduledStrike[] = [];

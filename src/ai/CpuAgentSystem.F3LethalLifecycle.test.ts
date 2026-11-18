@@ -12,7 +12,8 @@ import {PaintSurface} from '../ink/PaintSurface';
 import {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {SubWeaponSystem} from '../subweapon/SubWeaponSystem';
 import {weaponProfile} from '../weapons/WeaponCatalog';
-import {CpuKitSystem,nativeOriginalSourceTurfSubBallisticAim} from './CpuKitSystem';
+import {CpuKitSystem,nativeOriginalSourceTurfSubBallisticAim,
+ nativeSourceSubBallisticAim} from './CpuKitSystem';
 import {nativeSourceCpuKitRuntimeAuthorized}
  from '../app/NativeSourceRoundActionWindow';
 
@@ -3016,5 +3017,42 @@ describe('true SOURCE original unpainted-floor SUB ballistic launch',()=>{
   old.system.queueCpuPaidSub(old.bot,'pulse-bomb',new Vec3(5,3,0),
    new Vec3(1,0,0),true);
   expect(old.system.pendingKitRequests[0]?.sourceTurfSubAim).toBeUndefined();
+ });
+});
+
+describe('actual player SOURCE reticle F uses SUB physics, never MAIN gravity',()=>{
+ it('a real SOURCE reticle floor contact is reached by the chosen SUB independent of main weapon aiming',()=>{
+  const origin=new Vec3(0,3.7,0),reticle=new Vec3(5,3,0);
+  for(const subId of ['pulse-bomb','snap-bomb','anchor-bomb'] as const){
+   const sub=subWeaponProfile(subId);
+   const mainAim=ProjectileSystem.prototype.solveLaunchDirection(
+    origin,reticle,new Vec3(),weaponProfile('pulse-sprayer'));
+   const nativeSub=nativeSourceSubBallisticAim(origin,reticle,sub);
+   expect(nativeSub).not.toBeNull();
+   expect(nativeSub!.distance(mainAim)).toBeGreaterThan(.03);
+   const velocity=nativeSub!.clone().mulScalar(
+    sub.throwSpeedMetersPerSecond);
+   velocity.y+=sub.upwardBoostMetersPerSecond;
+   const simulated=origin.clone();
+   let nearest=Infinity,nearY=Infinity;
+   for(let i=0;i<Math.ceil(sub.maxFlightSeconds*60);i++){
+    velocity.y-=sub.gravityMetersPerSecond2/60;
+    simulated.add(velocity.clone().mulScalar(1/60));
+    const xz=Math.hypot(simulated.x-reticle.x,simulated.z-reticle.z);
+    if(xz<nearest){nearest=xz;nearY=simulated.y;}
+    if(simulated.x>reticle.x+.4)break;
+   }
+   expect(nearest).toBeLessThan(.23);
+   expect(Math.abs(nearY-reticle.y)).toBeLessThan(.30);
+   expect(origin).toEqual(new Vec3(0,3.7,0));
+   expect(reticle).toEqual(new Vec3(5,3,0));
+  }
+ });
+ it('unreachable or nonfinite reticle falls back instead of inventing SUB reach',()=>{
+  const sub=subWeaponProfile('pulse-bomb'),origin=new Vec3(0,3.7,0);
+  expect(nativeSourceSubBallisticAim(origin,new Vec3(90,3,0),sub))
+   .toBeNull();
+  expect(nativeSourceSubBallisticAim(origin,
+   new Vec3(Number.NaN,3,0),sub)).toBeNull();
  });
 });

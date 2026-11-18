@@ -13,7 +13,7 @@ import {
  TextureHandler,Vec3
 } from 'playcanvas';
 import {CpuAgentSystem} from '../ai/CpuAgentSystem';
-import {CpuKitSystem} from '../ai/CpuKitSystem';
+import {CpuKitSystem,nativeSourceSubBallisticAim} from '../ai/CpuKitSystem';
 import {CombatTargetSystem} from '../combat/CombatTargetSystem';
 import {PlayerResources} from '../combat/PlayerResources';
 import {ThirdPersonCamera,sourceRegisteredPaintHitActive} from '../camera/ThirdPersonCamera';
@@ -5636,9 +5636,22 @@ export class UndertowF3PlayablePreviewApp{
        actionWindow.humanCanStartNewActions&&
        this.resources.currentHp>0&&this.player.canShoot&&
        document.pointerLockElement===this.canvas){
-     this.humanSub.tryThrow(
-      weaponKit(this.projectiles.currentPlayerWeapon.id).sub,Team.A,
-      this.muzzle,this.aim);
+     const humanSubId=weaponKit(this.projectiles.currentPlayerWeapon.id).sub;
+     // The main gun has its OWN gravity and speed: this.aim was just
+     // re-solved for that main profile. Passing it unchanged to a native
+     // SOURCE SUB adds a different SUB upward boost and misses the true
+     // camera reticle's original floor/physical enemy contact.
+     // In canonical real SOURCE only, use the already tested SUB catalog
+     // 60Hz physical flight. Original Rapier and actor contact still
+     // decide what is hit. Never alter the main-shot aim or spent ink.
+     const nativeSubAim=this.nativeLiveSourcePrestart&&!this.w10b14&&
+       sourceCanonicalPlayableMode(location.href)!==null?
+       nativeSourceSubBallisticAim(
+        this.muzzle,this.target,subWeaponProfile(humanSubId)):null;
+     // Unreachable crosshair/sky points keep the old physical throw,
+     // and T20/deterministic QA never use this SOURCE-only correction.
+     this.humanSub.tryThrow(humanSubId,Team.A,
+       this.muzzle,nativeSubAim??this.aim);
     }
     const b41PreExplosion=this.b23InkFeedback.snapshot(frame);
     this.humanSub.fixedUpdate(seconds);
