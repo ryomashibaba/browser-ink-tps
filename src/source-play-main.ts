@@ -73,7 +73,7 @@ try{
 }catch(error){
  circuit.removeAttribute('href');combat.removeAttribute('href');
  coop.removeAttribute('href');front.removeAttribute('href');
- status.textContent='安全なSOURCE起動URLを確認できません。';
+ status.textContent='Safe SOURCE launch URL unavailable. / 安全なSOURCE起動URLを確認できません。';
  status.dataset.t21PortalReady='HOLD';
  console.error(error);
 }
@@ -109,10 +109,10 @@ const saveCamera=()=>{
  };
  if(cameraStore&&writeSourceCameraPreferences(cameraStore,candidate)){
   cameraSaved=candidate;
-  cameraNotice.textContent='カメラ設定をこのブラウザに保存しました。次のSOURCE試合で適用されます。';
+  cameraNotice.textContent='Camera settings saved in this browser for the next SOURCE round. / カメラ設定をこのブラウザに保存しました。次のSOURCE試合で適用されます。';
  }else{
   showCamera(cameraSaved??cameraDefaults);
-  cameraNotice.textContent='ブラウザに保存できません。ゲーム中の [ / ]、I、Q キーで調整してください。';
+  cameraNotice.textContent='Could not save settings; use [ / ], I and Q during play. / ブラウザに保存できません。ゲーム中の [ / ]、I、Q キーで調整してください。';
  }
 };
 cameraSensitivity.addEventListener('change',saveCamera);
