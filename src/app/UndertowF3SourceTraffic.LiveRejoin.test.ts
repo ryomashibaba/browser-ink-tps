@@ -1411,15 +1411,25 @@ it('rechecks all 60 pinned original B2 B4 goal paths after the existing landing-
  expect(totalAlreadyRejected).toBe(60);
  // At least one of the 60 historically blocked ORIGINAL routes must
  // now pass the WHOLE-source route-ray gate, not just an isolated point.
- // Retain the ten previously observed genuine floor/KCC uncertainties.
- // Still NEVER certify natural 60Hz CPU traversal or opposing contact.
- // Source-only static path admission on the 60 exact genuine historical
- // B450 cases: B2=14 and B4=12. A changed native result must be reviewed
- // rather than silently called playable KCC or certified 4v4.
+ // An original 4.5m right-low registered Rapier floor now also rechecks
+ // the actual Recast native Y at the SAME XZ. Twenty-seven additional
+ // source-local STATIC route samples pass with unchanged 25/17/26/0;
+ // seven other cases still fail. The separately witnessed B496 ten
+ // KCC/height uncertainties remain UNRESOLVED and are not this set.
+ // Never treat even a passed static path as full native CPU-sized KCC,
+ // opponent connectivity, or actual 60Hz movement.
  expect(actorReports.B2).toBeDefined();
  expect(actorReports.B4).toBeDefined();
- expect(totalPostFixApproved).toBe(26);
- expect(60-totalPostFixApproved).toBe(34);
+ expect((actorReports.B2 as {approvedHistoricalCandidateIndices:number[]})
+  .approvedHistoricalCandidateIndices).toEqual([
+   0,1,2,4,5,6,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29
+  ]);
+ expect((actorReports.B4 as {approvedHistoricalCandidateIndices:number[]})
+  .approvedHistoricalCandidateIndices).toEqual([
+   0,1,2,4,5,6,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29
+  ]);
+ expect(totalPostFixApproved).toBe(53);
+ expect(60-totalPostFixApproved).toBe(7);
 });
 
 describe('SOURCE player-C A1 arrival does not immediately restore unrelated Crowd patrol',()=>{
