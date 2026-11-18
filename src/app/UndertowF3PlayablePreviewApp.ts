@@ -63,7 +63,8 @@ import {b477ActualSourceCpuJoinCue} from './B477ActualSourceCpuJoinCue';
 import {b483RealFrontlineTeammateCommandSelected,
  b483MayRequestTrueFrontlineA1Order,
  b483ClassicPracticeAllowsLiveA1Order,
- b483OriginalAllyCommandFeedback} from './B483RealFrontlineTeammateCommand';
+ b483OriginalAllyCommandFeedback,
+ b483MayDispatchPhysicalPlayerCPress} from './B483RealFrontlineTeammateCommand';
 import {b481ActualSourcePaintOpportunity} from './B481ActualSourcePaintOpportunity';
 import {b337NativeNearbyActiveSourceCells} from './B337ActualLocalActiveCell';
 import {createB286CompactSourceTeam} from './B286SourceCompactTeam';
@@ -2639,6 +2640,7 @@ export class UndertowF3PlayablePreviewApp{
    }
    const b483ActualSelected=this.canvas.dataset.t21B483RealFrontlineAlly===
     'REAL_SOURCE_A1_PLAYER_C_KEY';
+   const b483Practice=this.b25Run.snapshot();
    const b483ActualReady=b483MayRequestTrueFrontlineA1Order({
     selected:b483ActualSelected,
     stage:[this.rawStage.solids.length,
@@ -2651,11 +2653,16 @@ export class UndertowF3PlayablePreviewApp{
     pointerLocked:document.pointerLockElement===this.canvas,
     playerHp:this.resources.currentHp,
     originalCpuRejoins:this.traffic.snapshot().physicalRejoins.length,
-    practiceVariant:this.b25Run.snapshot().practiceVariant,
-    practiceStatus:this.b25Run.snapshot().status
+    practiceVariant:b483Practice.practiceVariant,
+    practiceStatus:b483Practice.status
    });
-   if(ev.code==='KeyC'&&(!b483ActualSelected||!ev.repeat)&&
-      (b193Coop&&this.b203FullRound||b483ActualReady)&&
+   if(b483MayDispatchPhysicalPlayerCPress({
+      code:ev.code,repeat:ev.repeat,coOpSelected:b193Coop,
+      fullRound:this.b203FullRound,
+      practiceVariant:b483Practice.practiceVariant,
+      practiceStatus:b483Practice.status,
+      frontlineReady:b483ActualReady
+     })&&
       document.pointerLockElement===this.canvas&&
       this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
       this.resources.currentHp>0){
