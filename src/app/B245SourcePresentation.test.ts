@@ -61,6 +61,19 @@ describe('B245 real source PLAYER weapon guidance not clipped',()=>{
   expect(css.slice(keyHelp,css.indexOf('}',keyHelp)))
    .toContain('display:none!important');
  });
+ it('docks both genuine floor warnings below the tactical radar in roomy PLAYER play',()=>{
+  const css=b245PlayerSightlineCss(live);
+  const dock=css.split('@media(min-width:1100px) and (min-height:780px){')[1]
+   ?.split('@media(max-width:720px)')[0]??'';
+  expect(dock).toContain('#t21-f3-b129-original-edge-coach');
+  expect(dock).toContain('#t21-f3-b209-original-ramp-edge');
+  expect(dock).toContain('top:clamp(310px,35vh,342px)!important');
+  expect(dock).toContain('top:clamp(402px,46vh,450px)!important');
+  expect(dock).toContain('data-t21-b245-presentation="PLAYER"');
+  expect(dock).toContain('data-t21-b338-phase="PLAYING"');
+  expect(dock).not.toContain('display:none');
+  expect(dock).not.toContain('visibility:hidden');
+ });
  it('never applies full-round player CSS to QA, lab or production',()=>{
   for(const q of [
    live.replace('t21QaDrive=source','t21QaDrive=lab'),

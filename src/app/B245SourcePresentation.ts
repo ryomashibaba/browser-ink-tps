@@ -169,6 +169,19 @@ export function b245PlayerSightlineCss(search:string):string{
   '{left:14px!important;top:14px!important;right:auto!important;'+
    'transform:none!important;}',
   '}',
+  // Actual 1600x900 native screenshot: two true floor-boundary warnings
+  // overlay the right-side tactical radar. During ordinary live PLAYER
+  // play, dock both BELOW the radar, while preserving both messages,
+  // precise measured edge distances, severity, native datasets and F8 QA.
+  // This does not merge unrelated original-floor and ramp risks.
+  '@media(min-width:1100px) and (min-height:780px){',
+  on+'#t21-f3-b129-original-edge-coach',
+  '{right:14px!important;top:clamp(310px,35vh,342px)!important;'+
+   'max-width:248px!important;}',
+  on+'#t21-f3-b209-original-ramp-edge',
+  '{right:14px!important;top:clamp(402px,46vh,450px)!important;'+
+   'max-width:248px!important;}',
+  '}',
   // Append after normal font size: a narrow native PLAYER viewport should
   // never clip or shrink the selected weapon's real B338 control guide.
   '@media(max-width:720px){',
