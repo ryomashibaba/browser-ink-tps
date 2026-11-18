@@ -187,6 +187,9 @@ jobs:
       - name: Focused original SOURCE traffic regression
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
+          # Synthetic-only private F4 Phive extraction regression. Never downloads game assets.
+          node --test scripts/t21-f4-original-phive-local-once.test.mjs
+          python3 scripts/test_f4_phive_original_collision_probe.py
           node --test scripts/t21-b452-native-foot-vs-recast-audit.test.mjs scripts/t21-b454-real-native-full-rate-source-foot.test.mjs
           node --check scripts/t21-w10b139-original-native-descent-rally.mjs
           node --check scripts/t21-b440-short-native-original-foot.mjs
