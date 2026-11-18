@@ -95,11 +95,18 @@ export class PlayerInput {
           this.jumpQueued = true;
         event.preventDefault();
       }
-      if (event.code === 'KeyF' && !event.repeat && this.combatInputActive) {
+      if (event.code === 'KeyF' && !event.repeat && this.combatInputActive &&
+          (!this.sourceNativeRepeatGuard || freshPress)) {
+        // Native SOURCE sub is an edge, never another paid throw merely
+        // because the OS dispatched a second non-repeat keydown while
+        // this physical key remained down. T20 keeps its prior path.
         this.subPressedQueued = true;
         event.preventDefault();
       }
-      if (event.code === 'KeyG' && !event.repeat && this.combatInputActive) {
+      if (event.code === 'KeyG' && !event.repeat && this.combatInputActive &&
+          (!this.sourceNativeRepeatGuard || freshPress)) {
+        // The existing SOURCE special resource authority gets just one
+        // activation intent per actual keydown/up cycle.
         this.specialPressedQueued = true;
         event.preventDefault();
       }
@@ -213,6 +220,14 @@ export class PlayerInput {
     this.sourceSquidTapQueued=false;
     this.sourceMovementTapCodes.clear();
     this.keys.delete('Space');
+    if(this.sourceNativeRepeatGuard){
+      // A dying human may already have held F/G, or pressed them while
+      // splatted. A NEW native life must accept a subsequent fresh down,
+      // not treat the previous life's key ownership as a held action.
+      // OS repeats are independently rejected by the existing guard.
+      this.keys.delete('KeyF');
+      this.keys.delete('KeyG');
+    }
     // A physical Space keyup (not an automatic key repeat) rearms jump
     // after death; no modification to Rapier, movement, CPU or ink.
     if(!active)this.jumpRequiresRelease=true;

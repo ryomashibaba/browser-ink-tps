@@ -537,3 +537,48 @@ test('SOURCE short right-click keeps real DUALIES dodge but cannot become BRELLA
  expect(step(true,false,true).realDodgeAccepted).toBe(false);
  expect(step().realDodgeAccepted).toBe(false);
 });
+
+test('selected SOURCE F/G accept one actual press edge each, not duplicate non-repeat keydown or OS repeat',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ for(const [code,read] of [
+  ['KeyF',()=>input.consumeSubPressed()],
+  ['KeyG',()=>input.consumeSpecialPressed()]
+ ] as const){
+  emit('window','keydown',{code,repeat:false});
+  expect(read()).toBe(true);
+  expect(read()).toBe(false);
+  emit('window','keydown',{code,repeat:false}); // duplicated down, no up
+  expect(read()).toBe(false);
+  emit('window','keydown',{code,repeat:true}); // native OS repeat
+  expect(read()).toBe(false);
+  emit('window','keyup',{code});
+  emit('window','keydown',{code,repeat:false}); // actual new press
+  expect(read()).toBe(true);
+  emit('window','keyup',{code});
+ }
+});
+test('selected SOURCE F/G release previous-life key state without late kit intent',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ for(const code of ['KeyF','KeyG'])
+  emit('window','keydown',{code,repeat:false});
+ input.setCombatInputActive(false); // real HP-zero life transition
+ expect([input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([false,false]);
+ for(const code of ['KeyF','KeyG'])
+  emit('window','keydown',{code,repeat:false}); // dead: no intent
+ input.setCombatInputActive(true); // real 150-native-tick new life
+ expect([input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([false,false]);
+ for(const code of ['KeyF','KeyG'])
+  emit('window','keydown',{code,repeat:true}); // stale physical repeat
+ expect([input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([false,false]);
+ for(const code of ['KeyF','KeyG'])
+  emit('window','keydown',{code,repeat:false}); // genuine new press
+ expect([input.consumeSubPressed(),input.consumeSpecialPressed()])
+  .toEqual([true,true]);
+});
