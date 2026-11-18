@@ -115,7 +115,7 @@ export function b464PlayerFacingSourceFrontlineLines(
   ' · REAL ARRIVALS '+view.actualOriginalArrivals+'\n'+
   (travel?'B2 '+travel[0].toFixed(1)+'m · B4 '+
    travel[1].toFixed(1)+'m TRAVEL':'NATIVE FOOT TRAVEL UNVERIFIED')+
-  ' · OPPONENT ROUTE HOLD';
+  ' · OPPONENT ROUTE HOLD · UNSCORED';
 }
 
 /** Opt-in ONLY. Reads the existing world at 1 Hz, never drives it. */

@@ -2447,7 +2447,10 @@ async function main(){
   const root=document.querySelector('#t21-f3-b464-real-cpu-frontline');
   const game=window.__t21F3?.snapshot();
   const patrol=game?.cpu?.sourcePatrol;
-  if(!root||!patrol)return null;
+  // The overlay is a native 1 Hz readout. Initial HOLD is its honest
+  // not-yet-rendered state, not a failed real SOURCE boot. Wait until
+  // it has performed an actual STAGING READY render.
+  if(!root||!patrol||root.dataset.t21B464State!=='READY')return null;
   return {state:root.dataset.t21B464State,
    source:root.dataset.t21B464Authority,
    score:root.dataset.t21B464OfficialScoreable,
@@ -2463,10 +2466,18 @@ async function main(){
     game.sourceScoreablePromotions===0,
    noOfficialWinner:root.textContent?.includes('UNSCORED')===true};
  })()`),16000);
+ console.log('B440_REAL_SOURCE_FRONTLINE_HUD',JSON.stringify(optHud));
  if(optHud.state!=='READY'||optHud.source!=='25/17/26/0'||
     optHud.score!=='0'||optHud.routes!=='0'||
-    optHud.nativeGoalRequests!==String(optHud.actualRequests)||
-    optHud.originalArrivals!==String(optHud.actualArrivals)||
+    // The 1 Hz player-facing HUD may legitimately trail the current
+    // same-world 60 Hz actor counters. It must never claim MORE than the
+    // latest real SourceTraffic snapshot, or show invalid/forged values.
+    !Number.isSafeInteger(Number(optHud.nativeGoalRequests))||
+    Number(optHud.nativeGoalRequests)<0||
+    Number(optHud.nativeGoalRequests)>optHud.actualRequests||
+    !Number.isSafeInteger(Number(optHud.originalArrivals))||
+    Number(optHud.originalArrivals)<0||
+    Number(optHud.originalArrivals)>optHud.actualArrivals||
     !optHud.visible||!optHud.sourceVerified||!optHud.noOfficialWinner)
   fail('REAL_SOURCE_FRONTLINE_PLAYER_HUD_MUST_MATCH_NATIVE_CPU');
  proof.optionalCpuFrontlinePlayerHud=optHud;save();

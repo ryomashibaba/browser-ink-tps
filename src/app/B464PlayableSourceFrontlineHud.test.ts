@@ -100,10 +100,11 @@ describe('B464 real SOURCE native PLAYER uncluttered Rapier motion',()=>{
   const v=b464RealSourceFrontlineView(evidence())!;
   expect(b464PlayerFacingSourceFrontlineLines(v)).toBe(
    'ORIGINAL CPU · LIVE · REAL ARRIVALS 3\n'+
-   'B2 27.5m · B4 29.3m TRAVEL · OPPONENT ROUTE HOLD');
+   'B2 27.5m · B4 29.3m TRAVEL · OPPONENT ROUTE HOLD · UNSCORED');
   expect(v.lines).toContain('GOAL REQUESTS 12');
   expect(v.lines).toContain('UNSAFE / UNREACHABLE HELD 125');
   expect(b464PlayerFacingSourceFrontlineLines(v)).not.toContain('GOAL REQUESTS');
+  expect(b464PlayerFacingSourceFrontlineLines(v)).toContain('UNSCORED');
  });
  it('does not infer movement from ACTIVE or fake nonfinite native travel',()=>{
   const s=evidence();
