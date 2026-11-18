@@ -683,7 +683,9 @@ describe('genuine SOURCE launch menu remains readable without platform Japanese 
   expect(html).toContain('"Noto Sans CJK JP"');
   expect(html).toContain('font-family:var(--source-ui-font)');
   // No unexpected external requests or external font/license dependency.
-  expect(html).not.toMatch(/fonts\\.googleapis|fonts\\.gstatic|https:\\/\\/.*\\.woff/);
+  expect(html).not.toContain('fonts.googleapis.com');
+  expect(html).not.toContain('fonts.gstatic.com');
+  expect(html).not.toContain('.woff');
   for(const id of [
    'play-circuit','play-coop','play-combat','play-combat-frontline',
    'source-weapon-preselect','source-camera-sensitivity',
