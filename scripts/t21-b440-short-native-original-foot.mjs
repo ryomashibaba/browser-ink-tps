@@ -2281,6 +2281,7 @@ async function main(){
     enabled:!!button?.href&&!button?.hasAttribute('disabled')};
   });
  })()`);
+ console.log('B440_REAL_1600X900_MENU_BUTTON_RECTS',JSON.stringify(realMenuButtons));
  if(!Array.isArray(realMenuButtons)||realMenuButtons.length!==4||
   realMenuButtons.some(v=>!v.enabled||
    !Number.isFinite(v.buttonTop)||v.buttonTop<0||

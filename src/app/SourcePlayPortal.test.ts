@@ -682,6 +682,11 @@ describe('genuine SOURCE launch menu remains readable without platform Japanese 
   ])expect(html).toContain(literal);
   expect(html).toContain('"Noto Sans CJK JP"');
   expect(html).toContain('font-family:var(--source-ui-font)');
+  // All four real PC mode actions remain in view despite bilingual copy.
+  // A genuine 1600x900 Chromium layout gate still verifies exact boxes.
+  expect(html).toContain('@media(min-width:741px) and (max-height:950px)');
+  expect(html).toContain('.mode{padding:12px 15px;gap:5px}');
+  expect(html).toContain('.mode p{font-size:11.5px;line-height:1.3}');
   // No unexpected external requests or external font/license dependency.
   expect(html).not.toContain('fonts.googleapis.com');
   expect(html).not.toContain('fonts.gstatic.com');
