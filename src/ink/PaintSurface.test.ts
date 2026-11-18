@@ -603,3 +603,76 @@ describe('SOURCE ink projection and hit authority, allocation-aware real contact
     }
   });
 });
+
+describe('original SOURCE sampling hot-path conservative culling',()=>{
+ it('omits distant surface projections without changing actual cell ownership',()=>{
+  const ink=new GameplayInkSystem();
+  const near=new PaintSurface('UndertowT21D:near-floor',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   4,4,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  const far=new PaintSurface('UndertowT21D:far-floor',
+   new Vec3(175,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   4,4,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  ink.registerSurface(near);ink.registerSurface(far);
+  const nearProbe=vi.spyOn(near,'projectWorldPoint');
+  const farProbe=vi.spyOn(far,'projectWorldPoint');
+  const center=new Vec3(0,3,0);
+  const a=ink.sampleWorld(center,.4,SurfaceFlags.Paintable);
+  expect(a?.surface).toBe(near);
+  expect(a?.owner).toBe(Team.Neutral);
+  expect(nearProbe).toHaveBeenCalledOnce();
+  expect(farProbe).not.toHaveBeenCalled();
+  const b=ink.sampleWorld(new Vec3(175,3,0),.4,SurfaceFlags.Paintable);
+  expect(b?.surface).toBe(far);
+  expect(nearProbe).toHaveBeenCalledOnce();
+  expect(farProbe).toHaveBeenCalledOnce();
+  // Old edge/QA tolerance semantics are retained. Do not reinterpret
+  // missing/NaN plane tolerance as authorization for physical movement.
+  const unusual=ink.sampleWorld(center,Number.NaN,SurfaceFlags.Paintable);
+  expect(unusual?.surface).toBe(near);
+  expect(farProbe).toHaveBeenCalledTimes(2);
+  expect(ink.snapshot().areaA).toBe(0);
+ });
+ it('matches exhaustive original registered-floor sampling, including slopes and masks',()=>{
+  const ink=new GameplayInkSystem();
+  const regular=new PaintSurface('UndertowT21D:regular',
+   new Vec3(0,3,0),new Vec3(1,0,0),new Vec3(0,0,1),
+   8,7,.25,SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  const slope=new PaintSurface('UndertowT21D:slope',
+   new Vec3(15,4,7),new Vec3(1,0,0),
+   new Vec3(0,.6,.8),8,6,.25,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  const other=new PaintSurface('UndertowT21D:remote',
+   new Vec3(140,10,-70),new Vec3(1,0,0),
+   new Vec3(0,0,1),10,10,.25,
+   SurfaceFlags.Paintable|SurfaceFlags.Floor,8);
+  ink.registerSurface(regular);ink.registerSurface(slope);ink.registerSurface(other);
+  const exhaustive=(point:Vec3,distance:number)=>{
+   let best:ReturnType<GameplayInkSystem['sampleWorld']>=null;
+   for(const surface of ink.getSurfaces()){
+    const p=surface.projectWorldPoint(point);
+    if(p.planeDistance>distance||!p.inside)continue;
+    const u=Math.min(surface.widthMeters,Math.max(0,p.u));
+    const v=Math.min(surface.heightMeters,Math.max(0,p.v));
+    const x=Math.min(surface.widthCells-1,Math.max(0,Math.floor(u/surface.cellSize)));
+    const y=Math.min(surface.heightCells-1,Math.max(0,Math.floor(v/surface.cellSize)));
+    const idx=surface.index(x,y),flags=surface.flagsGrid[idx]??0;
+    if(!flags||(flags&SurfaceFlags.Paintable)===0)continue;
+    const sample={surface,owner:surface.ownerGrid[idx] as Team,flags,u,v,
+     planeDistance:p.planeDistance};
+    if(!best||sample.planeDistance<best.planeDistance)best=sample;
+   }
+   return best;
+  };
+  for(const dist of [0,.1,.4,1.0,Number.NaN]){
+   for(let n=0;n<160;n++){
+    const px=-10+(n*73%181)*.95;
+    const pz=-83+(n*47%131)*.96;
+    const point=new Vec3(px,2+(n*19%14)*.8,pz);
+    const expected=exhaustive(point,dist);
+    const actual=ink.sampleWorld(point,dist,SurfaceFlags.Paintable);
+    expect(actual).toEqual(expected);
+   }
+  }
+ });
+});

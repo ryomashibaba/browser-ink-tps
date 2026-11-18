@@ -32,6 +32,12 @@ export interface GameplayInkSample {
 
 export class GameplayInkSystem {
   private readonly surfaces = new Map<string, PaintSurface>();
+  // Reuse registration order without allocating projected-point objects
+  // for distant ink planes in the 60Hz player/7 CPU sampling hot path.
+  // Radius is an oversized enclosing sphere, NOT physical paint authority.
+  private readonly sampleBounds: Array<{
+    surface: PaintSurface; radiusMeters: number
+  }> = [];
   private areaA = 0;
   private areaB = 0;
   private totalScoreableArea = 0;
@@ -39,6 +45,15 @@ export class GameplayInkSystem {
   public registerSurface(surface: PaintSurface): void {
     if (this.surfaces.has(surface.id)) throw new Error(`Duplicate PaintSurface id: ${surface.id}`);
     this.surfaces.set(surface.id, surface);
+    // Orthogonal normalized original basis gives rectangle half-diagonal.
+    // Add 0.2% + 2cm to cover footprint edge epsilon and float roundoff.
+    // A real candidate with plane distance <= requested maxDistance
+    // can never lie outside (half-diagonal + maxDistance).
+    this.sampleBounds.push({
+      surface,
+      radiusMeters: Math.hypot(
+        surface.widthMeters,surface.heightMeters)*0.501+0.02
+    });
     this.totalScoreableArea += surface.scoreableAreaMeters2;
   }
 
@@ -63,10 +78,20 @@ export class GameplayInkSystem {
   ): GameplayInkSample | null {
     let best: GameplayInkSample | null = null;
 
-    for (const surface of this.surfaces.values()) {
+    for (const {surface,radiusMeters} of this.sampleBounds) {
       if (acceptSurface && !acceptSurface(surface)) continue;
       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
+      // Only cull when the requested plane tolerance is finite and >=0.
+      // NaN/Infinity and unusual QA requests keep the old exact
+      // projectWorldPoint semantics; never grant paint or alter ownership.
+      if (Number.isFinite(maxPlaneDistance) && maxPlaneDistance >= 0) {
+        const dx=point.x-surface.center.x;
+        const dy=point.y-surface.center.y;
+        const dz=point.z-surface.center.z;
+        const limit=radiusMeters+maxPlaneDistance;
+        if (dx*dx+dy*dy+dz*dz>limit*limit) continue;
+      }
       const projected = surface.projectWorldPoint(point);
       if (projected.planeDistance > maxPlaneDistance || !projected.inside) continue;
 
