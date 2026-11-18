@@ -68,6 +68,7 @@ on:
       - 'scripts/t21-b454-real-native-full-rate-source-foot.test.mjs'
       - 'scripts/t21-f4-original-phive-local-once.mjs'
       - 'scripts/t21-f4-original-phive-local-once.test.mjs'
+      - 'CHECK_F4_PRIVATE_PHIVE_WINDOWS.cmd'
       - 'src/app/B473RealSourceCombatLifeReadout.ts'
       - 'src/app/B473RealSourceCombatLifeReadout.test.ts'
       - 'src/app/B474OriginalFrontSteeringRefresh.ts'
