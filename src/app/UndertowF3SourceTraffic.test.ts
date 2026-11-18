@@ -303,6 +303,25 @@ describe('F3B playable 8-actor original source runtime',()=>{
     (s.flags&SurfaceFlags.Scoreable)!==0)).toBe(false);
   }finally{physics.world.free()}
  });
+ it('A1 original C order expires after 900 advancing native ticks even with wounded retreat pending',()=>{
+  const traffic:any=Object.create(UndertowF3SourceTraffic.prototype);
+  Object.assign(traffic,{
+   freeCombat:true,enableB192HumanCombat:false,
+   enableB137OriginalAllyRally:false,
+   b471AllyOrder:{requestedTick:1200,goal:new Vec3(0,3.1,55),
+    realAllyFootAtApproval:null},
+   b471ArrivedOriginalDwell:null,b471OrderStatus:'MOVING',
+   b471SourceDecision:'ORIGINAL_GOAL_GRANTED'
+  });
+  traffic.prepare(2099);
+  expect(traffic.b471OrderStatus).toBe('MOVING');
+  traffic.prepare(2100);
+  expect(traffic.b471AllyOrder).not.toBeNull();
+  traffic.prepare(2101);
+  expect(traffic.b471AllyOrder).toBeNull();
+  expect(traffic.b471OrderStatus).toBe('EXPIRED');
+  expect(traffic.b471SourceDecision).toBe('SOURCE_ORDER_EXPIRED');
+ });
  for(const humanWalkTicks of [0,28,60,120,180,240])it('native 7-CPU drop safety and human forward/reverse input case='+humanWalkTicks,()=>{
   const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
   try{

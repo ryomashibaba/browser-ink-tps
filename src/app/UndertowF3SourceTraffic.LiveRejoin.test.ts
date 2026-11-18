@@ -267,6 +267,30 @@ describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
   historical.add('B1');
   expect(traffic.isLiveRejoinedSourceCpu('B1')).toBe(true);
  });
+ it('genuine A1 respawn clears both in-flight player C order and old-life completed dwell',()=>{
+  for(const completed of [false,true]){
+   const {traffic,bots,historical}=fixture(),t:any=traffic;
+   const actor=bots[0]!;
+   t.b471AllyOrder=completed?null:{
+    requestedTick:1220,goal:new Vec3(0,3,44),
+    realAllyFootAtApproval:actor.position.clone()
+   };
+   t.b471ArrivedOriginalDwell=completed?{
+    goal:new Vec3(0,3,44),arrivalTick:1250
+   }:null;
+   t.b471OrderStatus=completed?'ARRIVED':'MOVING';
+   t.b471SourceDecision=completed?'ORIGINAL_ARRIVAL':'ORIGINAL_GOAL_GRANTED';
+   actor.lifeState='SPLATTED';actor.hp=0;
+   traffic.onNativeSourceCpuRespawn('A1');
+   expect(t.b471AllyOrder).toBeNull();
+   expect(t.b471ArrivedOriginalDwell).toBeNull();
+   expect(t.b471OrderStatus).toBe('HOLD');
+   expect(t.b471SourceDecision).toBe('PHYSICAL_SOURCE_HOLD');
+   expect(historical.has('A1')).toBe(false);
+   expect(traffic.nativeSourceLiveRejoinedIds()).toHaveLength(6);
+   expect(traffic.isLiveRejoinedSourceCpu('A2')).toBe(true);
+  }
+ });
  it('a genuinely respawned B2 or A3 loses old-life dynamic fronts but keeps immutable original candidates and living teammates',()=>{
   for(const id of ['B2','A3'] as const){
    const {traffic,bots,historical}=fixture();

@@ -3070,6 +3070,19 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // relocation and no synthetic actor position. Even when all CPUs are
   // released, refresh validity each physical tick before CPU goal choice.
   this.b137NativeTick=frame;
+  // C orders time out after 900 advancing native ticks, even while
+  // genuine low-HP retreat prevents A1 tactical goal selection.
+  // Never change physical feet, HP, ink or original route authority.
+  const activeA1Order=this.b471AllyOrder;
+  if(activeA1Order&&Number.isSafeInteger(frame)&&frame>=0&&
+     (!Number.isSafeInteger(activeA1Order.requestedTick)||
+      activeA1Order.requestedTick<0||
+      frame<activeA1Order.requestedTick||
+      frame-activeA1Order.requestedTick>900)){
+   this.b471AllyOrder=null;
+   this.b471OrderStatus='EXPIRED';
+   this.b471SourceDecision='SOURCE_ORDER_EXPIRED';
+  }
   this.b137HumanFootValid=false;
   this.b192HumanAliveGrounded=false;
   this.b192NativeHumanMode='HUMAN';
@@ -3160,12 +3173,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b442LastApprovedFront.delete(bot.id);
     if(bot.id==='A1'){
      this.b143ApprovedNativeAllyGoal=null;
-     if(this.b471AllyOrder){
-      this.b471AllyOrder=null;
-      this.b471ArrivedOriginalDwell=null;
+     // ARRIVED owns a real native dwell even though its order pointer
+     // is null. Physical splat must invalidate both live states.
+     if(this.b471AllyOrder||this.b471ArrivedOriginalDwell){
       this.b471OrderStatus='HOLD';
       this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
      }
+     this.b471AllyOrder=null;
+     this.b471ArrivedOriginalDwell=null;
     }
    }
    if(this.freeCombat&&priorLife==='SPLATTED'&&
@@ -3501,11 +3516,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.p2BTeamLastFullRouteAuditTick.delete(id);
   if(id==='A1'){
    this.b143ApprovedNativeAllyGoal=null;
-   if(this.b471AllyOrder){
-    this.b471AllyOrder=null;
+   // Genuine 150-tick respawn never inherits the old-life C order
+   // nor its completed supported arrival dwell.
+   if(this.b471AllyOrder||this.b471ArrivedOriginalDwell){
     this.b471OrderStatus='HOLD';
     this.b471SourceDecision='PHYSICAL_SOURCE_HOLD';
    }
+   this.b471AllyOrder=null;
+   this.b471ArrivedOriginalDwell=null;
   }
  }
  /** CPU main/kit sight uses the SAME actual-lifecycle + original
