@@ -237,6 +237,11 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
    const kcc=createConfiguredPlayerCharacterController(physics.world);
    physics.step();
    const stepLimit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60;
+   const heightBySegment=new Map<number,{segment:number;substep:number;
+    x:number;z:number;navY:number;rapierY:number|null;
+    solidId:string|null;gap:number}>();
+   const clipBySegment=new Map<number,{segment:number;substep:number;
+    x:number;z:number;clip:number;solidId:string|null}>();
    let steps=0,unsupported=0,unprojected=0,clipsOver3cm=0,
     maxXZClip=0,maxDrift=0,maxGroundGap=0,firstFailure:null|
     {segment:number;substep:number;cause:string;at:[number,number,number]}=null;
@@ -255,6 +260,12 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
      const gap=floor?Math.abs(floor.point.y-navY):Infinity;
      if(Number.isFinite(gap))maxGroundGap=Math.max(maxGroundGap,gap);
+     if(!floor||gap>.20){
+      const prev=heightBySegment.get(seg);
+      if(!prev||gap>prev.gap)heightBySegment.set(seg,{
+       segment:seg,substep:k,x,z,navY,rapierY:floor?.point.y??null,
+       solidId:floor?.solidId??null,gap});
+     }
      if(!floor||gap>.25){unprojected++;
       if(!firstFailure)firstFailure={segment:seg,substep:k,
        cause:floor?'NATIVE_RECAST_Y_DIFFERS_FROM_REAL_RAPIER':
@@ -269,7 +280,12 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
      const moved=kcc.computedMovement();
      const clipXZ=Math.hypot(wanted.x-moved.x,wanted.z-moved.z);
      maxXZClip=Math.max(maxXZClip,clipXZ);
-     if(clipXZ>.03){clipsOver3cm++;
+     if(clipXZ>.03){
+      const prev=clipBySegment.get(seg);
+      if(!prev||clipXZ>prev.clip)clipBySegment.set(seg,{
+       segment:seg,substep:k,x,z,clip:clipXZ,
+       solidId:floor?.solidId??null});
+      clipsOver3cm++;
       if(!firstFailure)firstFailure={segment:seg,substep:k,
        cause:'TRUE_CAPSULE_HORIZONTAL_CLIP',at:[x,navY,z]};}
      now.x+=moved.x;now.y+=moved.y;now.z+=moved.z;
@@ -286,9 +302,90 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
    physics.world.removeRigidBody(body);physics.step();
    return {id:probe.id,steps,unprojected,unsupported,clipsOver3cm,
     maxXZClip,maxDrift,maxGroundGap,firstFailure,
+    worstHeightSegments:[...heightBySegment.values()]
+     .sort((a,b)=>b.gap-a.gap).slice(0,8),
+    worstClipSegments:[...clipBySegment.values()]
+     .sort((a,b)=>b.clip-a.clip).slice(0,8),
     finalFoot:{x:now.x,y:now.y,z:now.z},
     endpoint:{x:probe.to[0],y:probe.to[1],z:probe.to[2]}};
   });
+  // Unlike the earlier raycast-Y follower, this uses continuous 60Hz
+  // horizontal acceleration and gravity. No floor-target Y, teleport,
+  // or horizontal recovery from an obsolete NavMesh sample is allowed.
+  const naturalCross=probes.map((probe,i)=>{
+   const id='cross-team-'+probe.id;
+   const points=nav.auditPath(new Vec3(...probe.from),
+    new Vec3(...probes[1-i]!.to),.35).nativePathPoints;
+   const sim=new RapierStagePhysics(1/60,stage);sim.step();
+   const first=points[0]!;
+   const support=sim.castCharacterFootSupport(new Vec3(first.x,
+    first.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,first.z),
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+   if(!support)throw Error('F4_NO_START_SUPPORT_'+id);
+   const foot={x:first.x,y:support.point.y,z:first.z};
+   const body=sim.world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+     foot.x,foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,foot.z));
+   const collider=sim.world.createCollider(RAPIER.ColliderDesc.capsule(
+    PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+    PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
+   const kcc=createConfiguredPlayerCharacterController(sim.world);
+   sim.step();
+   let vx=0,vz=0,vy=0,waypoint=1,grounded=false;
+   let airborneTicks=0,unsupportedTicks=0,stalledTicks=0,
+    maxStall=0,maxVerticalTick=0,ticks=0;
+   let blockedAt:null|{waypoint:number;foot:[number,number,number];
+    target:[number,number,number]}=null;
+   for(;ticks<2400&&waypoint<points.length;ticks++){
+    const target=points[waypoint]!;
+    const dx=target.x-foot.x,dz=target.z-foot.z;
+    const dist=Math.hypot(dx,dz);
+    if(dist<.18){waypoint++;continue;}
+    const speed=Math.min(GAME_CONFIG.player.humanSpeedMetersPerSecond,dist*12);
+    const acceleration=GAME_CONFIG.player.groundAccelerationMetersPerSecond2/60;
+    const approach=(a:number,b:number)=>a+
+     Math.max(-acceleration,Math.min(acceleration,b-a));
+    vx=approach(vx,dx/dist*speed);
+    vz=approach(vz,dz/dist*speed);
+    vy=Math.max(-GAME_CONFIG.player.maxFallSpeedMetersPerSecond,
+     vy-GAME_CONFIG.player.gravityMetersPerSecond2/60);
+    kcc.computeColliderMovement(collider,
+     {x:vx/60,y:vy/60,z:vz/60},undefined,undefined,
+     (other:RAPIER.Collider)=>other.handle!==collider.handle&&
+      sim.shouldCharacterCollide(other,'HUMAN'));
+    const delta=kcc.computedMovement();
+    grounded=kcc.computedGrounded();
+    if(grounded&&vy<0)vy=-.5;
+    if(!grounded)airborneTicks++;
+    maxVerticalTick=Math.max(maxVerticalTick,Math.abs(delta.y));
+    stalledTicks=Math.hypot(delta.x,delta.z)<.002?stalledTicks+1:0;
+    maxStall=Math.max(maxStall,stalledTicks);
+    body.setNextKinematicTranslation({x:foot.x+delta.x,
+     y:foot.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+delta.y,
+     z:foot.z+delta.z});
+    sim.step();
+    const actual=body.translation();
+    foot.x=actual.x;
+    foot.y=actual.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+    foot.z=actual.z;
+    if(!sim.castCharacterFootSupport(new Vec3(actual.x,actual.y,actual.z),
+     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'))unsupportedTicks++;
+    if(stalledTicks>90||foot.y< -6){
+     blockedAt={waypoint,foot:[foot.x,foot.y,foot.z],
+      target:[target.x,target.y,target.z]};break;
+    }
+   }
+   const dest=points[points.length-1]!;
+   const endpointXZError=Math.hypot(foot.x-dest.x,foot.z-dest.z);
+   sim.world.removeCharacterController(kcc);
+   sim.world.removeRigidBody(body);
+   return {id,ticks,waypoint,totalWaypoints:points.length,
+    grounded,airborneTicks,unsupportedTicks,maxStall,maxVerticalTick,
+    endpointXZError,blockedAt,actualFoot:foot,
+    naturalTraversalProven:waypoint===points.length&&grounded&&
+     unsupportedTicks===0&&endpointXZError<.35&&maxStall<90};
+  });
+  console.log('T21_F4_NATURAL_GRAVITY_KCC_DIAGNOSTIC',JSON.stringify(naturalCross));
   console.log('T21_F4_PHOTO_REAL_CAPSULE_AND_CROSS_TEAM',
    JSON.stringify({result,cross,global4v4Ready:false}));
   // Cross-team target is a real NavMesh polygon on the opposite side.
