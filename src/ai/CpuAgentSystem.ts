@@ -1878,11 +1878,27 @@ export class CpuAgentSystem {
    * unexpected passive Recast snap can be isolated to the steering
    * agent without granting any physical actor/mesh/link authority. */
   private sourceMayRecoverCrowdDiscontinuity(bot:CpuBot):boolean{
-    return this.phase14qF2RecoverableSteps&&!!this.f3dSourceGoals&&
+    const eligible=this.phase14qF2RecoverableSteps&&!!this.f3dSourceGoals&&
       this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
       !!this.phase14qGroundCollision&&bot.agent!==null&&
-      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
-      this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true;
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND';
+    if(!eligible)return false;
+    if(this.f3dSourceGoals!.isLiveRejoinedSourceCpu?.(bot.id)===true)
+      return true;
+    // F4 real Chromium #44631175775: after genuine splats, a CPU can be
+    // alive and GROUND at its original high spawn while its last physical
+    // rejoin proof has correctly expired. Native Crowd occasionally reuses
+    // a different navigation island at that moment; the old strict SOURCE
+    // gate killed the entire real match with a *passive proxy* discontinuity.
+    // Only the opt-in 51-solid experiment may quarantine/reconcile such a
+    // steering proxy, and ONLY while the actual Rapier CPU foot still has
+    // independently registered static support. This grants no movement,
+    // spawn, offmesh link, opponent access or false rejoin status.
+    if(!isT21F4ResearchStage(this.stage))return false;
+    const foot=this.phase14qGroundCollision!.sourceFootSupport?.(
+      bot.id,bot.position);
+    return hasRegisteredOriginalSourceCpuRapierFootSupport(
+      bot.position,foot,this.stage.solids);
   }
 
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
