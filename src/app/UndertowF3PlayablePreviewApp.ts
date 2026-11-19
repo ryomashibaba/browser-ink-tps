@@ -436,6 +436,15 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b209RampEdgeCoach:ReturnType<typeof createB209OriginalRampEdgeCoach>;
  private readonly b58SessionBoard:ReturnType<typeof createF3SourceSessionBoard>;
  private readonly b205RoundClock:HTMLElement|null;
+ // Cache stable SOURCE 180s ink/contest DOM. Do not spend live WebGL
+ // frames re-querying the same nine nodes; replace stale cache on detach.
+ private b414HudNodes:{
+  root:HTMLElement;gauge:HTMLElement;contest:HTMLElement;
+  inkText:HTMLElement;fill:HTMLElement;loop:HTMLElement;
+  contestText:HTMLElement;teamAFill:HTMLElement;teamBFill:HTMLElement
+ }|null=null;
+ private b417LastDrawnSampleTick:number|null=null;
+ private b417LastDrawnTotals:string|null=null;
  private readonly b211Roster:ReturnType<typeof createB211RealBattleRoster>|null;
  private readonly b367CombatNotice:HTMLElement|null;
  private readonly b367Timeline=new B367RealCpuCombatTimeline();
@@ -6826,8 +6835,30 @@ export class UndertowF3PlayablePreviewApp{
  /** B416: show true player tank every rendered frame, without B25 rescans. */
  private refreshB414RealtimeInkHud():void{
   const root=this.b195CoopHud;if(!root)return;
-  const gauge=root.querySelector<HTMLElement>('#t21-f3-b414-native-ink');
-  if(!gauge)return;
+  let nodes=this.b414HudNodes;
+  if(!nodes||nodes.root!==root||nodes.gauge.isConnected===false){
+   const gauge=root.querySelector<HTMLElement>('#t21-f3-b414-native-ink');
+   if(!gauge)return;
+   const contest=root.querySelector<HTMLElement>('#t21-f3-b417-paint-contest');
+   const inkText=root.querySelector<HTMLElement>('#t21-f3-b414-ink-text');
+   const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill');
+   const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop');
+   const contestText=root.querySelector<HTMLElement>('#t21-f3-b417-text');
+   const teamAFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-a');
+   const teamBFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-b');
+   if(!contest||!inkText||!fill||!loop||!contestText||
+      !teamAFill||!teamBFill){
+    gauge.hidden=true;gauge.style.display='none';
+    return;
+   }
+   nodes={root,gauge,contest,inkText,fill,loop,contestText,
+    teamAFill,teamBFill};
+   this.b414HudNodes=nodes;
+   this.b417LastDrawnSampleTick=null;
+   this.b417LastDrawnTotals=null;
+  }
+  const {gauge,contest,inkText,fill,loop,contestText,
+   teamAFill,teamBFill}=nodes;
   const live=root.dataset.t21B411Active==='true'&&
    this.matchState==='PLAYING'&&!this.paused&&!this.stopReason;
   const ink=this.stats.playerInk,rec=this.stats.playerInkRecoveryState;
@@ -6837,21 +6868,13 @@ export class UndertowF3PlayablePreviewApp{
   gauge.style.display=show?'block':'none';
   gauge.dataset.t21B414RealNativeSource=String(show);
   gauge.dataset.t21B414RenderTick=String(this.clock.tick);
-  // Optional co-op DOM loss must not freeze real 60Hz SOURCE/CPU play.
-  // Original collision, authority and PaintCoordinator failures still STOP.
-  const contest=root.querySelector<HTMLElement>('#t21-f3-b417-paint-contest');
-  const inkText=root.querySelector<HTMLElement>('#t21-f3-b414-ink-text');
-  const fill=root.querySelector<HTMLElement>('#t21-f3-b414-ink-fill');
-  const loop=root.querySelector<HTMLElement>('#t21-f3-b415-ink-loop');
-  const contestText=root.querySelector<HTMLElement>('#t21-f3-b417-text');
-  const teamAFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-a');
-  const teamBFill=root.querySelector<HTMLElement>('#t21-f3-b417-team-b');
-  if(!contest||!inkText||!fill||!loop||!contestText||!teamAFill||
-     !teamBFill){
-   gauge.hidden=true;gauge.style.display='none';
+  // DOM display errors must never modify the physical SOURCE world.
+  if(!show){
+   contest.hidden=true;contest.style.display='none';
+   this.b417LastDrawnSampleTick=null;
+   this.b417LastDrawnTotals=null;
    return;
   }
-  if(!show){contest.hidden=true;contest.style.display='none';return;}
   gauge.dataset.t21B414ActualInk=String(ink);
   gauge.dataset.t21B414Recovery=String(rec);
   gauge.dataset.t21B414Mode=String(mode);
@@ -6878,7 +6901,18 @@ export class UndertowF3PlayablePreviewApp{
    ],live);
   contest.hidden=owned===null;
   contest.style.display=owned?'block':'none';
-  if(owned){
+  if(!owned){
+   this.b417LastDrawnSampleTick=null;
+   this.b417LastDrawnTotals=null;
+  }else{
+   // Source ink ownership advances at real sample ticks, not every
+   // visual frame: skip redundant number formatting/contest bar writes.
+   // Keep the live ink gauge and status updated on every render.
+   const totals=owned.teamA+'/'+owned.teamB+'/'+owned.neutral;
+   if(this.b417LastDrawnSampleTick===owned.sampleNativeTick&&
+      this.b417LastDrawnTotals===totals)return;
+   this.b417LastDrawnSampleTick=owned.sampleNativeTick;
+   this.b417LastDrawnTotals=totals;
    contest.dataset.t21B417OriginalOnly='true';
    contest.dataset.t21B417OfficialTurfScore='false';
    contest.dataset.t21B417SampleTick=String(owned.sampleNativeTick);
