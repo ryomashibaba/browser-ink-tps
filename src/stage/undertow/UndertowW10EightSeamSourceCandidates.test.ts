@@ -193,7 +193,7 @@ describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=
 });
 
 describe('F4 physical-capsule follow-through and actual opposing connectivity',()=>{
- it('records real-size KCC outcome over the TWO newly connected source routes; no false global promotion',()=>{
+ it('tests full real-size KCC movement across BOTH intra-side and opposing-side native paths',()=>{
   const {stage}=buildT21F4PhotoRouteExperiment();
   const physics=new RapierStagePhysics(1/60,stage);physics.step();
   const nav=new RecastStageNavigation(stage,new PerformanceStats());
@@ -207,7 +207,16 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
     startSnap:a.startSnapDistanceMeters,endSnap:a.endSnapDistanceMeters,
     points:a.pointCount,error:a.endpointErrorMeters};
   });
-  const result=probes.map(probe=>{
+  // The previous CI only walked the two same-side routes. Real crossing
+  // must also be walked with the ACTUAL player capsule at 60 Hz, rather
+  // than claiming a Recast-success silhouette as physical traversal.
+  const physicalRoutes=[
+   ...probes.map(p=>({id:p.id,from:p.from,to:p.to})),
+   ...probes.map((p,i)=>({
+    id:'cross-team-'+p.id,from:p.from,to:probes[1-i]!.to
+   }))
+  ];
+  const result=physicalRoutes.map(probe=>{
    const path=nav.auditPath(new Vec3(...probe.from),
     new Vec3(...probe.to),.35);
    if(!path.reachedTarget||!path.nativePathPoints.length)
@@ -287,6 +296,14 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
   // geometry certification or direct approval for live world activation.
   expect(cross.map(c=>c.pathReached)).toEqual([true,true]);
   expect(result.every(x=>x.steps>100)).toBe(true);
+  const realCrossCapsules=result.filter(x=>x.id.startsWith('cross-team-'));
+  expect(realCrossCapsules).toHaveLength(2);
+  // This is the actual KCC position, accumulated with collider movement,
+  // not a prescribed Recast endpoint teleported into place.
+  expect(realCrossCapsules.every(x=>
+   x.unsupported===0&&
+   Math.hypot(x.finalFoot.x-x.endpoint.x,
+    x.finalFoot.z-x.endpoint.z)<.35)).toBe(true);
   expect(stage.solids.length).toBe(51);
  });
 });
