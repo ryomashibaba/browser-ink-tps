@@ -1,4 +1,14 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
+import {Vec3} from 'playcanvas';
+import {PerformanceStats} from '../../core/PerformanceStats';
+import {initializeRecastNavigation,RecastStageNavigation}
+ from '../../navigation/RecastStageNavigation';
+import {initializeRapier,RapierStagePhysics}
+ from '../../physics/RapierStagePhysics';
+import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
+ from './UndertowSpillwayConnectivityQa';
+import {buildT21F4PhotoRouteExperiment}
+ from './UndertowT21F4PhotoRouteReconstruction';
 import {PRODUCTION_STAGE_DEFINITION} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
@@ -123,5 +133,57 @@ describe('W10 exact eight CI688 original source face seams and 54 existing candi
   expect(result.naturalOpponentCrossingCertified).toBe(false);
   console.log('T21_V28_F4_REAL_ENTRANCE_CANDIDATE_RANK',
    JSON.stringify(result));
+ });
+});
+
+beforeAll(async()=>await Promise.all([
+ initializeRecastNavigation(),initializeRapier()
+]));
+describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=>{
+ it('closes both SOURCE right-low-to-underpass physical corridor candidates before any game integration',()=>{
+  const proof=buildT21F4PhotoRouteExperiment();
+  const {stage,repairs}=proof;
+  expect(proof.originalStageUnmodified).toBe(true);
+  expect(proof.actualOriginalCollisionProven).toBe(false);
+  expect(proof.sceneIsolated).toBe(true);
+  expect(stage.solids).toHaveLength(49);
+  expect(repairs).toHaveLength(14);
+  expect(stage.paintSurfaces).toHaveLength(17);
+  expect(stage.navigationLinks).toHaveLength(26);
+  expect(repairs.every(p=>p.geometryApproximate&&p.notOriginalCollision))
+   .toBe(true);
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const results=[];
+  for(const side of ['positive-z','negative-z'] as const){
+   const probe=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(x=>
+    x.id==='right-low-to-underpass-'+side)!;
+   const from=new Vec3(...probe.from),to=new Vec3(...probe.to);
+   const path=nav.auditPath(from,to,.35);
+   const floorPoints=repairs.filter(p=>p.side===
+    (side==='positive-z'?'POSITIVE_Z':'NEGATIVE_Z')).map(p=>{
+    const tri=p.solid.triangleMesh!;
+    const centroid=new Vec3(
+     (tri.vertices[0]![0]+tri.vertices[1]![0]+tri.vertices[2]![0])/3,
+     (tri.vertices[0]![1]+tri.vertices[1]![1]+tri.vertices[2]![1])/3,
+     (tri.vertices[0]![2]+tri.vertices[1]![2]+tri.vertices[2]![2])/3
+    );
+    const ray=physics.castCharacterFootSupport(
+     new Vec3(centroid.x,centroid.y+.87,centroid.z),
+     .87,'HUMAN');
+    return {id:p.id,hit:ray?.solidId??null,
+     residual:ray?Math.abs(ray.point.y-centroid.y):null};
+   });
+   results.push({side,startSnap:path.startSnapDistanceMeters,
+    endSnap:path.endSnapDistanceMeters,
+    query:path.querySuccess,points:path.pointCount,
+    error:path.endpointErrorMeters,reached:path.reachedTarget,
+    floorPoints});
+  }
+  console.log('T21_F4_PHOTO_EXPERIMENT_NATIVE_CONNECTIVITY',
+   JSON.stringify(results));
+  expect(results.map(r=>r.reached)).toEqual([true,true]);
+  expect(results.every(r=>r.startSnap<.3&&r.endSnap<.3))
+   .toBe(true);
  });
 });
