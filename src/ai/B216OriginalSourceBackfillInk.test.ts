@@ -413,8 +413,14 @@ describe('B216 source CPU no-goal actual Rapier-foot ink continuation',()=>{
    agent:bot.agent,goal:staleGoal.clone(),repeat:0
   }]]);
   system.sourceLastPhysicalBlockedTick=new Map();
+  system.sourceCrowdProjectionHold=new Map();
   system.sourceNativeMotionTick=0;
-  system.navigation={closestPoint:(p:Vec3)=>p.clone()};
+  system.navigation={
+   closestPoint:(p:Vec3)=>p.clone(),
+   auditNavMeshProjection:(p:Vec3)=>({
+    success:true,nearestPoint:p.clone(),distanceMeters:0
+   })
+  };
   bot.thinkRemaining=1;
   system.reconcileBlockedT21F2CrowdProxy(bot);
   expect(agentReset).toBe(1);
