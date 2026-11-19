@@ -16,6 +16,8 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
+import {isT21F4ResearchStage}
+ from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {isAlignedOriginalSourceCrowdTarget}
  from './OriginalSourceCrowdTargetAlignment';
 import {shouldRefreshStalledOriginalSourceCrowd,
@@ -1332,15 +1334,41 @@ export class CpuAgentSystem {
             const footSupported=
               hasRegisteredOriginalSourceCpuRapierFootSupport(
                 bot.position,physical,this.stage.solids);
+            // The unchanged 25-solid ORIGINAL authorizer rejects any
+            // estimated F4 corridor by design. The explicit 51-solid lab
+            // instead requires a COMPLETE native path from the ACTUAL CPU
+            // Rapier foot to the already checked ramp-guide point. It never
+            // writes a body, teleports Crowd, adds links, or skips Rapier KCC.
+            // Existing original-source .20/.22m rules remain untouched.
             const admitted=footSupported&&bot.agent?
-              chooseAuditedOriginalSourceCpuGoal(
-                bot.position,this.goal,
-                rejoined?this.sourceLastAdmittedRouteGoal.get(bot.id)??null:null,
-                (from,to)=>this.navigation.auditPath(
-                  new Vec3(from.x,from.y,from.z),
-                  new Vec3(to.x,to.y,to.z)
-                ),{allowOriginalFirstDropStartSnap:firstDrop}
-              ):null;
+              (isT21F4ResearchStage(this.stage)?
+                (()=>{
+                  const path=this.navigation.auditPath(bot.position,this.goal,.35);
+                  const first=path.nativePathPoints[0];
+                  const last=path.nativePathPoints.at(-1);
+                  const distance=(a:Readonly<{x:number;y:number;z:number}>,
+                    b:Readonly<{x:number;y:number;z:number}>)=>
+                    Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+                  return path.querySuccess&&path.reachedTarget&&first&&last&&
+                    path.pointCount>=2&&
+                    path.pointCount===path.nativePathPoints.length&&
+                    path.nativePathPoints.every(p=>
+                      [p.x,p.y,p.z].every(Number.isFinite))&&
+                    path.startSnapDistanceMeters<=.35&&
+                    path.endSnapDistanceMeters<=.35&&
+                    path.endpointErrorMeters<=.20&&
+                    distance(first,bot.position)<=.35&&
+                    distance(last,this.goal)<=.35?
+                    {point:this.goal,reusedPrevious:false}:null;
+                })():
+                chooseAuditedOriginalSourceCpuGoal(
+                  bot.position,this.goal,
+                  rejoined?this.sourceLastAdmittedRouteGoal.get(bot.id)??null:null,
+                  (from,to)=>this.navigation.auditPath(
+                    new Vec3(from.x,from.y,from.z),
+                    new Vec3(to.x,to.y,to.z)
+                  ),{allowOriginalFirstDropStartSnap:firstDrop}
+                )):null;
             if(admitted){
               this.goal.set(admitted.point.x,admitted.point.y,
                 admitted.point.z);
