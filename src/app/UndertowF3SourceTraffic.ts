@@ -1545,23 +1545,37 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    }
    this.f4GuideProgress.set(id,next);
    if(next===guide.length){this.heldRequests++;return false;}
-   const target=new Vec3(...guide[next]!);
-   const native=this.nav.auditPath(realFoot,target,.35);
-   const support=this.physics.castCharacterFootSupport(new Vec3(
+   // Triangle centroids are source-identified PHOTO intents, but may
+   // sit 0.21-0.25m outside the actually eroded Recast walkable polygon.
+   // Move only to a REAL successful native projection within 0.30m,
+   // then independently recheck its actual Rapier foot support. No new
+   // floor, NavLink, Actor/Crowd teleport, or physics veto bypass.
+   const photoGoal=new Vec3(...guide[next]!);
+   const projection=this.nav.auditNavMeshProjection(photoGoal);
+   const projectValid=projection.success===true&&
+      projection.nearestPoint!==null&&
+      projection.distanceMeters!==null&&
+      projection.distanceMeters<=.30+1e-6;
+   const target=projectValid?new Vec3(
+    projection.nearestPoint!.x,projection.nearestPoint!.y,
+    projection.nearestPoint!.z):photoGoal;
+   const native=projectValid?
+      this.nav.auditPath(realFoot,target,.35):null;
+   const support=projectValid?this.physics.castCharacterFootSupport(new Vec3(
     target.x,target.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
-    target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+    target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
    const gap=support?Math.abs(support.point.y-target.y):null;
-   const admitted=native.reachedTarget&&
+   const admitted=projectValid&&native!==null&&native.reachedTarget&&
       native.startSnapDistanceMeters<=.30&&
       native.endSnapDistanceMeters<=.30&&native.pointCount>0&&
       support!==null&&gap!==null&&gap<=.25;
    this.f4GuideLastAudit.set(id,{
     id,index:next,actualFoot:[realFoot.x,realFoot.y,realFoot.z],
     goal:[target.x,target.y,target.z],
-    nativeReached:native.reachedTarget,
-    nativeStartSnap:native.startSnapDistanceMeters,
-    nativeEndSnap:native.endSnapDistanceMeters,
-    nativePathPoints:native.pointCount,
+    nativeReached:native?.reachedTarget??false,
+    nativeStartSnap:native?.startSnapDistanceMeters??Infinity,
+    nativeEndSnap:native?.endSnapDistanceMeters??Infinity,
+    nativePathPoints:native?.pointCount??0,
     footSupportSolid:support?.solidId??null,
     supportGapMeters:gap,admitted
    });
