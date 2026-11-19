@@ -866,6 +866,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(prior&&realFoot.distance(prior)<=.30)
    this.b441OriginalRampGoal?.delete(id);
   const inFlight=this.b441OriginalRampGoal?.get(id);
+  // A true SOURCE in-flight ramp target can itself be physically denied
+  // for 90+ genuine Rapier KCC samples while the actor has not moved
+  // for 120 native ticks. Retaining it forever prevents alternatives
+  // that are ALREADY present on this same authenticated source ramp.
+  // Never infer a bad goal from aim drought, Crowd pause or proximity.
+  // Retest a distinct EXISTING ramp target only after this evidence.
+  const lastRealTravel=this.lastMoved?.get(id);
+  const stalledInFlight=!!inFlight&&
+   (this.realKccRejectedSteps.get(id)??0)>=90&&
+   Number.isSafeInteger(lastRealTravel)&&lastRealTravel!==undefined&&
+   lastRealTravel>0&&
+   Number.isSafeInteger(this.b137NativeTick)&&
+   this.b137NativeTick>=lastRealTravel+120&&
+   this.physicallyRejoined.has(id)&&
+   realFoot.distance(inFlight)>.30;
   // True 720-tick SOURCE B2/B4 congestion recovery improved actual
   // 60Hz B4 movement; B3 nevertheless remained grounded on the SAME
   // original ramp, ~0.61-0.64m from B2 for 200+ native ticks.
@@ -874,7 +889,6 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // existing ORIGINAL ramp goal when actual KCC foot has stayed still
   // for 120 ticks and that goal has NOT already been reached.
   // This is a candidate-trigger, never a new Recast/Rapier permission.
-  const lastRealTravel=this.lastMoved?.get(id);
   const b3InFlightFront=this.b443OriginalGoalLocks?.get(id)?.target;
   const unfinishedB3Front=id!=='B3'||!b3InFlightFront||
    Math.hypot(b3InFlightFront.x-realFoot.x,
@@ -917,14 +931,15 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!inFlight&&(this.realKccRejectedSteps.get(id)??0)<
       B34_GROUNDED_STALL_TICKS&&!crowdedStationaryOriginalFoot&&
       !trulyStationaryB2Ramp)return false;
-  if(!inFlight){
+  if(!inFlight||stalledInFlight){
    const previous=this.b441OriginalRampLastAuditTick?.get(id)??-999999;
    if(this.b137NativeTick-previous<60)return false;
    this.b441OriginalRampLastAuditTick?.set(id,this.b137NativeTick);
   }
-  const options=inFlight?
+  const options=inFlight&&!stalledInFlight?
    proposals.filter(p=>new Vec3(...p.point).distance(inFlight)<.001):
-   [...proposals].sort((a,b)=>
+   [...proposals].filter(p=>!stalledInFlight||
+    new Vec3(...p.point).distance(inFlight!)>=1.5).sort((a,b)=>
     Math.abs(new Vec3(...a.point).distance(realFoot)-2.5)-
     Math.abs(new Vec3(...b.point).distance(realFoot)-2.5));
   for(const proposal of options){
@@ -934,7 +949,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // goal finish its final native-supported step. The same real
    // Recast path, 0.30m original Rapier support and actor-block
    // validation below remain mandatory.
-   if((!inFlight&&goal.distance(realFoot)<1.5)||goal.z> -33||
+   if(((!inFlight||stalledInFlight)&&goal.distance(realFoot)<1.5)||
+      goal.z> -33||
       this.sourceNativeCharacterFootHit(goal)?.solidId!==sourceId)
     continue;
    const route=this.nav.auditPath(realFoot,goal);
@@ -946,7 +962,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.b441OriginalRampRejected=(this.b441OriginalRampRejected??0)+1;
     continue;
    }
-   if(inFlight)this.b441OriginalRampRetentions=
+   if(inFlight&&!stalledInFlight)this.b441OriginalRampRetentions=
     (this.b441OriginalRampRetentions??0)+1;
    else{
     this.b441OriginalRampApprovals=(this.b441OriginalRampApprovals??0)+1;
@@ -955,7 +971,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    out.copy(goal);this.realGoalRequests++;
    return true;
   }
-  if(inFlight)this.b441OriginalRampGoal?.delete(id);
+  // No alternate passed: do not call a failed route a recovery, and do
+  // not erase the formerly verified in-flight destination merely because
+  // this one bounded alternate search found no valid original path.
+  if(inFlight&&!stalledInFlight)this.b441OriginalRampGoal?.delete(id);
   return false;
  }
  /** B150 source-only real A1 teammate ink support. Real source foot,

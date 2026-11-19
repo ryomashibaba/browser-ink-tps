@@ -969,6 +969,65 @@ it('B2/B4 genuine 120-tick teammate congestion tries only EXISTING original ramp
  expect(b2.position.equals(foot)).toBe(true);
 });
 
+it('SOURCE B2 real KCC-stalled in-flight original ramp retargets only to a separately reaudited existing ramp point',()=>{
+ const stage=undertowT21dConnectivityQaStage();
+ const floor='UndertowT21D:right-low-route-ramp-negative-z';
+ const original=proposeB441OriginalRampLocalGoals(stage,'B');
+ expect(original.length).toBeGreaterThan(2);
+ const old=new Vec3(...original[0]!.point);
+ const foot=new Vec3(-5.303488254547119,4.285635948181152,-48.5355339050293);
+ const bot={id:'B2',team:Team.B,position:foot.clone(),agent:{},
+  mobilityState:'GROUND',lifeState:'ACTIVE',hp:100};
+ const source:any=Object.create(UndertowF3SourceTraffic.prototype);
+ let allRoutesAllowed=true;
+ const approved:Vec3[]=[];
+ Object.assign(source,{
+  stage,bots:[bot],enableB441SourceFrontline:true,physics:{},
+  physicallyRejoined:new Set(['B2']),
+  b137NativeTick:1600,lastMoved:new Map([['B2',1400]]),
+  b441FrontGoals:new Map([['B2',[]]]),
+  b441OriginalRampGoal:new Map([['B2',old.clone()]]),
+  b441OriginalRampLastAuditTick:new Map(),
+  b441OriginalRampApprovals:0,b441OriginalRampRetentions:0,
+  b441OriginalRampRejected:0,realKccRejectedSteps:new Map([['B2',89]]),
+  sourceNativeCharacterFootHit:()=>({solidId:floor}),
+  hasSourceFootSupport:()=>true,
+  hasSourceSupportedRoute:(_path:unknown)=>allRoutesAllowed,
+  kccActorBlocksOriginalRoute:()=>false,
+  nav:{auditPath:(from:Vec3,to:Vec3)=>{
+   approved.push(to.clone());
+   return {reachedTarget:true,startSnapDistanceMeters:0,
+    endSnapDistanceMeters:0,nativePathPoints:[from.clone(),to.clone()]};
+  }},realGoalRequests:0
+ });
+ const out=new Vec3(99,99,99);
+ // 89 genuine denials are not enough to release the current goal.
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(true);
+ expect(out.equals(old)).toBe(true);
+ expect(source.b441OriginalRampGoal.get('B2').equals(old)).toBe(true);
+ source.realKccRejectedSteps.set('B2',90);
+ out.set(99,99,99);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(true);
+ expect(out.distance(old)).toBeGreaterThanOrEqual(1.5);
+ expect(original.some(p=>out.distance(new Vec3(...p.point))<.001)).toBe(true);
+ expect(source.b441OriginalRampGoal.get('B2').equals(out)).toBe(true);
+ expect(approved.some(p=>p.equals(out))).toBe(true);
+ expect(bot.position.equals(foot)).toBe(true);
+ expect([stage.solids.length,stage.paintSurfaces.length,
+  stage.navigationLinks?.length]).toEqual([25,17,26]);
+ // With another true stationary spell, no other original route means
+ // HOLD: neither fake path nor new CPU body/physics acceptance.
+ const previous=out.clone();
+ source.realKccRejectedSteps.set('B2',95);
+ source.b137NativeTick+=180;
+ allRoutesAllowed=false;
+ out.set(99,99,99);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(false);
+ expect(out.equals(new Vec3(99,99,99))).toBe(true);
+ expect(source.b441OriginalRampGoal.get('B2').equals(previous)).toBe(true);
+ expect(bot.position.equals(foot)).toBe(true);
+});
+
 it('B4 genuine 90s stalled ramp prefers a distinct existing SAME-SOLID original goal only after strict Recast and Rapier approval',()=>{
  const source:any=Object.create(UndertowF3SourceTraffic.prototype);
  const foot=new Vec3(-6.294005870819092,4.5892939639091495,-49.23163604736328);
