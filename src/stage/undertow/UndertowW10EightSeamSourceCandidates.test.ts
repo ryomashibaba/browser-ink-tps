@@ -9,7 +9,8 @@ import {initializeRecastNavigation,RecastStageNavigation}
  from '../../navigation/RecastStageNavigation';
 import {initializeRapier,RapierStagePhysics}
  from '../../physics/RapierStagePhysics';
-import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
+import {UNDERTOW_T21D_CONNECTIVITY_PROBES,
+ undertowT21dConnectivityQaStage}
  from './UndertowSpillwayConnectivityQa';
 import {buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide,
  buildT21F4ResearchStage,isT21F4ResearchStage}

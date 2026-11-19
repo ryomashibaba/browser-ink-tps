@@ -1515,7 +1515,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Opt-in F4 experiment: submit short native Crowd goals along the two
   // pre-existing center ramps, never a forced Actor pose or NavLink.
   // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
-  if(this.f4GuideByTeam.size>0){
+  if((this.f4GuideByTeam?.size??0)>0){
    const bot=this.bots.find(b=>b.id===id);
    const guide=bot?this.f4GuideByTeam.get(bot.team):null;
    if(!bot||bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
