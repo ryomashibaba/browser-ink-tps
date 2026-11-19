@@ -1287,6 +1287,14 @@ export class CpuAgentSystem {
 
       bot.thinkRemaining -= dt;
       if (bot.thinkRemaining <= 0) {
+        // An invalid original Recast projection quarantines ONLY this
+        // passive steering proxy. Never reissue movement while the true
+        // Rapier foot has not been independently revalidated.
+        if(this.phase14qF2RecoverableSteps&&this.f3dSourceGoals&&
+           this.sourceCrowdProjectionHold.has(bot.id)){
+          bot.thinkRemaining=GAME_CONFIG.cpu.tacticalThinkSeconds;
+          continue;
+        }
         // A QA source-local patrol must not invoke a jump to an
         // unbound central/high island. Ordinary T20 jump logic is intact.
         const jumpStarted=this.f3dSourceGoals?false:
@@ -1572,12 +1580,19 @@ export class CpuAgentSystem {
         bot.mobilityState='FIRST_DROP_FALL';
         continue;
       }
-      // A Crowd reattach after KCC landing can resnap onto a different
-      // vertical navmesh island. Unless this is an explicitly validated
-      // source-backed first drop, NEVER silently copy a discontinuous
-      // Recast position into the real CPU/render pose. QA only: T20 unchanged.
+      // A Crowd reattach after KCC landing may jump to a different
+      // vertical Recast island. A genuinely REJOINED original SOURCE
+      // actor can instead reconcile ONLY its passive steering proxy;
+      // the real registered Rapier CPU foot never moves or teleports.
+      // Unjoined/strict QA and default T20 keep the former hard stop.
       if(this.phase14eFirstDrop &&
           auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition){
+        if(this.sourceMayRecoverCrowdDiscontinuity(bot)){
+          this.reconcileBlockedT21F2CrowdProxy(bot);
+          this.continueBlockedOriginalSourceCpuActions(bot,dt,
+            humanTeam,humanPosition,humanActive,canStartNewCombatActions);
+          continue;
+        }
         this.navigation.removeAgent(bot.agent);
         bot.agent=null;
         throw new Error('T21_PHASE14G_UNSUPPORTED_CROWD_REJOIN_DISCONTINUITY');
@@ -1791,6 +1806,17 @@ export class CpuAgentSystem {
     this.blockedSourceActionRows.set(bot.id,previous);
   }
 
+  /** True native SOURCE only: after Rapier first-drop rejoin, an
+   * unexpected passive Recast snap can be isolated to the steering
+   * agent without granting any physical actor/mesh/link authority. */
+  private sourceMayRecoverCrowdDiscontinuity(bot:CpuBot):boolean{
+    return this.phase14qF2RecoverableSteps&&!!this.f3dSourceGoals&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
+      !!this.phase14qGroundCollision&&bot.agent!==null&&
+      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&
+      this.f3dSourceGoals.isLiveRejoinedSourceCpu?.(bot.id)===true;
+  }
+
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
     if(!this.phase14qF2RecoverableSteps||!bot.agent)
       throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');
@@ -1855,7 +1881,7 @@ export class CpuAgentSystem {
         bot.id,this.sourceNativeMotionTick);
       return;
     }
-    this.sourceCrowdProjectionHold.delete(bot.id);
+    const justRecoveredFromHold=this.sourceCrowdProjectionHold.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     // B35's dedup cache is not the live Crowd target: resetMoveTarget
     // discarded the target, so the SAME already-authorized original goal
@@ -1872,7 +1898,10 @@ export class CpuAgentSystem {
     if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
       p.z-bot.position.z)>.20)
       throw Error('T21_F2_CROWD_PROXY_REANCHOR_FAILED');
-    bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
+    // The newly revalidated registered foot deserves an actual NEW native
+    // route at the next tick; all other KCC-veto retries retain .20s pacing.
+    bot.thinkRemaining=Math.min(bot.thinkRemaining,
+      justRecoveredFromHold?0:.20);
     // Actual rejected Rapier/offmesh steps are NOT stale Recast stalls.
     // Preserve this real blocker evidence for five native seconds so the
     // separate no-KCC-rejection recovery cannot hide a true collision.

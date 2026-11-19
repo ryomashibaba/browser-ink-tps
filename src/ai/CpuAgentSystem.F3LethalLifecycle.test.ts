@@ -558,6 +558,39 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     expect(bot.position).toEqual(new Vec3(0,0,0));
   });
 
+  it('resumes genuine source native movement only after a held real foot revalidates',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.stage.solids=[{id:'UndertowT21D:right-low-team-b'}];
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+      solidId:'UndertowT21D:right-low-team-b',
+      point:bot.position.clone()
+    }));
+    const agent={position:vi.fn(()=>bot.position.clone()),
+      teleport:vi.fn(),resetMoveTarget:vi.fn()};
+    bot.agent=agent;bot.thinkRemaining=.18;
+    system.sourceCrowdProjectionHold.set(bot.id,400);
+    system.sourceNativeMotionTick=490;
+    system.navigation.auditNavMeshProjection=vi.fn((p:Vec3)=>({
+      success:true,nearestPoint:p.clone(),distanceMeters:0
+    }));
+    system.reconcileBlockedT21F2CrowdProxy(bot);
+    expect(agent.teleport).toHaveBeenCalledOnce();
+    expect(system.sourceCrowdProjectionHold.has(bot.id)).toBe(false);
+    expect(bot.thinkRemaining).toBe(0);
+    expect(bot.position).toEqual(new Vec3(0,0,0));
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    expect(system.sourceMayRecoverCrowdDiscontinuity(bot)).toBe(true);
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>false;
+    expect(system.sourceMayRecoverCrowdDiscontinuity(bot)).toBe(false);
+    system.f3dSourceGoals.isLiveRejoinedSourceCpu=()=>true;
+    system.phase14qF2RecoverableSteps=false;
+    expect(system.sourceMayRecoverCrowdDiscontinuity(bot)).toBe(false);
+    system.phase14qF2RecoverableSteps=true;
+    bot.mobilityState='FIRST_DROP_REJOIN';
+    expect(system.sourceMayRecoverCrowdDiscontinuity(bot)).toBe(false);
+  });
+
 });
 
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
