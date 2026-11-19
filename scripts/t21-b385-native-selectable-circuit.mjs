@@ -26,6 +26,7 @@ const OUT=process.env.T21_B385_OUTPUT||'/tmp/t21-b385';
 const shortB415=process.env.T21_B415_SHORT_CANONICAL==='1';
 // One natural F-key Snap Bomb after genuine 3/3, not another 180s run.
 const shortRealSub=process.env.T21_B385_ONE_SUB_SHORT==='1';
+const shortSubRefill=process.env.T21_B385_SUB_REFILL_SHORT==='1';
 const children=[],pending=new Map(),observations=[];
 let socket=null,sequence=0;
 const report={schema:'B385_REAL_CHROMIUM_NATIVE_SOURCE_SELECTABLE_ROUND',
@@ -1608,7 +1609,7 @@ async function run(){
    const u=q?.sub;
    // Snap Bomb can physically contact a floor immediately. A genuine
    // DETONATED cue may supersede THROWN before the next CDP read.
-   const acceptedCue=shortRealSub?
+   const acceptedCue=(shortRealSub||shortSubRefill)?
     (u?.mode==='THROWN'||u?.mode==='DETONATED'):
     u?.mode==='THROWN';
    return q?.view==='PLAYER'&&q.phase==='PLAYING'&&
@@ -1757,6 +1758,94 @@ async function run(){
  console.log('B394_REAL_NATIVE_BOMB_SOURCE_PAINT_HUD',
   JSON.stringify(realBombInkProof));
  await picture('b394-real-native-bomb-source-paint');
+
+ if(shortSubRefill){
+  // Genuine F+F low-ink state; native Shift over ACTUAL OWN paint,
+  // then a third real 45-ink projectile and physical explosion.
+  const low=original(await state(),'SUB_AFTER_TWO_REAL_DETONATIONS');
+  if(low.matchState!=='PLAYING'||low.paused||
+     low.b38HumanSub.throws!==nativeSubReady.b38HumanSub.throws+2||
+     low.b38HumanSub.explosions!==nativeSubReady.b38HumanSub.explosions+2||
+     low.player.ink>=45||low.cpu.physicalRejoins.length!==7)
+   fail('SUB_REFILL_TWO_BOMBS_NOT_LOW_INK',{tick:low.tick,ink:low.player.ink,
+    sub:low.b38HumanSub});
+  let firstOwn=null,refilled;
+  await key('keyDown','Shift','ShiftLeft',16);
+  try{
+   refilled=await until(async()=>{
+    const n=original(await state(),'TRUE_NATIVE_OWN_SQUID_SUB_REFILL');
+    if(n.matchState!=='PLAYING'||n.paused||n.player.hp<=0||
+       n.shotsFired!==low.shotsFired||n.cpu.physicalRejoins.length!==7)
+     fail('SUB_REFILL_NATIVE_WORLD_CHANGED',{tick:n.tick,
+      state:n.matchState,player:n.player,shots:n.shotsFired});
+    const genuine=n.player.mode==='SQUID'&&
+      n.player.inkRelation==='OWN'&&
+      n.playerInkRecoveryState==='SQUID_OWN'&&
+      n.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND'&&
+      n.b112OriginalHumanGround?.genuineKccGrounded===true;
+    if(!genuine)return false;
+    if(!firstOwn)firstOwn={tick:n.tick,ink:n.player.ink,
+      originalFoot:n.b112OriginalHumanGround.lastOriginalSourceHitId};
+    return n.tick>=firstOwn.tick+3&&n.player.ink>=45&&
+      n.player.ink>firstOwn.ink+.25?n:false;
+   },55000);
+  }finally{await key('keyUp','Shift','ShiftLeft',16);}
+  const human=await until(async()=>{
+   const n=original(await state(),'NATIVE_HUMAN_AFTER_OWN_SUB_REFILL');
+   return n.player.mode==='HUMAN'&&n.matchState==='PLAYING'&&
+      !n.paused?n:false;
+  },15000);
+  if(!firstOwn||human.player.ink<45||human.shotsFired!==low.shotsFired)
+   fail('SUB_REFILL_HUMAN_NOT_READY',{human:human.player,firstOwn});
+  await key('keyDown','f','KeyF',70);
+  let third;
+  try{
+   third=await until(async()=>{
+    const n=original(await state(),'THIRD_REAL_F_SUB_THROW');
+    return n.b38HumanSub.throws===human.b38HumanSub.throws+1?n:false;
+   },30000);
+  }finally{await key('keyUp','f','KeyF',70);}
+  const end=await until(async()=>{
+   const n=original(await state(),'THIRD_REAL_SUB_EXPLOSION');
+   return n.b38HumanSub.explosions===human.b38HumanSub.explosions+1?n:false;
+  },60000);
+  const proof={phase:'B385_NATIVE_2_SUB_OWN_REFILL_3RD_SUB',
+   actualOriginal:'25/17/26/0',
+   afterTwo:{tick:low.tick,ink:low.player.ink,
+    throws:low.b38HumanSub.throws,explosions:low.b38HumanSub.explosions},
+   squidOwnStart:firstOwn,
+   squidOwnEnd:{tick:refilled.tick,ink:refilled.player.ink,
+    mode:refilled.player.mode,relation:refilled.player.inkRelation,
+    recovery:refilled.playerInkRecoveryState},
+   trueOwnInkRecovered:refilled.player.ink-firstOwn.ink,
+   humanBeforeThird:{tick:human.tick,ink:human.player.ink},
+   actualThirdThrow:{tick:third.tick,ink:third.player.ink,
+    throws:third.b38HumanSub.throws},
+   actualThirdExplosion:{tick:end.tick,ink:end.player.ink,
+    throws:end.b38HumanSub.throws,explosions:end.b38HumanSub.explosions,
+    originalBombOutcome:end.b23HumanInkFeedback.lastBombOutcome,
+    sourceCells:end.b23HumanInkFeedback.lastBombOutcomeChangedCells},
+   realCpuRejoins:end.cpu.physicalRejoins.length,
+   trueMainShotsBefore:low.shotsFired,trueMainShotsAfter:end.shotsFired,
+   keyInputs:'F,F,Shift,F',actorWrites:0,timeWrites:0,inkWrites:0,
+   officialScoreable:0,officialWinner:'NONE',full180sCertified:false,
+   naturalCrossTeamContactCertified:false};
+  if(end.matchState!=='PLAYING'||end.paused||
+     end.cpu.physicalRejoins.length!==7||
+     end.shotsFired!==low.shotsFired||
+     end.b38HumanSub.throws!==low.b38HumanSub.throws+1||
+     end.b38HumanSub.explosions!==low.b38HumanSub.explosions+1||
+     end.player.ink>=human.player.ink||
+     end.sourceScoreablePromotions!==0)
+    fail('SUB_REFILL_CYCLE_NATIVE_PROOF_INVALID',proof);
+  report.phases.push(proof);persist();
+  await picture('b385-native-third-sub-after-own-refill');
+  report.outcome='PASS_B385_TWO_SUBS_OWN_REFILL_THIRD_SUB_NATIVE';
+  report.note='Real three F throws and native explosions; Shift-only physical OWN ink refill. No 180s, official Turf, cross-team contact or injected game state.';
+  persist();
+  console.log('B385_REAL_THIRD_SUB_AFTER_OWN_REFILL_PASS',JSON.stringify(proof));
+  return;
+ }
  const naturallyRefilled=await until(async()=>{
   const q=await trueSubHud();
   return q?.view==='PLAYER'&&q.phase==='PLAYING'&&!q.hidden&&
