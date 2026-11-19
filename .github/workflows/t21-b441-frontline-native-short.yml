@@ -209,21 +209,6 @@ jobs:
           npx vitest run src/audio/SourcePracticeAudio.test.ts src/player/PlayerController.source-player.test.ts src/app/UndertowF3SourceSessionBoard.test.ts src/app/B160SourceCpuActivityView.test.ts src/app/UndertowF3SourceTraffic.test.ts src/app/OriginalSourceCombatRetreat.test.ts src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts src/input/PlayerInput.qa.test.ts src/app/B485RealRepeatA1Command.test.ts src/app/B483RealFrontlineTeammateCommand.test.ts src/stage/undertow/UndertowOriginalNativeLandingFootReprojection.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/app/B245SourcePresentation.test.ts src/app/B207SourceCombatRound.test.ts src/app/SourcePlayPortal.test.ts src/input/PlayerInput.qa.test.ts src/app/UndertowF3OriginalVisualRegistration.test.ts src/app/UndertowF3RadarElevation.test.ts src/stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate.test.ts src/app/UndertowF3NativeHumanCrowd.test.ts src/app/UndertowF3SourceFloorAuthority.test.ts src/app/W10B112HumanGroundLedger.test.ts src/app/W10B114OriginalFootprintAudit.test.ts src/app/W10B130OriginalFlatEdge.test.ts src/app/UndertowF3OriginalEdgeGuidance.test.ts src/ai/CpuSourceCrowdStallRecovery.test.ts src/ai/CpuSourceCrowdStallRecovery.integration.test.ts src/app/UndertowF3GWholeSourcePreview.test.ts src/app/UndertowF3LTexturedSourcePreview.test.ts src/camera/ThirdPersonCamera.test.ts src/camera/ThirdPersonCamera.combat.test.ts src/camera/UndertowF3SmartOcclusion.test.ts src/app/B248SourceActorVisuals.test.ts src/app/UndertowF3PaintAwarePatrol.test.ts src/ai/B180OriginalSourcePaintOpportunity.test.ts src/ai/B216OriginalSourceBackfillInk.test.ts src/app/W10B154OriginalTeamInkMode.test.ts src/app/B441OriginalSourceFrontline.test.ts src/app/B443OriginalFrontHold.test.ts src/stage/undertow/UndertowW10EightSeamSourceCandidates.test.ts
       - name: Existing ink-cell and real registered player resource regressions
         run: npx vitest run src/stage/undertow/UndertowW9NativeCpuPaintProjectileQa.test.ts src/ai/B178OriginalSourceInkResources.test.ts src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts src/projectile/B343OriginalSourceVolleyBudget.test.ts src/projectile/B345SourceShooterOpeningCadence.test.ts src/ink/PaintSurface.test.ts src/stage/undertow/UndertowPhase14NRealPlayerProjectileQa.test.ts src/stage/undertow/UndertowPhase14QSharedActorCollision.test.ts src/stage/undertow/UndertowW10B12LocalCpuHumanCombatLifecycle.test.ts src/stage/undertow/UndertowW10B13HumanToCpuSplatRespawn.test.ts src/projectile/NativeSourceSpecialBlastAndTtl.test.ts src/projectile/NativeSourceMeleePaintSupport.test.ts
-      # One approved F4 real browser test: reuse existing workflow and runner.
-      - name: One true F4 51-solid Chromium human and 7CPU session
-        if: ${{ contains(github.event.head_commit.message, '[f4-real-chrome]') }}
-        env:
-          T21_F4_CENTRAL_BROWSER_ONCE: '1'
-          T21_B440_OUT: /tmp/t21-f4-51-solid-chromium
-        run: node scripts/t21-b440-short-native-original-foot.mjs
-      - name: Keep actual F4 Chromium feet, screenshot and boot error
-        if: ${{ always() && contains(github.event.head_commit.message, '[f4-real-chrome]') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: t21-f4-51-solid-real-chrome-once
-          path: /tmp/t21-f4-51-solid-chromium/
-          if-no-files-found: warn
-          retention-days: 14
       # B493 pinned RAW only. No Chromium or source gameplay simulation.
       - name: Download immutable original B2 B4 60Hz Chromium foot ledger
         if: ${{ contains(github.event.head_commit.message, '[b493-kcc-readonly]') }}
@@ -432,6 +417,22 @@ jobs:
           NATIVE_BINDINGS
       - name: TypeScript check and real browser bundle compilation only
         run: npm run build -- --base=/browser-ink-tps/
+      # One approved F4 real browser test: reuse existing workflow and runner.
+      - name: One true F4 51-solid Chromium human and 7CPU session
+        if: ${{ contains(github.event.head_commit.message, '[f4-real-chrome]') }}
+        env:
+          T21_F4_CENTRAL_BROWSER_ONCE: '1'
+          T21_B440_OUT: /tmp/t21-f4-51-solid-chromium
+        run: node scripts/t21-b440-short-native-original-foot.mjs
+      - name: Keep actual F4 Chromium feet, screenshot and boot error
+        if: ${{ always() && contains(github.event.head_commit.message, '[f4-real-chrome]') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: t21-f4-51-solid-real-chrome-once
+          path: /tmp/t21-f4-51-solid-chromium/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: One-shot genuine 11-face V23 Rapier, ephemeral verified source
         if: ${{ contains(github.event.head_commit.message, '[p0-v23-original-face-once]') }}
         shell: bash
@@ -453,7 +454,7 @@ jobs:
     # B385 already runs real 7CPU for this one camera-input milestone.
     # A single explicit short native 3D-foot evidence run may coexist with
     # P0 radar; all unrelated heavy SOURCE 180s workflows still skip P0.
-    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') && (!contains(github.event.head_commit.message, '[p0-radar-build-only]') || contains(github.event.head_commit.message, '[p1-native-goal3d-once]') || contains(github.event.head_commit.message, '[p1-native-b443-once]')) && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') && !contains(github.event.head_commit.message, '[b499-eight-source-seams]') && !startsWith(github.event.head_commit.message, '[a1-fall-r-native-once]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[b415-short]') && !contains(github.event.head_commit.message, '[p1-own-retry]') && (!contains(github.event.head_commit.message, '[p0-radar-build-only]') || contains(github.event.head_commit.message, '[p1-native-goal3d-once]') || contains(github.event.head_commit.message, '[p1-native-b443-once]')) && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') && !contains(github.event.head_commit.message, '[b499-eight-source-seams]') && !contains(github.event.head_commit.message, '[f4-real-chrome]') && !startsWith(github.event.head_commit.message, '[a1-fall-r-native-once]') }}
     runs-on: ubuntu-latest
     # One explicit genuine >3600 native-tick case; ordinary pushes stay short.
     timeout-minutes: ${{ (contains(github.event.head_commit.message, '[true-full-replay]') || contains(github.event.head_commit.message, '[k3-one-world]')) && 80 || ((contains(github.event.head_commit.message, '[true-expiry]') || contains(github.event.head_commit.message, '[real-q-once]') || contains(github.event.head_commit.message, '[real-sweep-once]') || contains(github.event.head_commit.message, '[real-sweep-clear]') || contains(github.event.head_commit.message, '[real-charger-once]')) && 35 || 15) }}
