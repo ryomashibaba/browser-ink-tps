@@ -1147,12 +1147,35 @@ async function runF4RealChrome(){
   return n.b25SourcePaintRun?.status==='ARMED'?n:false;
  },30000,300);
  await buttonClick('#t21-f3-b202-resume');
+ // Preserve actual CPU and human progress EVEN IF all seven never rejoin.
+ // This is evidence, not authority to mark an incomplete game PASS.
+ report.prejoinFrames=[];
+ let lastPrejoinTick=-90;
  const playing=await until(async()=>{
   const n=await snap();
   if(n?.stopReason)fail('F4_STOP_'+String(n.stopReason));
+  if(n.tick-lastPrejoinTick>=90){
+   lastPrejoinTick=n.tick;
+   report.prejoinFrames.push({tick:n.tick,state:n.matchState,
+    paused:n.paused??null,rejoined:n.cpu?.physicalRejoins?.length??0,
+    cpu:n.cpu?.cpu?.map(c=>({id:c.id,mobility:c.mobilityState,
+     foot:c.physicalFoot,rejoined:c.rejoined})),
+    actualGoals:n.cpu?.sourcePatrol?.realGoalRequests??null});
+   if(report.prejoinFrames.length>18)report.prejoinFrames.shift();
+   save();
+  }
   return n.matchState==='PLAYING'&&!n.paused&&
    n.cpu?.physicalRejoins?.length===7?n:false;
- },200000,350);
+ },150000,350).catch(e=>{
+  if(!String(e).includes('TIMEOUT'))throw e;
+  report.verdict='HOLD_SEVEN_CPU_REAL_REJOIN_TIMEOUT';
+  report.rejoinWaitError=String(e);
+  report.sevenCpu='HOLD';
+  save();
+  console.log('T21_F4_REAL_CHROME_51_SOLID',JSON.stringify(report));
+  return null;
+ });
+ if(!playing)return;
  report.sevenCpu='PASS_ACTUAL_SEVEN_REJOINED';
  report.startTick=playing.tick;
  report.initialHuman=playing.player?.position;

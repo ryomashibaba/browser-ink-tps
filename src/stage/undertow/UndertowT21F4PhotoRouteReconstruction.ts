@@ -185,6 +185,10 @@ export function t21F4CentralCrossingGuide(
 
 /** Uncertified, explicitly opted-in F4 physical research world. */
 export const T21_F4_RESEARCH_STAGE_LABEL='T21 V28 F4 CENTRAL ROUTE RESEARCH ONLY';
+// Exact research-stage objects constructed from frozen SOURCE geometry.
+// A per-CPU 0.28s tactical decision must not rebuild and JSON-stringify
+// 26 meshes repeatedly. Slow fingerprint audit is retained for unknown objects.
+const F4_APPROVED_RESEARCH_STAGES=new WeakSet<StageDefinition>();
 
 export function buildT21F4ResearchStage(base:StageDefinition):StageDefinition{
  const frozen=undertowT21dConnectivityQaStage();
@@ -194,9 +198,14 @@ export function buildT21F4ResearchStage(base:StageDefinition):StageDefinition{
     base.navigationLinks!==frozen.navigationLinks)
   throw Error('F4_RESEARCH_MUST_START_FROM_IMMUTABLE_SOURCE');
  const candidate=buildT21F4PhotoRouteExperiment();
- return {...base,
+ const approved:StageDefinition={...base,
   metadata:{...base.metadata,displayName:T21_F4_RESEARCH_STAGE_LABEL},
   solids:candidate.stage.solids};
+ if(approved.solids.length!==51||
+    !frozen.solids.every((s,i)=>approved.solids[i]===s))
+  throw Error('F4_RESEARCH_STAGE_EXACT_BASE_SOLIDS_REQUIRED');
+ F4_APPROVED_RESEARCH_STAGES.add(approved);
+ return approved;
 }
 
 /** Allow the 51-solid opt-in only if the exact 25 original solids plus
@@ -210,6 +219,7 @@ export function isT21F4ResearchStage(stage:StageDefinition):boolean{
     stage.paintSurfaces!==base.paintSurfaces||
     stage.navigationLinks!==base.navigationLinks||
     !base.solids.every((s,i)=>stage.solids[i]===s))return false;
+ if(F4_APPROVED_RESEARCH_STAGES.has(stage))return true;
  const expected=buildT21F4PhotoRouteExperiment().stage.solids;
  return stage.solids.every((s,i)=>i<25||
   JSON.stringify(s)===JSON.stringify(expected[i]));
