@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {t21OriginalOpticalManifestsValid} from './t21-f3gl-restore.mjs';
+import {t21OriginalOpticalManifestsValid,t21KnownLegacyOriginalOpticalManifestsValid} from './t21-f3gl-restore.mjs';
 const root=resolve(import.meta.dirname,'..');
 const view=readFileSync(resolve(root,'PLAY_ORIGINAL_STAGE_WINDOWS.cmd'),'utf8');
 const normal=readFileSync(resolve(root,'PLAY_SOURCE_WINDOWS.cmd'),'utf8');
@@ -85,6 +85,38 @@ function b490Sample(on){
    realCameraEye:[1,5,54],realCameraForward:[.2,-.1,-.97]}}
  };
 }
+test('known legacy F3G+F3I+F3K source precursor can be upgraded only when exactly source-verified',()=>{
+ const old={
+  ...flat,
+  groups:['floor','slope','metal','glass','support','structure','detail']
+   .map(kind=>({kind,file:'original-'+kind+'.bin'}))
+ };
+ const environment={
+  ...env,verifiedAgainstPinnedSource:true,productionAuthorization:false,
+  navigationLinksAdded:0,scoreableSurfacesAdded:0,inferredFloorOrRouteAdded:0,
+  environmentStageRegistrationRecovered:false,traversalAuthorityRecovered:false,
+  previewBin:{file:'f3i-environment-obj-space.bin'}
+ };
+ const family={...gallery,verifiedAgainstPinnedSource:true,
+  components:Array.from({length:8},(_,i)=>({
+   file:'f3k-family-'+String(i+1).padStart(2,'0')+'.bin'
+  }))};
+ assert.equal(t21KnownLegacyOriginalOpticalManifestsValid(
+  old,environment,family),true);
+ for(const [a,b,c] of [
+  [{...old,sourceSHA256:'modified'},environment,family],
+  [old,{...environment,actorPlacementRecovered:true},family],
+  [old,environment,{...family,stageCollisionSolidsAdded:1}],
+  [old,environment,{...family,components:[]}],
+  [{...old,groups:old.groups.slice(1)},environment,family]
+ ])assert.equal(t21KnownLegacyOriginalOpticalManifestsValid(a,b,c),false);
+ // Unknown content, symlinked files, failed candidate hashes and rejected
+ // pre-promotion legacy checks MUST NOT be interpreted as optical authority.
+ assert.match(source,/verifyKnownLegacyOriginalPack\(DEST\)/);
+ assert.match(source,/found\.length!==filenames\.size/);
+ assert.match(source,/!e\.isFile\(\)\|\|e\.isSymbolicLink\(\)/);
+ assert.match(source,/await rename\(old,DEST\)/);
+});
 test('B490 verified UV and physical-only frame have identical actual body and camera',()=>{
  const result=b490ValidateSamePoseFrames(b490Sample(true),b490Sample(false));
  assert.equal(result.status,'PASS_SAME_POSE_CAPTURE_READY');

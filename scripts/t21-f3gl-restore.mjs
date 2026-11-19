@@ -5,7 +5,7 @@
  * Opt-in from PLAY_ORIGINAL_STAGE_WINDOWS.cmd or\n * PLAY_SOURCE_WITH_ORIGINAL_VISUALS_WINDOWS.cmd. The default launcher\n * never downloads original assets.
  */
 import {createHash} from 'node:crypto';
-import {readFile,writeFile,mkdtemp,mkdir,rm,rename,stat} from 'node:fs/promises';
+import {readFile,writeFile,mkdtemp,mkdir,rm,rename,stat,lstat,readdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -72,6 +72,78 @@ export function t21OriginalOpticalManifestsValid(flat,uv,environment,gallery){
   gallery.productionAuthorization===false;
 }
 
+/** An explicitly opted-in visual launcher may upgrade only the EXACT
+ * locally generated F3G+F3I+F3K precursor from t21:source:prepare.
+ * It cannot adopt an unknown directory, custom textures or source files.
+ * Optical authority stays NONE; this is never collision or actor evidence. */
+export function t21KnownLegacyOriginalOpticalManifestsValid(flat,env,gallery){
+ const groups=['original-floor.bin','original-slope.bin','original-metal.bin',
+  'original-glass.bin','original-support.bin','original-structure.bin',
+  'original-detail.bin'];
+ if(!flat||flat.schema!=='T21_F3G_PINNED_ORIGINAL_STATIC_OBJ_V1'||
+    flat.sourceSHA256!==PINNED_TEMPLE01_SHA256||
+    flat.verifiedAgainstPinnedSource!==true||
+    flat.includedOriginalTriangles!==57578||
+    flat.stagePlayableAuthority!=='NONE'||
+    flat.stageCollisionSolidsAdded!==0||
+    flat.stagePaintSurfacesAdded!==0||
+    flat.navigationLinksAdded!==0||
+    flat.scoreableSurfacesAdded!==0||
+    flat.inferredFloorOrRouteAdded!==0||
+    flat.productionAuthorization!==false||
+    !Array.isArray(flat.groups)||flat.groups.length!==7||
+    !groups.every((file,i)=>flat.groups[i]?.file===file))
+  return false;
+ if(!env||env.schema!=='T21_F3I_ENVIRONMENT_SOURCE_DIAGNOSTIC_V1'||
+    env.sourceSHA256!==PINNED_TEMPLE01_SHA256||
+    env.verifiedAgainstPinnedSource!==true||
+    env.stagePlayableAuthority!=='NONE'||
+    env.productionAuthorization!==false||
+    env.stageCollisionSolidsAdded!==0||
+    env.navigationLinksAdded!==0||
+    env.scoreableSurfacesAdded!==0||
+    env.inferredFloorOrRouteAdded!==0||
+    env.actorPlacementRecovered!==false||
+    env.environmentStageRegistrationRecovered!==false||
+    env.traversalAuthorityRecovered!==false||
+    env.previewBin?.file!=='f3i-environment-obj-space.bin')
+  return false;
+ return !!gallery&&
+   gallery.schema==='T21_F3K_ISOLATED_SOURCE_FAMILY_GALLERY_V1'&&
+   gallery.sourceSHA256===PINNED_TEMPLE01_SHA256&&
+   gallery.verifiedAgainstPinnedSource===true&&
+   gallery.stagePlayableAuthority==='NONE'&&
+   gallery.actorPlacementRecovered===false&&
+   gallery.stageCollisionSolidsAdded===0&&
+   gallery.productionAuthorization===false&&
+   Array.isArray(gallery.components)&&gallery.components.length===8&&
+   gallery.components.every((c,i)=>
+    c.file==='f3k-family-'+String(i+1).padStart(2,'0')+'.bin');
+}
+
+/** Never overwrite unknown user data. A recognized legacy folder must
+ * consist of exactly the generator's manifest and hash-verified blobs. */
+async function verifyKnownLegacyOriginalPack(dir){
+ const info=await lstat(dir);
+ if(!info.isDirectory()||info.isSymbolicLink())
+  throw Error('T21_LOCAL_LEGACY_NOT_A_REAL_DIRECTORY');
+ const [flat,env,gallery]=await Promise.all([
+  'manifest.json','f3i-environment.json','f3k-family-gallery.json'
+ ].map(async name=>JSON.parse(await readFile(join(dir,name),'utf8'))));
+ if(!t21KnownLegacyOriginalOpticalManifestsValid(flat,env,gallery))
+  throw Error('T21_LOCAL_EXISTING_PACK_NOT_VERIFIED_LEGACY');
+ const entries=[...flat.groups,env.previewBin,...gallery.components];
+ const filenames=new Set(['manifest.json','f3i-environment.json',
+  'f3k-family-gallery.json',...entries.map(e=>e.file)]);
+ const found=await readdir(dir,{withFileTypes:true});
+ if(found.length!==filenames.size||found.some(e=>
+   !e.isFile()||e.isSymbolicLink()||!filenames.has(e.name)))
+  throw Error('T21_LOCAL_LEGACY_HAS_UNRECOGNIZED_FILES');
+ for(const e of entries)await exactFile(dir,e.file,e.bytes,e.sha256);
+ return {legacyVerified:true,originalSha256:flat.sourceSHA256,
+  opticalOnly:true,collisionSolidsAdded:0};
+}
+
 async function verifyLocalPack(dir){
  const [flat,uv,environment,gallery]=await Promise.all([
   'manifest.json','f3l-original-textured.json',
@@ -122,11 +194,20 @@ async function download(url,maxBytes){
 }
 
 export async function restoreLocalOriginalOptics(){
+ let verifiedLegacy=null;
  if(await exists(DEST)){
-  const proven=await verifyLocalPack(DEST);
-  console.log('T21_ORIGINAL_REVIEW_REUSING_VERIFIED_LOCAL_PACK',
-   JSON.stringify(proven));
-  return proven;
+  try{
+   const proven=await verifyLocalPack(DEST);
+   console.log('T21_ORIGINAL_REVIEW_REUSING_VERIFIED_LOCAL_PACK',
+    JSON.stringify(proven));
+   return proven;
+  }catch(error){
+   // Previously supported t21:source:prepare creates genuine F3G+F3I+F3K
+   // WITHOUT F3L UV. Reject unknown, modified or incomplete directories.
+   // A true old pack may be upgraded ONLY after explicit visual launcher
+   // opt-in, and the new complete pack passes independent hash validation.
+   verifiedLegacy=await verifyKnownLegacyOriginalPack(DEST);
+  }
  }
  await mkdir(PUBLIC,{recursive:true});
  let temp=null,staging=null;
@@ -163,9 +244,32 @@ export async function restoreLocalOriginalOptics(){
   await writeFile(join(staging,'f3l-original-textured.json'),
    JSON.stringify({...uv,textures},null,2)+'\n');
   const result=await verifyLocalPack(staging);
-  if(await exists(DEST))throw Error('T21_ORIGINAL_TARGET_APPEARED_NO_OVERWRITE');
-  await rename(staging,DEST); // Same filesystem; no partially installed pack.
-  staging=null;
+  if(verifiedLegacy){
+   // Preserve and recheck the old user-local derived data IMMEDIATELY
+   // before replacing it; a concurrent edit never gets overwritten.
+   await verifyKnownLegacyOriginalPack(DEST);
+   const backup=await mkdtemp(join(PUBLIC,'.t21-stage-legacy-'));
+   const old=join(backup,'previous-verified-derived-pack');
+   try{
+    await rename(DEST,old);
+    try{
+     await rename(staging,DEST);
+     staging=null;
+    }catch(error){
+     await rename(old,DEST); // Failed install restores the old visual pack.
+     throw error;
+    }
+   }finally{
+    // Only delete fully recognized, hash-verified DERIVED assets after
+    // the complete new original-visual pack is installed successfully.
+    if(!await exists(old))await rm(backup,{recursive:true,force:true});
+    else if(!staging)await rm(backup,{recursive:true,force:true});
+   }
+  }else{
+   if(await exists(DEST))throw Error('T21_ORIGINAL_TARGET_APPEARED_NO_OVERWRITE');
+   await rename(staging,DEST); // Same filesystem; no partially installed pack.
+   staging=null;
+  }
   console.log('T21_ORIGINAL_PINNED_UV_RESTORED_LOCAL_ONLY',
    JSON.stringify({...result,sourceSha256:PINNED_TEMPLE01_SHA256}));
   return result;
