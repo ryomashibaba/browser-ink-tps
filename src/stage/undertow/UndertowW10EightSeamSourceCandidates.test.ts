@@ -11,7 +11,7 @@ import {initializeRapier,RapierStagePhysics}
  from '../../physics/RapierStagePhysics';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from './UndertowSpillwayConnectivityQa';
-import {buildT21F4PhotoRouteExperiment}
+import {buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide}
  from './UndertowT21F4PhotoRouteReconstruction';
 import {PRODUCTION_STAGE_DEFINITION} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -319,36 +319,16 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
    const raw=nav.auditPath(new Vec3(...probe.from),
     new Vec3(...probes[1-i]!.to),.35).nativePathPoints;
    const sourceSide=i===0?'POSITIVE_Z':'NEGATIVE_Z';
-   const ramps=[sourceSide,
-    i===0?'NEGATIVE_Z':'POSITIVE_Z'].map(side=>{
-    const repair=experiment.repairs.find(r=>
-     r.kind==='CENTRAL_STEP_APPROACH'&&r.side===side);
-    const v=repair?.solid.triangleMesh?.vertices;
-    if(!v||v.length!==4)throw Error('F4_MISSING_EXISTING_CENTRAL_RAMP');
-    const mid=(a:readonly number[],b:readonly number[])=>new Vec3(
-     (a[0]!+b[0]!)/2,(a[1]!+b[1]!)/2,(a[2]!+b[2]!)/2);
-    return {low:mid(v[0]!,v[1]!),high:mid(v[2]!,v[3]!)};
-   });
-   const low=ramps[0]!.low,high=ramps[0]!.high;
-   // The native corridor currently cuts into the SIDE of an elevated
-   // ramp at x(model)≈-6.4, z≈+/-0.64, a 0.5m curb. Follow both existing
-   // center-slope strips from their zero-height ENDS instead: source-side
-   // lower -> step top -> destination-side lower. This is steering ONLY.
-   // All points belong to already registered experimental triangles.
+   const guide=t21F4CentralCrossingGuide(experiment.repairs,sourceSide);
+   const low=new Vec3(...guide[0]!);
+   const high=new Vec3(...guide[8]!);
+   // The raw NavMesh path enters the ramp from its 0.5m-high SIDE.
+   // Route the KCC along existing floor from its actual low entrance.
    const entry=raw.findIndex((p,j)=>j>=10&&p.y>.35&&p.y<1.3&&
     Math.hypot(p.x-low.x,p.z-low.z)<6);
    if(entry<0)throw Error('F4_CENTRAL_RAMP_ENTRY_NOT_LOCALIZED');
-   const centerline=(from:Vec3,to:Vec3)=>Array.from({length:9},(_,j)=>{
-    const t=j/8;
-    return new Vec3(from.x+(to.x-from.x)*t,
-     from.y+(to.y-from.y)*t,from.z+(to.z-from.z)*t);
-   });
-   const top=ramps[1]!.high;
    const guided=[...raw.slice(0,entry),
-    ...centerline(low,high),
-    ...centerline(high,top).slice(1),
-    ...centerline(top,ramps[1]!.low).slice(1),
-    raw[raw.length-1]!];
+    ...guide.map(p=>new Vec3(...p)),raw[raw.length-1]!];
    const points=guidance==='real-ramp-entrance'?guided:raw;
    const exit=raw.length-1;
    const sim=new RapierStagePhysics(1/60,stage);sim.step();

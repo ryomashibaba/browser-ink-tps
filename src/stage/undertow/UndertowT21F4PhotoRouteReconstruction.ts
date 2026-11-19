@@ -147,3 +147,38 @@ export function buildT21F4PhotoRouteExperiment(){
    stage.navigationLinks===frozen.navigationLinks,
   sceneIsolated:true as const,actualOriginalCollisionProven:false as const};
 }
+
+/**
+ * F4 experimental physical corridor steering points.
+ * Every point is interpolated on the two ALREADY PRESENT approximate
+ * center ramps or on the existing center step-top line between them.
+ * Steering only: never creates a collider, off-mesh connection, floor or
+ * height correction. Geometry is photo-estimated, NOT certified original.
+ */
+export function t21F4CentralCrossingGuide(
+ repairs:readonly PhotoRouteRepair[],originSide:'POSITIVE_Z'|'NEGATIVE_Z'
+):readonly StageVector3[]{
+ const destSide=originSide==='POSITIVE_Z'?'NEGATIVE_Z':'POSITIVE_Z';
+ const edge=(side:Side)=>{
+  const repair=repairs.find(r=>r.kind==='CENTRAL_STEP_APPROACH'&&r.side===side);
+  const v=repair?.solid.triangleMesh?.vertices;
+  if(!v||v.length!==4||!repair?.geometryApproximate||
+     !repair.notOriginalCollision)
+   throw Error('F4_CENTRAL_GUIDE_REQUIRES_ISOLATED_UNCERTIFIED_RAMP');
+  const mid=(a:StageVector3,b:StageVector3):StageVector3=>[
+   (a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
+  return {low:mid(v[0]!,v[1]!),high:mid(v[2]!,v[3]!)};
+ };
+ const start=edge(originSide),end=edge(destSide);
+ const line=(a:StageVector3,b:StageVector3):StageVector3[]=> 
+  Array.from({length:9},(_,j)=>{
+   const t=j/8;
+   return [a[0]+(b[0]-a[0])*t,
+    a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  });
+ return [
+  ...line(start.low,start.high),
+  ...line(start.high,end.high).slice(1),
+  ...line(end.high,end.low).slice(1)
+ ];
+}
