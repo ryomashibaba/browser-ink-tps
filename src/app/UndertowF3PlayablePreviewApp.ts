@@ -737,7 +737,9 @@ export class UndertowF3PlayablePreviewApp{
    realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
   if(this.b203FullRound&&
      new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'){
-   this.b250SourceView=installB250SourceView(app,cameraEntity,stage);
+   // Original B250 material/94-face visual authority stays frozen. The
+   // experimental 51-solid world is used only by actual Recast/Rapier.
+   this.b250SourceView=installB250SourceView(app,cameraEntity,this.rawStage);
    this.canvas.dataset.t21B250Readability='READABLE';
   }
   // Reviewed true-original optical structure triangles only. All 25
