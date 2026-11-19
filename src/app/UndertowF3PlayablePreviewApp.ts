@@ -142,7 +142,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
-import {createF3PlayableHud,sourceF3RealAimLineCue} from './UndertowF3PlayableHud';
+import {createF3PlayableHud,sourceF3RealAimLineCue,sourceFullHudRefreshDue} from './UndertowF3PlayableHud';
 import {b343SourceShooterPracticeHref} from '../projectile/B343OriginalSourceVolleyBudget';
 import {installB245SourcePresentation} from './B245SourcePresentation';
 import {describeB141RealOriginalAlly,b141PlayerAllyHudLine}
@@ -6468,8 +6468,8 @@ export class UndertowF3PlayablePreviewApp{
    // B403: Keep the actual original-source radar fresh during slow
    // SwiftShader frames without increasing full-HUD refresh frequency.
    // This draws read-only positions/ownerGrid: no simulation or score writes.
-   const fullHudDue=this.matchState!==priorNativeRoundPhase||
-      this.matchState==='TIME_UP'||this.renderedFrames%12===0;
+   const fullHudDue=sourceFullHudRefreshDue(
+    this.matchState,priorNativeRoundPhase,this.renderedFrames);
    if(this.radarVisible&&!fullHudDue&&this.renderedFrames%3===0){
     // Fast path must not repeatedly run the whole QA/HUD snapshot:
     // use only measured KCC position and current native CPU traffic.

@@ -12,8 +12,32 @@ import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
-import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,b465SourceRoundKeyHelp,genuineF3DirectHitVisible,sourceF3RealAimLineCue,type F3PlayableHudState}
+import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,b465SourceRoundKeyHelp,genuineF3DirectHitVisible,sourceF3RealAimLineCue,sourceFullHudRefreshDue,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
+
+describe('real SOURCE TIME_UP full-HUD work budget',()=>{
+ it('refreshes immediately on genuine round phase changes, including TIME_UP',()=>{
+  expect(sourceFullHudRefreshDue('PLAYING','STAGING',5)).toBe(true);
+  expect(sourceFullHudRefreshDue('TIME_UP','PLAYING',5)).toBe(true);
+  expect(sourceFullHudRefreshDue('STAGING','TIME_UP',5)).toBe(true);
+ });
+ it('does not rebuild the whole frozen 180s result every render frame',()=>{
+  const everyFrame=Array.from({length:720},(_,i)=>
+   sourceFullHudRefreshDue('TIME_UP','TIME_UP',i));
+  expect(everyFrame.filter(Boolean).length).toBe(60);
+  expect(everyFrame[0]).toBe(true);
+  expect(everyFrame[11]).toBe(false);
+  expect(everyFrame[12]).toBe(true);
+  expect(everyFrame[719]).toBe(false);
+ });
+ it('keeps the same active/source staging cadence and no score authority',()=>{
+  for(const phase of ['STAGING','PLAYING']){
+   expect(Array.from({length:24},(_,i)=>
+    sourceFullHudRefreshDue(phase,phase,i)).filter(Boolean).length)
+     .toBe(2);
+  }
+ });
+});
 
 function state():F3PlayableHudState{
  return {

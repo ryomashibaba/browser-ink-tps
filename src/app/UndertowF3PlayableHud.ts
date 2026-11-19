@@ -15,6 +15,18 @@ import {B394OriginalBombPaintNotice} from './B394OriginalBombPaintNotice';
 import type {F3HumanInkContact} from './UndertowF3SourceInkFeedback';
 import {sourceCanonicalPlayableMode,SOURCE_ORIGINAL_FALL_STOP} from './SourcePlayPortal';
 
+/** Full SOURCE HUD/snapshot work is costly: the old TIME_UP branch
+ * refreshed the complete world and DOM on EVERY visual frame forever.
+ * The real match-state transition still refreshes immediately; thereafter
+ * TIME_UP uses the same 12-frame cadence as live SOURCE play. Renderer,
+ * GPU paint flush, input/button events and native ticks are untouched.
+ */
+export function sourceFullHudRefreshDue(
+ currentPhase:string,previousPhase:string,renderedFrames:number
+):boolean{
+ return currentPhase!==previousPhase||renderedFrames%12===0;
+}
+
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
  playerInkRecoveryState?:string;

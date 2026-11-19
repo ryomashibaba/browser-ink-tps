@@ -33,10 +33,11 @@ permissions:
 jobs:
   genuine-original-ally-sync:
     name: True CDP human plus A1 source physical cooperative clear
-    # Already genuine PASS on prior HEAD. Run one B448-only short A3
-    # research case without redundantly repeating the unrelated A1
-    # cooperative 5-minute browser run; manual dispatch still allowed.
-    if: ${{ !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}
+    # Genuine A1 gameplay already has a native PASS. A routine F2, F3,
+    # paint or HUD push must not launch this unrelated long Chromium job.
+    # Use the existing manual dispatch or one explicit A1 test marker.
+    # Preserve historical dev-branch behavior and the prior exclusions.
+    if: ${{ (github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || contains(github.event.head_commit.message, '[a1-coop-native-once]') || startsWith(github.event.head_commit.message, '[a1-fall-r-native-once]')) && !contains(github.event.head_commit.message, '[a3-native-once]') && !contains(github.event.head_commit.message, '[p0-radar-build-only]') && !contains(github.event.head_commit.message, '[p0-first-stop-build-only]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 48
     steps:
