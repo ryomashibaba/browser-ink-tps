@@ -573,6 +573,92 @@ async function runApprovedCombatTwinReplay(){
 }
 
 
+async function runNativeCpuSubWitness(start){
+  const cpuKit=(s,label)=>{
+   const k=s.cpuKitQa;
+   if(!k||k.enabled!==false||
+      k.artificialGaugeArms!==0||k.artificialInkRefills!==0||
+      k.manualSubRequests!==0||k.manualSpecialRequests!==0||
+      ![k.cpuSubUses,k.subProjectilesLaunched,k.subExplosions]
+       .every(n=>Number.isSafeInteger(n)&&n>=0)||
+      s.cpu.physicalRejoins.length!==7||
+      s.originalSourceSolids!==25||s.originalPaintSurfaces!==17||
+      s.originalSourceNavigationLinks!==26||
+      s.sourceScoreablePromotions!==0)
+    fail('CPU_SUB_UNTRUSTED_OR_MANUAL_QA',{label,
+     tick:s.tick,cpuRejoins:s.cpu.physicalRejoins.length,cpuKit:k});
+   return k;
+  };
+  const base=cpuKit(start,'BEFORE');
+  // Do not demand instant SUB use: real CPU ink cooldowns, cover rays,
+  // other combat choices and the 60Hz native pool are authoritative.
+  // At most 48 genuine seconds of the SAME PLAYING round; a blocked
+  // opportunity is an honest useful FAIL, not invented ink/hit/route.
+  let latest=start;
+  const observe=async()=>{
+   const s=await state();
+   if(s.matchState!=='PLAYING'||s.paused||s.stopReason||
+      s.tick<start.tick||s.cpu.physicalRejoins.length!==7)
+    fail('CPU_SUB_ROUND_INTERRUPTED',{startTick:start.tick,
+     tick:s.tick,match:s.matchState});
+   cpuKit(s,'NATIVE_LIVE');
+   latest=s;
+   return s;
+  };
+  // Poll only current read-only snapshots: no synthetic CPU decisions.
+  // A real launch plus explosion within this bounded window is PASS.
+  let achieved=null;
+  const nativeTickLimit=start.tick+48*60;
+  const wallDeadline=Date.now()+165000;
+  while(Date.now()<wallDeadline){
+   const s=await observe(),k=s.cpuKitQa;
+   if(k.cpuSubUses>base.cpuSubUses&&
+      k.subProjectilesLaunched>base.subProjectilesLaunched&&
+      k.subExplosions>base.subExplosions){
+    achieved=s;break;
+   }
+   if(s.tick>=nativeTickLimit)break;
+   await sleep(190);
+  }
+  const end=achieved??latest;
+  const kit=end.cpuKitQa;
+  const proof={phase:'P1_REAL_AUTONOMOUS_CPU_ORIGINAL_SUB',
+   originalSource:'25/17/26/0',nativeTickStart:start.tick,
+   nativeTickEnd:end.tick,actualNativeTicks:end.tick-start.tick,
+   cpuPhysicalRejoins:end.cpu.physicalRejoins.length,
+   before:{uses:base.cpuSubUses,launches:base.subProjectilesLaunched,
+    explosions:base.subExplosions},
+   after:{uses:kit.cpuSubUses,launches:kit.subProjectilesLaunched,
+    explosions:kit.subExplosions},
+   nativeAutonomousPaidSubUseDelta:kit.cpuSubUses-base.cpuSubUses,
+   nativePhysicalSubLaunchDelta:
+    kit.subProjectilesLaunched-base.subProjectilesLaunched,
+   nativePhysicalExplosionDelta:
+    kit.subExplosions-base.subExplosions,
+   nativeCpuPaintCells:end.cpuImpactInkCellsChanged,
+   artificialGauges:kit.artificialGaugeArms,
+   manualCpuSubRequests:kit.manualSubRequests,
+   manualCpuSpecialRequests:kit.manualSpecialRequests,
+   syntheticActors:0,syntheticAmmo:0,syntheticTick:0,
+   originalScoreable:0,originalWinner:'NONE',
+   naturalCrossTeamRouteCertified:false,full4v4Certified:false,
+   full180sCertified:false};
+  report.phases.push(proof);persist();
+  await picture('p1-real-autonomous-cpu-sub-circuit');
+  if(!achieved){
+   report.outcome='HOLD_P1_NO_AUTONOMOUS_CPU_SUB_LAUNCH_EXPLOSION';
+   report.note='Authentic seven-CPU SOURCE round remained unscored. No new naturally paid CPU sub launch+detonation observed within the bounded native window.';
+   persist();
+   console.log('P1_REAL_CPU_SUB_NATIVE_HOLD',JSON.stringify(proof));
+   fail('P1_NO_REAL_AUTONOMOUS_CPU_SUB_LAUNCH_EXPLOSION',proof);
+  }
+  report.outcome='PASS_P1_TRUE_CPU_PAID_SUB_LAUNCH_EXPLOSION';
+  report.note='7 native CPUs and actual nonmanual paid CPU sub launches/explosions in SAME registered SOURCE round. This is not enemy HP or 4v4 completion.';
+  persist();
+  console.log('P1_TRUE_NATIVE_AUTONOMOUS_CPU_SUB_PASS',JSON.stringify(proof));
+  return;
+ }
+
 /** One bounded REAL ordinary B207 SOURCE combat observation.
  * Never simulate actors, ticks, paint, paths, HP or scoring. */
 async function runShortNormalSourceCombat(){
@@ -619,6 +705,9 @@ async function runShortNormalSourceCombat(){
   n.cpu?.sourcePatrol?.b441Enabled===true&&
   n.b216RealNativePaintBackfill?.p2OriginalOuterSelected===true;
  if(!sourceOk(first))fail('NORMAL_7CPU_STAGE_OR_PAINT_RECOVERY_NOT_ACTIVE',first);
+ // Actual CPU SUB research must run only in this genuine B207 kit-enabled
+ // 7CPU combat world; B384 human kit practice does NOT enable CPU turf SUB.
+ if(shortCpuSub){await runNativeCpuSubWitness(first);return;}
  const last=await until(async()=>{
   const n=await state();
   return n?.matchState==='PLAYING'&&!n.paused&&
@@ -1016,7 +1105,7 @@ async function run(){
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Emulation.setDeviceMetricsOverride',{width:1600,height:900,deviceScaleFactor:1,mobile:false});
  if(process.env.T21_P2_SHORT_CANONICAL_COMBAT_ONCE==='1'||
-    process.env.T21_P2_NORMAL_COMBAT_180_ONCE==='1'){
+    process.env.T21_P2_NORMAL_COMBAT_180_ONCE==='1'||shortCpuSub){
   await runShortNormalSourceCombat();return;
  }
  if(process.env.T21_P2_COMBAT_TWIN_180_REPLAY_ONCE==='1'||
@@ -1527,92 +1616,6 @@ async function run(){
  // Native autonomous CPU SUB, one bounded real-world gameplay run.
  // All measurements read live authoritative CPU kit/projectile counters.
  // A 7/7 native CPU round with no genuine SUB stays HOLD, never a fake PASS.
- if(shortCpuSub){
-  const start=original(await state(),'REAL_CPU_SUB_START');
-  const cpuKit=(s,label)=>{
-   const k=s.cpuKitQa;
-   if(!k||k.enabled!==false||
-      k.artificialGaugeArms!==0||k.artificialInkRefills!==0||
-      k.manualSubRequests!==0||k.manualSpecialRequests!==0||
-      ![k.cpuSubUses,k.subProjectilesLaunched,k.subExplosions]
-       .every(n=>Number.isSafeInteger(n)&&n>=0)||
-      s.cpu.physicalRejoins.length!==7||
-      s.originalSourceSolids!==25||s.originalPaintSurfaces!==17||
-      s.originalSourceNavigationLinks!==26||
-      s.sourceScoreablePromotions!==0)
-    fail('CPU_SUB_UNTRUSTED_OR_MANUAL_QA',{label,
-     tick:s.tick,cpuRejoins:s.cpu.physicalRejoins.length,cpuKit:k});
-   return k;
-  };
-  const base=cpuKit(start,'BEFORE');
-  // Do not demand instant SUB use: real CPU ink cooldowns, cover rays,
-  // other combat choices and the 60Hz native pool are authoritative.
-  // At most 48 genuine seconds of the SAME PLAYING round; a blocked
-  // opportunity is an honest useful FAIL, not invented ink/hit/route.
-  let latest=start;
-  const observe=async()=>{
-   const s=original(await state(),'NATIVE_CPU_SUB_WITNESS');
-   if(s.matchState!=='PLAYING'||s.paused||s.stopReason||
-      s.tick<start.tick||s.cpu.physicalRejoins.length!==7)
-    fail('CPU_SUB_ROUND_INTERRUPTED',{startTick:start.tick,
-     tick:s.tick,match:s.matchState});
-   cpuKit(s,'NATIVE_LIVE');
-   latest=s;
-   return s;
-  };
-  // Poll only current read-only snapshots: no synthetic CPU decisions.
-  // A real launch plus explosion within this bounded window is PASS.
-  let achieved=null;
-  const nativeTickLimit=start.tick+48*60;
-  const wallDeadline=Date.now()+165000;
-  while(Date.now()<wallDeadline){
-   const s=await observe(),k=s.cpuKitQa;
-   if(k.cpuSubUses>base.cpuSubUses&&
-      k.subProjectilesLaunched>base.subProjectilesLaunched&&
-      k.subExplosions>base.subExplosions){
-    achieved=s;break;
-   }
-   if(s.tick>=nativeTickLimit)break;
-   await sleep(190);
-  }
-  const end=achieved??latest;
-  const kit=end.cpuKitQa;
-  const proof={phase:'P1_REAL_AUTONOMOUS_CPU_ORIGINAL_SUB',
-   originalSource:'25/17/26/0',nativeTickStart:start.tick,
-   nativeTickEnd:end.tick,actualNativeTicks:end.tick-start.tick,
-   cpuPhysicalRejoins:end.cpu.physicalRejoins.length,
-   before:{uses:base.cpuSubUses,launches:base.subProjectilesLaunched,
-    explosions:base.subExplosions},
-   after:{uses:kit.cpuSubUses,launches:kit.subProjectilesLaunched,
-    explosions:kit.subExplosions},
-   nativeAutonomousPaidSubUseDelta:kit.cpuSubUses-base.cpuSubUses,
-   nativePhysicalSubLaunchDelta:
-    kit.subProjectilesLaunched-base.subProjectilesLaunched,
-   nativePhysicalExplosionDelta:
-    kit.subExplosions-base.subExplosions,
-   nativeCpuPaintCells:end.cpuImpactInkCellsChanged,
-   artificialGauges:kit.artificialGaugeArms,
-   manualCpuSubRequests:kit.manualSubRequests,
-   manualCpuSpecialRequests:kit.manualSpecialRequests,
-   syntheticActors:0,syntheticAmmo:0,syntheticTick:0,
-   originalScoreable:0,originalWinner:'NONE',
-   naturalCrossTeamRouteCertified:false,full4v4Certified:false,
-   full180sCertified:false};
-  report.phases.push(proof);persist();
-  await picture('p1-real-autonomous-cpu-sub-circuit');
-  if(!achieved){
-   report.outcome='HOLD_P1_NO_AUTONOMOUS_CPU_SUB_LAUNCH_EXPLOSION';
-   report.note='Authentic seven-CPU SOURCE round remained unscored. No new naturally paid CPU sub launch+detonation observed within the bounded native window.';
-   persist();
-   console.log('P1_REAL_CPU_SUB_NATIVE_HOLD',JSON.stringify(proof));
-   fail('P1_NO_REAL_AUTONOMOUS_CPU_SUB_LAUNCH_EXPLOSION',proof);
-  }
-  report.outcome='PASS_P1_TRUE_CPU_PAID_SUB_LAUNCH_EXPLOSION';
-  report.note='7 native CPUs and actual nonmanual paid CPU sub launches/explosions in SAME registered SOURCE round. This is not enemy HP or 4v4 completion.';
-  persist();
-  console.log('P1_TRUE_NATIVE_AUTONOMOUS_CPU_SUB_PASS',JSON.stringify(proof));
-  return;
- }
  // B390 CORE: verify the complete real 180s round directly after the
  // genuine original first-drop, raised KCC, 3/3 ink and 7 CPU proof.
  // Do NOT silently treat neutral-foot idle ink as a refill. The separate
