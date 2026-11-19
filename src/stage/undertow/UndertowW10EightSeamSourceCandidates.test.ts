@@ -318,31 +318,39 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
    const id='cross-team-'+probe.id;
    const raw=nav.auditPath(new Vec3(...probe.from),
     new Vec3(...probes[1-i]!.to),.35).nativePathPoints;
-   const repair=experiment.repairs.find(r=>
-    r.kind==='CENTRAL_STEP_APPROACH'&&
-    r.side===(i===0?'POSITIVE_Z':'NEGATIVE_Z'));
-   const vs=repair?.solid.triangleMesh?.vertices;
-   if(!vs||vs.length!==4)throw Error('F4_MISSING_EXISTING_CENTRAL_RAMP');
-   // The quad ALREADY exists in the isolated stage. Drive to its real low
-   // edge, climb its actual centerline, then return to native Recast. This
-   // changes steering only: NO new floor, NavLink, teleport or target Y.
-   const mid=(a:readonly number[],b:readonly number[])=>new Vec3(
-    (a[0]!+b[0]!)/2,(a[1]!+b[1]!)/2,(a[2]!+b[2]!)/2);
-   const low=mid(vs[0]!,vs[1]!);
-   const high=mid(vs[2]!,vs[3]!);
+   const sourceSide=i===0?'POSITIVE_Z':'NEGATIVE_Z';
+   const ramps=[sourceSide,
+    i===0?'NEGATIVE_Z':'POSITIVE_Z'].map(side=>{
+    const repair=experiment.repairs.find(r=>
+     r.kind==='CENTRAL_STEP_APPROACH'&&r.side===side);
+    const v=repair?.solid.triangleMesh?.vertices;
+    if(!v||v.length!==4)throw Error('F4_MISSING_EXISTING_CENTRAL_RAMP');
+    const mid=(a:readonly number[],b:readonly number[])=>new Vec3(
+     (a[0]!+b[0]!)/2,(a[1]!+b[1]!)/2,(a[2]!+b[2]!)/2);
+    return {low:mid(v[0]!,v[1]!),high:mid(v[2]!,v[3]!)};
+   });
+   const low=ramps[0]!.low,high=ramps[0]!.high;
+   // The native corridor currently cuts into the SIDE of an elevated
+   // ramp at x(model)≈-6.4, z≈+/-0.64, a 0.5m curb. Follow both existing
+   // center-slope strips from their zero-height ENDS instead: source-side
+   // lower -> step top -> destination-side lower. This is steering ONLY.
+   // All points belong to already registered experimental triangles.
    const entry=raw.findIndex((p,j)=>j>=10&&p.y>.35&&p.y<1.3&&
     Math.hypot(p.x-low.x,p.z-low.z)<6);
-   const exit=raw.findIndex((p,j)=>j>entry&&p.y>=1.3&&
-    Math.hypot(p.x-high.x,p.z-high.z)<5);
-   if(entry<0||exit<0)throw Error('F4_CENTRAL_RAMP_NAV_SEQUENCE_CHANGED');
-   const centerline=Array.from({length:9},(_,j)=>{
+   if(entry<0)throw Error('F4_CENTRAL_RAMP_ENTRY_NOT_LOCALIZED');
+   const centerline=(from:Vec3,to:Vec3)=>Array.from({length:9},(_,j)=>{
     const t=j/8;
-    return new Vec3(low.x+(high.x-low.x)*t,
-     low.y+(high.y-low.y)*t,low.z+(high.z-low.z)*t);
+    return new Vec3(from.x+(to.x-from.x)*t,
+     from.y+(to.y-from.y)*t,from.z+(to.z-from.z)*t);
    });
-   const points=guidance==='real-ramp-entrance'
-    ? [...raw.slice(0,entry),...centerline,...raw.slice(exit)]
-    :raw;
+   const top=ramps[1]!.high;
+   const guided=[...raw.slice(0,entry),
+    ...centerline(low,high),
+    ...centerline(high,top).slice(1),
+    ...centerline(top,ramps[1]!.low).slice(1),
+    raw[raw.length-1]!];
+   const points=guidance==='real-ramp-entrance'?guided:raw;
+   const exit=raw.length-1;
    const sim=new RapierStagePhysics(1/60,stage);sim.step();
    const first=points[0]!;
    const support=sim.castCharacterFootSupport(new Vec3(first.x,
