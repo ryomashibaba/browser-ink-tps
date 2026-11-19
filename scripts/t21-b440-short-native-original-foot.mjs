@@ -1098,7 +1098,7 @@ async function b490CaptureLocalSamePosePair(){
  */
 async function runF4RealChrome(){
  const url=root+'?t21Play=preview&t21QaDrive=source'+
-  '&t21W10B183=firstDropPlay&t21W10B192=humanCombat'+
+  '&t21W10B183=firstDropPlay&t21W10B193=allyCoop'+
   '&t21W10B203=fullRound&t21F4Central=research';
  const report={schema:'T21_V28_F4_NATIVE_CHROMIUM_51_SOLID',
   query:new URL(url).search,boot:'HOLD',sevenCpu:'HOLD',
