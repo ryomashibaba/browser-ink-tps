@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {rankOriginalSourceCombatRetreatGoals as rank,
  originalSourceCpuWoundedRecoveryActive as wounded,
  originalSourceCpuMayHoldOwnInk as hold,
+ originalSourceWoundedHoldNativeFoot as nativeHold,
  type OriginalSourceRetreatInput} from './OriginalSourceCombatRetreat';
 
 function genuine():OriginalSourceRetreatInput{
@@ -102,4 +103,18 @@ describe('F3 original SOURCE low-HP survival goal preference',()=>{
    {index:3,foot:[0,3,47],actualOwnOriginalPaintCell:true}
   ]})).toEqual([3]);
  });
+ it('cannot hold a wounded real CPU on a failed or vertically wrong Recast echo',()=>{
+  const foot={x:0,y:3,z:42};
+  const aligned={success:true,distanceMeters:.11,
+   nearestPoint:{x:.05,y:3.1,z:42}};
+  expect(nativeHold(foot,aligned)).toBe(true);
+  expect(nativeHold(foot,{...aligned,success:false,
+   distanceMeters:0,nearestPoint:{...foot}})).toBe(false);
+  expect(nativeHold(foot,{...aligned,nearestPoint:null})).toBe(false);
+  expect(nativeHold(foot,{...aligned,distanceMeters:.201})).toBe(false);
+  expect(nativeHold(foot,{...aligned,nearestPoint:{x:0,y:3.21,z:42}})).toBe(false);
+  expect(nativeHold(foot,{...aligned,distanceMeters:NaN})).toBe(false);
+  expect(nativeHold({...foot,x:NaN},aligned)).toBe(false);
+ });
+
 });

@@ -32,7 +32,7 @@ import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
 import {b180OriginalSourceUnownedNeighborAim} from '../ai/B180OriginalSourcePaintOpportunity';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
-import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk,originalSourceRegisteredOwnFoot} from './OriginalSourceCombatRetreat';
+import {rankOriginalSourceCombatRetreatGoals,originalSourceCpuWoundedRecoveryActive,originalSourceCpuMayHoldOwnInk,originalSourceRegisteredOwnFoot,originalSourceWoundedHoldNativeFoot} from './OriginalSourceCombatRetreat';
 import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals,
  b467MayRetryOriginalBFrontFromRealFoot,
  b468MayRetryDifferentOriginalBGoalAfterRealDwell,
@@ -1593,9 +1593,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     if(originalSourceCpuMayHoldOwnInk(
        recovery,actualOriginalOwnInk(realFoot),exposedHere)&&
        this.hasSourceFootSupport(realFoot)){
-     const nativeFoot=this.nav.closestPoint(realFoot);
-     if(Math.hypot(nativeFoot.x-realFoot.x,
-      nativeFoot.y-realFoot.y,nativeFoot.z-realFoot.z)<=.20){
+     // closestPoint may echo the submitted foot on a failed Recast query.
+     // Require a real nearest-poly observation before holding this goal.
+     const projection=this.nav.auditNavMeshProjection(realFoot);
+     if(originalSourceWoundedHoldNativeFoot(realFoot,projection)){
       out.copy(realFoot);
       this.realGoalRequests++;
       return true;

@@ -9,6 +9,24 @@ import type {StageDefinition} from '../stage/StageDefinition';
 import {b178SampleRegisteredSourceFoot} from '../ai/B178OriginalSourceInkResources';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 
+/** A wounded CPU can hold a position only after a TRUE native Recast
+ * projection of its real registered Rapier foot. closestPoint() can echo
+ * input on failure, which must never count as a live native hold goal. */
+export function originalSourceWoundedHoldNativeFoot(
+ foot:Readonly<{x:number;y:number;z:number}>,
+ projection:Readonly<{
+  success:boolean;nearestPoint:Readonly<{x:number;y:number;z:number}>|null;
+  distanceMeters:number|null;
+ }>
+):boolean{
+ const p=projection.nearestPoint,d=projection.distanceMeters;
+ return projection.success===true&&p!==null&&d!==null&&
+  Number.isFinite(d)&&d>=0&&d<=.20+1e-6&&
+  [foot.x,foot.y,foot.z,p.x,p.y,p.z].every(Number.isFinite)&&
+  Math.hypot(p.x-foot.x,p.y-foot.y,p.z-foot.z)<=.20+1e-6;
+}
+
+
 /** In real SOURCE combat a wounded CPU may choose only OWN ink carried
  * by its actual registered original Rapier support. Nearest optical ink
  * can belong to a different stacked slab or an adjacent ramp raster row.
