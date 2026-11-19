@@ -1205,7 +1205,11 @@ async function runF4RealChrome(){
       mobility:c.mobilityState,rejoined:c.rejoined})),
      liveRejoins:n.cpu?.physicalRejoins?.length,
      nativeGoalRequests:n.cpu?.sourcePatrol?.realGoalRequests??null,
-     f4GuideLastAudit:n.cpu?.sourcePatrol?.f4GuideLastAudit??[]});
+     f4GuideLastAudit:n.cpu?.sourcePatrol?.f4GuideLastAudit??[],
+     // Existing live 60Hz evidence: genuine Crowd proposal versus
+     // accepted/denied Rapier CPU KCC. Never infer from goal counters.
+     sourceGroundMotion:n.cpuSourceNativeGroundMotion?.byActor??{},
+     continuity:n.cpuContinuity?.actors??[]});
     if(report.frames.length>22)report.frames.shift();
     save();
    }
@@ -1230,6 +1234,8 @@ async function runF4RealChrome(){
  report.endCpu=end.cpu?.cpu?.map(c=>({id:c.id,foot:c.physicalFoot,
   rejoined:c.rejoined,state:c.mobilityState}));
  report.stopReason=end.stopReason??null;
+ report.finalNativeMotion=end.cpuSourceNativeGroundMotion?.byActor??{};
+ report.finalCpuContinuity=end.cpuContinuity?.actors??[];
  try{
   const png=await cdp('Page.captureScreenshot',{
    format:'png',captureBeyondViewport:false,fromSurface:true});
