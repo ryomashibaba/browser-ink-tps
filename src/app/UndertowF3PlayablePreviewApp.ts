@@ -6127,6 +6127,8 @@ export class UndertowF3PlayablePreviewApp{
     // the heavy ink/radar/scoreless practice panels every frame.
     this.practiceHud.renderNativeCombat({
      tick:frame,hp:this.resources.currentHp,
+     // Same real 60Hz game-clock authority, not browser render FPS.
+     remainingSeconds:this.remainingSeconds,
      ink:this.stats.playerInk,inkRelation:this.player.currentInkRelation,
      respawnTicks:this.resources.currentHp<=0?
       Math.max(0,150-this.respawnFrames):null,

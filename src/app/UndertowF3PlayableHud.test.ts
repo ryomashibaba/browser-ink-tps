@@ -12,7 +12,7 @@ import {weaponKit,subWeaponProfile} from '../weapons/WeaponKitCatalog';
 import {weaponProfile} from '../weapons/WeaponCatalog';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b371RealSourceMissionCue,type B371SourceMissionFrame} from './B371RealSourceMissionCue';
-import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,b465SourceRoundKeyHelp,genuineF3DirectHitVisible,sourceF3RealAimLineCue,sourceFullHudRefreshDue,type F3PlayableHudState}
+import {b361GenuineShooterLine,formatF3PlayableHud,b290SourcePlayerHudPhase,b338SourceRoundGuide,b465SourceRoundKeyHelp,genuineF3DirectHitVisible,sourceF3RealAimLineCue,sourceFullHudRefreshDue,sourceNativeLiveClockLabel,type F3PlayableHudState}
  from './UndertowF3PlayableHud';
 
 describe('real SOURCE TIME_UP full-HUD work budget',()=>{
@@ -36,6 +36,26 @@ describe('real SOURCE TIME_UP full-HUD work budget',()=>{
     sourceFullHudRefreshDue(phase,phase,i)).filter(Boolean).length)
      .toBe(2);
   }
+ });
+});
+
+describe('SOURCE genuine native 60Hz on-screen countdown',()=>{
+ const actual={nativeTick:1350,remainingSeconds:157.1,phase:'PLAYING',
+  paused:false,stopReason:null} as const;
+ it('matches the genuine 180s clock without any frame-rate extrapolation',()=>{
+  expect(sourceNativeLiveClockLabel(actual)).toBe('2:38');
+  expect(sourceNativeLiveClockLabel({...actual,remainingSeconds:180})).toBe('3:00');
+  expect(sourceNativeLiveClockLabel({...actual,remainingSeconds:60})).toBe('1:00');
+  expect(sourceNativeLiveClockLabel({...actual,remainingSeconds:59.999})).toBe('1:00');
+  expect(sourceNativeLiveClockLabel({...actual,remainingSeconds:.001})).toBe('0:01');
+ });
+ it('suppresses bogus clock advances outside certified live SOURCE play',()=>{
+  for(const changes of [
+   {phase:'STAGING'},{phase:'TIME_UP'},{paused:true},
+   {stopReason:'ORIGINAL_FLOOR_HOLD'},{nativeTick:0},{nativeTick:1.5},
+   {remainingSeconds:0},{remainingSeconds:-1},{remainingSeconds:181},
+   {remainingSeconds:NaN},{remainingSeconds:Infinity},{remainingSeconds:undefined}
+  ])expect(sourceNativeLiveClockLabel({...actual,...changes})).toBeNull();
  });
 });
 

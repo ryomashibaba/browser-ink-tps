@@ -27,6 +27,22 @@ export function sourceFullHudRefreshDue(
  return currentPhase!==previousPhase||renderedFrames%12===0;
 }
 
+/** Drive the visible SOURCE countdown from actual native 60Hz ticks.
+ * Never estimate time from render FPS or create a timer/gameplay write.
+ * Unsafe, paused, staging and completed sessions keep the full HUD. */
+export function sourceNativeLiveClockLabel(x:{
+ nativeTick:number;remainingSeconds?:number;phase:string;
+ paused:boolean;stopReason:string|null;
+}):string|null{
+ const remaining=x.remainingSeconds;
+ if(x.phase!=='PLAYING'||x.paused||x.stopReason||
+    !Number.isSafeInteger(x.nativeTick)||x.nativeTick<1||
+    typeof remaining!=='number'||!Number.isFinite(remaining)||
+    remaining<=0||remaining>180)return null;
+ const whole=Math.ceil(remaining);
+ return Math.floor(whole/60)+':'+String(whole%60).padStart(2,'0');
+}
+
 export interface F3PlayableHudState extends B75NativeInkFrame {
  player:{hp:number;ink:number;mode?:string;inkRelation?:string};
  playerInkRecoveryState?:string;
@@ -71,6 +87,8 @@ export interface F3PlayableHudState extends B75NativeInkFrame {
 /** B135: genuine 60Hz KCC/projectile combat telemetry, without an ink score. */
 export interface F3NativeCombatPulse{
  tick:number;hp:number;ink:number;inkRelation:string;
+ /** Actual 60Hz SOURCE remaining time; never interpolated from rendering. */
+ remainingSeconds?:number;
  respawnTicks:number|null;hitCount:number;splatCount:number;
  nativeWeaponGuidance?:string;
  nativeKccGrounded?:boolean|null;
@@ -520,6 +538,15 @@ export function createF3PlayableHud(ui:HTMLElement){
    Number.isSafeInteger(p.splatCount)&&p.splatCount>=0&&
    p.splatCount<=p.hitCount;
   const tick=legitimate?p.tick:-1;
+  // The lightweight native HP/weapon pulse already runs at each real
+  // 60Hz physics tick: update only the clock digits on a changed second.
+  const fastClock=legitimate&&nativeFullSourceRound?
+   sourceNativeLiveClockLabel({
+    nativeTick:p.tick,remainingSeconds:p.remainingSeconds,
+    phase:p.matchState,paused:p.paused,stopReason:p.stopReason
+   }):null;
+  if(fastClock!==null&&clock.textContent!==fastClock)
+   clock.textContent=fastClock;
   const hp=legitimate?p.hp:0;
   const hitCount=legitimate?p.hitCount:null;
   const splatCount=legitimate?p.splatCount:null;
