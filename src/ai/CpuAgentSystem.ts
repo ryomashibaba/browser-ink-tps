@@ -1379,11 +1379,26 @@ export class CpuAgentSystem {
               // a second Recast query failed or chose another floor.
               const projected=this.navigation.auditNavMeshProjection(
                 this.goal);
+              // Actual F4 Chromium witness: existing real photo-route
+              // target is Rapier-backed and Recast-reached, yet the final
+              // ORIGINAL-only .22m projection discarded B-team (.2286m)
+              // and A3 (.2439m). The F4 experimental geometry already
+              // uses <=.30m for source goal admission; use that SAME
+              // bounded tolerance ONLY for this 51-solid research world.
+              // Original 25-solid .22m and real KCC step fences are intact.
+              const f4Projection=isT21F4ResearchStage(this.stage);
+              const projectionTolerance=f4Projection?.30:.22;
+              const distanceToProjected=projected.nearestPoint?
+                Math.hypot(projected.nearestPoint.x-this.goal.x,
+                  projected.nearestPoint.y-this.goal.y,
+                  projected.nearestPoint.z-this.goal.z):Infinity;
               if(projected.success&&projected.nearestPoint&&
                  projected.distanceMeters!==null&&
-                 projected.distanceMeters<=.22+1e-6&&
-                 isAlignedOriginalSourceCrowdTarget(
-                   this.goal,projected.nearestPoint)){
+                 projected.distanceMeters<=projectionTolerance+1e-6&&
+                 (f4Projection?
+                   distanceToProjected<=projectionTolerance+1e-6:
+                   isAlignedOriginalSourceCrowdTarget(
+                    this.goal,projected.nearestPoint))){
                 projectedApprovedSourceGoal=projected.nearestPoint;
                 newlyAuditedOriginalSourceGoal=!admitted.reusedPrevious;
               }else sourceGoal=false;
