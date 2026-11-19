@@ -2139,7 +2139,17 @@ export class UndertowF3PlayablePreviewApp{
    ui.appendChild(indicator);
    this.b141RealAllyIndicator=indicator;
   }
-  this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui);
+  this.b129EdgeCoach=createF3OriginalRaisedEdgeCoach(ui,world=>{
+   const camera=this.playerCameraEntity.camera;
+   const device=this.app.graphicsDevice;
+   if(!camera||device.width<=0||device.height<=0)return null;
+   const p=camera.worldToScreen(new Vec3(world[0],world[1]+.12,world[2]));
+   const bounds=this.canvas.getBoundingClientRect();
+   return {x:bounds.left+p.x*bounds.width/device.width,
+    y:bounds.top+p.y*bounds.height/device.height,
+    depth:p.z,viewportWidth:window.innerWidth,
+    viewportHeight:window.innerHeight};
+  });
   this.b209RampEdgeCoach=createB209OriginalRampEdgeCoach(ui);
   if(this.b112GroundEnabled||this.nativeLiveSourcePrestart){
    const warning=document.createElement('div');

@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {inspectB130OriginalFlatSource as f} from './W10B130OriginalFlatEdge';
 import {inspectB124ActualRaisedSourceBoundary as raised}
  from './W10B124OriginalRaisedSourceBoundary';
-import {originalRaisedSourceEdgeStatus as status}
+import {originalRaisedSourceEdgeStatus as status,b130SourceEdgePin}
  from './UndertowF3OriginalEdgeGuidance';
 const r='UndertowT21D:right-low-team-a';
 const l='UndertowT21D:first-drop-landing-positive-z';
@@ -61,5 +61,41 @@ describe('B130 real registered source polygon edge guide',()=>{
   expect(probe(b(3,3.895,48),'UndertowT21D:unknown')).toBeNull();
   expect(probe(b(7,4.5,49),'UndertowT21D:right-low-route-ramp-positive-z')).toBeNull();
   expect(()=>probe(b(NaN,5.4,49),r)).toThrow('B130_FROZEN_NATIVE_SOURCE_AUTHORITY');
+ });
+});
+
+describe('B130 true original floor world-edge pin, display only',()=>{
+ it('nearest screen marker lies on exact original boundary, not optical shelf',()=>{
+  for(const [body,id,top] of [
+   [b(6.2972092628479,5.395079135894775,36.603267669677734),r,4.5],
+   [b(.8607550859451294,3.8949995040893555,49.67649841308594),l,3]
+  ] as const){
+   const w=probe(body,id)!;
+   const point=w.nearestRegisteredOriginalEdgeWorld;
+   expect(point[1]).toBeCloseTo(top,5);
+   expect(Math.hypot(point[0]-body[0],point[2]-body[2]))
+    .toBeCloseTo(w.distanceToOriginalPolygonBoundaryMeters,7);
+   const e=status(pack(w));
+   expect(e.showCaution).toBe(true);
+   expect(e.nearestRegisteredOriginalEdgeWorld).toEqual(point);
+  }
+ });
+ it('prevents stale/untrusted, offscreen, behind-camera and crosshair pins',()=>{
+  const w=probe(b(6.2972092628,5.395,36.6032),r)!;
+  const e=status(pack(w));
+  const screen={x:210,y:420,depth:4,viewportWidth:1600,viewportHeight:900};
+  expect(b130SourceEdgePin(e,screen,false)?.world).toEqual(
+   w.nearestRegisteredOriginalEdgeWorld);
+  for(const invalid of [
+   status({...pack(w),nativeKccGrounded:false}),
+   status({...pack(w),nativeTick:501}),
+   status({...pack(w),paused:true}),
+   status({...pack(w),stageAuthority:[25,17,26,1]})
+  ])expect(b130SourceEdgePin(invalid,screen,false)).toBeNull();
+  for(const invalid of [
+   null,{...screen,depth:-1},{...screen,x:800,y:450},
+   {...screen,x:-1},{...screen,y:Infinity}
+  ])expect(b130SourceEdgePin(e,invalid,false)).toBeNull();
+  expect(b130SourceEdgePin(e,screen,true)).toBeNull();
  });
 });

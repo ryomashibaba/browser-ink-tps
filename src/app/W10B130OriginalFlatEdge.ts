@@ -4,17 +4,19 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as original}
 import {pointInStageFootprint,type StageFootprintPoint}
  from '../stage/StageFootprint';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
-function dist(u:number,v:number,ring:readonly StageFootprintPoint[]){
- if(ring.length<3)return Infinity;
- let result=Infinity;
+function nearest(u:number,v:number,ring:readonly StageFootprintPoint[]){
+ let best={distance:Infinity,u:NaN,v:NaN};
+ if(ring.length<3)return best;
  for(let i=0;i<ring.length;i++){
   const a=ring[i]!,b=ring[(i+1)%ring.length]!;
   const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz;
   const t=len===0?0:Math.max(0,Math.min(1,
    ((u-a[0])*dx+(v-a[1])*dz)/len));
-  result=Math.min(result,Math.hypot(u-a[0]-dx*t,v-a[1]-dz*t));
+  const px=a[0]+dx*t,pz=a[1]+dz*t;
+  const distance=Math.hypot(u-px,v-pz);
+  if(distance<best.distance)best={distance,u:px,v:pz};
  }
- return result;
+ return best;
 }
 export function inspectB130OriginalFlatSource(args:{
  nativeTick:number;actualRapierBody:readonly [number,number,number];
@@ -34,14 +36,21 @@ export function inspectB130OriginalFlatSource(args:{
  const foot=body[1]-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
  const u=body[0]-(s.center[0]-s.size[0]/2);
  const v=body[2]-(s.center[2]-s.size[2]/2);
+ // The nearest boundary is from the unchanged registered source outer ring
+ // or its original holes; XZ projection is NOT Rapier movement authority.
+ const boundary=[nearest(u,v,s.footprint.outer),
+  ...(s.footprint.holes??[]).map(h=>nearest(u,v,h))]
+  .reduce((a,b)=>b.distance<a.distance?b:a);
  return {
   schema:'W10_B130_ORIGINAL_SOURCE_FLAT_EDGE_V1' as const,
   nativeTick,actualNamedOriginalSolidId:s.id,
   insideRegisteredOriginalXZFootprint:pointInStageFootprint(u,v,s.footprint),
   originalFlatVerticalBandWithin22cm:Math.abs(foot-top)<=.22,
-  distanceToOriginalPolygonBoundaryMeters:Math.min(
-   dist(u,v,s.footprint.outer),
-   ...(s.footprint.holes??[]).map(h=>dist(u,v,h))),
+  distanceToOriginalPolygonBoundaryMeters:boundary.distance,
+  nearestRegisteredOriginalEdgeWorld:[
+   s.center[0]-s.size[0]/2+boundary.u,top,
+   s.center[2]-s.size[2]/2+boundary.v
+  ] as readonly [number,number,number],
   originalAuthority:[25,17,26,0] as const,
   sourcePolygonIncludesHoles:true as const,
   polygonAloneDoesNotCertifyKcc:true as const,
