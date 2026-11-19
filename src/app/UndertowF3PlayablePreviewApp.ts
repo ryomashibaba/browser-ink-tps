@@ -701,7 +701,14 @@ export class UndertowF3PlayablePreviewApp{
   // render-target passes. The production/default GpuInkAtlas remains unchanged.
   this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
    GAME_CONFIG.ink.atlasGutterPixels,true);
-  buildTestStage(app,stage,surfaces,this.atlas);
+  // Only actual human-operated 180s SOURCE rounds get pigment depth/wet
+  // glints on the EXISTING 17 registered paint surfaces. The standalone
+  // production renderer and every SOURCE QA baseline retain old shading.
+  const realSourceWetInkLook=this.b203FullRound&&
+   new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
+  buildTestStage(app,stage,surfaces,this.atlas,realSourceWetInkLook);
+  this.canvas.dataset.t21SourceWetInkLook=
+   realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
   if(this.b203FullRound&&
      new URL(location.href).searchParams.get('t21QaInput')!=='deterministic'){
    this.b250SourceView=installB250SourceView(app,cameraEntity,stage);

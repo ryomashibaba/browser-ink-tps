@@ -33,6 +33,7 @@ uniform float uAtlasTexelSize;
 uniform vec3 uNeutralColor;
 uniform vec3 uTeamAColor;
 uniform vec3 uTeamBColor;
+uniform float uSourceWetInkStyle;
 varying vec2 vUv0;
 varying vec3 vWorldPos;
 void main(void) {
@@ -54,6 +55,17 @@ void main(void) {
   float worldPattern = 0.965 + 0.035 * sin(vWorldPos.x * 1.6 + vWorldPos.z * 1.2);
   color *= worldPattern;
   color += vec3(0.10, 0.12, 0.14) * wetness;
+  if (uSourceWetInkStyle > 0.5) {
+    // A deliberately SOURCE-only, authored visual treatment. The existing
+    // atlas coverage and original footprint STILL determine every ink pixel.
+    // Pigment and wet highlights disappear exactly when coverage is zero.
+    float stipple = sin(vWorldPos.x * 12.5 + sin(vWorldPos.z * 7.4) * 0.8);
+    float flow = sin(vWorldPos.z * 8.1 - vWorldPos.x * 3.7);
+    float pigment = 0.89 + 0.15 * (0.5 + 0.5 * stipple * flow);
+    float wetGlint = wetness * (0.5 + 0.5 * flow);
+    color = mix(uNeutralColor, teamColor * pigment, coverage) * worldPattern;
+    color += vec3(0.19, 0.22, 0.25) * wetGlint;
+  }
   gl_FragColor = vec4(color, 1.0);
 }`;
 
@@ -74,7 +86,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   return output;
 }`;
 
-const FRAGMENT_WGSL = `
+export const FRAGMENT_WGSL = `
 uniform uAtlasRect: vec4f;
 uniform uSurfaceMeters: vec2f;
 uniform uInkCellSize: f32;
@@ -82,6 +94,7 @@ uniform uAtlasTexelSize: f32;
 uniform uNeutralColor: vec3f;
 uniform uTeamAColor: vec3f;
 uniform uTeamBColor: vec3f;
+uniform uSourceWetInkStyle: f32;
 var uInkAtlas: texture_2d<f32>;
 var uInkAtlasSampler: sampler;
 varying vUv0: vec2f;
@@ -107,12 +120,21 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
   var color = mix(uniform.uNeutralColor, teamColor, coverage);
   let worldPattern = 0.965 + 0.035 * sin(input.vWorldPos.x * 1.6 + input.vWorldPos.z * 1.2);
   color = color * worldPattern + vec3f(0.10, 0.12, 0.14) * wetness;
+  if (uniform.uSourceWetInkStyle > 0.5) {
+    let stipple = sin(input.vWorldPos.x * 12.5 +
+      sin(input.vWorldPos.z * 7.4) * 0.8);
+    let flow = sin(input.vWorldPos.z * 8.1 - input.vWorldPos.x * 3.7);
+    let pigment = 0.89 + 0.15 * (0.5 + 0.5 * stipple * flow);
+    let wetGlint = wetness * (0.5 + 0.5 * flow);
+    color = mix(uniform.uNeutralColor, teamColor * pigment, coverage) *
+      worldPattern + vec3f(0.19, 0.22, 0.25) * wetGlint;
+  }
   var output: FragmentOutput;
   output.color = vec4f(color, 1.0);
   return output;
 }`;
 
-export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture): ShaderMaterial {
+export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture, sourceWetInkStyle = false): ShaderMaterial {
   const rect = surface.atlasRect;
   if (!rect) throw new Error(`Surface ${surface.id} has no atlas rect.`);
 
@@ -146,6 +168,8 @@ export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture):
   material.setParameter('uNeutralColor', new Float32Array(GAME_CONFIG.visual.neutral));
   material.setParameter('uTeamAColor', new Float32Array(GAME_CONFIG.visual.teamA));
   material.setParameter('uTeamBColor', new Float32Array(GAME_CONFIG.visual.teamB));
+  // Defaults OFF for every existing production/T20/test stage renderer.
+  material.setParameter('uSourceWetInkStyle', sourceWetInkStyle ? 1 : 0);
   material.update();
   return material;
 }

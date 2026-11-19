@@ -1,6 +1,7 @@
 import { Vec3 } from 'playcanvas';
 import { describe, expect, it, vi } from 'vitest';
 import { GameplayInkSystem } from './GameplayInkSystem';
+import {FRAGMENT_GLSL,FRAGMENT_WGSL} from './InkSurfaceMaterial';
 import { PaintSurface,sourceRegisteredPaintCellActive,sourceRegisteredPaintHitActive,
  sourceThrownSubPaintBeforeRegisteredSolid,sourceOriginalBlastPaintLineClear } from './PaintSurface';
 import {ProjectileSystem} from '../projectile/ProjectileSystem';
@@ -51,6 +52,21 @@ function surface(masked: boolean): PaintSurface {
     masked ? footprint : undefined
   );
 }
+
+describe('actual original SOURCE wet-ink appearance is raster-bound', () => {
+  it('keeps GLSL and WGSL material outputs behind the same authenticated atlas coverage', () => {
+    for(const shader of [FRAGMENT_GLSL,FRAGMENT_WGSL]){
+      expect(shader).toContain('uSourceWetInkStyle');
+      expect(shader).toContain('cellBegin');
+      expect(shader).toContain('cellEnd');
+      expect(shader).toContain('coverage');
+      expect(shader).toContain('wetness');
+      expect(shader).toContain('teamColor * pigment, coverage');
+      expect(shader).toContain('vec3');
+      expect(shader).not.toContain('gl_FragDepth');
+    }
+  });
+});
 
 describe('PaintSurface footprint authority', () => {
   it('uses the same footprint for ray projection, active cells and score area', () => {

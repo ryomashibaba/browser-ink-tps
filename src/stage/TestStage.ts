@@ -62,14 +62,15 @@ export function buildTestStage(
   app: AppBase,
   definition: StageDefinition,
   surfaces: readonly PaintSurface[],
-  atlas: GpuInkAtlas
+  atlas: GpuInkAtlas,
+  sourceWetInkStyle = false
 ): StageBuildResult {
   const root = new Entity('StageRoot');
   app.root.addChild(root);
 
   // Paintable geometry remains generated from the exact frozen PaintSurface basis.
   for (const surface of surfaces) {
-    const material = createInkSurfaceMaterial(surface, atlas.texture);
+    const material = createInkSurfaceMaterial(surface, atlas.texture, sourceWetInkStyle);
     const mesh = createSurfaceMesh(app, surface);
     const meshInstance = new MeshInstance(mesh, material);
     const entity = new Entity('PaintSurface:' + surface.id);
