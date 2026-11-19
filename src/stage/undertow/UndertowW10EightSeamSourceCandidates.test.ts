@@ -343,10 +343,11 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
     if(dist<.18){waypoint++;continue;}
     const speed=Math.min(GAME_CONFIG.player.humanSpeedMetersPerSecond,dist*12);
     const acceleration=GAME_CONFIG.player.groundAccelerationMetersPerSecond2/60;
-    const approach=(a:number,b:number)=>a+
-     Math.max(-acceleration,Math.min(acceleration,b-a));
-    vx=approach(vx,dx/dist*speed);
-    vz=approach(vz,dz/dist*speed);
+    const nextVx=dx/dist*speed,nextVz=dz/dist*speed;
+    const changeX=nextVx-vx,changeZ=nextVz-vz;
+    const factor=Math.min(1,acceleration/
+     Math.max(1e-9,Math.hypot(changeX,changeZ)));
+    vx+=changeX*factor;vz+=changeZ*factor;
     vy=Math.max(-GAME_CONFIG.player.maxFallSpeedMetersPerSecond,
      vy-GAME_CONFIG.player.gravityMetersPerSecond2/60);
     kcc.computeColliderMovement(collider,
@@ -354,6 +355,14 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
      (other:RAPIER.Collider)=>other.handle!==collider.handle&&
       sim.shouldCharacterCollide(other,'HUMAN'));
     const delta=kcc.computedMovement();
+    // Mirror genuine PlayerController's post-contact velocity reconciliation.
+    const requestedXZ=Math.hypot(vx/60-delta.x,vz/60-delta.z);
+    if(kcc.numComputedCollisions()>0&&requestedXZ>.016){
+     const attempted=Math.hypot(vx,vz);
+     const accepted=Math.hypot(delta.x,delta.z)*60;
+     const factor=accepted>attempted?attempted/accepted:1;
+     vx=delta.x*60*factor;vz=delta.z*60*factor;
+    }
     grounded=kcc.computedGrounded();
     if(grounded&&vy<0)vy=-.5;
     if(!grounded)airborneTicks++;
