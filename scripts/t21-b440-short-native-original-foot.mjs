@@ -29,6 +29,11 @@ import {auditLiveA3SourceGoalEvidence} from './t21-native-a3-front-evidence.mjs'
 
 const root='http://127.0.0.1:4298/browser-ink-tps/';
 const b441Experiment=process.env.T21_B441_SOURCE_FRONTLINE==='1';
+// Genuine Chromium opt-in on the same 51-solid experimental game.
+const f4RealChrome=process.env.T21_F4_CENTRAL_BROWSER_ONCE==='1';
+if(f4RealChrome&&(process.env.GITHUB_ACTIONS!=='true'||
+ process.platform!=='linux'||b441Experiment))
+ throw Error('F4_NATIVE_CHROME_REQUIRES_OWNED_RESEARCH_CI');
 const p0NormalHuman=process.env.T21_P0_NORMAL_HUMAN==='1';
 // Only a naturally observed physical STOP can authorize a genuine CDP R.
 const p0FallROnlyOnce=process.env.T21_P0_KEY_R_FALL_ONCE==='1';
@@ -1087,6 +1092,115 @@ async function b490CaptureLocalSamePosePair(){
   proof.b490FrozenF3lPair));
 }
 
+
+/** One actual Chromium + real 60Hz game. No Actor/CPU/clock writes:
+ * trusted mouse buttons and human KeyW ONLY. F4 has no formal art/QA PASS.
+ */
+async function runF4RealChrome(){
+ const url=root+'?t21Play=preview&t21QaDrive=source'+
+  '&t21W10B183=firstDropPlay&t21W10B192=humanCombat'+
+  '&t21W10B203=fullRound&t21F4Central=research';
+ const report={schema:'T21_V28_F4_NATIVE_CHROMIUM_51_SOLID',
+  query:new URL(url).search,boot:'HOLD',sevenCpu:'HOLD',
+  humanCrossed:false,cpuCrossers:[],frames:[],
+  sourceProtection:'25/17/26/0',sourceWrites:0,
+  actorWrites:0,clockWrites:0,scoringWrites:0,
+  verdict:'HOLD',realBrowser:true};
+ proof.f4RealChromium=report;save();
+ await cdp('Page.navigate',{url});
+ await waitForRealSourceReady('F4_SAME_WORLD_BOOT');
+ const canvas=await evaluate(`(() => {
+  const c=document.querySelector('#app-canvas');
+  const n=window.__t21F3?.snapshot?.();
+  return {ready:c?.dataset.t21F3Ready,
+   renderer:c?.dataset.t21F3Renderer,
+   f4:c?.dataset.t21F4CentralResearch,
+   actors:n?.cpu?.cpu?.length??null,
+   originalSolids:n?.originalSourceSolids??null,
+   paint:n?.originalPaintSurfaces??null,
+   links:n?.originalSourceNavigationLinks??null,
+   scoreable:n?.sourceScoreablePromotions??null,
+   state:n?.matchState??null,
+   bootError:document.querySelector('#boot-error')?.textContent?.slice(0,250)??null};
+ })()`);
+ report.canvas=canvas;save();
+ if(canvas.f4!=='UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER'||
+    canvas.renderer!=='webgl2'||canvas.actors!==7||
+    canvas.originalSolids!==25||canvas.paint!==17||
+    canvas.links!==26||canvas.scoreable!==0||
+    canvas.state!=='STAGING')
+  fail('F4_CHROME_STAGE_OR_CROWD_IDENTITY_'+JSON.stringify(canvas));
+ report.boot='PASS_NATIVE_51_SOLID_WEBGL2';save();
+ await buttonClick('#t21-f3-b25-start');
+ await until(async()=>{
+  const n=await snap();
+  return n.b25SourcePaintRun?.status==='ARMED'?n:false;
+ },30000,300);
+ await buttonClick('#t21-f3-b202-resume');
+ const playing=await until(async()=>{
+  const n=await snap();
+  if(n?.stopReason)fail('F4_STOP_'+String(n.stopReason));
+  return n.matchState==='PLAYING'&&!n.paused&&
+   n.cpu?.physicalRejoins?.length===7?n:false;
+ },200000,350);
+ report.sevenCpu='PASS_ACTUAL_SEVEN_REJOINED';
+ report.startTick=playing.tick;
+ report.initialHuman=playing.player?.position;
+ report.initialCpu=playing.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot}));
+ save();
+ const key={key:'w',code:'KeyW',
+  windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
+ let down=false,last=playing.tick-80;
+ try{
+  await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});down=true;
+  await until(async()=>{
+   const n=await snap();
+   if(n.stopReason||n.matchState!=='PLAYING'||n.paused)
+    fail('F4_ACTUAL_MATCH_STOP_'+String(n.stopReason));
+   if(n.tick-last>=60){
+    last=n.tick;
+    report.frames.push({tick:n.tick,human:n.player?.position,
+     grounded:n.player?.grounded??n.nativeKccGrounded??null,
+     cpu:n.cpu?.cpu?.map(c=>({id:c.id,foot:c.physicalFoot,
+      mobility:c.mobilityState,rejoined:c.rejoined})),
+     liveRejoins:n.cpu?.physicalRejoins?.length,
+     nativeGoalRequests:n.cpu?.sourcePatrol?.realGoalRequests??null});
+    if(report.frames.length>22)report.frames.shift();
+    save();
+   }
+   return n.tick>=playing.tick+900?n:false;
+  },180000,400);
+ }finally{
+  if(down)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+ }
+ const end=await snap();
+ const at=(p,i)=>Array.isArray(p)?p[i]:p?.[['x','y','z'][i]];
+ const humanStart=at(playing.player?.position,2);
+ const humanFinish=at(end.player?.position,2);
+ report.humanCrossed=Number.isFinite(humanStart)&&
+  Number.isFinite(humanFinish)&&humanStart>.5&&humanFinish<-.5;
+ report.cpuCrossers=(end.cpu?.cpu??[]).filter(c=>{
+  const z=at(c.physicalFoot,2);
+  return Number.isFinite(z)&&
+   (c.id.startsWith('A')?z<-.5:z>.5);
+ }).map(c=>c.id);
+ report.endTick=end.tick;report.endState=end.matchState;
+ report.humanStartZ=humanStart;report.humanFinalZ=humanFinish;
+ report.endCpu=end.cpu?.cpu?.map(c=>({id:c.id,foot:c.physicalFoot,
+  rejoined:c.rejoined,state:c.mobilityState}));
+ report.stopReason=end.stopReason??null;
+ try{
+  const png=await cdp('Page.captureScreenshot',{
+   format:'png',captureBeyondViewport:false,fromSurface:true});
+  if(png?.data)writeFileSync(resolve(out,'f4-actual-chromium.png'),
+   Buffer.from(png.data,'base64'));
+ }catch(e){report.screenshotHold=String(e).slice(0,250);}
+ report.verdict=report.humanCrossed&&report.cpuCrossers.length>0?
+  'CANDIDATE_ACTUAL_CROSSING_NEEDS_VISUAL_REVIEW':
+  'HOLD_REAL_HUMAN_AND_CPU_CROSSING_UNPROVEN';
+ proof.verdict=report.verdict;save();
+ console.log('T21_F4_REAL_CHROME_51_SOLID',JSON.stringify(report));
+}
 async function main(){
  save();
  const chrome=process.env.T21_CHROME_PATH||
@@ -1139,7 +1253,7 @@ async function main(){
   const x=JSON.parse(String(e.data)),p=pending.get(x.id);
   // One approved B441 browser run captures the actual runtime error.
   // Observational CDP event only: no input, actor or world mutation.
-  if((p0NormalHuman||b441Experiment)&&
+  if((p0NormalHuman||b441Experiment||f4RealChrome)&&
      (x.method==='Runtime.consoleAPICalled'&&
       x.params?.type==='error'||x.method==='Runtime.exceptionThrown')){
    const errorBucket=p0NormalHuman?'p0BrowserErrors':'b441BrowserErrors';
@@ -1158,6 +1272,7 @@ async function main(){
  await cdp('Page.enable');await cdp('Runtime.enable');
  await cdp('Emulation.setDeviceMetricsOverride',{
   width:1600,height:900,deviceScaleFactor:1,mobile:false});
+ if(f4RealChrome){await runF4RealChrome();return;}
  // Reuse this SAME genuine Chromium session to test the actual
  // SOURCE game portal before entering the existing authoritative CPU trial.
  // Portal is optical/navigation only; never edits simulation or actor state.
