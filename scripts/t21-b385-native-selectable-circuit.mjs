@@ -1770,8 +1770,74 @@ async function run(){
    fail('SUB_REFILL_TWO_BOMBS_NOT_LOW_INK',{tick:low.tick,ink:low.player.ink,
     sub:low.b38HumanSub});
   let firstOwn=null,refilled;
+  const nativeOwnApproach=[];
   await key('keyDown','Shift','ShiftLeft',16);
   try{
+   // Real Chromium F+F screenshot: the KCC is grounded on unpainted
+   // gray original floor with already-painted cyan in front. A stationary
+   // Shift cannot turn NEUTRAL into OWN. Use bounded physical W input only;
+   // native Rapier, original floor, ink ownership and SQUID_OWN remain
+   // authoritative, with no movement / tank / clock assignment.
+   const started=original(await state(),'AFTER_SHIFT_AT_REAL_SOURCE_FOOT');
+   for(let i=0;i<6;i++){
+    const before=original(await state(),'BEFORE_NATIVE_SOURCE_OWN_STEP');
+    if(before.player.mode==='SQUID'&&
+       before.player.inkRelation==='OWN'&&
+       before.playerInkRecoveryState==='SQUID_OWN'&&
+       before.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND')break;
+    if(before.matchState!=='PLAYING'||before.paused||
+       before.player.hp<=0||before.shotsFired!==low.shotsFired||
+       before.cpu.physicalRejoins.length!==7)
+     fail('SUB_OWN_APPROACH_UNTRUSTED_WORLD',{tick:before.tick});
+    await key('keyDown','w','KeyW',87);
+    let moved;
+    try{
+     moved=await until(async()=>{
+      const n=original(await state(),'REAL_NATIVE_KEYW_IN_SQUID');
+      return n.tick>=before.tick+6?n:false;
+     },20000);
+    }finally{await key('keyUp','w','KeyW',87);}
+    const coast=await until(async()=>{
+     const n=original(await state(),'AFTER_REAL_KEYW_COAST');
+     return n.tick>=moved.tick+5?n:false;
+    },20000);
+    const sourceFoot=coast.b112OriginalHumanGround;
+    const distance=Math.hypot(
+      coast.player.position[0]-started.player.position[0],
+      coast.player.position[2]-started.player.position[2]);
+    const record={fromTick:before.tick,toTick:coast.tick,
+     from:before.player.position,to:coast.player.position,
+     movedMeters:distance,mode:coast.player.mode,
+     ink:coast.player.ink,relation:coast.player.inkRelation,
+     recovery:coast.playerInkRecoveryState,
+     originalFoot:sourceFoot?.lastOriginalSourceHitId,
+     grounded:sourceFoot?.genuineKccGrounded};
+    nativeOwnApproach.push(record);report.phases.push({
+     phase:'B385_REAL_KEYW_TOWARD_ORIGINAL_OWN_PAINT',...record});
+    persist();
+    if(coast.matchState!=='PLAYING'||coast.paused||
+       coast.player.mode!=='SQUID'||
+       sourceFoot?.genuineKccGrounded!==true||
+       sourceFoot.lastOriginalSourceHitId!==
+         'UndertowT21D:right-low-team-a'||
+       !Number.isFinite(distance)||distance>4.5||
+       coast.cpu.physicalRejoins.length!==7||
+       coast.shotsFired!==low.shotsFired)
+      fail('SUB_OWN_APPROACH_ORIGINAL_FOOT_HOLD',record);
+    if(coast.player.inkRelation==='OWN'&&
+       coast.playerInkRecoveryState==='SQUID_OWN'&&
+       coast.b381RealNativeDodge?.realLocomotion==='SWIM_GROUND')
+     break;
+   }
+   const reached=original(await state(),'AFTER_BOUNDED_NATIVE_OWN_APPROACH');
+   if(reached.player.mode!=='SQUID'||
+      reached.player.inkRelation!=='OWN'||
+      reached.playerInkRecoveryState!=='SQUID_OWN')
+    fail('SUB_OWN_PAINT_NOT_REACHED_WITH_NATIVE_MOVEMENT',{
+     lowInk:low.player.ink,currentInk:reached.player.ink,
+     relation:reached.player.inkRelation,
+     recovery:reached.playerInkRecoveryState,
+     nativeOwnApproach});
    refilled=await until(async()=>{
     const n=original(await state(),'TRUE_NATIVE_OWN_SQUID_SUB_REFILL');
     if(n.matchState!=='PLAYING'||n.paused||n.player.hp<=0||
@@ -1814,6 +1880,7 @@ async function run(){
    afterTwo:{tick:low.tick,ink:low.player.ink,
     throws:low.b38HumanSub.throws,explosions:low.b38HumanSub.explosions},
    squidOwnStart:firstOwn,
+   nativeOwnApproach,
    squidOwnEnd:{tick:refilled.tick,ink:refilled.player.ink,
     mode:refilled.player.mode,relation:refilled.player.inkRelation,
     recovery:refilled.playerInkRecoveryState},
