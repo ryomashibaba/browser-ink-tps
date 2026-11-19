@@ -874,6 +874,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Retest a distinct EXISTING ramp target only after this evidence.
   const lastRealTravel=this.lastMoved?.get(id);
   const stalledInFlight=!!inFlight&&
+   // A second goal cannot immediately inherit the PREVIOUS target's
+   // observed KCC denials. Keep the new genuine native goal for at
+   // least 120 further 60Hz ticks before a second alternate search.
+   // No physical foot, route, collision gate or denial count is changed.
+   this.b137NativeTick-
+    (this.b441OriginalRampLastAuditTick?.get(id)??-999999)>=120&&
    (this.realKccRejectedSteps.get(id)??0)>=90&&
    Number.isSafeInteger(lastRealTravel)&&lastRealTravel!==undefined&&
    lastRealTravel>0&&

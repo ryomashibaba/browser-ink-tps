@@ -1013,6 +1013,17 @@ it('SOURCE B2 real KCC-stalled in-flight original ramp retargets only to a separ
  expect(source.b441OriginalRampGoal.get('B2').equals(out)).toBe(true);
  expect(approved.some(p=>p.equals(out))).toBe(true);
  expect(bot.position.equals(foot)).toBe(true);
+ // The denied KCC streak is intentionally NOT cleared by an
+ // administrative goal switch. It must not, however, immediately
+ // rotate the newly adopted physical destination again.
+ const adopted=out.clone();
+ source.b137NativeTick+=60;
+ source.realKccRejectedSteps.set('B2',95);
+ out.set(99,99,99);
+ expect(source.tryOriginalRampLocalRecovery('B2',foot,out)).toBe(true);
+ expect(out.equals(adopted)).toBe(true);
+ expect(source.b441OriginalRampGoal.get('B2').equals(adopted)).toBe(true);
+ expect(source.realKccRejectedSteps.get('B2')).toBe(95);
  expect([stage.solids.length,stage.paintSurfaces.length,
   stage.navigationLinks?.length]).toEqual([25,17,26]);
  // With another true stationary spell, no other original route means
