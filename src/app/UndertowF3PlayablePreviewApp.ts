@@ -2555,7 +2555,9 @@ export class UndertowF3PlayablePreviewApp{
   document.addEventListener('visibilitychange',()=>{
    if(document.hidden)this.pauseSourceRoundOnFocusLoss();
   });
-  this.radar=createF3SourceRadar(ui,stage,this.b45SourceSurfaces);
+  // The radar is an original 25-solid visual reference, never movement
+  // authority: F4's true 51-solid collision/Recast worlds stay separate.
+  this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces);
   // B245 player view preserves all QA nodes, snapshots, physics and controls.
   installB245SourcePresentation(ui,()=>{
    // The existing B441 SOURCE browser runner is a real 7-CPU human mode
