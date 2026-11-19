@@ -61,6 +61,20 @@ export function summarizeB160CpuActivity(s:B160OriginalCpuInkSource):
   officialScoreableCells:0,original4v4Certified:false
  };
 }
+/** The final 17 registered owner grids are the only true ending paint
+ * state, so show that user-facing result before the lengthy seven-CPU
+ * attribution bars. Never change ownership, the original score authority
+ * or the contents of either report. This function is layout-only. */
+export function b160FinalRecapAnchor(
+ stats:Pick<Element,'parentElement'>,
+ sourceGrid:Pick<Element,'parentElement'>|null
+):Pick<Element,'parentElement'> {
+ if(!stats.parentElement||!sourceGrid||
+    sourceGrid.parentElement!==stats.parentElement)
+  throw Error('B160_ORIGINAL_FINAL_SOURCE_GRID_REQUIRED');
+ return sourceGrid;
+}
+
 export function createB160SourceCpuActivityView(
  ui:HTMLElement,finishedScreen:HTMLElement
 ){
@@ -85,7 +99,16 @@ export function createB160SourceCpuActivityView(
  liveContainer.appendChild(live);
  const stats=finishedScreen.querySelector('#t21-f3-b59-final-stats');
  if(!stats?.parentElement)throw Error('B160_NATIVE_FINISH_STATS_REQUIRED');
- stats.parentElement.insertBefore(finish,stats.nextSibling);
+ const sourceGrid=finishedScreen.querySelector(
+  '#t21-f3-b400-source-grid-recap');
+ // The original-source final ownership (not Turf score) is the first
+ // useful result of a completed SOURCE paint round. Prior 1600x900 real
+ // Chromium screenshot placed seven CPU attribution bars ABOVE it and
+ // pushed the real 17-grid balance beneath the fixed replay footer.
+ // Retain all bars and native evidence, simply move them below the grid.
+ const anchor=b160FinalRecapAnchor(stats,sourceGrid);
+ anchor.parentElement!.insertBefore(finish,sourceGrid!.nextSibling);
+ finish.dataset.t21B160Presentation='AFTER_REAL_SOURCE_GRID';
  let lastWritten='';
  const render=(source:B160OriginalCpuInkSource,
   state:'STAGING'|'PLAYING'|'TIME_UP',stopped:boolean)=>{

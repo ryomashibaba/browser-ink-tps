@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {summarizeB160CpuActivity,type B160OriginalCpuInkSource}
+import {summarizeB160CpuActivity,b160FinalRecapAnchor,type B160OriginalCpuInkSource}
  from './B160SourceCpuActivityView';
 const ids=['A1','A2','A3','B1','B2','B3','B4'] as const;
 function sample():B160OriginalCpuInkSource{
@@ -15,6 +15,23 @@ function sample():B160OriginalCpuInkSource{
   }])) as B160OriginalCpuInkSource['byActor']
  };
 }
+describe('B160 registered-source final recap comes before CPU attribution',()=>{
+ it('anchors the CPU bars after the existing genuine source-grid summary',()=>{
+  const parent={} as Element;
+  const stats={parentElement:parent} as Element;
+  const sourceGrid={parentElement:parent} as Element;
+  expect(b160FinalRecapAnchor(stats,sourceGrid)).toBe(sourceGrid);
+ });
+ it('refuses a missing or unrelated source-grid ending without guessing',()=>{
+  const parent={} as Element;
+  const stats={parentElement:parent} as Element;
+  expect(()=>b160FinalRecapAnchor(stats,null))
+   .toThrow('B160_ORIGINAL_FINAL_SOURCE_GRID_REQUIRED');
+  expect(()=>b160FinalRecapAnchor(stats,{parentElement:{} as Element} as Element))
+   .toThrow('B160_ORIGINAL_FINAL_SOURCE_GRID_REQUIRED');
+ });
+});
+
 describe('B160 source-only genuine seven-CPU ink activity, not Turf score',()=>{
  it('shows seven actual native accepted paint contributors and no winner',()=>{
   const v=summarizeB160CpuActivity(sample());
