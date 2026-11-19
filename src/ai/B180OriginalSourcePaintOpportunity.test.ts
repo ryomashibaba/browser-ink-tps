@@ -96,17 +96,22 @@ describe('B180 real-source CPU paints an actual unowned registered cell',()=>{
   surface.ownerGrid[surface.index(12,12)]=Team.B;
   surface.ownerGrid[surface.index(10,12)]=Team.Neutral;
   const s=sample(surface,2.1,2.1);
+  // PaintSurface.localToWorld offsets local U/V from the registered
+  // center, not from the WORLD origin. Compare exact actual world cell
+  // centers instead of treating local (2.5,2.5) as world (2.5,2.5).
+  const enemyWorld=surface.localToWorld(2.5,2.5);
+  const neutralWorld=surface.localToWorld(2.1,2.5);
   const seen:number[]=[];
   const aim=b180OriginalSourceUnownedNeighborAim(s,Team.A,p=>{
    seen.push(p.x);
-   return Math.abs(p.x-2.5)>.05;
+   return Math.abs(p.x-enemyWorld.x)>.05;
   });
   expect(seen.length).toBe(2);
-  expect(seen.some(x=>Math.abs(x-2.5)<.01)).toBe(true);
-  expect(aim?.x).toBeCloseTo(2.1);
-  expect(aim?.z).toBeCloseTo(2.5);
+  expect(seen.some(x=>Math.abs(x-enemyWorld.x)<.01)).toBe(true);
+  expect(aim?.x).toBeCloseTo(neutralWorld.x);
+  expect(aim?.z).toBeCloseTo(neutralWorld.z);
   expect(b180OriginalSourceUnownedNeighborAim(s,Team.A)?.x)
-   .toBeCloseTo(2.5); // unchanged no-filter preference
+   .toBeCloseTo(enemyWorld.x); // unchanged no-filter preference
   expect(b180OriginalSourceUnownedNeighborAim(s,Team.A,()=>false))
    .toBeNull();
   expect(surface.ownerGrid[surface.index(12,12)]).toBe(Team.B);
