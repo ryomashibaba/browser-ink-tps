@@ -24,6 +24,8 @@ const ROOT='http://127.0.0.1:4193/browser-ink-tps/';
 const OUT=process.env.T21_B385_OUTPUT||'/tmp/t21-b385';
 // Genuine short native test, no 180s/replay/official result claim.
 const shortB415=process.env.T21_B415_SHORT_CANONICAL==='1';
+// One natural F-key Snap Bomb after genuine 3/3, not another 180s run.
+const shortRealSub=process.env.T21_B385_ONE_SUB_SHORT==='1';
 const children=[],pending=new Map(),observations=[];
 let socket=null,sequence=0;
 const report={schema:'B385_REAL_CHROMIUM_NATIVE_SOURCE_SELECTABLE_ROUND',
@@ -1546,6 +1548,8 @@ async function run(){
  }
  // B385 true F-key sub-weapon vertical slice. Actual Twin Comets kit
  // equips Snap Bomb (native catalog cost 45 ink); no physics or tank writes.
+ // Previous raw genuine 3/3 had 97 ink; asking for 99 caused a 100-second
+ // timeout even though TWO actual 45-ink bombs were already affordable.
  const nativeSubReady=await until(async()=>{
   const s=original(await state(),'REAL_NATIVE_SUB_READY');
   if(s.matchState!=='PLAYING'||s.paused||s.player.hp<=0||
@@ -1553,8 +1557,8 @@ async function run(){
      s.b361NativePlayerWeapon?.id!=='twin-comets')
    fail('SOURCE_SUB_NOT_AVAILABLE',{tick:s.tick,sub:s.b38HumanSub,
     weapon:s.b361NativePlayerWeapon,hp:s.player.hp});
-  return s.player.ink>=99?s:false;
- },100000);
+  return s.player.ink>=90?s:false;
+ },30000);
  const trueSubHud=async()=>evalPage('(() => {const s=window.__t21F3.snapshot(),'+
   'u=document.querySelector("#ui-root"),g=document.querySelector("#t21-f3-b338-source-guide");'+
   'return {tick:s.tick,ink:s.player.ink,throws:s.b38HumanSub?.throws,'+
@@ -1602,10 +1606,15 @@ async function run(){
   const b392Thrown=await until(async()=>{
    const q=await trueSubHud();
    const u=q?.sub;
+   // Snap Bomb can physically contact a floor immediately. A genuine
+   // DETONATED cue may supersede THROWN before the next CDP read.
+   const acceptedCue=shortRealSub?
+    (u?.mode==='THROWN'||u?.mode==='DETONATED'):
+    u?.mode==='THROWN';
    return q?.view==='PLAYER'&&q.phase==='PLAYING'&&
-    u?.visible===true&&u.mode==='THROWN'&&
+    u?.visible===true&&acceptedCue&&
     u.throws===after.b38HumanSub.throws&&
-    u.text==='REAL SUB THROWN · Snap Bomb · NOT CPU HIT'&&
+    u.text==='REAL SUB '+u.mode+' · Snap Bomb · NOT CPU HIT'&&
     u.noWrites==='0'&&u.scoreable==='0'&&u.cpuHit==='false'?u:false;
   },45000);
   actualFEvents.push({nativeTick:after.tick,physicalFKey:true,
@@ -1614,6 +1623,44 @@ async function run(){
    actualInkBefore:before.player.ink,actualInkAfter:after.player.ink,
    visibleB392RealThrow:b392Thrown,
    mainShotsUnchanged:true,originalScoreable:0});
+  if(shortRealSub){
+   // Real 60Hz native bomb flight/impact, not F-key telemetry alone.
+   const exploded=await until(async()=>{
+    const s=original(await state(),'REAL_SINGLE_SUB_EXPLOSION');
+    return s.b38HumanSub?.explosions>=
+     before.b38HumanSub.explosions+1?s:false;
+   },60000);
+   const native=exploded.b23HumanInkFeedback;
+   const witness={phase:'B385_TRUE_F_SUB_SHORT_EXPLODED',
+    source:'25/17/26/0',nativeTick:exploded.tick,
+    selectedKit:'twin-comets',weapon:'Snap Bomb',
+    actualThrowsBefore:before.b38HumanSub.throws,
+    actualThrowsAfter:exploded.b38HumanSub.throws,
+    actualExplosionsBefore:before.b38HumanSub.explosions,
+    actualExplosionsAfter:exploded.b38HumanSub.explosions,
+    humanInkBefore:before.player.ink,humanInkAfter:exploded.player.ink,
+    originalHumanPaintKind:native.lastBombOutcome??null,
+    observedBombStamps:native.lastBombOutcomeStamps??null,
+    observedChangedSourceCells:native.lastBombOutcomeChangedCells??null,
+    nativeBombPaintEventsObserved:native.humanBombExplosionsObserved??null,
+    nativeCpuRejoins:exploded.cpu.physicalRejoins.length,
+    mainShotsUnchanged:exploded.shotsFired===before.shotsFired,
+    realKeyF:true,gameplayInjectedTime:0,gameplayInjectedActors:0,
+    gameplayInjectedInk:0,officialScoreable:0,officialWinner:'NONE',
+    crossTeamRoutesCertified:false};
+   if(exploded.matchState!=='PLAYING'||exploded.paused||
+      witness.nativeCpuRejoins!==7||!witness.mainShotsUnchanged||
+      exploded.sourceScoreablePromotions!==0)
+    fail('SHORT_SUB_NATIVE_STATE_DRIFT',witness);
+   report.phases.push(witness);persist();
+   await picture('b385-real-one-f-sub-after-explosion');
+   report.outcome='PASS_B385_REAL_ONE_F_SUB_NATIVE_EXPLOSION';
+   report.note='Real first F-key native projectile + explosion and truthful original paint counters. No 180s, source-score, CPU hit or full4v4 certification.';
+   persist();
+   console.log('B385_REAL_F_SUB_SHORT_NATIVE_EXPLOSION_PASS',
+    JSON.stringify(witness));
+   return;
+  }
  }
  const insufficientHud=await until(async()=>{
   const q=await trueSubHud();

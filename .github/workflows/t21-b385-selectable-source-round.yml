@@ -33,9 +33,9 @@ jobs:
   native-b384-user-round:
     # V15 P1 on the research branch: one real 180s milestone only.
     # Do not re-run this expensive workflow on subsequent game commits.
-    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || (contains(github.event.head_commit.message, '[p1-180s-once]') || contains(github.event.head_commit.message, '[b415-short]') || contains(github.event.head_commit.message, '[f2-ground-stall-once]'))
+    if: github.ref != 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' || github.event_name == 'workflow_dispatch' || (contains(github.event.head_commit.message, '[p1-180s-once]') || contains(github.event.head_commit.message, '[b415-short]') || contains(github.event.head_commit.message, '[f2-ground-stall-once]') || contains(github.event.head_commit.message, '[p1-sub-short]'))
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ contains(github.event.head_commit.message, '[b415-short]') && 20 || 75 }}
+    timeout-minutes: ${{ (contains(github.event.head_commit.message, '[b415-short]') || contains(github.event.head_commit.message, '[p1-sub-short]')) && 20 || 75 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,9 +50,10 @@ jobs:
       - run: node --test scripts/t21-b390-native-radar-check.test.mjs
       - name: Drive actual source Chrome (short B415 or full B390)
         env:
-          T21_B390_TRUE_180S: ${{ contains(github.event.head_commit.message, '[b415-short]') && '0' || '1' }}
+          T21_B390_TRUE_180S: ${{ (contains(github.event.head_commit.message, '[b415-short]') || contains(github.event.head_commit.message, '[p1-sub-short]')) && '0' || '1' }}
           T21_B390_CORE_180S: ${{ contains(github.event.head_commit.message, '[p1-core-180s-once]') && '1' || '0' }}
           T21_B415_SHORT_CANONICAL: ${{ contains(github.event.head_commit.message, '[b415-short]') && '1' || '0' }}
+          T21_B385_ONE_SUB_SHORT: ${{ contains(github.event.head_commit.message, '[p1-sub-short]') && '1' || '0' }}
           T21_P1_OWN_ONCE: ${{ contains(github.event.head_commit.message, '[p1-own-once]') && '1' || '0' }}
           T21_P2_COMBAT_TWIN_180_REPLAY_ONCE: ${{ contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && '1' || '0' }}
           T21_F2_GROUND_STALL_ONCE: ${{ contains(github.event.head_commit.message, '[f2-ground-stall-once]') && '1' || '0' }}
@@ -95,7 +96,7 @@ jobs:
         if: ${{ always() && !contains(github.event.head_commit.message, '[p2-canonical-combat-once]') && !contains(github.event.head_commit.message, '[f2-ground-stall-once]') && !contains(github.event.head_commit.message, '[p2-short-combat-once]') && !contains(github.event.head_commit.message, '[p2-normal-180-once]') }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ contains(github.event.head_commit.message, '[b415-short]') && 'b415-genuine-short-canonical-circuit' || 'b390-genuine-selected-180s-source-round' }}
+          name: ${{ contains(github.event.head_commit.message, '[p1-sub-short]') && 'b385-true-native-f-sub-short' || contains(github.event.head_commit.message, '[b415-short]') && 'b415-genuine-short-canonical-circuit' || 'b390-genuine-selected-180s-source-round' }}
           path: /tmp/t21-b385/
           retention-days: 14
           if-no-files-found: warn
