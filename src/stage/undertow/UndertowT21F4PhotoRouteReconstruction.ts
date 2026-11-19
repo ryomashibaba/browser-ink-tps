@@ -19,7 +19,8 @@ type P=readonly [number,number,number];
 type Side='POSITIVE_Z'|'NEGATIVE_Z';
 type RepairKind='NARROW_SOURCE_SLOPE_WALKWAY'|'SOURCE_EDGE_ALIGNMENT'|
  'SOURCE_MISSING_FLAT_BAND'|'SOURCE_SLOPE_TO_FLAT_LIP'|
- 'SOURCE_INNER_UNDERPASS_LIP'|'REGISTERED_RAMP_ENTRANCE';
+ 'SOURCE_INNER_UNDERPASS_LIP'|'REGISTERED_RAMP_ENTRANCE'|
+ 'CENTRAL_STEP_APPROACH';
 
 export type PhotoRouteRepair=Readonly<{
  id:string;side:Side;kind:RepairKind;
@@ -103,7 +104,18 @@ const patches:readonly Readonly<{
   references:['underpass-route-floor-concrete02','underpass-route-slope00-inner']},
  {name:'inner-slope00-to-underpass',kind:'SOURCE_INNER_UNDERPASS_LIP',
   model:modelQuad(-13.24,-10.95,5.88,6.35,3,3),
-  references:['underpass-route-slope00-inner','glass-underpass']}
+  references:['underpass-route-slope00-inner','glass-underpass']},
+ // The source center-low pieces end near model X=+-2.938 (Y=3.0),
+ // whereas the PDF-registered central step-top begins near X=+-2.29
+ // at model Y=4.5. A flat bridge would contradict that 1.5m rise.
+ // Isolated photo-guided ramp candidate joins each genuine center-low
+ // footprint (at X=+-8.15) to the genuine step top (X=+-1.9),
+ // using 1.9m width at model Z around 0. No novel offmesh link.
+ // This is approximate visual reconstruction, NOT exact original collision.
+ {name:'center-low-to-step-top',kind:'CENTRAL_STEP_APPROACH',
+  model:[[-8.15,3,-.95],[-8.15,3,.95],
+         [-1.90,4.5,-.95],[-1.90,4.5,.95]],
+  references:['center-low-floor','center-origin-step-top-face']}
 ];
 
 export function buildT21F4PhotoRouteExperiment(){
@@ -130,7 +142,7 @@ export function buildT21F4PhotoRouteExperiment(){
  };
  return {stage,repairs,
   frozenSource:'25/17/26/0' as const,
-  originalStageUnmodified:stage.solids.length===49&&
+  originalStageUnmodified:stage.solids.length===51&&
    stage.paintSurfaces===frozen.paintSurfaces&&
    stage.navigationLinks===frozen.navigationLinks,
   sceneIsolated:true as const,actualOriginalCollisionProven:false as const};

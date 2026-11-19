@@ -150,8 +150,8 @@ describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=
   expect(proof.originalStageUnmodified).toBe(true);
   expect(proof.actualOriginalCollisionProven).toBe(false);
   expect(proof.sceneIsolated).toBe(true);
-  expect(stage.solids).toHaveLength(49);
-  expect(repairs).toHaveLength(14);
+  expect(stage.solids).toHaveLength(51);
+  expect(repairs).toHaveLength(16);
   expect(stage.paintSurfaces).toHaveLength(17);
   expect(stage.navigationLinks).toHaveLength(26);
   expect(repairs.every(p=>p.geometryApproximate&&p.notOriginalCollision))
@@ -282,7 +282,11 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
   });
   console.log('T21_F4_PHOTO_REAL_CAPSULE_AND_CROSS_TEAM',
    JSON.stringify({result,cross,global4v4Ready:false}));
+  // Cross-team target is a real NavMesh polygon on the opposite side.
+  // This is an experimental connectivity gate only, never original Turf
+  // geometry certification or direct approval for live world activation.
+  expect(cross.map(c=>c.pathReached)).toEqual([true,true]);
   expect(result.every(x=>x.steps>100)).toBe(true);
-  expect(stage.solids.length).toBe(49);
+  expect(stage.solids.length).toBe(51);
  });
 });
