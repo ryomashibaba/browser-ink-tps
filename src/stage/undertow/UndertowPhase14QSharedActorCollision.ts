@@ -78,6 +78,7 @@ export class UndertowPhase14QSharedActorCollision{
   // radius-0.34m ball, not a radius-0.32m HUMAN capsule. Never approve
   // CPU overlap based on the smaller inactive collider profile.
   private humanColliderMode:'HUMAN'|'SQUID'='HUMAN';
+  private readonly f4Research:boolean;
   private readonly kcc;
   private readonly cpuRadius=ORIGINAL_SOURCE_CPU_CAPSULE.radiusMeters;
   private readonly cpuHalfHeight=ORIGINAL_SOURCE_CPU_CAPSULE.halfHeightMeters;
@@ -88,10 +89,11 @@ export class UndertowPhase14QSharedActorCollision{
     private readonly stage:StageDefinition,
     enabled:boolean
   ){
+    this.f4Research=isT21F4ResearchStage(stage);
     if(enabled!==true||stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
       stage.paintSurfaces.length!==17||
       stage.navigationLinks?.length!==26||freeze.activationReady!==false||
-      (!isT21F4ResearchStage(stage)&&
+      (!this.f4Research&&
        (stage.solids.length!==25||stage.solids!==freeze.solids))||
       stage.paintSurfaces!==freeze.paintSurfaces||
       stage.navigationLinks!==freeze.navigationLinks)
@@ -153,11 +155,13 @@ export class UndertowPhase14QSharedActorCollision{
    * foot. Use the existing SOURCE CPU endpoint band (0.25m); this query
    * grants neither movement nor new collision/paint authority. */
   public sourceFootSupport(id:string,foot:T21QFoot){
-    const actual=this.actors.get(id)?.sourceFoot;
-    if(!actual||![foot.x,foot.y,foot.z].every(Number.isFinite)||
-       Math.hypot(actual.x-foot.x,actual.y-foot.y,actual.z-foot.z)>1e-5)
+    const actor=this.actors.get(id);
+    if(!actor||![foot.x,foot.y,foot.z].every(Number.isFinite)||
+       Math.hypot(actor.sourceFoot.x-foot.x,actor.sourceFoot.y-foot.y,
+         actor.sourceFoot.z-foot.z)>1e-5)
       return null;
-    return this.registeredOriginalSourceFootSupport(foot);
+    return this.registeredOriginalSourceFootSupport(foot)??
+      (this.f4Research?this.f4CapsuleSupport(actor,foot):null);
   }
 
   /** Static SOURCE physical support for an observed OR candidate foot.
@@ -171,6 +175,21 @@ export class UndertowPhase14QSharedActorCollision{
       new Vec3(foot.x,foot.y+offset,foot.z),offset,'HUMAN');
     return hit&&Math.abs(hit.point.y-foot.y)<=.25&&
       this.stage.solids.some(s=>s.id===hit.solidId)?hit:null;
+  }
+
+  /** At a seam, the capsule can rest on a face beside its center ray. */
+  private f4CapsuleSupport(actor:ActorBody,foot:T21QFoot){
+    const hit=this.physics.world.castShape(
+      {x:foot.x,y:foot.y+this.cpuCenterOffset,z:foot.z},
+      actor.collider.rotation(),{x:0,y:-1,z:0},actor.collider.shape,
+      0,.08,false,undefined,undefined,actor.collider,undefined,
+      collider=>this.physics.sourceSolidIdForCollider(collider)!==null&&
+        this.physics.shouldCharacterCollide(collider,'HUMAN'));
+    if(!hit||hit.normal1.y<Math.cos(
+       PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))return null;
+    const solidId=this.physics.sourceSolidIdForCollider(hit.collider);
+    return solidId?{point:new Vec3(hit.witness1.x,hit.witness1.y,hit.witness1.z),
+      solidId}:null;
   }
 
   /** Exact current PlayerController KCC foot, NOT an invented CPU repellor. */
@@ -450,7 +469,7 @@ export class UndertowPhase14QSharedActorCollision{
     id:string,from:T21QFoot,to:T21QFoot,maxDistance:number
   ):T21QFoot|null{
     const actor=this.actors.get(id);
-    if(!actor||!this.sourceFootSupport(id,from)||
+    if(!this.f4Research||!actor||!this.sourceFootSupport(id,from)||
        this.hasApproximateSameLayerOverlap(id,from))return null;
     const dx=to.x-from.x,dz=to.z-from.z;
     const distance=Math.hypot(dx,dz);
@@ -465,7 +484,8 @@ export class UndertowPhase14QSharedActorCollision{
     const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
     return Math.hypot(move.x,move.z)<=maxDistance+1e-5&&
       !this.hasApproximateSameLayerOverlap(id,foot)&&
-      this.registeredOriginalSourceFootSupport(foot)?foot:null;
+      (this.registeredOriginalSourceFootSupport(foot)||
+        this.f4CapsuleSupport(actor,foot))?foot:null;
   }
 
   /**

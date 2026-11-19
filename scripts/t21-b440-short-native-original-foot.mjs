@@ -1102,7 +1102,7 @@ async function runF4RealChrome(){
   '&t21W10B203=fullRound&t21F4Central=research';
  const report={schema:'T21_V28_F4_NATIVE_CHROMIUM_51_SOLID',
   query:new URL(url).search,boot:'HOLD',sevenCpu:'HOLD',
-  humanCrossed:false,cpuCrossers:[],frames:[],
+  humanCrossed:false,cpuCrossers:[],cpuMostAdvanced:{},frames:[],
   sourceProtection:'25/17/26/0',sourceWrites:0,
   actorWrites:0,clockWrites:0,scoringWrites:0,
   verdict:'HOLD',realBrowser:true};
@@ -1181,6 +1181,20 @@ async function runF4RealChrome(){
  report.initialHuman=playing.player?.position;
  report.initialCpu=playing.cpu.cpu.map(c=>({id:c.id,foot:c.physicalFoot}));
  save();
+ const recordCpuProgress=n=>{
+  for(const cpu of n.cpu?.cpu??[]){
+   const foot=cpu.physicalFoot;
+   if(!cpu.rejoined||cpu.mobilityState!=='GROUND'||
+      !Array.isArray(foot)||!foot.every(Number.isFinite))continue;
+   const sign=cpu.id.startsWith('A')?-1:1;
+   const prior=report.cpuMostAdvanced[cpu.id];
+   if(!prior||sign*foot[2]>sign*prior.foot[2])
+    report.cpuMostAdvanced[cpu.id]={foot,tick:n.tick};
+   if(sign*foot[2]>.5&&!report.cpuCrossers.includes(cpu.id))
+    report.cpuCrossers.push(cpu.id);
+  }
+ };
+ recordCpuProgress(playing);
  const key={key:'w',code:'KeyW',
   windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
  let down=false,last=playing.tick-80;
@@ -1190,6 +1204,7 @@ async function runF4RealChrome(){
    const n=await snap();
    if(n.stopReason||n.matchState!=='PLAYING'||n.paused)
     fail('F4_ACTUAL_MATCH_STOP_'+String(n.stopReason));
+   recordCpuProgress(n);
    // Straight W beyond the source's supported lane at Z~22 is an
    // actual unsafe fall, not a CPU corridor test. Keep all game physics
    // genuine while observing CPUs after a bounded real HUMAN key release.
@@ -1224,11 +1239,7 @@ async function runF4RealChrome(){
  const humanFinish=at(end.player?.position,2);
  report.humanCrossed=Number.isFinite(humanStart)&&
   Number.isFinite(humanFinish)&&humanStart>.5&&humanFinish<-.5;
- report.cpuCrossers=(end.cpu?.cpu??[]).filter(c=>{
-  const z=at(c.physicalFoot,2);
-  return Number.isFinite(z)&&
-   (c.id.startsWith('A')?z<-.5:z>.5);
- }).map(c=>c.id);
+ recordCpuProgress(end);
  report.endTick=end.tick;report.endState=end.matchState;
  report.humanStartZ=humanStart;report.humanFinalZ=humanFinish;
  report.endCpu=end.cpu?.cpu?.map(c=>({id:c.id,foot:c.physicalFoot,
@@ -1242,9 +1253,10 @@ async function runF4RealChrome(){
   if(png?.data)writeFileSync(resolve(out,'f4-actual-chromium.png'),
    Buffer.from(png.data,'base64'));
  }catch(e){report.screenshotHold=String(e).slice(0,250);}
- report.verdict=report.humanCrossed&&report.cpuCrossers.length>0?
+ report.verdict=report.cpuCrossers.length===0?
+  'HOLD_REAL_CPU_CROSSING_UNPROVEN':report.humanCrossed?
   'CANDIDATE_ACTUAL_CROSSING_NEEDS_VISUAL_REVIEW':
-  'HOLD_REAL_HUMAN_AND_CPU_CROSSING_UNPROVEN';
+  'CPU_CROSSING_OBSERVED_HUMAN_UNPROVEN';
  proof.verdict=report.verdict;save();
  console.log('T21_F4_REAL_CHROME_51_SOLID',JSON.stringify(report));
 }
