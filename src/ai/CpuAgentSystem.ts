@@ -160,6 +160,10 @@ export interface CpuSharedGroundStepAuthority {
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,dt:number
   ):Readonly<{x:number;y:number;z:number}>|null;
+  tryF4GroundStep?(
+    id:string,from:Readonly<{x:number;y:number;z:number}>,
+    to:Readonly<{x:number;y:number;z:number}>,maxDistance:number
+  ):Readonly<{x:number;y:number;z:number}>|null;
 }
 
 /** T21-D / M4 only: restore the physical HUMAN's passive Crowd footprint
@@ -934,7 +938,10 @@ export class CpuAgentSystem {
    const d=Math.hypot(candidate.x-bot.position.x,
     candidate.y-bot.position.y,candidate.z-bot.position.z);
    if(event==='CROWD'){
-    if(d<=.001)row.crowdNoStep++;
+    row.lastCrowdCandidate=[candidate.x,candidate.y,candidate.z];
+    const steeringDistance=isT21F4ResearchStage(this.stage)
+      ?Math.hypot(candidate.x-bot.position.x,candidate.z-bot.position.z):d;
+    if(steeringDistance<=.001)row.crowdNoStep++;
     else row.crowdProposals++;
    }else if(event==='KCC_APPROVED'){
     if(d>.015)row.rapierAcceptedMoving++;
@@ -950,8 +957,9 @@ export class CpuAgentSystem {
    }else if(event==='OFFMESH_DEFER')row.offmeshDeferred++;
    else if(event==='OVERSPEED')row.overspeedRejected++;
    else row.crowdReanchors++;
-   row.lastRealFoot=[bot.position.x,bot.position.y,bot.position.z];
-   row.lastCrowdCandidate=[candidate.x,candidate.y,candidate.z];
+   row.lastRealFoot=event==='KCC_APPROVED'?
+     [candidate.x,candidate.y,candidate.z]:
+     [bot.position.x,bot.position.y,bot.position.z];
   }
 
   /** CPU weapon requests accepted for genuine paintable turf, per real actor. */
@@ -1592,6 +1600,9 @@ export class CpuAgentSystem {
         }
       }
       const p = bot.agent.position();
+      const f4Ground=this.phase14qF2RecoverableSteps&&
+        isT21F4ResearchStage(this.stage)&&
+        this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
       this.observeSourceGroundStep(bot,'CROWD',p);
       // F2: the original offmesh event may begin only with a free
       // original-source physical capsule corridor. Other moving CPUs can
@@ -1599,7 +1610,7 @@ export class CpuAgentSystem {
       // the REAL CPU at its last approved KCC foot and re-anchoring ONLY
       // the ephemeral Recast steering proxy, never its render/physics foot.
       // The authentic link is retried after other bodies clear.
-      if(this.phase14qF2RecoverableSteps&&
+      if(!f4Ground&&this.phase14qF2RecoverableSteps&&
          p.y<bot.position.y-.1&&
          auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition&&
          this.phase14qGroundCollision!.shouldDeferF2FirstDrop!(
@@ -1613,7 +1624,7 @@ export class CpuAgentSystem {
       }
       // A real Recast offmesh jump is no longer copied into the CPU render
       // position when (and only when) the T21-D QA adapter is injected.
-      if(this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
+      if(!f4Ground&&this.phase14eFirstDrop?.observe(bot.id,bot.position,p,dt)){
         this.navigation.removeAgent(bot.agent);
         bot.agent=null;
         // Upper-source Crowd target never survives a genuine one-way
@@ -1628,8 +1639,9 @@ export class CpuAgentSystem {
       // actor can instead reconcile ONLY its passive steering proxy;
       // the real registered Rapier CPU foot never moves or teleports.
       // Unjoined/strict QA and default T20 keep the former hard stop.
+      const proxyFoot=f4Ground?{x:p.x,y:bot.position.y,z:p.z}:p;
       if(this.phase14eFirstDrop &&
-          auditPhase14CrowdFrame(bot.position,p,dt).suspectedInstantTransition){
+          auditPhase14CrowdFrame(bot.position,proxyFoot,dt).suspectedInstantTransition){
         if(this.sourceMayRecoverCrowdDiscontinuity(bot)){
           this.reconcileBlockedT21F2CrowdProxy(bot);
           this.continueBlockedOriginalSourceCpuActions(bot,dt,
@@ -1646,7 +1658,20 @@ export class CpuAgentSystem {
       // A true vertical offmesh transition is handled above by the genuine
       // original-source Rapier fall bridge, never by this horizontal clamp.
       let accepted={x:p.x,y:p.y,z:p.z};
-      if(this.phase14qF2RecoverableSteps){
+      if(f4Ground){
+        const ground=this.phase14qGroundCollision?.tryF4GroundStep?.(
+          bot.id,bot.position,p,dt*(this.b178NativeCpuMovementSpeed.get(bot.id)??
+            GAME_CONFIG.cpu.maxSpeedMetersPerSecond));
+        if(!ground){
+          this.observeSourceGroundStep(bot,'KCC_REJECTED',p,
+            'UNSUPPORTED_OR_BLOCKED_F4_GROUND');
+          this.reconcileBlockedT21F2CrowdProxy(bot);
+          this.continueBlockedOriginalSourceCpuActions(bot,dt,
+            humanTeam,humanPosition,humanActive,canStartNewCombatActions);
+          continue;
+        }
+        accepted={...ground};
+      }else if(this.phase14qF2RecoverableSteps){
         // A physically supported original SOURCE enemy-ink foot supplies
         // one speed for BOTH the live Recast agent and Rapier-bound motion.
         // The unchanged KCC still vetoes every unsupported destination.
@@ -1660,7 +1685,7 @@ export class CpuAgentSystem {
       // A teammate KCC slide counts only after its true physical foot
       // is committed, not when the Recast Crowd merely proposes a step.
       let realTeammateSlide=false;
-      if(this.phase14qGroundCollision){
+      if(this.phase14qGroundCollision&&!f4Ground){
         let shared:ReturnType<CpuSharedGroundStepAuthority['auditGroundStep']>;
         try{
           shared=this.phase14qGroundCollision.auditGroundStep(
@@ -1877,15 +1902,21 @@ export class CpuAgentSystem {
     const validSourceFoot=source&&
       hasRegisteredOriginalSourceCpuRapierFootSupport(
         bot.position,footSupport,this.stage.solids);
+    const f4Ground=isT21F4ResearchStage(this.stage)&&
+      this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true;
+    const aligned=(point:Readonly<{x:number;y:number;z:number}>)=>
+      f4Ground
+        ? Math.hypot(point.x-bot.position.x,point.z-bot.position.z)<=.35&&
+          Math.abs(point.y-bot.position.y)<=.40
+        : Math.hypot(point.x-bot.position.x,point.y-bot.position.y,
+            point.z-bot.position.z)<=.20;
     const observed=native?.nearestPoint;
     const nativeGood=source&&validSourceFoot&&native?.success===true&&
       observed!==null&&observed!==undefined&&
       native.distanceMeters!==null&&
       Number.isFinite(native.distanceMeters)&&
-      native.distanceMeters<=.20&&
       [observed.x,observed.y,observed.z].every(Number.isFinite)&&
-      Math.hypot(observed.x-bot.position.x,
-        observed.y-bot.position.y,observed.z-bot.position.z)<=.20;
+      aligned(observed);
     if(source&&!nativeGood){
       // The real body stays at its last KCC-approved foot. Instead of
       // terminating the entire 180s round, quarantine THIS one passive
@@ -1902,17 +1933,14 @@ export class CpuAgentSystem {
       return;
     }
     const nav=source?observed!:this.navigation.closestPoint(bot.position);
-    if(![nav.x,nav.y,nav.z].every(Number.isFinite)||
-       Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
-       nav.z-bot.position.z)>.20)
+    if(![nav.x,nav.y,nav.z].every(Number.isFinite)||!aligned(nav))
       throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
     this.observeSourceGroundStep(bot,'CROWD_REANCHOR',bot.agent.position());
     bot.agent.teleport(nav);
     bot.agent.resetMoveTarget();
     const anchored=bot.agent.position();
     if(source&&(![anchored.x,anchored.y,anchored.z].every(Number.isFinite)||
-       Math.hypot(anchored.x-bot.position.x,
-       anchored.y-bot.position.y,anchored.z-bot.position.z)>.20)){
+       !aligned(anchored))){
       // An internal Recast re-snap after teleport is NOT a physical step.
       // Keep this CPU stationary rather than claiming a successful anchor.
       this.sourceCrowdProjectionHold.set(bot.id,this.sourceNativeMotionTick);
@@ -1938,8 +1966,7 @@ export class CpuAgentSystem {
     // aim cannot find a trusted unpainted cell. Live navigation is still
     // reset and the stale B35 movement-dedup target stays invalidated.
     const p=bot.agent.position();
-    if(Math.hypot(p.x-bot.position.x,p.y-bot.position.y,
-      p.z-bot.position.z)>.20)
+    if(!aligned(p))
       throw Error('T21_F2_CROWD_PROXY_REANCHOR_FAILED');
     // The newly revalidated registered foot deserves an actual NEW native
     // route at the next tick; all other KCC-veto retries retain .20s pacing.

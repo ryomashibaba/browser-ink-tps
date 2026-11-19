@@ -445,6 +445,29 @@ export class UndertowPhase14QSharedActorCollision{
       corrected:null;
   }
 
+  /** Follow Crowd's horizontal intent using the shared world's grounded KCC. */
+  public tryF4GroundStep(
+    id:string,from:T21QFoot,to:T21QFoot,maxDistance:number
+  ):T21QFoot|null{
+    const actor=this.actors.get(id);
+    if(!actor||!this.sourceFootSupport(id,from)||
+       this.hasApproximateSameLayerOverlap(id,from))return null;
+    const dx=to.x-from.x,dz=to.z-from.z;
+    const distance=Math.hypot(dx,dz);
+    const fraction=distance>maxDistance?maxDistance/distance:1;
+    // The player uses the same downward bias after grounded contact.
+    this.kcc.computeColliderMovement(actor.collider,
+      {x:dx*fraction,y:-.5/60,z:dz*fraction},
+      undefined,undefined,(collider:Collider)=>
+        collider.handle!==actor.collider.handle&&
+        this.physics.shouldCharacterCollide(collider,'HUMAN'));
+    const move=this.kcc.computedMovement();
+    const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
+    return Math.hypot(move.x,move.z)<=maxDistance+1e-5&&
+      !this.hasApproximateSameLayerOverlap(id,foot)&&
+      this.registeredOriginalSourceFootSupport(foot)?foot:null;
+  }
+
   /**
    * F2 opt-in first-drop admission gate. Before detaching an authentic
    * upper Crowd agent into its independent original-source Rapier fall,

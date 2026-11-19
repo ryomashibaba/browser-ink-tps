@@ -1213,8 +1213,8 @@ async function runF4RealChrome(){
     if(report.frames.length>22)report.frames.shift();
     save();
    }
-   return n.tick>=playing.tick+900?n:false;
-  },320000,850);
+   return n.tick>=playing.tick+2400?n:false;
+  },480000,850);
  }finally{
   if(down)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
  }
@@ -1279,9 +1279,10 @@ async function main(){
  // Unique owned Chrome profile; do not reuse /tmp on the user's Windows.
  if(b490LocalCompare)
   b490OwnedChromeProfile=mkdtempSync(join(tmpdir(),'t21-b490-chromium-'));
+ const viewport=f4RealChrome?{width:960,height:540}:{width:1600,height:900};
  const chromeProcess=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage',
   '--no-first-run','--disable-extensions','--enable-unsafe-swiftshader',
-  '--use-angle=swiftshader','--window-size=1600,900','--hide-scrollbars',
+  '--use-angle=swiftshader',`--window-size=${viewport.width},${viewport.height}`,'--hide-scrollbars',
   '--remote-debugging-port=9268','--remote-allow-origins=*',
   '--user-data-dir='+(b490OwnedChromeProfile??'/tmp/t21-b440-native-short-profile'),
   'about:blank'],{stdio:'ignore'});
@@ -1318,7 +1319,7 @@ async function main(){
  });
  await cdp('Page.enable');await cdp('Runtime.enable');
  await cdp('Emulation.setDeviceMetricsOverride',{
-  width:1600,height:900,deviceScaleFactor:1,mobile:false});
+  ...viewport,deviceScaleFactor:1,mobile:false});
  if(f4RealChrome){await runF4RealChrome();return;}
  // Reuse this SAME genuine Chromium session to test the actual
  // SOURCE game portal before entering the existing authoritative CPU trial.

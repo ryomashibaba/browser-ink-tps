@@ -1539,8 +1539,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    let next=this.f4GuideProgress.get(id)??0;
    while(next<guide.length){
     const p=guide[next]!;
-    if(Math.hypot(realFoot.x-p[0],realFoot.z-p[2])>.40||
-       Math.abs(realFoot.y-p[1])>.28)break;
+    const dx=realFoot.x-p[0],dz=realFoot.z-p[2];
+    if(Math.hypot(dx,dz)>.40||Math.abs(realFoot.y-p[1])>.28){
+     // Avoidance can carry a CPU past the waypoint on the same ramp.
+     // Use its actual foot along the outgoing segment to avoid backtracking.
+     const following=guide[next+1];
+     if(!following)break;
+     const sx=following[0]-p[0],sz=following[2]-p[2];
+     const t=(dx*sx+dz*sz)/(sx*sx+sz*sz);
+     if(!(t>0&&t<=1)||Math.hypot(dx-sx*t,dz-sz*t)>.65||
+        Math.abs(realFoot.y-(p[1]+(following[1]-p[1])*t))>.28)break;
+    }
     next++;
    }
    this.f4GuideProgress.set(id,next);
@@ -1566,7 +1575,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
    const gap=support?Math.abs(support.point.y-target.y):null;
    const admitted=projectValid&&native!==null&&native.reachedTarget&&
-      native.startSnapDistanceMeters<=.30&&
+      native.startSnapDistanceMeters<=.35&&
       native.endSnapDistanceMeters<=.30&&native.pointCount>0&&
       support!==null&&gap!==null&&gap<=.25;
    this.f4GuideLastAudit.set(id,{
@@ -3309,6 +3318,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // physical first-drop/rejoin proof. An absent CPU is NOT still 7/7.
    if(priorLife==='ACTIVE'&&bot.lifeState==='SPLATTED'){
     this.physicallyRejoined.delete(bot.id);
+    this.f4GuideProgress?.delete(bot.id);
+    this.f4GuideLastAudit?.delete(bot.id);
     this.originalSourceRecoveryIntent.delete(bot.id);
     this.cleared.delete(bot.id);
     this.physicallyFalling.delete(bot.id);
@@ -3638,6 +3649,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!bot||bot.lifeState!=='SPLATTED')
    throw Error('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
   this.physicallyRejoined.delete(id);
+  this.f4GuideProgress?.delete(id);
+  this.f4GuideLastAudit?.delete(id);
   this.physicallyFalling.delete(id);
   this.cleared.delete(id);
   this.respawnOriginalDrops.delete(id);

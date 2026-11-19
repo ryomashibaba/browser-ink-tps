@@ -183,7 +183,7 @@ jobs:
   p0-radar-build-only:
     if: ${{ github.ref == 'refs/heads/research/t21-integrated-a1-c-patrol-four-mode-20261105' && (contains(github.event.head_commit.message, '[p0-radar-build-only]') || contains(github.event.head_commit.message, '[p0-first-stop-build-only]') || contains(github.event.head_commit.message, '[b499-eight-source-seams]') || contains(github.event.head_commit.message, '[f4-real-chrome]')) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[f4-real-chrome]') && 15 || 8 }}
     permissions:
       contents: read
     steps:
