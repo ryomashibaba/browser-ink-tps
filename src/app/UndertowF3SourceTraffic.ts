@@ -174,6 +174,15 @@ export interface F3TrafficSnapshot{
   readonly auditedTargets:number;
   /** Opt-in B441: REAL source-backed frontline goal attempts; still UNSCORED. */
   readonly b441Enabled:boolean;
+  /** Last genuine F4 native/Rapier gate for each live CPU. Research only. */
+  readonly f4GuideLastAudit:readonly {
+   id:string;index:number;
+   actualFoot:[number,number,number];
+   goal:[number,number,number];
+   nativeReached:boolean;nativeStartSnap:number;nativeEndSnap:number;
+   nativePathPoints:number;footSupportSolid:string|null;
+   supportGapMeters:number|null;admitted:boolean;
+  }[];
   readonly b441ProposalsChecked:number;
   readonly b441StrictGoalsAvailable:number;
   readonly b441ActualGoalRequests:number;
@@ -347,6 +356,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly egress=new Map<string,StageVector3>();
  private readonly f4GuideByTeam=new Map<Team.A|Team.B,readonly StageVector3[]>();
  private readonly f4GuideProgress=new Map<string,number>();
+ private readonly f4GuideLastAudit=new Map<string,{
+  id:string;index:number;actualFoot:[number,number,number];
+  goal:[number,number,number];
+  nativeReached:boolean;nativeStartSnap:number;nativeEndSnap:number;
+  nativePathPoints:number;footSupportSolid:string|null;
+  supportGapMeters:number|null;admitted:boolean;
+ }>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
  /** Only genuine original-ramp, native-approved recovery GOALS; never feet. */
@@ -1534,11 +1550,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const support=this.physics.castCharacterFootSupport(new Vec3(
     target.x,target.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
     target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
-   if(!native.reachedTarget||native.startSnapDistanceMeters>.30||
-      native.endSnapDistanceMeters>.30||native.pointCount===0||
-      !support||Math.abs(support.point.y-target.y)>.25){
-    this.heldRequests++;return false;
-   }
+   const gap=support?Math.abs(support.point.y-target.y):null;
+   const admitted=native.reachedTarget&&
+      native.startSnapDistanceMeters<=.30&&
+      native.endSnapDistanceMeters<=.30&&native.pointCount>0&&
+      support!==null&&gap!==null&&gap<=.25;
+   this.f4GuideLastAudit.set(id,{
+    id,index:next,actualFoot:[realFoot.x,realFoot.y,realFoot.z],
+    goal:[target.x,target.y,target.z],
+    nativeReached:native.reachedTarget,
+    nativeStartSnap:native.startSnapDistanceMeters,
+    nativeEndSnap:native.endSnapDistanceMeters,
+    nativePathPoints:native.pointCount,
+    footSupportSolid:support?.solidId??null,
+    supportGapMeters:gap,admitted
+   });
+   if(!admitted){this.heldRequests++;return false;}
    out.copy(target);this.realGoalRequests++;return true;
   }
   const candidates=this.patrolGoals.get(id);
@@ -3719,6 +3746,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
     b441Enabled:this.enableB441SourceFrontline,
+    f4GuideLastAudit:[...this.f4GuideLastAudit.values()],
     b441ProposalsChecked:this.b441ProposalsChecked,
     b441StrictGoalsAvailable:this.b441StrictGoalsAvailable,
     b441ActualGoalRequests:this.b441ActualGoalRequests,

@@ -1190,6 +1190,13 @@ async function runF4RealChrome(){
    const n=await snap();
    if(n.stopReason||n.matchState!=='PLAYING'||n.paused)
     fail('F4_ACTUAL_MATCH_STOP_'+String(n.stopReason));
+   // Straight W beyond the source's supported lane at Z~22 is an
+   // actual unsafe fall, not a CPU corridor test. Keep all game physics
+   // genuine while observing CPUs after a bounded real HUMAN key release.
+   if(down&&n.tick>=playing.tick+280){
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
+    down=false;report.humanKeyReleaseTick=n.tick;save();
+   }
    if(n.tick-last>=60){
     last=n.tick;
     report.frames.push({tick:n.tick,human:n.player?.position,
@@ -1197,7 +1204,8 @@ async function runF4RealChrome(){
      cpu:n.cpu?.cpu?.map(c=>({id:c.id,foot:c.physicalFoot,
       mobility:c.mobilityState,rejoined:c.rejoined})),
      liveRejoins:n.cpu?.physicalRejoins?.length,
-     nativeGoalRequests:n.cpu?.sourcePatrol?.realGoalRequests??null});
+     nativeGoalRequests:n.cpu?.sourcePatrol?.realGoalRequests??null,
+     f4GuideLastAudit:n.cpu?.sourcePatrol?.f4GuideLastAudit??[]});
     if(report.frames.length>22)report.frames.shift();
     save();
    }
