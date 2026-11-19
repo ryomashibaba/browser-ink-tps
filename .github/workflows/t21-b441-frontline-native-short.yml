@@ -195,6 +195,7 @@ jobs:
           node-version: '24'
       - name: Install exact source dependencies
         run: npm install --no-audit --no-fund --no-package-lock
+      # Include the real wounded SOURCE own-ink hold failure/height cases.
       - name: Focused original SOURCE traffic regression
         run: |
           node --test scripts/t21-source-play-windows-launcher.test.mjs scripts/t21-f3gl-restore.test.mjs
