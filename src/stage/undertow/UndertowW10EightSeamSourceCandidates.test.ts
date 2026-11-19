@@ -194,7 +194,8 @@ describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=
 
 describe('F4 physical-capsule follow-through and actual opposing connectivity',()=>{
  it('tests full real-size KCC movement across BOTH intra-side and opposing-side native paths',()=>{
-  const {stage}=buildT21F4PhotoRouteExperiment();
+  const experiment=buildT21F4PhotoRouteExperiment();
+  const {stage}=experiment;
   const physics=new RapierStagePhysics(1/60,stage);physics.step();
   const nav=new RecastStageNavigation(stage,new PerformanceStats());
   const probes=['positive-z','negative-z'].map(side=>
@@ -312,10 +313,36 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
   // Unlike the earlier raycast-Y follower, this uses continuous 60Hz
   // horizontal acceleration and gravity. No floor-target Y, teleport,
   // or horizontal recovery from an obsolete NavMesh sample is allowed.
-  const naturalCross=probes.map((probe,i)=>{
+  const naturalCross=probes.flatMap((probe,i)=>
+   (['raw-recast','real-ramp-entrance'] as const).map(guidance=>{
    const id='cross-team-'+probe.id;
-   const points=nav.auditPath(new Vec3(...probe.from),
+   const raw=nav.auditPath(new Vec3(...probe.from),
     new Vec3(...probes[1-i]!.to),.35).nativePathPoints;
+   const repair=experiment.repairs.find(r=>
+    r.kind==='CENTRAL_STEP_APPROACH'&&
+    r.side===(i===0?'POSITIVE_Z':'NEGATIVE_Z'));
+   const vs=repair?.solid.triangleMesh?.vertices;
+   if(!vs||vs.length!==4)throw Error('F4_MISSING_EXISTING_CENTRAL_RAMP');
+   // The quad ALREADY exists in the isolated stage. Drive to its real low
+   // edge, climb its actual centerline, then return to native Recast. This
+   // changes steering only: NO new floor, NavLink, teleport or target Y.
+   const mid=(a:readonly number[],b:readonly number[])=>new Vec3(
+    (a[0]!+b[0]!)/2,(a[1]!+b[1]!)/2,(a[2]!+b[2]!)/2);
+   const low=mid(vs[0]!,vs[1]!);
+   const high=mid(vs[2]!,vs[3]!);
+   const entry=raw.findIndex((p,j)=>j>=10&&p.y>.35&&p.y<1.3&&
+    Math.hypot(p.x-low.x,p.z-low.z)<6);
+   const exit=raw.findIndex((p,j)=>j>entry&&p.y>=1.3&&
+    Math.hypot(p.x-high.x,p.z-high.z)<5);
+   if(entry<0||exit<0)throw Error('F4_CENTRAL_RAMP_NAV_SEQUENCE_CHANGED');
+   const centerline=Array.from({length:9},(_,j)=>{
+    const t=j/8;
+    return new Vec3(low.x+(high.x-low.x)*t,
+     low.y+(high.y-low.y)*t,low.z+(high.z-low.z)*t);
+   });
+   const points=guidance==='real-ramp-entrance'
+    ? [...raw.slice(0,entry),...centerline,...raw.slice(exit)]
+    :raw;
    const sim=new RapierStagePhysics(1/60,stage);sim.step();
    const first=points[0]!;
    const support=sim.castCharacterFootSupport(new Vec3(first.x,
@@ -388,12 +415,14 @@ describe('F4 physical-capsule follow-through and actual opposing connectivity',(
    const endpointXZError=Math.hypot(foot.x-dest.x,foot.z-dest.z);
    sim.world.removeCharacterController(kcc);
    sim.world.removeRigidBody(body);
-   return {id,ticks,waypoint,totalWaypoints:points.length,
+   return {id,guidance,ticks,waypoint,totalWaypoints:points.length,
+    entranceIndex:entry,exitIndex:exit,
+    rampLow:[low.x,low.y,low.z],rampHigh:[high.x,high.y,high.z],
     grounded,airborneTicks,unsupportedTicks,maxStall,maxVerticalTick,
     endpointXZError,blockedAt,actualFoot:foot,
     naturalTraversalProven:waypoint===points.length&&grounded&&
      unsupportedTicks===0&&endpointXZError<.35&&maxStall<90};
-  });
+  }));
   console.log('T21_F4_NATURAL_GRAVITY_KCC_DIAGNOSTIC',JSON.stringify(naturalCross));
   console.log('T21_F4_PHOTO_REAL_CAPSULE_AND_CROSS_TEAM',
    JSON.stringify({result,cross,global4v4Ready:false}));
