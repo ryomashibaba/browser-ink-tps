@@ -182,3 +182,35 @@ export function t21F4CentralCrossingGuide(
   ...line(end.high,end.low).slice(1)
  ];
 }
+
+/** Uncertified, explicitly opted-in F4 physical research world. */
+export const T21_F4_RESEARCH_STAGE_LABEL='T21 V28 F4 CENTRAL ROUTE RESEARCH ONLY';
+
+export function buildT21F4ResearchStage(base:StageDefinition):StageDefinition{
+ const frozen=undertowT21dConnectivityQaStage();
+ if(base.metadata.id!==frozen.metadata.id||
+    base.solids!==frozen.solids||
+    base.paintSurfaces!==frozen.paintSurfaces||
+    base.navigationLinks!==frozen.navigationLinks)
+  throw Error('F4_RESEARCH_MUST_START_FROM_IMMUTABLE_SOURCE');
+ const candidate=buildT21F4PhotoRouteExperiment();
+ return {...base,
+  metadata:{...base.metadata,displayName:T21_F4_RESEARCH_STAGE_LABEL},
+  solids:candidate.stage.solids};
+}
+
+/** Allow the 51-solid opt-in only if the exact 25 original solids plus
+ * 26 known original/approximate additions are byte-for-byte unchanged.
+ */
+export function isT21F4ResearchStage(stage:StageDefinition):boolean{
+ const base=undertowT21dConnectivityQaStage();
+ if(stage.metadata.id!==base.metadata.id||
+    stage.metadata.displayName!==T21_F4_RESEARCH_STAGE_LABEL||
+    stage.solids.length!==51||
+    stage.paintSurfaces!==base.paintSurfaces||
+    stage.navigationLinks!==base.navigationLinks||
+    !base.solids.every((s,i)=>stage.solids[i]===s))return false;
+ const expected=buildT21F4PhotoRouteExperiment().stage.solids;
+ return stage.solids.every((s,i)=>i<25||
+  JSON.stringify(s)===JSON.stringify(expected[i]));
+}

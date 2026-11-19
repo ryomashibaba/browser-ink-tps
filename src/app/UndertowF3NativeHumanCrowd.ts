@@ -1,3 +1,4 @@
+import {isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3C opt-in live human Crowd presence. Only the actual grounded source-
  * supported Rapier player's FOOT is projected as a passive steering
@@ -45,7 +46,7 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  ){
   if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
     frozen.activationReady!==false||
-    stage.solids!==frozen.solids||
+    (!isT21F4ResearchStage(stage)&&stage.solids!==frozen.solids)||
     stage.paintSurfaces!==frozen.paintSurfaces||
     stage.navigationLinks!==frozen.navigationLinks)
    throw Error('T21_F3C_HUMAN_NATIVE_CROWD_NONPRODUCTION_ONLY');

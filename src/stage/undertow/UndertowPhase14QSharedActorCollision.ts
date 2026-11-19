@@ -1,3 +1,4 @@
+import {isT21F4ResearchStage} from './UndertowT21F4PhotoRouteReconstruction';
 import RAPIER, {type Collider,type RigidBody} from '@dimforge/rapier3d-compat';
 import {Vec3} from 'playcanvas';
 import {GAME_CONFIG} from '../../config/game/gameConfig';
@@ -88,9 +89,10 @@ export class UndertowPhase14QSharedActorCollision{
     enabled:boolean
   ){
     if(enabled!==true||stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
-      stage.solids.length!==25||stage.paintSurfaces.length!==17||
+      stage.paintSurfaces.length!==17||
       stage.navigationLinks?.length!==26||freeze.activationReady!==false||
-      stage.solids!==freeze.solids||
+      (!isT21F4ResearchStage(stage)&&
+       (stage.solids.length!==25||stage.solids!==freeze.solids))||
       stage.paintSurfaces!==freeze.paintSurfaces||
       stage.navigationLinks!==freeze.navigationLinks)
       throw Error('T21_PHASE14Q_NOT_AUTHORIZED_FOR_PRODUCTION');

@@ -1,3 +1,4 @@
+import {isT21F4ResearchStage} from './UndertowT21F4PhotoRouteReconstruction';
 import {Vec3} from 'playcanvas';
 import type {RecastStageNavigation} from '../../navigation/RecastStageNavigation';
 import type {StageDefinition,StageNavigationLinkDefinition,StageVector3} from '../StageDefinition';
@@ -33,7 +34,7 @@ export function planT21F2SourceDropRoutes(
 ):T21F2RoutePlan{
  if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
     frozen.activationReady!==false||
-    stage.solids!==frozen.solids||
+    (!isT21F4ResearchStage(stage)&&stage.solids!==frozen.solids)||
     stage.paintSurfaces!==frozen.paintSurfaces||
     stage.navigationLinks!==frozen.navigationLinks||
     !spawns.qaOnly||spawns.releaseAuthorized)

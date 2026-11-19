@@ -1,3 +1,5 @@
+import {isT21F4ResearchStage,buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide}
+ from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3 opt-in playable preview traffic: reuse ONLY the eight genuine source
  * spawn feet and frozen existing first-drop + FloorConcrete03 ramp links.
@@ -343,6 +345,8 @@ const sourceSides=['positive-z','negative-z'] as const;
 export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  readonly routePlan:T21F2RoutePlan;
  private readonly egress=new Map<string,StageVector3>();
+ private readonly f4GuideByTeam=new Map<Team.A|Team.B,readonly StageVector3[]>();
+ private readonly f4GuideProgress=new Map<string,number>();
  private readonly patrolGoals=new Map<string,Vec3[]>();
  private readonly b441FrontGoals=new Map<string,Vec3[]>();
  /** Only genuine original-ramp, native-approved recovery GOALS; never feet. */
@@ -589,6 +593,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableOriginalSourceBattleRecovery=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
+  if(isT21F4ResearchStage(stage)){
+   const experiment=buildT21F4PhotoRouteExperiment();
+   this.f4GuideByTeam.set(Team.A,
+    t21F4CentralCrossingGuide(experiment.repairs,'POSITIVE_Z'));
+   this.f4GuideByTeam.set(Team.B,
+    t21F4CentralCrossingGuide(experiment.repairs,'NEGATIVE_Z'));
+  }
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
    throw Error('T21_F3_REAL_CPU_INVENTORY_REQUIRED');
   for(const bot of bots){
@@ -1500,6 +1511,35 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b443OriginalGoalLocks.delete(id);
    this.b442LastApprovedFront.delete(id);
    this.heldRequests++;return false;
+  }
+  // Opt-in F4 experiment: submit short native Crowd goals along the two
+  // pre-existing center ramps, never a forced Actor pose or NavLink.
+  // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
+  if(this.f4GuideByTeam.size>0){
+   const bot=this.bots.find(b=>b.id===id);
+   const guide=bot?this.f4GuideByTeam.get(bot.team):null;
+   if(!bot||bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
+      !guide||!this.physics){this.heldRequests++;return false;}
+   let next=this.f4GuideProgress.get(id)??0;
+   while(next<guide.length){
+    const p=guide[next]!;
+    if(Math.hypot(realFoot.x-p[0],realFoot.z-p[2])>.40||
+       Math.abs(realFoot.y-p[1])>.28)break;
+    next++;
+   }
+   this.f4GuideProgress.set(id,next);
+   if(next===guide.length){this.heldRequests++;return false;}
+   const target=new Vec3(...guide[next]!);
+   const native=this.nav.auditPath(realFoot,target,.35);
+   const support=this.physics.castCharacterFootSupport(new Vec3(
+    target.x,target.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+    target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+   if(!native.reachedTarget||native.startSnapDistanceMeters>.30||
+      native.endSnapDistanceMeters>.30||native.pointCount===0||
+      !support||Math.abs(support.point.y-target.y)>.25){
+    this.heldRequests++;return false;
+   }
+   out.copy(target);this.realGoalRequests++;return true;
   }
   const candidates=this.patrolGoals.get(id);
   const bot=this.bots.find(b=>b.id===id);

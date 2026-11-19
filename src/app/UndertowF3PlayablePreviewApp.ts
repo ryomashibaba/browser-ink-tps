@@ -131,6 +131,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {buildT21F4ResearchStage}
+ from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
@@ -266,6 +268,13 @@ const PROJECT='Undertow T21 · F3 Play Lab';
 export class UndertowF3PlayablePreviewApp{
  static async boot(canvas:HTMLCanvasElement,ui:HTMLElement){
   const qaParams=new URL(location.href).searchParams;
+  if(qaParams.has('t21F4Central')&&
+    (qaParams.get('t21F4Central')!=='research'||
+     qaParams.get('t21Play')!=='preview'||
+     qaParams.get('t21QaDrive')!=='source'||
+     qaParams.get('t21W10B203')!=='fullRound'||
+     qaParams.get('t21QaInput')==='deterministic'))
+   throw Error('F4_EXPLICIT_NONPRODUCTION_HUMAN_RESEARCH_ONLY');
   if(qaParams.has('t21CpuKits')&&
      (qaParams.get('t21CpuKits')!=='qa'||qaParams.get('t21QaDrive')!=='source'))
    throw Error('T21_F3_CPU_KITS_REQUIRE_EXPLICIT_SOURCE_QA');
@@ -294,6 +303,8 @@ export class UndertowF3PlayablePreviewApp{
  private readonly clock=new FixedStepClock(60,8,.25);
  private readonly ink=new GameplayInkSystem();
  private readonly rawStage=undertowT21dConnectivityQaStage();
+ private readonly f4ResearchMode=new URL(location.href).searchParams
+  .get('t21F4Central')==='research';
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
@@ -650,21 +661,31 @@ export class UndertowF3PlayablePreviewApp{
   this.playerCameraEntity=cameraEntity;
   if(this.b27KineticEnabled&&cameraEntity.camera?.fov!==B27_SOURCE_BASE_FOV_DEGREES)
    throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
-  this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
-  this.nav=new RecastStageNavigation(this.rawStage,this.stats);
-  this.physics=new RapierStagePhysics(STEP,this.rawStage);
+  const physicalStage=this.f4ResearchMode
+   ?buildT21F4ResearchStage(this.rawStage):this.rawStage;
+  this.canvas.dataset.t21F4CentralResearch=this.f4ResearchMode
+   ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
+  this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,physicalStage);
+  this.nav=new RecastStageNavigation(physicalStage,this.stats);
+  this.physics=new RapierStagePhysics(STEP,physicalStage);
   this.physics.step();
+  // Preserve independent original-source audit, even in 51-solid play.
+  const sourceAuditNav=this.f4ResearchMode
+   ?new RecastStageNavigation(this.rawStage,this.stats):this.nav;
+  const sourceAuditPhysics=this.f4ResearchMode
+   ?new RapierStagePhysics(STEP,this.rawStage):this.physics;
+  if(this.f4ResearchMode)sourceAuditPhysics.step();
   // B155/F4: read real original Recast paths and Rapier stage rays
   // once per boot; never fabricate missing walkway or NavLink.
   this.b155SourceConnectivityReview=
    buildB155OriginalSourceConnectivityReview(
-    this.rawStage,this.nav,this.physics);
+    this.rawStage,sourceAuditNav,sourceAuditPhysics);
   // B157: reversed REAL Recast reachability for the existing two gaps
   // plus read-only Rapier casts at the native Recast terminal points.
   // Original movement, stage, navigation, CPU and score stay frozen.
   this.b157OriginalBidirectionalSourceAudit=
    auditB157OriginalBidirectionalGaps(
-    this.rawStage,this.nav,this.physics,this.b155SourceConnectivityReview);
+    this.rawStage,sourceAuditNav,sourceAuditPhysics,this.b155SourceConnectivityReview);
   // B158: exact previously CI #688 source triangles already held in repo,
   // CI #691 negative path trial still honored; NO solid/nav/paint changes.
   this.b158OriginalSourceFaceRecastMatch=
@@ -674,7 +695,7 @@ export class UndertowF3PlayablePreviewApp{
   // 42 finite samples, without adding geometry or navigation.
   this.b159OriginalFaceNavMeshProjection=
    examineB159OriginalSourceFaceProjections(
-    this.rawStage,this.nav,this.physics,
+    this.rawStage,sourceAuditNav,sourceAuditPhysics,
     this.b158OriginalSourceFaceRecastMatch);
   // B218 read-only geometry: the exact CI688 source face chain is not
   // physical terrain, a traversable Recast path or player KCC authority.
@@ -687,10 +708,13 @@ export class UndertowF3PlayablePreviewApp{
   // B220 actual native audit queries at ORIGINAL source-face centroids;
   // read-only: neither Recast paths nor stage rays authorize a KCC move.
   this.b220NativeSourceSeamProbes=b220AuditOriginalRecastSeamWitnesses(
-   this.rawStage,this.nav,this.physics,this.b219OriginalSourceBlockerTriage);
+   this.rawStage,sourceAuditNav,sourceAuditPhysics,
+   this.b219OriginalSourceBlockerTriage);
   const slots=planSourceSupportedT21QaSpawnSlots(
-   this.rawStage,this.nav,this.physics);
-  const stage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
+   this.rawStage,sourceAuditNav,sourceAuditPhysics);
+  const originalStage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
+  const stage=this.f4ResearchMode
+   ?buildT21F4ResearchStage(originalStage):originalStage;
   const surfaces=defineTestSurfaces(this.ink,stage);
   this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))

@@ -11,7 +11,8 @@ import {initializeRapier,RapierStagePhysics}
  from '../../physics/RapierStagePhysics';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES}
  from './UndertowSpillwayConnectivityQa';
-import {buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide}
+import {buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide,
+ buildT21F4ResearchStage,isT21F4ResearchStage}
  from './UndertowT21F4PhotoRouteReconstruction';
 import {PRODUCTION_STAGE_DEFINITION} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
@@ -144,6 +145,18 @@ beforeAll(async()=>await Promise.all([
  initializeRecastNavigation(),initializeRapier()
 ]));
 describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=>{
+ it('authorizes only the unmodified 25 source solids plus the exact 26 research pieces',()=>{
+  const original=undertowT21dConnectivityQaStage();
+  const research=buildT21F4ResearchStage(original);
+  expect(isT21F4ResearchStage(original)).toBe(false);
+  expect(isT21F4ResearchStage(research)).toBe(true);
+  expect(original.solids).toHaveLength(25);
+  expect(research.solids).toHaveLength(51);
+  expect(research.solids.slice(0,25).every((s,i)=>s===original.solids[i])).toBe(true);
+  expect(research.paintSurfaces).toBe(original.paintSurfaces);
+  expect(research.navigationLinks).toBe(original.navigationLinks);
+  expect(research.metadata.id).toBe(original.metadata.id);
+ });
  it('closes both SOURCE right-low-to-underpass physical corridor candidates before any game integration',()=>{
   const proof=buildT21F4PhotoRouteExperiment();
   const {stage,repairs}=proof;

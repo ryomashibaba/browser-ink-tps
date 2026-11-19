@@ -1,3 +1,4 @@
+import {isT21F4ResearchStage} from './UndertowT21F4PhotoRouteReconstruction';
 import {Vec3} from 'playcanvas';
 import {PLAYER_CHARACTER_PHYSICS} from '../../player/PlayerCharacterPhysics';
 import {RapierStagePhysics} from '../../physics/RapierStagePhysics';
@@ -75,7 +76,8 @@ export class UndertowPhase14ECpuHandoff implements UndertowPhase14ECpuAdapter{
   if(enabled!==true||
     qaStage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
     freeze.activationReady!==false||
-    qaStage.solids.length!==25||qaStage.paintSurfaces.length!==17||
+    (!isT21F4ResearchStage(qaStage)&&qaStage.solids.length!==25)||
+    qaStage.paintSurfaces.length!==17||
     qaStage.navigationLinks?.length!==26)
     throw Error('T21_PHASE14E_NOT_OPTED_IN_TO_INACTIVE_QA_STAGE');
   this.rejoinPhysics=new RapierStagePhysics(kinematicHz,qaStage);
