@@ -1,3 +1,4 @@
+import {isT21F4ResearchStage} from './UndertowT21F4PhotoRouteReconstruction';
 import type {CrowdAgent} from 'recast-navigation';
 import {Vec3} from 'playcanvas';
 import {GAME_CONFIG} from '../../config/game/gameConfig';
@@ -55,10 +56,10 @@ export class UndertowPhase14QHumanCrowdAnchor{
  ){
    if(!enabled||stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
       freeze.activationReady!==false||
-      stage.solids!==freeze.solids||
+      (!isT21F4ResearchStage(stage)&&stage.solids!==freeze.solids)||
       stage.paintSurfaces!==freeze.paintSurfaces||
       stage.navigationLinks!==freeze.navigationLinks||
-      stage.solids.length!==25||
+      (!isT21F4ResearchStage(stage)&&stage.solids.length!==25)||
       stage.paintSurfaces.length!==17||
       stage.navigationLinks?.length!==26)
      throw Error('T21_PHASE14Q_HUMAN_CROWD_PRODUCTION_FORBIDDEN');

@@ -70,7 +70,9 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   // Suppress only the eighth NONPHYSICAL agent on the two exact source
   // spawn polygons. Retain CPU7, Rapier authority and the 2m safety stop.
   this.originalHighSpawnLastGuard=
-   auditOriginalHighSpawnPassiveGuard(foot,this.stage.solids);
+   // Read-only original polygon audit must always receive the frozen
+   // SOURCE solids, even when F4 Crowd navigates the 51-solid lab world.
+   auditOriginalHighSpawnPassiveGuard(foot,frozen.solids);
   if(this.originalHighSpawnLastGuard.withheld){
    this.suspend();
    this.excluded++;
@@ -83,7 +85,7 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   // proxy solely on the exact two original-source slab footprints.
   // The REAL physical HUMAN and all seven original CPU actors stay.
   this.b119LastGate=auditB119OriginalFirstDropLanding(
-   foot,this.stage.solids);
+   foot,frozen.solids);
   if(this.b119LastGate.withheld){
    this.suspend();
    this.excluded++;
