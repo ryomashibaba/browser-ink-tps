@@ -91,6 +91,33 @@ export function sourceShotTone(id:WeaponId='pulse-sprayer'){
   p.weaponClass==='BRUSH'?0.7:1;
  return {pitch:p.audioPitch,wave,length,volume:Math.min(1.7,Math.max(.65,p.fxScale))};
 }
+/** Original synthesized impact texture, only after a TRUE native cue.
+ * This is lightweight procedural noise, not downloaded/copyrighted audio,
+ * a synthetic hit, or a change to any original ink/physics authority. */
+export function sourceCueNoiseTexture(cue:SourceCue,
+ id:WeaponId='pulse-sprayer'):{volume:number;lowpassHz:number}|null{
+ const weapon=WEAPON_PROFILES[id]??WEAPON_PROFILES['pulse-sprayer'];
+ if(cue==='SHOT'){
+  const heavy=weapon.weaponClass==='BLASTER'||weapon.weaponClass==='ROLLER'||
+   weapon.weaponClass==='SLOSHER';
+  const precise=weapon.weaponClass==='CHARGER'||weapon.weaponClass==='STRINGER';
+  return {volume:precise?.006:heavy?.029:.015,
+   lowpassHz:heavy?950:precise?2900:1700};
+ }
+ switch(cue){
+  case 'PAINT':return {volume:.025,lowpassHz:950};
+  case 'SWIM':return {volume:.013,lowpassHz:520};
+  case 'LAND':return {volume:.026,lowpassHz:400};
+  case 'REFILL':return {volume:.012,lowpassHz:780};
+  case 'THROW':return {volume:.011,lowpassHz:1400};
+  case 'EXPLODE':return {volume:.056,lowpassHz:420};
+  case 'CPU_HIT':return {volume:.019,lowpassHz:1650};
+  case 'CPU_SPLAT':case 'SPLAT':
+   return {volume:.043,lowpassHz:820};
+  case 'HURT':return {volume:.018,lowpassHz:970};
+  default:return null;
+ }
+}
 /** Real pointer-lock only. N = audio mute; M is reserved for the existing radar. */
 export function sourceAudioMuteHotkey(
  event:Pick<KeyboardEvent,'code'|'repeat'|'altKey'|'ctrlKey'|'metaKey'>,
@@ -101,6 +128,7 @@ export function sourceAudioMuteHotkey(
 }
 export class SourcePracticeAudio {
  private ctx:AudioContext|null=null;
+ private noiseBuffer:AudioBuffer|null=null;
  private muted=false;
  private previous:SourceAudioFrame|null=null;
  private readonly last=new Map<SourceCue,number>();
@@ -159,6 +187,21 @@ export class SourcePracticeAudio {
   if(this.muted||!this.ctx||this.ctx.state!=='running')return;
   for(const cue of cues)this.play(cue,frame.weaponId);
  }
+ /** One short repeatable original waveform reused by all real impact cues.
+  * 0.40 s mono at the device's sample rate; no per-shot allocation/fetch. */
+ private sampledSourceNoise(ctx:AudioContext):AudioBuffer{
+  if(this.noiseBuffer)return this.noiseBuffer;
+  const count=Math.min(32768,Math.max(8192,Math.ceil(ctx.sampleRate*.40)));
+  const buffer=ctx.createBuffer(1,count,ctx.sampleRate);
+  const channel=buffer.getChannelData(0);
+  let seed=0x6d2b79f5;
+  for(let i=0;i<count;i++){
+   seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;
+   channel[i]=(seed>>>0)/0x80000000-1;
+  }
+  this.noiseBuffer=buffer;
+  return buffer;
+ }
  private play(cue:SourceCue,weaponId?:WeaponId):void{
   const ctx=this.ctx;
   if(!ctx)return;
@@ -183,6 +226,28 @@ export class SourcePracticeAudio {
    oscillator.connect(gain);gain.connect(ctx.destination);
    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
    oscillator.start(now);oscillator.stop(now+duration+.012);
+   // Genuine native wet-ink/physical cues receive a brief filtered
+   // splatter/transient behind the existing 12-weapon pitched tone.
+   // Never add a sound from just aim/intent, only the accepted cue.
+   const texture=sourceCueNoiseTexture(cue,weaponId);
+   if(texture){
+    const noise=ctx.createBufferSource();
+    const filter=ctx.createBiquadFilter();
+    const body=ctx.createGain();
+    const noiseDuration=Math.min(duration,.32);
+    noise.buffer=this.sampledSourceNoise(ctx);
+    noise.loop=true;
+    filter.type='lowpass';
+    filter.frequency.setValueAtTime(texture.lowpassHz,now);
+    body.gain.setValueAtTime(.0001,now);
+    body.gain.linearRampToValueAtTime(texture.volume,now+.008);
+    body.gain.exponentialRampToValueAtTime(.0001,now+noiseDuration);
+    noise.connect(filter);filter.connect(body);body.connect(ctx.destination);
+    noise.onended=()=>{
+     noise.disconnect();filter.disconnect();body.disconnect();
+    };
+    noise.start(now);noise.stop(now+noiseDuration+.012);
+   }
   }catch{this.canvas.dataset.t21SourceAudio='UNAVAILABLE';}
  }
 }

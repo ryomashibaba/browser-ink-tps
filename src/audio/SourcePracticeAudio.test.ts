@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {sourceAudioCues,sourceShotTone,sourceAudioMuteHotkey,type SourceAudioFrame} from './SourcePracticeAudio';
+import {sourceAudioCues,sourceShotTone,sourceCueNoiseTexture,sourceAudioMuteHotkey,type SourceAudioFrame} from './SourcePracticeAudio';
 import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 const before:SourceAudioFrame={tick:10,phase:'PLAYING',locked:true,stopped:false,
  shots:1,dry:0,throws:0,explosions:0,hits:0,cpuSplats:0,damage:0,
@@ -75,6 +75,30 @@ describe('SOURCE 12-weapon true gameplay sound and actual physical feedback',()=
   expect(sourceShotTone('rail-charger').wave).toBe('sine');
   expect(sourceShotTone('arc-blaster').wave).toBe('sawtooth');
   expect(sourceShotTone('rotor-splatling').wave).toBe('square');
+ });
+});
+
+describe('genuine SOURCE audio texture is contingent on accepted events',()=>{
+ it('wet ink, character landing and accepted shot get bounded original noise',()=>{
+  const spray=sourceCueNoiseTexture('SHOT','pulse-sprayer');
+  const blaster=sourceCueNoiseTexture('SHOT','arc-blaster');
+  const charger=sourceCueNoiseTexture('SHOT','rail-charger');
+  expect(spray?.volume).toBeGreaterThan(0);
+  expect(blaster?.volume).toBeGreaterThan(spray!.volume);
+  expect(charger?.volume).toBeLessThan(spray!.volume);
+  for(const cue of ['PAINT','LAND','SWIM','REFILL','EXPLODE'] as const){
+   const texture=sourceCueNoiseTexture(cue);
+   expect(texture?.volume).toBeGreaterThan(0);
+   expect(texture!.volume).toBeLessThan(.1);
+   expect(texture!.lowpassHz).toBeGreaterThanOrEqual(400);
+  }
+ });
+ it('creates no impact texture for time-up, unavailable event or dry fire',()=>{
+  expect(sourceCueNoiseTexture('DRY')).toBeNull();
+  expect(sourceCueNoiseTexture('TIME_UP')).toBeNull();
+  expect(sourceCueNoiseTexture('RESPAWN')).toBeNull();
+  expect(sourceAudioCues(before,after())).toEqual([]);
+  expect(sourceAudioCues(before,after({paintCells:0}))).toEqual([]);
  });
 });
 
