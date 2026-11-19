@@ -665,7 +665,9 @@ export class UndertowF3PlayablePreviewApp{
    ?buildT21F4ResearchStage(this.rawStage):this.rawStage;
   this.canvas.dataset.t21F4CentralResearch=this.f4ResearchMode
    ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
-  this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,physicalStage);
+  // F3E optical survey MUST retain its original frozen 25-solid authority;
+  // the real F4 Recast/Rapier simulation already uses physicalStage.
+  this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
   this.nav=new RecastStageNavigation(physicalStage,this.stats);
   this.physics=new RapierStagePhysics(STEP,physicalStage);
   this.physics.step();
@@ -741,7 +743,9 @@ export class UndertowF3PlayablePreviewApp{
   // Reviewed true-original optical structure triangles only. All 25
   // original Rapier solids remain the sole physical stage authority.
   this.structures=buildF3OriginalOpticalStructures(app);
-  this.sourceCompletion=buildF3eOriginalSourceCoverage(app,stage);
+  // Original visual reference is read-only and source-frozen, not the
+  // 51-solid experimental physics authority.
+  this.sourceCompletion=buildF3eOriginalSourceCoverage(app,this.rawStage);
   // Actual SOURCE play must never present unregistered source-study
   // floor faces as its default fallback. The real 25 registered solids
   // and matching ink meshes already render via buildTestStage above.

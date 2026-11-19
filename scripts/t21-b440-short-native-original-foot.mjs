@@ -1108,7 +1108,17 @@ async function runF4RealChrome(){
   verdict:'HOLD',realBrowser:true};
  proof.f4RealChromium=report;save();
  await cdp('Page.navigate',{url});
- await waitForRealSourceReady('F4_SAME_WORLD_BOOT');
+ // F4 research reports actual on-page construction errors immediately;
+ // do not spend the full legacy original-source READY timeout hiding them.
+ await until(async()=>{
+  const state=await evaluate(`(() => ({
+   ready:document.querySelector('#app-canvas')?.dataset.t21F3Ready,
+   renderer:document.querySelector('#app-canvas')?.dataset.t21F3Renderer,
+   bootError:document.querySelector('#boot-error')?.textContent?.slice(0,350)
+  }))()`);
+  if(state?.bootError)fail('F4_REAL_BROWSER_BOOT_'+state.bootError);
+  return state?.ready==='READY'&&state?.renderer==='webgl2'?state:false;
+ },120000,240);
  const canvas=await evaluate(`(() => {
   const c=document.querySelector('#app-canvas');
   const n=window.__t21F3?.snapshot?.();
