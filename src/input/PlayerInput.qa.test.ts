@@ -435,6 +435,10 @@ test('SOURCE ignores shortcut-modified motion but keeps ordinary fresh controls'
  emit('window','keydown',{code:'ShiftLeft',repeat:false,altKey:true});
  emit('window','keydown',{code:'Space',repeat:false,metaKey:true});
  expect([input.moveY,input.squidHeld,input.consumeJump()]).toEqual([0,false,false]);
+ // A native browser cannot issue a new physical down for those held keys
+ // without their keyup. Release the shortcut chords before fresh gameplay.
+ for(const code of ['KeyW','ShiftLeft','Space'])
+  emit('window','keyup',{code});
  emit('window','keydown',{code:'KeyW',repeat:false});
  emit('window','keydown',{code:'ShiftLeft',repeat:false});
  emit('window','keydown',{code:'Space',repeat:false});
