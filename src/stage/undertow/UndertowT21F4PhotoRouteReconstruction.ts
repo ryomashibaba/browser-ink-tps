@@ -150,8 +150,8 @@ export function buildT21F4PhotoRouteExperiment(){
 
 /**
  * F4 experimental physical corridor steering points.
- * Every point is interpolated on the two ALREADY PRESENT approximate
- * center ramps or on the existing center step-top line between them.
+ * Every point is sampled on ALREADY PRESENT experimental triangle faces
+ * or interpolated on the two approximate central ramps and step-top.
  * Steering only: never creates a collider, off-mesh connection, floor or
  * height correction. Geometry is photo-estimated, NOT certified original.
  */
@@ -176,10 +176,45 @@ export function t21F4CentralCrossingGuide(
    return [a[0]+(b[0]-a[0])*t,
     a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
   });
+ // CPU first drops occur at physical Z~±53, not at the central step.
+ // Previously the first guide point was already at central Z~0, which
+ // forced native Crowd to attempt an entire multi-layer corridor at once.
+ // Guide the EXISTING 51-solid experiment through its measured repaired
+ // floor triangles first. Every corner is a true triangle centroid in the
+ // already registered F4 experimental geometry; no new solids or links.
+ const approach=(side:Side):StageVector3[]=>{
+  const result:StageVector3[]=[];
+  for(const patch of repairs.filter(r=>
+    r.side===side&&r.kind!=='CENTRAL_STEP_APPROACH')){
+   const vertices=patch.solid.triangleMesh?.vertices;
+   const indices=patch.solid.triangleMesh?.indices;
+   if(!vertices||!indices||indices.length!==6||
+      !patch.geometryApproximate||!patch.notOriginalCollision)
+    throw Error('F4_GUIDE_REQUIRES_EXISTING_PHOTO_FACE_'+patch.id);
+   const centers:StageVector3[]=[];
+   for(let i=0;i<6;i+=3){
+    const va=vertices[indices[i]!]!,vb=vertices[indices[i+1]!]!,
+     vc=vertices[indices[i+2]!]!;
+    centers.push([
+     (va[0]+vb[0]+vc[0])/3,
+     (va[1]+vb[1]+vc[1])/3,
+     (va[2]+vb[2]+vc[2])/3
+    ]);
+   }
+   // From either high-spawn end, absolute Z decreases toward the center.
+   result.push(...centers.sort((a,b)=>Math.abs(b[2])-Math.abs(a[2])));
+  }
+  return result;
+ };
+ const outgoing=approach(originSide),returning=approach(destSide);
+ if(outgoing.length!==14||returning.length!==14)
+  throw Error('F4_GUIDE_MISSING_EXPERIMENTAL_ROUTE_FACES');
  return [
+  ...outgoing,
   ...line(start.low,start.high),
   ...line(start.high,end.high).slice(1),
-  ...line(end.high,end.low).slice(1)
+  ...line(end.high,end.low).slice(1),
+  ...returning.reverse()
  ];
 }
 

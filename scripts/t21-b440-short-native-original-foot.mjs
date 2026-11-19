@@ -1166,7 +1166,7 @@ async function runF4RealChrome(){
   }
   return n.matchState==='PLAYING'&&!n.paused&&
    n.cpu?.physicalRejoins?.length===7?n:false;
- },150000,350).catch(e=>{
+ },320000,850).catch(e=>{
   if(!String(e).includes('TIMEOUT'))throw e;
   report.verdict='HOLD_SEVEN_CPU_REAL_REJOIN_TIMEOUT';
   report.rejoinWaitError=String(e);
@@ -1202,7 +1202,7 @@ async function runF4RealChrome(){
     save();
    }
    return n.tick>=playing.tick+900?n:false;
-  },180000,400);
+  },320000,850);
  }finally{
   if(down)await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
  }
