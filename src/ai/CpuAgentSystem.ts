@@ -328,6 +328,9 @@ export class CpuAgentSystem {
    foot:Vec3;tick:number;count:number
   }>();
   private readonly sourceLastPhysicalBlockedTick=new Map<string,number>();
+  /** SOURCE-only: an invalid native projection holds just the passive
+   * steering agent while preserving the actual Rapier CPU foot and shots. */
+  private readonly sourceCrowdProjectionHold=new Map<string,number>();
   /** Source-only expensive failed recovery probes are bounded to 90 ticks. */
   private readonly sourceLastRecoveryAuditTick=new Map<string,number>();
   private sourceNativeMotionTick=0;
@@ -969,6 +972,7 @@ export class CpuAgentSystem {
     this.sourceCrowdRefreshedThisLife.clear();
     this.sourceCrowdRecoveryFoot.clear();
     this.sourceLastPhysicalBlockedTick.clear();
+    this.sourceCrowdProjectionHold.clear();
     this.sourceLastRecoveryAuditTick.clear();
     this.sourceNativeMotionTick=0;
     this.b35LastNativeTarget.clear();
@@ -1517,6 +1521,25 @@ export class CpuAgentSystem {
         continue;
       }
 
+      // A single invalid passive Recast projection never moves a real
+      // SOURCE CPU or becomes a fatal error for all eight players.
+      // Retry the same registered Rapier/native projection at most once
+      // per 90 true ticks; never reissue an unaudited movement target.
+      if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
+         this.sourceCrowdProjectionHold.has(bot.id)){
+        const last=this.sourceCrowdProjectionHold.get(bot.id)!;
+        if(this.sourceNativeMotionTick-last>=90)
+          this.reconcileBlockedT21F2CrowdProxy(bot);
+        if(this.sourceCrowdProjectionHold.has(bot.id)){
+          bot.agent.resetMoveTarget();
+          this.sourceLiveNativeMotionGoal.delete(bot.id);
+          this.sourceLastAdmittedRouteGoal.delete(bot.id);
+          this.b35LastNativeTarget.delete(bot.id);
+          this.continueBlockedOriginalSourceCpuActions(bot,dt,
+            humanTeam,humanPosition,humanActive,canStartNewCombatActions);
+          continue;
+        }
+      }
       const p = bot.agent.position();
       this.observeSourceGroundStep(bot,'CROWD',p);
       // F2: the original offmesh event may begin only with a free
@@ -1771,13 +1794,68 @@ export class CpuAgentSystem {
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
     if(!this.phase14qF2RecoverableSteps||!bot.agent)
       throw Error('T21_F2_UNAUTHORIZED_CROWD_RECONCILIATION');
-    this.observeSourceGroundStep(bot,'CROWD_REANCHOR',bot.agent.position());
-    const nav=this.navigation.closestPoint(bot.position);
-    if(Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
-      nav.z-bot.position.z)>.20)
+    // A failed Recast closestPoint() can echo the input. That echo is not
+    // evidence that this original physical foot is on the native NavMesh.
+    // For SOURCE, require a fresh successful native projection AND the
+    // unchanged original Rapier support. No new route/mesh is authorized.
+    const source=this.f3dSourceGoals!==null&&
+      this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa';
+    const native=source?
+      this.navigation.auditNavMeshProjection(bot.position):null;
+    const footSupport=source?
+      this.phase14qGroundCollision?.sourceFootSupport?.(
+        bot.id,bot.position):null;
+    const validSourceFoot=source&&
+      hasRegisteredOriginalSourceCpuRapierFootSupport(
+        bot.position,footSupport,this.stage.solids);
+    const observed=native?.nearestPoint;
+    const nativeGood=source&&validSourceFoot&&native?.success===true&&
+      observed!==null&&observed!==undefined&&
+      native.distanceMeters!==null&&
+      Number.isFinite(native.distanceMeters)&&
+      native.distanceMeters<=.20&&
+      [observed.x,observed.y,observed.z].every(Number.isFinite)&&
+      Math.hypot(observed.x-bot.position.x,
+        observed.y-bot.position.y,observed.z-bot.position.z)<=.20;
+    if(source&&!nativeGood){
+      // The real body stays at its last KCC-approved foot. Instead of
+      // terminating the entire 180s round, quarantine THIS one passive
+      // Crowd proxy until original Recast/Rapier can both be revalidated.
+      // Still permit only existing physically supported paid ink actions.
+      bot.agent.resetMoveTarget();
+      this.sourceCrowdProjectionHold.set(bot.id,this.sourceNativeMotionTick);
+      this.sourceLiveNativeMotionGoal.delete(bot.id);
+      this.sourceLastAdmittedRouteGoal.delete(bot.id);
+      this.b35LastNativeTarget.delete(bot.id);
+      bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
+      this.sourceLastPhysicalBlockedTick.set(
+        bot.id,this.sourceNativeMotionTick);
+      return;
+    }
+    const nav=source?observed!:this.navigation.closestPoint(bot.position);
+    if(![nav.x,nav.y,nav.z].every(Number.isFinite)||
+       Math.hypot(nav.x-bot.position.x,nav.y-bot.position.y,
+       nav.z-bot.position.z)>.20)
       throw Error('T21_F2_PHYSICAL_CPU_OFF_ORIGINAL_NAVMESH');
+    this.observeSourceGroundStep(bot,'CROWD_REANCHOR',bot.agent.position());
     bot.agent.teleport(nav);
     bot.agent.resetMoveTarget();
+    const anchored=bot.agent.position();
+    if(source&&(![anchored.x,anchored.y,anchored.z].every(Number.isFinite)||
+       Math.hypot(anchored.x-bot.position.x,
+       anchored.y-bot.position.y,anchored.z-bot.position.z)>.20)){
+      // An internal Recast re-snap after teleport is NOT a physical step.
+      // Keep this CPU stationary rather than claiming a successful anchor.
+      this.sourceCrowdProjectionHold.set(bot.id,this.sourceNativeMotionTick);
+      this.sourceLiveNativeMotionGoal.delete(bot.id);
+      this.sourceLastAdmittedRouteGoal.delete(bot.id);
+      this.b35LastNativeTarget.delete(bot.id);
+      bot.thinkRemaining=Math.min(bot.thinkRemaining,.20);
+      this.sourceLastPhysicalBlockedTick.set(
+        bot.id,this.sourceNativeMotionTick);
+      return;
+    }
+    this.sourceCrowdProjectionHold.delete(bot.id);
     this.sourceLiveNativeMotionGoal.delete(bot.id);
     // B35's dedup cache is not the live Crowd target: resetMoveTarget
     // discarded the target, so the SAME already-authorized original goal
@@ -4832,6 +4910,7 @@ export class CpuAgentSystem {
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceCrowdRecoveryFoot?.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.sourceCrowdProjectionHold.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);
@@ -4899,6 +4978,7 @@ export class CpuAgentSystem {
     this.sourceCrowdRefreshedThisLife.delete(bot.id);
     this.sourceCrowdRecoveryFoot?.delete(bot.id);
     this.sourceLastPhysicalBlockedTick.delete(bot.id);
+    this.sourceCrowdProjectionHold.delete(bot.id);
     this.sourceLastRecoveryAuditTick.delete(bot.id);
     this.b35LastNativeTarget.delete(bot.id);
     this.sourceCommittedPaintAims.delete(bot.id);

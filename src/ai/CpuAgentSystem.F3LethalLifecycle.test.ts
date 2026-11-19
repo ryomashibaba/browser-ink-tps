@@ -62,6 +62,7 @@ function fixture(originalF3: boolean) {
   system.sourceLiveNativeMotionGoal = new Map();
   system.sourceCrowdRefreshedThisLife = new Set();
   system.sourceLastPhysicalBlockedTick = new Map();
+  system.sourceCrowdProjectionHold = new Map();
   system.sourceLastRecoveryAuditTick = new Map();
   system.sourceNativeMotionTick = 0;
   system.b35LastNativeTarget = new Map();
@@ -448,7 +449,13 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     };
     bot.agent=agent;
     bot.thinkRemaining=3;
-    system.navigation.closestPoint=vi.fn((foot:Vec3)=>foot.clone());
+    system.stage.solids=[{id:'UndertowT21D:right-low-team-b'}];
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+      solidId:'UndertowT21D:right-low-team-b',point:bot.position.clone()
+    }));
+    system.navigation.auditNavMeshProjection=vi.fn((foot:Vec3)=>({
+      success:true,nearestPoint:foot.clone(),distanceMeters:0
+    }));
     const unrelatedAgent={
       teleport:vi.fn(),resetMoveTarget:vi.fn(),
       position:vi.fn(()=>new Vec3(1,0,3))
@@ -488,6 +495,69 @@ describe('SOURCE CPU actions at last registered foot after vetoed Crowd movement
     expect(shouldReissueOriginalSourceNativeTarget(null,lastGoal)).toBe(true);
     expect(bot.thinkRemaining).toBeCloseTo(.20);
   });
+  it('holds only the unsafe passive SOURCE Crowd proxy when native projection fails or is a wrong vertical island',()=>{
+    for(const fail of ['ECHO','NO_POINT','WRONG_LEVEL','NO_RAPIER'] as const){
+      const {system,bot}=fixture(true);
+      system.phase14qF2RecoverableSteps=true;
+      system.sourceCrowdProjectionHold=new Map();
+      system.stage.solids=[{id:'UndertowT21D:right-low-team-b'}];
+      system.sourceGroundStepEvidence=new Map();
+      system.blockedSourceActionRows=new Map();
+      system.sourceLiveNativeMotionGoal=new Map();
+      system.sourceLastAdmittedRouteGoal=new Map();
+      system.sourceLastPhysicalBlockedTick=new Map();
+      system.b35LastNativeTarget=new Map();
+      const original=bot.position.clone();
+      const agent={
+        position:vi.fn(()=>original.clone()),
+        teleport:vi.fn(),resetMoveTarget:vi.fn()
+      };
+      bot.agent=agent;bot.thinkRemaining=1;
+      system.sourceNativeMotionTick=600;
+      system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+        solidId:fail==='NO_RAPIER'?'NOT_REGISTERED':
+          'UndertowT21D:right-low-team-b',point:original.clone()
+      }));
+      const native=fail==='NO_POINT'?
+        {success:false,nearestPoint:null,distanceMeters:null}:
+        fail==='WRONG_LEVEL'?
+        {success:true,nearestPoint:new Vec3(0,.21,0),distanceMeters:.21}:
+        fail==='NO_RAPIER'?
+        {success:true,nearestPoint:original.clone(),distanceMeters:0}:
+        {success:false,nearestPoint:original.clone(),distanceMeters:0};
+      system.navigation.auditNavMeshProjection=vi.fn(()=>native);
+      system.navigation.closestPoint=vi.fn(()=>original.clone());
+      expect(()=>system.reconcileBlockedT21F2CrowdProxy(bot)).not.toThrow();
+      expect(agent.teleport).not.toHaveBeenCalled();
+      expect(agent.resetMoveTarget).toHaveBeenCalledOnce();
+      expect(bot.position.equals(original)).toBe(true);
+      expect(system.sourceCrowdProjectionHold.get(bot.id)).toBe(600);
+      expect(system.sourceLastPhysicalBlockedTick.get(bot.id)).toBe(600);
+      expect(system.navigation.closestPoint).not.toHaveBeenCalled();
+    }
+  });
+  it('retains genuine 0.244m original Rapier-floor support but does not grant an off-layer Recast path',()=>{
+    const {system,bot}=fixture(true);
+    system.phase14qF2RecoverableSteps=true;
+    system.sourceCrowdProjectionHold=new Map();
+    system.sourceGroundStepEvidence=new Map();
+    system.stage.solids=[{id:'UndertowT21D:right-low-route-ramp-negative-z'}];
+    system.phase14qGroundCollision.sourceFootSupport=vi.fn(()=>({
+      solidId:'UndertowT21D:right-low-route-ramp-negative-z',
+      point:new Vec3(bot.position.x,bot.position.y-.244,bot.position.z)
+    }));
+    const agent={position:vi.fn(()=>bot.position.clone()),
+      teleport:vi.fn(),resetMoveTarget:vi.fn()};
+    bot.agent=agent;
+    system.navigation.auditNavMeshProjection=vi.fn(()=>({
+      success:true,nearestPoint:bot.position.clone(),distanceMeters:0
+    }));
+    system.reconcileBlockedT21F2CrowdProxy(bot);
+    expect(agent.teleport).toHaveBeenCalledOnce();
+    expect(system.sourceCrowdProjectionHold.has(bot.id)).toBe(false);
+    expect(bot.position).toEqual(new Vec3(0,0,0));
+  });
+
 });
 
 describe('F3 real CPU HP-zero is a single immediate source-native splat', () => {
