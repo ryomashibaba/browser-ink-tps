@@ -1,5 +1,9 @@
 import {beforeAll,describe,expect,it} from 'vitest';
 import {Vec3} from 'playcanvas';
+import RAPIER from '@dimforge/rapier3d-compat';
+import {PLAYER_CHARACTER_PHYSICS,createConfiguredPlayerCharacterController}
+ from '../../player/PlayerCharacterPhysics';
+import {GAME_CONFIG} from '../../config/game/gameConfig';
 import {PerformanceStats} from '../../core/PerformanceStats';
 import {initializeRecastNavigation,RecastStageNavigation}
  from '../../navigation/RecastStageNavigation';
@@ -185,5 +189,100 @@ describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=
   expect(results.map(r=>r.reached)).toEqual([true,true]);
   expect(results.every(r=>r.startSnap<.3&&r.endSnap<.3))
    .toBe(true);
+ });
+});
+
+describe('F4 physical-capsule follow-through and actual opposing connectivity',()=>{
+ it('records real-size KCC outcome over the TWO newly connected source routes; no false global promotion',()=>{
+  const {stage}=buildT21F4PhotoRouteExperiment();
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const probes=['positive-z','negative-z'].map(side=>
+   UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>
+    p.id==='right-low-to-underpass-'+side)!);
+  const cross=probes.map((p,i)=>{
+   const q=probes[1-i]!;
+   const a=nav.auditPath(new Vec3(...p.from),new Vec3(...q.to),.35);
+   return {from:p.id,to:q.id,pathReached:a.reachedTarget,
+    startSnap:a.startSnapDistanceMeters,endSnap:a.endSnapDistanceMeters,
+    points:a.pointCount,error:a.endpointErrorMeters};
+  });
+  const result=probes.map(probe=>{
+   const path=nav.auditPath(new Vec3(...probe.from),
+    new Vec3(...probe.to),.35);
+   if(!path.reachedTarget||!path.nativePathPoints.length)
+    throw Error('F4_PHOTO_RECAST_NOT_CONTINUOUS_'+probe.id);
+   const points=path.nativePathPoints;
+   const initial=physics.castCharacterFootSupport(
+    new Vec3(points[0]!.x,points[0]!.y+
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,points[0]!.z),
+    PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+   if(!initial)throw Error('F4_PHOTO_INITIAL_REAL_FOOT_UNSUPPORTED');
+   const now={x:points[0]!.x,y:initial.point.y,z:points[0]!.z};
+   const body=physics.world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+     now.x,now.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,now.z));
+   const collider=physics.world.createCollider(RAPIER.ColliderDesc.capsule(
+    PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters,
+    PLAYER_CHARACTER_PHYSICS.humanRadiusMeters),body);
+   const kcc=createConfiguredPlayerCharacterController(physics.world);
+   physics.step();
+   const stepLimit=GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60;
+   let steps=0,unsupported=0,unprojected=0,clipsOver3cm=0,
+    maxXZClip=0,maxDrift=0,maxGroundGap=0,firstFailure:null|
+    {segment:number;substep:number;cause:string;at:[number,number,number]}=null;
+   for(let seg=1;seg<points.length;seg++){
+    const a=points[seg-1]!,b=points[seg]!;
+    const parts=Math.max(1,Math.ceil(Math.hypot(
+     b.x-a.x,b.y-a.y,b.z-a.z)/stepLimit));
+    for(let k=1;k<=parts;k++){
+     const fraction=k/parts;
+     const x=a.x+(b.x-a.x)*fraction;
+     const z=a.z+(b.z-a.z)*fraction;
+     const navY=a.y+(b.y-a.y)*fraction;
+     const point=new Vec3(x,navY+
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,z);
+     const floor=physics.castCharacterFootSupport(point,
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+     const gap=floor?Math.abs(floor.point.y-navY):Infinity;
+     if(Number.isFinite(gap))maxGroundGap=Math.max(maxGroundGap,gap);
+     if(!floor||gap>.25){unprojected++;
+      if(!firstFailure)firstFailure={segment:seg,substep:k,
+       cause:floor?'NATIVE_RECAST_Y_DIFFERS_FROM_REAL_RAPIER':
+        'NO_RAPIER_FLOOR_SUPPORT',at:[x,navY,z]};
+     }
+     const targetY=floor?.point.y??navY;
+     const wanted={x:x-now.x,y:targetY-now.y,z:z-now.z};
+     kcc.computeColliderMovement(collider,wanted,
+      undefined,undefined,(other:RAPIER.Collider)=>
+       other.handle!==collider.handle&&
+       physics.shouldCharacterCollide(other,'HUMAN'));
+     const moved=kcc.computedMovement();
+     const clipXZ=Math.hypot(wanted.x-moved.x,wanted.z-moved.z);
+     maxXZClip=Math.max(maxXZClip,clipXZ);
+     if(clipXZ>.03){clipsOver3cm++;
+      if(!firstFailure)firstFailure={segment:seg,substep:k,
+       cause:'TRUE_CAPSULE_HORIZONTAL_CLIP',at:[x,navY,z]};}
+     now.x+=moved.x;now.y+=moved.y;now.z+=moved.z;
+     maxDrift=Math.max(maxDrift,Math.hypot(now.x-x,now.z-z));
+     if(!physics.castCharacterFootSupport(new Vec3(now.x,
+       now.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,now.z),
+       PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'))unsupported++;
+     body.setTranslation({x:now.x,y:now.y+
+      PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,z:now.z},true);
+     physics.step();steps++;
+    }
+   }
+   physics.world.removeCharacterController(kcc);
+   physics.world.removeRigidBody(body);physics.step();
+   return {id:probe.id,steps,unprojected,unsupported,clipsOver3cm,
+    maxXZClip,maxDrift,maxGroundGap,firstFailure,
+    finalFoot:{x:now.x,y:now.y,z:now.z},
+    endpoint:{x:probe.to[0],y:probe.to[1],z:probe.to[2]}};
+  });
+  console.log('T21_F4_PHOTO_REAL_CAPSULE_AND_CROSS_TEAM',
+   JSON.stringify({result,cross,global4v4Ready:false}));
+  expect(result.every(x=>x.steps>100)).toBe(true);
+  expect(stage.solids.length).toBe(49);
  });
 });
