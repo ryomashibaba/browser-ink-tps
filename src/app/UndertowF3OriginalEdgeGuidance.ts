@@ -78,6 +78,25 @@ export function originalRaisedSourceEdgeStatus(input:F3RaisedEdgeInput){
   originalGeometryModified:false as const
  };
 }
+/** PlayCanvas 2.22.1 worldToScreen() reports CANVAS CSS pixels even
+ * when maxPixelRatio / drawing-buffer resolution differs. These may only
+ * be translated by the canvas's viewport origin, never re-scaled by
+ * GraphicsDevice.width/height. WorldToScreen.z is clip depth and cannot
+ * decide whether the original edge is in front of the actual camera.
+ * The signed view-space Z is authoritative for that VISUAL gate only.
+ */
+export function b130EdgeCanvasToViewport(
+ canvas:Readonly<{left:number;top:number}>,
+ projectedCss:Readonly<{x:number;y:number}>,
+ cameraViewSpaceZ:number,
+ viewport:Readonly<{width:number;height:number}>
+){
+ return {
+  x:canvas.left+projectedCss.x,y:canvas.top+projectedCss.y,
+  depth:-cameraViewSpaceZ,
+  viewportWidth:viewport.width,viewportHeight:viewport.height
+ };
+}
 /** Screen-space view gate; never grants a traversable floor or KCC step. */
 export function b130SourceEdgePin(
  edge:ReturnType<typeof originalRaisedSourceEdgeStatus>,

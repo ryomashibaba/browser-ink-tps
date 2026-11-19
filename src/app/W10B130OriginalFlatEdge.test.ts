@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {inspectB130OriginalFlatSource as f} from './W10B130OriginalFlatEdge';
 import {inspectB124ActualRaisedSourceBoundary as raised}
  from './W10B124OriginalRaisedSourceBoundary';
-import {originalRaisedSourceEdgeStatus as status,b130SourceEdgePin}
+import {originalRaisedSourceEdgeStatus as status,b130SourceEdgePin,
+ b130EdgeCanvasToViewport}
  from './UndertowF3OriginalEdgeGuidance';
 const r='UndertowT21D:right-low-team-a';
 const l='UndertowT21D:first-drop-landing-positive-z';
@@ -65,6 +66,22 @@ describe('B130 real registered source polygon edge guide',()=>{
 });
 
 describe('B130 true original floor world-edge pin, display only',()=>{
+ it('projects CSS pixel edge markers without doubling device-pixel scaling',()=>{
+  // PlayCanvas 2.22.1 provides CSS pixels, regardless of DPR or render size.
+  // A canvas at viewport (24,30) adds only the page offset.
+  const screen=b130EdgeCanvasToViewport(
+   {left:24,top:30},{x:410,y:300},-3,{width:1600,height:900});
+  expect(screen).toEqual({
+   x:434,y:330,depth:3,viewportWidth:1600,viewportHeight:900
+  });
+  const w=probe(b(6.2972092628,5.395,36.6032),r)!;
+  const live=status(pack(w));
+  expect(b130SourceEdgePin(live,screen,false)?.x).toBe(434);
+  // Clip-space Z is not a behind-camera test; actual view-space Z is.
+  const behind=b130EdgeCanvasToViewport(
+   {left:24,top:30},{x:410,y:300},2,{width:1600,height:900});
+  expect(b130SourceEdgePin(live,behind,false)).toBeNull();
+ });
  it('nearest screen marker lies on exact original boundary, not optical shelf',()=>{
   for(const [body,id,top] of [
    [b(6.2972092628479,5.395079135894775,36.603267669677734),r,4.5],

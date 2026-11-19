@@ -170,7 +170,8 @@ import {sourceNativeInputProjection,sourceNativeEditingHotkeyTarget}
  from './SourceNativeInputProjection';
 import {inspectB124ActualRaisedSourceBoundary}
  from './W10B124OriginalRaisedSourceBoundary';
-import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus}
+import {createF3OriginalRaisedEdgeCoach,originalRaisedSourceEdgeStatus,
+ b130EdgeCanvasToViewport}
  from './UndertowF3OriginalEdgeGuidance';
 import {inspectB130OriginalFlatSource} from './W10B130OriginalFlatEdge';
 import {buildB113NativeFloorTrace} from './W10B113NativeFloorTrace';
@@ -2143,12 +2144,15 @@ export class UndertowF3PlayablePreviewApp{
    const camera=this.playerCameraEntity.camera;
    const device=this.app.graphicsDevice;
    if(!camera||device.width<=0||device.height<=0)return null;
-   const p=camera.worldToScreen(new Vec3(world[0],world[1]+.12,world[2]));
+   const worldPoint=new Vec3(world[0],world[1]+.12,world[2]);
+   const p=camera.worldToScreen(worldPoint);
+   // PlayCanvas 2.22.1 returns CSS pixels already (clientRect), not the
+   // graphics device's physical pixel resolution. Avoid DPR double scaling.
+   // WorldToScreen.z is clip depth, NOT a camera-front/behind flag.
+   const viewZ=camera.viewMatrix.transformPoint(worldPoint).z;
    const bounds=this.canvas.getBoundingClientRect();
-   return {x:bounds.left+p.x*bounds.width/device.width,
-    y:bounds.top+p.y*bounds.height/device.height,
-    depth:p.z,viewportWidth:window.innerWidth,
-    viewportHeight:window.innerHeight};
+   return b130EdgeCanvasToViewport(bounds,p,viewZ,
+    {width:window.innerWidth,height:window.innerHeight});
   });
   this.b209RampEdgeCoach=createB209OriginalRampEdgeCoach(ui);
   if(this.b112GroundEnabled||this.nativeLiveSourcePrestart){
