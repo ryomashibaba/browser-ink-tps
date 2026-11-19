@@ -1,4 +1,4 @@
-import {isT21F4ResearchStage,buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide}
+import {isT21F4ResearchStage,buildT21F4PhotoRouteExperiment,t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3 opt-in playable preview traffic: reuse ONLY the eight genuine source
@@ -596,9 +596,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(isT21F4ResearchStage(stage)){
    const experiment=buildT21F4PhotoRouteExperiment();
    this.f4GuideByTeam.set(Team.A,
-    t21F4CentralCrossingGuide(experiment.repairs,'POSITIVE_Z'));
+    t21F4PlayableCorridorGuide(experiment.repairs,'POSITIVE_Z'));
    this.f4GuideByTeam.set(Team.B,
-    t21F4CentralCrossingGuide(experiment.repairs,'NEGATIVE_Z'));
+    t21F4PlayableCorridorGuide(experiment.repairs,'NEGATIVE_Z'));
   }
   if(bots.length!==7||new Set(bots.map(b=>b.id)).size!==7)
    throw Error('T21_F3_REAL_CPU_INVENTORY_REQUIRED');
