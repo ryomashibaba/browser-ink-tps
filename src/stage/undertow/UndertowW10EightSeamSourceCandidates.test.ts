@@ -15,6 +15,12 @@ import {UNDERTOW_T21D_CONNECTIVITY_PROBES,
 import {buildT21F4PhotoRouteExperiment,t21F4CentralCrossingGuide,
  buildT21F4ResearchStage,isT21F4ResearchStage}
  from './UndertowT21F4PhotoRouteReconstruction';
+import {planSourceSupportedT21QaSpawnSlots,withProvisionalT21QaSpawnMetadata}
+ from './UndertowPhase14QSourceSpawnPlan';
+import {planT21F2SourceDropRoutes} from './UndertowF2SourceDropRoutes';
+import {UndertowPhase14ECpuHandoff} from './UndertowPhase14ECpuHandoff';
+import {UndertowPhase14QSharedActorCollision} from './UndertowPhase14QSharedActorCollision';
+import {UndertowF3NativeHumanCrowd} from '../../app/UndertowF3NativeHumanCrowd';
 import {PRODUCTION_STAGE_DEFINITION} from '../StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from './UndertowSpillwayBlockoutGeometry';
@@ -146,6 +152,32 @@ beforeAll(async()=>await Promise.all([
  initializeRecastNavigation(),initializeRapier()
 ]));
 describe('F4 photo/video reconstruction: isolated genuine Recast and Rapier',()=>{
+ it('constructs real 51-solid Recast/Rapier first-drop and shared-actor interfaces without changing old source',()=>{
+  const source=undertowT21dConnectivityQaStage();
+  const oldNav=new RecastStageNavigation(source,new PerformanceStats());
+  const oldPhysics=new RapierStagePhysics(1/60,source);
+  oldPhysics.step();
+  const spawns=planSourceSupportedT21QaSpawnSlots(source,oldNav,oldPhysics);
+  const originalWithSlots=withProvisionalT21QaSpawnMetadata(source,spawns);
+  const stage=buildT21F4ResearchStage(originalWithSlots);
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const physics=new RapierStagePhysics(1/60,stage);physics.step();
+  const routes=planT21F2SourceDropRoutes(stage,nav,spawns);
+  expect(routes.routes).toHaveLength(8);
+  expect(routes.originalSourceLinksPreserved).toBe(true);
+  expect(new UndertowPhase14ECpuHandoff(stage,true)).toBeDefined();
+  expect(new UndertowPhase14QSharedActorCollision(physics,stage,true)).toBeDefined();
+  expect(new UndertowF3NativeHumanCrowd(nav,stage)).toBeDefined();
+  const a=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>
+   p.id==='right-low-to-underpass-positive-z')!;
+  const b=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>
+   p.id==='right-low-to-underpass-negative-z')!;
+  expect(nav.auditPath(new Vec3(...a.from),new Vec3(...b.to),.35)
+   .reachedTarget).toBe(true);
+  expect(nav.auditPath(new Vec3(...b.from),new Vec3(...a.to),.35)
+   .reachedTarget).toBe(true);
+  expect(source.solids).toHaveLength(25);
+ });
  it('authorizes only the unmodified 25 source solids plus the exact 26 research pieces',()=>{
   const original=undertowT21dConnectivityQaStage();
   const research=buildT21F4ResearchStage(original);
