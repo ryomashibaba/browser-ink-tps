@@ -3746,7 +3746,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    b93ExperimentalEnabled:this.enableB93UpperDetour,
    sourcePatrol:{auditedTargets:this.auditedTargets,
     b441Enabled:this.enableB441SourceFrontline,
-    f4GuideLastAudit:[...this.f4GuideLastAudit.values()],
+    f4GuideLastAudit:[...(this.f4GuideLastAudit?.values()??[])],
     b441ProposalsChecked:this.b441ProposalsChecked,
     b441StrictGoalsAvailable:this.b441StrictGoalsAvailable,
     b441ActualGoalRequests:this.b441ActualGoalRequests,
