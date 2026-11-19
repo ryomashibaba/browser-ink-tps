@@ -355,6 +355,78 @@ test('SOURCE rejects stale WASD, squid, jump and buttons before pointerlockchang
  expect(input.moveY).toBe(1);
 });
 
+
+test('SOURCE Ctrl/Alt/Meta cancel already-held movement and paid input before next 60Hz step',()=>{
+ for(const modifier of [
+  {code:'ControlLeft',ctrlKey:true},
+  {code:'AltLeft',altKey:true},
+  {code:'MetaLeft',metaKey:true}
+ ]){
+  const {input,emit}=lockedInput();
+  input.setSourcePrestartMovementBlocked(true);
+  input.setSourcePrestartMovementBlocked(false);
+  for(const code of ['KeyW','ShiftLeft','Space','KeyF','KeyG'])
+   emit('window','keydown',{code,repeat:false});
+  emit('canvas','pointerdown',{button:0});
+  emit('canvas','pointerdown',{button:2});
+  emit('window','keydown',{...modifier,repeat:false});
+  expect([input.moveY,input.jumpHeld,input.squidHeld,
+   input.fireHeld,input.secondaryHeld,input.consumeMoveAxesForPlayerTick().y,
+   input.consumeSquidHeldForPlayerTick(),input.consumeJump(),
+   input.consumePrimaryPressed(),input.consumeSecondaryPressed(),
+   input.consumeSubPressed(),input.consumeSpecialPressed()])
+   .toEqual([0,false,false,false,false,0,false,false,false,false,false,false]);
+  emit('window','keyup',{code:modifier.code});
+  // Repeats and duplicated non-repeat keydown cannot revive the physical
+  // keys which were already held before the browser modifier shortcut.
+  for(const code of ['KeyW','ShiftLeft','Space','KeyF','KeyG'])
+   emit('window','keydown',{code,repeat:true});
+  emit('window','keydown',{code:'KeyW',repeat:false});
+  expect([input.moveY,input.consumeMoveAxesForPlayerTick().y,
+   input.consumeSubPressed(),input.consumeSpecialPressed()])
+   .toEqual([0,0,false,false]);
+  for(const code of ['KeyW','ShiftLeft','Space','KeyF','KeyG'])
+   emit('window','keyup',{code});
+  emit('window','keydown',{code:'KeyW',repeat:false});
+  emit('window','keydown',{code:'KeyF',repeat:false});
+  expect([input.moveY,input.consumeSubPressed()]).toEqual([1,true]);
+ }
+});
+
+test('SOURCE late modified mouse event cancels pending fast shots and key taps',()=>{
+ const {input,emit}=lockedInput();
+ input.setSourcePrestartMovementBlocked(true);
+ input.setSourcePrestartMovementBlocked(false);
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ emit('window','keyup',{code:'KeyD'});
+ emit('window','keydown',{code:'KeyG',repeat:false});
+ emit('window','keyup',{code:'KeyG'});
+ emit('canvas','pointerdown',{button:0});
+ emit('canvas','pointerup',{button:0});
+ emit('canvas','pointerdown',{button:2});
+ emit('canvas','pointerup',{button:2});
+ emit('canvas','pointerdown',{button:0,ctrlKey:true});
+ expect([input.consumeMoveAxesForPlayerTick().x,input.consumeSpecialPressed(),
+  input.consumePrimaryPressed(),input.consumeSecondaryPressed()])
+  .toEqual([0,false,false,false]);
+ // Actual new physical intent is accepted without a page refresh.
+ emit('window','keydown',{code:'KeyD',repeat:false});
+ emit('canvas','pointerdown',{button:0});
+ expect([input.consumeMoveAxesForPlayerTick().x,input.consumePrimaryPressed()])
+  .toEqual([1,true]);
+});
+
+test('unchanged T20 does not inherit opt-in SOURCE shortcut latching',()=>{
+ const {input,emit}=lockedInput();
+ emit('window','keydown',{code:'KeyW',repeat:false});
+ emit('window','keydown',{code:'ControlLeft',ctrlKey:true,repeat:false});
+ expect(input.moveY).toBe(1);
+ emit('window','keyup',{code:'ControlLeft'});
+ expect(input.moveY).toBe(1);
+ emit('window','keyup',{code:'KeyW'});
+ expect(input.moveY).toBe(0);
+});
+
 test('SOURCE ignores shortcut-modified motion but keeps ordinary fresh controls',()=>{
  const {input,emit}=lockedInput();
  input.setSourcePrestartMovementBlocked(true);

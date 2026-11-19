@@ -38,6 +38,31 @@ export class PlayerInput {
   private subPressedQueued = false;
   private specialPressedQueued = false;
 
+  /** SOURCE only: a modifier pressed AFTER actual gameplay inputs must also
+   * cancel their pending 60Hz taps and held states. Merely rejecting a
+   * modified keydown left old WASD, squid, jump and fire intent armed.
+   * Latch the formerly held keys until their physical release, to prevent
+   * stale OS-repeat or duplicate-down events from rearming the action.
+   * T20 and deterministic QA never enable this source-only guard. */
+  private cancelSourceShortcutInputs(shortcutCode?:string):void{
+    if(!this.sourceNativeRepeatGuard||this.deterministicQaEnabled)return;
+    for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
+      if(this.keys.has(code))this.sourcePrestartHeldKeys.add(code);
+      this.keys.delete(code);
+    }
+    if(shortcutCode&&SOURCE_PRESTART_MOVEMENT_CODES.has(shortcutCode))
+      this.sourcePrestartHeldKeys.add(shortcutCode);
+    this.sourceMovementTapCodes.clear();
+    this.sourceSquidTapQueued=false;
+    this.jumpQueued=false;
+    this.subPressedQueued=false;
+    this.specialPressedQueued=false;
+    this.fire=false;
+    this.primaryPressedQueued=false;
+    this.secondary=false;
+    this.secondaryPressedQueued=false;
+  }
+
   public constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly deterministicQaEnabled = false
@@ -47,7 +72,10 @@ export class PlayerInput {
       // SOURCE gameplay must not interpret browser/system modifier shortcuts
       // as WASD, squid, Space or weapon intent. T20 stays unchanged.
       if(this.sourceNativeRepeatGuard &&
-         (event.altKey||event.ctrlKey||event.metaKey))return;
+         (event.altKey||event.ctrlKey||event.metaKey)){
+        this.cancelSourceShortcutInputs(event.code);
+        return;
+      }
       // An OS key repeat after STAGING/blur is not a new physical press.
       // Without this guard, focus recovery can revive unwanted movement.
       if(this.sourceNativeRepeatGuard &&
@@ -151,7 +179,10 @@ export class PlayerInput {
       // left/right clicks must likewise never fire, dodge or raise a shield.
       // T20 and explicit deterministic QA preserve their previous behavior.
       if(this.sourceNativeRepeatGuard &&
-         (event.altKey||event.ctrlKey||event.metaKey))return;
+         (event.altKey||event.ctrlKey||event.metaKey)){
+        this.cancelSourceShortcutInputs();
+        return;
+      }
       // The first left click is reserved for acquiring pointer lock.
       // Fire only once the game already owns the mouse.
       if (
