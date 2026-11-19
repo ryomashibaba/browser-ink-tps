@@ -24,12 +24,16 @@ export function sourcePracticeInkBalance(
  s:B401LiveState,stage:readonly number[],phase:string
 ):SourcePracticeInkBalanceSnapshot|null{
  if(stage.length!==4||stage.join('/')!=='25/17/26/0'||
-    (phase!=='STAGING'&&phase!=='PLAYING')||
+    !['STAGING','PLAYING','TIME_UP'].includes(phase)||
     s.status!=='LIVE_REGISTERED_SOURCE_ONLY'||
     s.registeredSurfaces!==17||!s.originalSourceOnly||
     s.officialTurfScore!==false||s.winner!=='NONE'||
     s.productionAuthorized!==false||s.gameplayWrites!==0||
-    !Number.isSafeInteger(s.sampleNativeTick)||s.sampleNativeTick<1)return null;
+    !Number.isSafeInteger(s.sampleNativeTick)||s.sampleNativeTick<1||
+    // A previous live sample is not a final result. TIME_UP must be
+    // independently sampled at a genuine 180s native tick by B401.
+    (phase==='TIME_UP'&&(s.reason!=='FINAL_NATIVE_SOURCE_OWNER_GRID'||
+     s.sampleNativeTick<10800)))return null;
  const {totalActiveCells:total,teamA:a,teamB:b,neutral:n}=s;
  if(![total,a,b,n].every(Number.isSafeInteger)||
     total<1||a<0||b<0||n<0||a+b+n!==total)return null;
@@ -80,17 +84,22 @@ export function createSourcePracticeInkBalance(parent:HTMLElement){
    root.dataset.sourcePaintStatus='HOLD';
    return;
   }
-  root.dataset.sourcePaintStatus='LIVE_SOURCE_ONLY';
+  const finished=phase==='TIME_UP';
+  root.dataset.sourcePaintStatus=finished?'FINAL_SOURCE_ONLY':'LIVE_SOURCE_ONLY';
   root.dataset.sourceSampleTick=String(data.sourceTick);
   root.dataset.teamACells=String(data.teamA);
   root.dataset.teamBCells=String(data.teamB);
   root.dataset.neutralCells=String(data.neutral);
-  label.textContent='SOURCE PAINT · A '+data.teamA.toLocaleString('en-US')+
+  label.textContent=(finished?'FINAL SOURCE PAINT · A ':'SOURCE PAINT · A ')+
+   data.teamA.toLocaleString('en-US')+
    ' / B '+data.teamB.toLocaleString('en-US')+
    ' / NEUTRAL '+data.neutral.toLocaleString('en-US');
   a.style.width=data.aPercent.toFixed(4)+'%';
   b.style.width=data.bPercent.toFixed(4)+'%';
   neutral.style.width=data.neutralPercent.toFixed(4)+'%';
+  footer.textContent=finished?
+   'FINAL REGISTERED CELLS · UNSCORED · NO OFFICIAL WINNER':
+   'NON-SCOREABLE SOURCE CELLS · NO OFFICIAL WINNER';
  };
  return {root,render};
 }

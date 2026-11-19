@@ -21,6 +21,17 @@ describe('F3 normal PLAYER source practice paint balance (never a winner)',()=>{
   expect(sourcePracticeInkBalance(genuine,[25,17,26,1],'PLAYING')).toBeNull();
   expect(sourcePracticeInkBalance(genuine,[26,17,26,0],'PLAYING')).toBeNull();
   expect(sourcePracticeInkBalance(genuine,stage,'TIME_UP')).toBeNull();
+  const final={...genuine,sampleNativeTick:10800,
+   reason:'FINAL_NATIVE_SOURCE_OWNER_GRID'};
+  expect(sourcePracticeInkBalance(final,stage,'TIME_UP')).toEqual({
+   sourceTick:10800,teamA:210,teamB:390,neutral:400,
+   total:1000,aPercent:21,bPercent:39,neutralPercent:40,
+   officialTurfScore:false,winner:'NONE',gameplayWrites:0
+  });
+  expect(sourcePracticeInkBalance({...final,sampleNativeTick:10799},
+   stage,'TIME_UP')).toBeNull();
+  expect(sourcePracticeInkBalance({...final,winner:'B' as 'NONE'},
+   stage,'TIME_UP')).toBeNull();
   expect(sourcePracticeInkBalance({...genuine,status:'HOLD'},stage,'PLAYING')).toBeNull();
   expect(sourcePracticeInkBalance({...genuine,sampleNativeTick:0},stage,'PLAYING')).toBeNull();
   expect(sourcePracticeInkBalance({...genuine,registeredSurfaces:16},stage,'PLAYING')).toBeNull();

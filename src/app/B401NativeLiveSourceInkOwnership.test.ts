@@ -23,6 +23,41 @@ describe('B401 live SOURCE-only grid ownership',()=>{
   expect(Array.from(first.ownerGrid)).toEqual([1,-1,1,1]);
   expect(b.aPercent+b.bPercent+b.neutralPercent).toBeCloseTo(100,8);
  });
+ it('takes one exact final original OwnerGrid snapshot at genuine TIME_UP',()=>{
+  const first=grid('source',[1,0,0,0]),gs=all(first);
+  const m=new B401NativeLiveSourceInkOwnership();
+  const atStart=m.observe(gs,stage,10750,'PLAYING',true);
+  expect(atStart.teamA).toBe(1);
+  (first.ownerGrid as Int8Array)[1]=-1;
+  // 50 ticks is less than the ordinary 120-tick sample interval.
+  const last=m.observe(gs,stage,10800,'TIME_UP',true);
+  expect(last).toMatchObject({
+   status:'LIVE_REGISTERED_SOURCE_ONLY',
+   reason:'FINAL_NATIVE_SOURCE_OWNER_GRID',
+   sampleNativeTick:10800,teamA:1,teamB:1,
+   officialTurfScore:false,winner:'NONE',gameplayWrites:0
+  });
+  expect(b401SourceHudLine(last)).toContain('FINAL SOURCE GRID');
+  (first.ownerGrid as Int8Array)[2]=1;
+  expect(m.observe(gs,stage,10800,'TIME_UP',true)).toBe(last);
+  expect(m.observe(gs,stage,10801,'TIME_UP',true)).toBe(last);
+  expect(last.teamA).toBe(1);
+  const clock='TIME COMPLETE\n'+b401SourceHudLine(last)+'NO OFFICIAL WINNER';
+  expect(b401ReplaceSourceGridFooter(clock,last)).toBe(clock);
+  expect(b401ReplaceSourceGridFooter(clock,last).split('FINAL SOURCE GRID').length)
+   .toBe(2);
+  expect(b401ReplaceSourceGridFooter(clock,last).endsWith('NO OFFICIAL WINNER'))
+   .toBe(true);
+ });
+ it('requires a genuine full native timeline and refuses false TIME_UP',()=>{
+  const m=new B401NativeLiveSourceInkOwnership(),g=all(grid('source'));
+  expect(m.observe(g,stage,9999,'TIME_UP',true).status).toBe('WAITING');
+  expect(m.observe(g,stage,10800,'TIME_UP',false).status).toBe('WAITING');
+  const live=m.observe(g,stage,10000,'PLAYING',true);
+  expect(live.status).toBe('LIVE_REGISTERED_SOURCE_ONLY');
+  expect(m.observe(g,stage,10000,'TIME_UP',true)).toBe(live);
+  expect(m.observe(g,stage,9999,'PLAYING',true)).toBe(live);
+ });
  it('refuses guessed stage, unscored constraints, fake phase, and invalid owners',()=>{
   const reader=new B401NativeLiveSourceInkOwnership(),source=all(grid('real'));
   expect(reader.observe(source,stage,1,'PLAYING',false).status).toBe('WAITING');
