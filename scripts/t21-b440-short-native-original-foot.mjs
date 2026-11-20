@@ -1181,7 +1181,69 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    result.lowestZ=Math.min(result.lowestZ,p[2]);
    if(p[2]<-.5&&n.nativeKccGrounded===true){
     result.status='CANDIDATE_REAL_HUMAN_KCC_CROSSING_REVIEW_REQUIRED';
-    result.crossingTick=n.tick;result.crossingFoot=[...p];break;
+    result.crossingTick=n.tick;result.crossingFoot=[...p];
+    // Capture the actual centered crossing, not a later spawn screenshot.
+    // Screenshot is visual evidence only; the native Rapier foot remains
+    // the crossing authority.
+    await release();
+    try{
+     const shot=await cdp('Page.captureScreenshot',{
+      format:'png',captureBeyondViewport:false});
+     if(typeof shot?.data==='string'&&shot.data.length>100){
+      writeFileSync(resolve(out,'f4-human-real-center-crossing.png'),
+       Buffer.from(shot.data,'base64'));
+      result.crossingScreenshot='f4-human-real-center-crossing.png';
+     }
+    }catch(e){result.crossingScreenshotHold=String(e).slice(0,160);}
+    // One bounded, genuine reverse walk over the SAME central Rapier
+    // terrain, with no actor, clock, collision, or navigation writes.
+    // Camera yaw is already checked <=5 degrees; S means +world Z.
+    result.reverseStatus='HOLD_REAL_RETURN_NOT_YET_CROSSED';
+    await setKeys(['KeyS']);
+    let returnTick=n.tick, bestReturnZ=p[2];
+    for(let reverse=0;reverse<36;reverse++){
+     const now=await until(async()=>{
+      const s=await snap();
+      return s.tick>=returnTick+5||s.matchState!=='PLAYING'||
+       s.stopReason||s.player?.hp<=0?s:null;
+     },18000,75);
+     const physical=now?.f4HumanPhysicalFoot;
+     if(!Array.isArray(physical)||physical.length!==3||
+        !physical.every(Number.isFinite)||
+        now.matchState!=='PLAYING'||now.stopReason||
+        now.player?.hp<=0||now.nativeKccGrounded!==true){
+      result.reverseStatus='HOLD_REAL_RETURN_INTERRUPTED';
+      break;
+     }
+     returnTick=now.tick;
+     bestReturnZ=Math.max(bestReturnZ,physical[2]);
+     result.lastFoot=[...physical];
+     result.lastBodyCenter=[...now.player.position];
+     result.reverseFoot=[...physical];
+     if(now.tick-start.tick>result.nativeTickBudget){
+      result.reverseStatus='HOLD_REAL_RETURN_NATIVE_BUDGET';
+      break;
+     }
+     if(physical[2]>1){
+      result.reverseStatus='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW';
+      result.returnTick=now.tick;
+      break;
+     }
+    }
+    await release();
+    result.reverseMaxZ=bestReturnZ;
+    if(result.reverseStatus==='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'){
+     try{
+      const shot=await cdp('Page.captureScreenshot',{
+       format:'png',captureBeyondViewport:false});
+      if(typeof shot?.data==='string'&&shot.data.length>100){
+       writeFileSync(resolve(out,'f4-human-real-center-return.png'),
+        Buffer.from(shot.data,'base64'));
+       result.returnScreenshot='f4-human-real-center-return.png';
+      }
+     }catch(e){result.returnScreenshotHold=String(e).slice(0,160);}
+    }
+    break;
    }
    if(n.tick-start.tick>result.nativeTickBudget){
     result.status='HOLD_BOUNDED_REAL_KEYBOARD_BUDGET';break;
