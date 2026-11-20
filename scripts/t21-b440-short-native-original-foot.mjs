@@ -1423,16 +1423,38 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  proof.f4HumanCombatWindow=outRow;save();
  const before=await snap();
  const pilot=proof.f4HumanRealPilot;
- if(pilot?.reverseStatus!=='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'||
-    before.matchState!=='PLAYING'||before.paused||before.stopReason||
-    before.player?.hp<=0||before.player?.mode!=='HUMAN'||
-    before.cpu?.physicalRejoins?.length!==7){
-  outRow.status='HOLD_F4_COMBAT_REQUIRES_REAL_GROUNDED_RETURN_AND_7CPU';
-  save();return outRow;
- }
  const roster=n=>(n.cpu?.cpu??[]).filter(c=>c.id?.startsWith('B'))
   .map(c=>({id:c.id,hp:c.hp??null,life:c.lifeState??null,
     foot:c.physicalFoot??null}));
+ const humanFoot=before.f4HumanPhysicalFoot;
+ const nearbyEnemy=Array.isArray(humanFoot)&&humanFoot.length===3?
+  roster(before).filter(c=>c.life==='ACTIVE'&&
+   Array.isArray(c.foot)&&c.foot.length===3)
+   .map(c=>({id:c.id,distanceMeters:Math.hypot(
+    c.foot[0]-humanFoot[0],c.foot[2]-humanFoot[2])}))
+   .sort((a,b)=>a.distanceMeters-b.distanceMeters)[0]:null;
+ const realRoundTrip=
+  pilot?.reverseStatus==='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW';
+ // An actual opposing CPU can traverse toward a human who has not yet
+ // completed the separate corridor proof. A safe, physically grounded
+ // contested encounter is a genuine opportunity to test shooting, but
+ // it never substitutes for the missing KCC crossing or formal 4v4.
+ const realGroundedEncounter=!realRoundTrip&&
+  before.nativeKccGrounded===true&&
+  Number.isFinite(nearbyEnemy?.distanceMeters)&&
+  nearbyEnemy.distanceMeters<=13;
+ outRow.engagementBasis=realRoundTrip?'REAL_HUMAN_CENTER_ROUNDTRIP':
+  realGroundedEncounter?'REAL_GROUNDED_ENEMY_APPROACHED_WITHIN_13M':
+   'HOLD_NO_REAL_SOURCE_ENGAGEMENT';
+ outRow.nearestActualOpponent=nearbyEnemy??null;
+ if((!realRoundTrip&&!realGroundedEncounter)||
+    before.nativeKccGrounded!==true||
+    before.matchState!=='PLAYING'||before.paused||before.stopReason||
+    before.player?.hp<=0||before.player?.mode!=='HUMAN'||
+    before.cpu?.cpu?.length!==7){
+  outRow.status='HOLD_F4_COMBAT_REQUIRES_REAL_GROUNDED_ENGAGEMENT_AND_7CPU_ROSTER';
+  save();return outRow;
+ }
  const inkCells=n=>n.b23HumanInkFeedback?.humanChangedCells??null;
  outRow.nativeStartTick=before.tick;
  outRow.humanHpBefore=before.player.hp;
@@ -1741,7 +1763,7 @@ async function runF4RealChrome(){
  recordCpuProgress(playing);
  const key={key:'w',code:'KeyW',
   windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
- let down=false,last=playing.tick-80;
+ let down=false,last=playing.tick-80,combatAttempted=false;
  try{
   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});down=true;
   await until(async()=>{
@@ -1764,9 +1786,33 @@ async function runF4RealChrome(){
     report.humanEarlyPilot=proof.f4HumanRealPilot?.status??'HOLD';
     if(proof.f4HumanRealPilot?.reverseStatus===
        'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'){
+      combatAttempted=true;
       await runF4RealHumanCombatWindow(recordCpuProgress);
       report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
     }
+    recordCpuProgress(await snap());
+    save();
+   }
+   // After an honest human KCC route HOLD, do not discard a real CPU
+   // that later reaches the stationary, grounded human. One bounded
+   // source-combat attempt uses real CDP mouse input and live CPU HP.
+   // The failed human crossing stays FAILED; no actor/CPU repositioning.
+   if(!combatAttempted&&report.humanEarlyPilot&&
+      proof.f4HumanRealPilot?.reverseStatus!==
+       'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'&&
+      n.matchState==='PLAYING'&&!n.paused&&!n.stopReason&&
+      n.nativeKccGrounded===true&&n.player?.hp>0&&
+      Array.isArray(n.f4HumanPhysicalFoot)&&
+      (n.cpu?.cpu??[]).some(c=>c.id?.startsWith('B')&&
+       c.lifeState==='ACTIVE'&&
+       Array.isArray(c.physicalFoot)&&
+       Math.hypot(
+        c.physicalFoot[0]-n.f4HumanPhysicalFoot[0],
+        c.physicalFoot[2]-n.f4HumanPhysicalFoot[2])<=11.5)){
+    combatAttempted=true;
+    await runF4RealHumanCombatWindow(recordCpuProgress);
+    report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
+    report.humanCombatIndependentOfCorridor=true;
     recordCpuProgress(await snap());
     save();
    }
