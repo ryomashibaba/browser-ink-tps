@@ -4514,7 +4514,13 @@ export class CpuAgentSystem {
       const nearRealHuman=humanActive&&humanTeam!==bot.team&&
         bot.team===Team.B&&this.f3dSourceGoals!==null&&
         this.stage.metadata.id==='undertow-t21d-partial-connectivity-qa'&&
-        bot.position.z<=-33&&humanPosition.z<=-33&&
+        // The F4 lab's genuine central crossover has opponents at
+        // Z near zero. Keep B207's original same-side constraint
+        // byte-for-byte, but let B defenders react to a physically nearby
+        // human on the separate F4 51-solid research collision stage.
+        // Native range, live HP, height and Rapier cover still own the aim.
+        (isT21F4ResearchStage(this.stage)||
+         (bot.position.z<=-33&&humanPosition.z<=-33))&&
         [humanPosition.x,humanPosition.y,humanPosition.z,
          bot.position.x,bot.position.y,bot.position.z].every(Number.isFinite)&&
         Math.abs(humanPosition.y-bot.position.y)<=2.4&&
