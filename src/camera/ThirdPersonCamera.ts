@@ -184,11 +184,14 @@ export class ThirdPersonCamera {
    this.b258ResearchProfile=name;
   }
   public sourcePracticeViewSnapshot(){
-    const eye=this.cameraEntity.getPosition();
+    // Headless camera unit tests use intentionally partial camera stubs.
+    // Real PlayCanvas Entities provide getPosition(); unavailable mocks
+    // carry no physical eye authority and must not crash SOURCE controls.
+    const eye=typeof this.cameraEntity.getPosition==='function'?
+     this.cameraEntity.getPosition():null;
     return {
-      // Read-only real camera eye, needed to distinguish actual camera
-      // center-ray aim from the offset player capsule and its muzzle.
-      actualEye:[eye.x,eye.y,eye.z] as const,
+      // Real camera eye, read-only. Null on partial unit-test stubs.
+      actualEye:eye?[eye.x,eye.y,eye.z] as const:null,
       sourcePracticeOnly:this.sourcePracticeControls,
       sourceAimSensitivityMultiplier:this.sourcePracticeControls?
        this.sourceAimSensitivityMultiplier:1,
