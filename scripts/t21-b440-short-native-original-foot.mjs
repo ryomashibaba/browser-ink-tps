@@ -1105,7 +1105,8 @@ async function runF4HumanRealWasdPilot(){
   guideAuthority:'PHOTO_STEERING_ONLY_NOT_COLLISION_PROOF',
   initialFoot:null,lastFoot:null,lowestZ:null,
   reachedWaypoints:0,waypointCount:0,nativeTickBudget:840,
-  realKeyDowns:0,samples:[]};
+  realKeyDowns:0,nativeBridgedSteps:0,lastNativeBridge:null,
+  samples:[]};
  proof.f4HumanRealPilot=result;save();
  const keys={
   KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
@@ -1188,11 +1189,26 @@ async function runF4HumanRealWasdPilot(){
    result.reachedWaypoints=next;
    if(result.status.startsWith('HOLD'))break;
    if(next===route.length){result.status='REAL_WASD_PHOTO_GUIDE_COMPLETED';break;}
-   const goal=route[next],dx=goal[0]-p[0],dz=goal[2]-p[2];
-   const distance=Math.hypot(dx,dz);
-   if(distance>8||Math.abs(goal[1]-p[1])>2.5){
-    result.status='HOLD_PHOTO_ROUTE_GEOMETRY_GAP';break;
+   const goal=route[next];
+   let steeringGoal=goal,navBridge=null;
+   const directDistance=Math.hypot(goal[0]-p[0],goal[2]-p[2]);
+   if(directDistance>8||Math.abs(goal[1]-p[1])>2.5){
+    // Missing PHOTO guide samples are not missing physical terrain.
+    // Obtain a real native Recast path from the genuine human foot and
+    // a Rapier-supported <=1.25m next target; never inject a fake floor.
+    navBridge=await evaluate(`window.__t21F3?.auditF4HumanResearchPath?.(${next})`);
+    result.lastNativeBridge=navBridge??null;
+    if(navBridge?.admitted!==true||
+       !Array.isArray(navBridge.shortGoal)||
+       navBridge.shortGoal.length!==3||
+       !navBridge.shortGoal.every(Number.isFinite)){
+     result.status='HOLD_NATIVE_RECAST_OR_RAPIER_BRIDGE_UNPROVEN';
+     break;
+    }
+    steeringGoal=navBridge.shortGoal;
+    result.nativeBridgedSteps++;
    }
+   const dx=steeringGoal[0]-p[0],dz=steeringGoal[2]-p[2];
    // Native camera yaw was measured near zero. In this orientation,
    // W/S controls -/+Z and A/D controls -/+X (not arbitrary Actor pose).
    const chosen=Math.abs(dx)>Math.abs(dz)*.8?
@@ -1200,7 +1216,8 @@ async function runF4HumanRealWasdPilot(){
    await setKey(chosen);
    if(iteration%7===0){
     result.samples.push({tick:n.tick,foot:[...p],waypoint:next,
-     target:goal,key:chosen,kccGrounded:true});
+     target:goal,steeringGoal,key:chosen,kccGrounded:true,
+     nativeBridgeVerified:navBridge?.admitted===true});
     if(result.samples.length>24)result.samples.shift();
     save();
    }

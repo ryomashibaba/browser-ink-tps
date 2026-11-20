@@ -2806,6 +2806,8 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
+   auditF4HumanResearchPath:(index:number)=>
+    this.auditF4HumanResearchPath(index),
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
    b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
    b484ActualA1CKeyFollowThrough:()=>this.traffic.b484RealOriginalA1OrderTrace(),
@@ -7869,6 +7871,69 @@ export class UndertowF3PlayablePreviewApp{
    matchState:this.matchState,paused:this.paused,stopReason:this.stopReason,
    activeHuman:this.resources.currentHp>0
   });
+ }
+ /** F4-only passive original Recast/Rapier proof for genuine human WASD.
+  * Neither this method nor its caller can write Actor, nav, paint or physics. */
+ public auditF4HumanResearchPath(index:number){
+  const guide=this.f4HumanResearchGuide;
+  if(!this.f4ResearchMode||!guide||!Number.isInteger(index)||
+     index<0||index>=guide.length)
+   return {admitted:false,reason:'F4_WAYPOINT_UNAVAILABLE'};
+  const body=this.player.getPosition(new Vec3());
+  const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const foot=new Vec3(body.x,body.y-off,body.z);
+  const photo=new Vec3(...guide[index]!);
+  const projected=this.nav.auditNavMeshProjection(photo);
+  const end=projected.nearestPoint;
+  if(!projected.success||!end||projected.distanceMeters===null||
+     projected.distanceMeters>.30)
+   return {admitted:false,reason:'PHOTO_GOAL_OFF_NAV',
+    index,projectionMeters:projected.distanceMeters};
+  const goal=new Vec3(end.x,end.y,end.z);
+  const native=this.nav.auditPath(foot,goal,.30);
+  const bodySupport=this.physics.castCharacterFootSupport(body,off,'HUMAN');
+  const goalSupport=this.physics.castCharacterFootSupport(
+   new Vec3(goal.x,goal.y+off,goal.z),off,'HUMAN');
+  const goalGap=goalSupport?Math.abs(goalSupport.point.y-goal.y):null;
+  if(!this.stats.playerGrounded||!bodySupport||!goalSupport||
+     goalGap===null||goalGap>.25||!native.reachedTarget||
+     native.startSnapDistanceMeters>.45||
+     native.endSnapDistanceMeters>.30||native.pointCount<2)
+   return {admitted:false,reason:'REAL_FOOT_NAV_OR_RAPIER_GOAL_UNSUPPORTED',
+    index,grounded:this.stats.playerGrounded,
+    realFootSupport:bodySupport?.solidId??null,
+    goalSupport:goalSupport?.solidId??null,goalGap,
+    navReached:native.reachedTarget,
+    startSnap:native.startSnapDistanceMeters,
+    endSnap:native.endSnapDistanceMeters,pathPoints:native.pointCount};
+  const next=native.nativePathPoints.find(p=>
+   Math.hypot(p.x-foot.x,p.z-foot.z)>.30);
+  if(!next)return {admitted:false,reason:'NATIVE_PATH_NO_FORWARD_CORNER',index};
+  const distance=Math.hypot(next.x-foot.x,next.z-foot.z);
+  const t=Math.min(1,1.25/distance);
+  const lookahead=new Vec3(
+   foot.x+(next.x-foot.x)*t,
+   foot.y+(next.y-foot.y)*t,
+   foot.z+(next.z-foot.z)*t);
+  const projectedStep=this.nav.auditNavMeshProjection(lookahead);
+  const step=projectedStep.nearestPoint;
+  const supported=step?this.physics.castCharacterFootSupport(
+   new Vec3(step.x,step.y+off,step.z),off,'HUMAN'):null;
+  const stepGap=step&&supported?
+   Math.abs(supported.point.y-step.y):null;
+  if(!projectedStep.success||!step||
+     projectedStep.distanceMeters===null||
+     projectedStep.distanceMeters>.30||!supported||
+     stepGap===null||stepGap>.25)
+   return {admitted:false,reason:'NATIVE_LOOKAHEAD_LACKS_REAL_FLOOR',
+    index,stepSnap:projectedStep.distanceMeters,
+    stepGap,stepSolid:supported?.solidId??null};
+  return {admitted:true,reason:'REAL_RECAST_RAPIER_READ_ONLY_GUIDE',
+   index,realFoot:[foot.x,foot.y,foot.z],
+   shortGoal:[step.x,step.y,step.z],
+   fullPhotoGoal:[goal.x,goal.y,goal.z],
+   pathPoints:native.pointCount,stepSolid:supported.solidId,
+   stepGap,goalGap};
  }
  public snapshot(){
   const pos=this.player.getPosition(this.p);
