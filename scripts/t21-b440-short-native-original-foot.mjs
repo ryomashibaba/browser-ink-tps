@@ -1276,12 +1276,13 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    const goal=route[next];
    let steeringGoal=goal,navBridge=null;
    const directDistance=Math.hypot(goal[0]-p[0],goal[2]-p[2]);
-   if(directDistance>8||Math.abs(goal[1]-p[1])>.28||
-      n.tick-lastMoveTick>=24){
-    // A near PHOTO goal may sit on a DIFFERENT floor (observed 0.895m
-    // discrepancy at project Z~15.7), or an already blocked straight
-    // line. Audit real native Recast and Rapier BEFORE continuing to
-    // hold a key into a wall. Never insert a floor or move the actor.
+   if(directDistance>8||n.tick-lastMoveTick>=24){
+    // On the authentic downhill ramps, a genuine foot-to-photo Y gap
+    // can be >0.28m over a few metres without any disconnected floor.
+    // Let real Rapier KCC traverse the nearby slope normally. After an
+    // actual ~24-tick movement stall, require a true Recast/Rapier
+    // supported short leg rather than holding a key into a wall.
+    // Never insert a floor or move the actor outside actual KCC.
     navBridge=await evaluate(`window.__t21F3?.auditF4HumanResearchPath?.(${next})`);
     result.lastNativeBridge=navBridge??null;
     if(navBridge?.admitted!==true||
