@@ -64,6 +64,43 @@ const T21_F4_ORIGINAL_CORRIDOR_ENDPOINTS=[
 ] as const;
 const checkedTerrain=new WeakSet<Terrain>();
 
+function triangleCorners(solid:StageSolidDefinition,face:number):StageVector3[]{
+ const mesh=solid.triangleMesh!;
+ return mesh.indices.slice(face*3,face*3+3).map(i=>mesh.vertices[i]!);
+}
+
+function between(a:StageVector3,b:StageVector3,fraction:number):StageVector3{
+ return [a[0]+(b[0]-a[0])*fraction,a[1]+(b[1]-a[1])*fraction,
+  a[2]+(b[2]-a[2])*fraction];
+}
+
+/** Waypoints for the positive-Z return. These sample the existing physical floor. */
+export function t21F4OriginalHumanReturnGuide(terrain:Terrain):readonly StageVector3[]{
+ const floor=terrain['corridor-floors'],ingress=terrain['ingress-floors'];
+ if(!floor||!ingress)return [];
+ const corridorFace=(id:number)=>triangleCorners(floor,
+  (CORRIDOR_FACE_GROUPS['corridor-floors'] as readonly number[]).indexOf(id));
+ const ingressFace=(id:number)=>triangleCorners(ingress,
+  (INGRESS_FACE_GROUPS['ingress-floors'] as readonly number[]).indexOf(id));
+ const [lowerLeft,lowerRight,upperLeft]=corridorFace(69306);
+ const [,upperRight]=corridorFace(69307);
+ // The midpoint still clips the crosswise side geometry. Pass just to
+ // its right with room for the 0.32m radius human capsule.
+ const top=between(upperLeft!,upperRight!,.70);
+ const bottom=between(lowerLeft!,lowerRight!,.70);
+ const [ingressUpperRight,ingressLowerRight,ingressUpperLeft]=ingressFace(4100);
+ const [,ingressLowerLeft]=ingressFace(4101);
+ const ingressBottom=between(ingressLowerLeft!,ingressLowerRight!,.5);
+ const ingressTop=between(ingressUpperLeft!,ingressUpperRight!,.5);
+ return [
+  [-7.895,.20,11.533],[-5.915,1.5,17.293],
+  between(top,bottom,.05),between(top,bottom,.94),[-3.154,0,25],
+  [-2,0,30],[-2.6,0,36],[-4.355,.05,40.33],
+  between(ingressBottom,ingressTop,.03),between(ingressBottom,ingressTop,.97),
+  [-.5,3,47.75],[.5,3,48.2],[2.3,3.33,48.15]
+ ];
+}
+
 export function isT21F4OriginalTerrain(terrain:Terrain):boolean{
  return checkedTerrain.has(terrain);
 }
@@ -137,8 +174,7 @@ export function t21F4OriginalCorridorEndpoints(terrain:Terrain):readonly (readon
  const corridor=terrain['corridor-floors'];
  if(!corridor)return [];
  const centroid=(solid:StageSolidDefinition,face:number):StageVector3=>{
-  const mesh=solid.triangleMesh!;
-  const [a,b,c]=mesh.indices.slice(face*3,face*3+3).map(i=>mesh.vertices[i]!);
+  const [a,b,c]=triangleCorners(solid,face);
   return Object.freeze([
    (a![0]+b![0]+c![0])/3,(a![1]+b![1]+c![1])/3,(a![2]+b![2]+c![2])/3
   ] as const);

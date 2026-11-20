@@ -129,12 +129,12 @@ import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
 import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
-import {undertowT21dConnectivityQaStage}
+import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,f4OriginalCorridorEndpoints,
  t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
-import {parseT21F4OriginalTerrain,type T21F4OriginalTerrain}
+import {parseT21F4OriginalTerrain,t21F4OriginalHumanReturnGuide,type T21F4OriginalTerrain}
  from '../stage/undertow/UndertowT21F4OriginalTerrain';
 import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
@@ -325,6 +325,7 @@ export class UndertowF3PlayablePreviewApp{
  /** F4-only read-only triangle centroids for genuine human WASD review.
   * These steering points are not certified human collision or navigation. */
  private readonly f4HumanResearchGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
+ private readonly f4HumanOriginalReturnGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
  private readonly f4OriginalCorridorsPresent:boolean;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
@@ -690,6 +691,10 @@ export class UndertowF3PlayablePreviewApp{
   this.f4HumanResearchGuide=terrain?
    (originalCorridors.length?originalCorridors.flat():null):this.f4ResearchMode?
    t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
+  const returnGuide=terrain?t21F4OriginalHumanReturnGuide(terrain):[];
+  this.f4HumanOriginalReturnGuide=returnGuide.length?[...returnGuide,
+   UNDERTOW_T21D_CONNECTIVITY_PROBES.find(probe=>probe.id==='right-low-ramp-positive-z')!.to
+  ]:null;
   this.canvas.dataset.t21F4CentralResearch=terrain
    ?originalCorridors.length?'UNOFFICIAL_LOCAL_ORIGINAL_CORRIDORS':'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN'
    :this.f4ResearchMode
@@ -2853,8 +2858,8 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
-   auditF4HumanResearchPath:(index:number)=>
-    this.auditF4HumanResearchPath(index),
+   auditF4HumanResearchPath:(index:number,route?:'return')=>
+    this.auditF4HumanResearchPath(index,route),
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
    b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
    b484ActualA1CKeyFollowThrough:()=>this.traffic.b484RealOriginalA1OrderTrace(),
@@ -7921,8 +7926,8 @@ export class UndertowF3PlayablePreviewApp{
  }
  /** F4-only passive original Recast/Rapier proof for genuine human WASD.
   * Neither this method nor its caller can write Actor, nav, paint or physics. */
- public auditF4HumanResearchPath(index:number){
-  const guide=this.f4HumanResearchGuide;
+ public auditF4HumanResearchPath(index:number,route?:'return'){
+  const guide=route==='return'?this.f4HumanOriginalReturnGuide:this.f4HumanResearchGuide;
   if(!this.f4ResearchMode||!guide||!Number.isInteger(index)||
      index<0||index>=guide.length)
    return {admitted:false,reason:'F4_WAYPOINT_UNAVAILABLE'};
@@ -8061,6 +8066,7 @@ export class UndertowF3PlayablePreviewApp{
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:nativeCamera,
    f4HumanResearchGuide:this.f4HumanResearchGuide,
+   f4HumanOriginalReturnGuide:this.f4HumanOriginalReturnGuide,
    // Snapshot player.position is Rapier capsule CENTER, not a foot.
    // The real human review must use the native capsule's lowest point
    // when comparing it to photo/Recast/Rapier floor elevation.
