@@ -26,6 +26,18 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as FROZEN}
  from '../src/stage/undertow/UndertowSpillwayBlockoutGeometry';
 import type {StageDefinition,StageSolidDefinition,StageVector3}
  from '../src/stage/StageDefinition';
+import {buildT21F4ResearchStage,isT21F4OriginalTerrainStage,isT21F4ResearchStage}
+ from '../src/stage/undertow/UndertowT21F4PhotoRouteReconstruction';
+import {parseT21F4OriginalTerrain}
+ from '../src/stage/undertow/UndertowT21F4OriginalTerrain';
+import {undertowTemple01ModelXZToProjectXZ}
+ from '../src/stage/undertow/UndertowSpillwayModelXZGeometry';
+import {undertowT21dConnectivityQaStage}
+ from '../src/stage/undertow/UndertowSpillwayConnectivityQa';
+import {planSourceSupportedT21QaSpawnSlots}
+ from '../src/stage/undertow/UndertowPhase14QSourceSpawnPlan';
+import {planT21F2SourceDropRoutes} from '../src/stage/undertow/UndertowF2SourceDropRoutes';
+import {ORIGINAL_SOURCE_CPU_CAPSULE} from '../src/stage/undertow/UndertowPhase14QSharedActorCollision';
 
 type P3=readonly[number,number,number];
 type OriginalTriangle={
@@ -244,7 +256,7 @@ function traverse(stage:StageDefinition,side:B235Side,c:Candidate,mode:Mode){
   opponentPathsCertified:'0/12',productionAuthorized:false};
 }
 beforeAll(async()=>{await initializeRapier();await initializeRecastNavigation();});
-describe('B239 full pinned source FloorLine00 isolated Rapier KCC + Recast',()=>{
+describe.skipIf(Boolean(process.env.T21_F4_LOCAL_TERRAIN&&!process.env.T21_B239_FACES_OUTPUT))('B239 full pinned source FloorLine00 isolated Rapier KCC + Recast',()=>{
  it('measures both mirrors against 30-solid original-source QA without changing frozen runtime',()=>{
   const seed=readSource(),results=[];
   expect(FROZEN.solids).toHaveLength(25);
@@ -337,3 +349,160 @@ describe('B239 full pinned source FloorLine00 isolated Rapier KCC + Recast',()=>
    JSON.stringify(result));
  },120000);
 });
+
+it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
+ 'checks the local original F4 ground with genuine Rapier capsules and Recast',
+ ()=>{
+  const seed=JSON.parse(readFileSync(process.env.T21_F4_LOCAL_TERRAIN!,'utf8'));
+  const terrain=parseT21F4OriginalTerrain(seed);
+  const base=undertowT21dConnectivityQaStage();
+  const stage=buildT21F4ResearchStage(base,terrain);
+  expect(isT21F4ResearchStage(stage)).toBe(true);
+  expect(isT21F4OriginalTerrainStage(stage)).toBe(true);
+  expect(isT21F4ResearchStage({...stage})).toBe(false);
+  expect(stage.solids).toHaveLength(51);
+  expect(stage.solids.slice(0,25)).toEqual(base.solids);
+  expect(stage.paintSurfaces).toBe(base.paintSurfaces);
+  expect(stage.navigationLinks).toBe(base.navigationLinks);
+  const dt=1/60;
+  const physics=new RapierStagePhysics(dt,stage);
+  const nav=new RecastStageNavigation(stage,new PerformanceStats());
+  const profile=P;
+  const cpu=ORIGINAL_SOURCE_CPU_CAPSULE;
+  physics.step();
+  const project=(x:number,y:number,z:number)=>{
+   const [px,pz]=undertowTemple01ModelXZToProjectXZ([x,z]);
+   return new Vec3(px,y-3,pz);
+  };
+  const support=(p:Vec3,offset:number)=>{
+   const center=new Vec3(p.x,p.y+offset,p.z);
+   return physics.castCharacterFootSupport(center,offset,'HUMAN');
+  };
+  const signedNormals=Object.values(terrain).map(solid=>{
+   const mesh=solid.triangleMesh!;
+   return Array.from({length:mesh.indices.length/3},(_,face)=>{
+    const [a,b,c]=mesh.indices.slice(face*3,face*3+3).map(i=>new Vec3(...mesh.vertices[i]!));
+    const center=a!.clone().add(b!).add(c!).mulScalar(1/3);
+    const normal=new Vec3().cross(b!.sub(a!),c!.sub(a!)).normalize();
+    const origin=center.clone().add(normal.clone().mulScalar(.05));
+    const hit=physics.world.castRayAndGetNormal(new RAPIER.Ray(origin,normal.clone().mulScalar(-1)),
+     .10,true,undefined,undefined,undefined,undefined,
+     collider=>physics.sourceSolidIdForCollider(collider)===solid.id);
+    expect(hit?.timeOfImpact).toBeCloseTo(.05,4);
+    expect(hit?.normal.y).toBeCloseTo(normal.y,4);
+    return normal.y;
+   });
+  });
+  const centerLow=project(-6,3,0);
+  const centerTop=project(0,4.5,0);
+  expect(support(centerLow,profile.humanFootOffsetMeters)?.point.y).toBeCloseTo(0,4);
+  expect(support(centerTop,profile.humanFootOffsetMeters)?.point.y).toBeCloseTo(1.5,4);
+  const centerProjection=nav.auditNavMeshProjection(centerTop);
+  const centerRoute=nav.auditPath(centerLow,centerTop,.30);
+  const ingress=SIDES.map(side=>{
+   const slope=b236InspectOriginalSlopeEntrance(side);
+   return {side,...navWitness(nav,TERMINAL[side],slope.topFoot)};
+  });
+  const basePhysics=new RapierStagePhysics(dt,base);basePhysics.step();
+  const baseNav=new RecastStageNavigation(base,new PerformanceStats());
+  const spawns=planSourceSupportedT21QaSpawnSlots(base,baseNav,basePhysics);
+  baseNav.crowd.destroy();
+  basePhysics.world.free();
+  expect(planT21F2SourceDropRoutes(stage,nav,spawns).routes).toHaveLength(8);
+
+  const createMover=(foot:Vec3,radius:number,halfHeight:number)=>{
+   const offset=radius+halfHeight;
+   const body=physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased()
+    .setTranslation(foot.x,foot.y+offset+.035,foot.z));
+   const collider=physics.world.createCollider(RAPIER.ColliderDesc.capsule(halfHeight,radius),body);
+   const controller=createConfiguredPlayerCharacterController(physics.world);
+   const position=()=>{
+    const p=body.translation();
+    return new Vec3(p.x,p.y-offset,p.z);
+   };
+   let unsupported=0;
+   let upward=0;
+   let vertical=-.5;
+   const blockers=new Set<string>();
+   const advance=(target:Vec3,maxSpeed:number)=>{
+    const p=position();
+    const direction=new Vec3(target.x-p.x,0,target.z-p.z);
+    const distance=direction.length();
+    if(distance>0)direction.mulScalar(Math.min(1,maxSpeed*dt/distance));
+    vertical=Math.max(-GAME_CONFIG.player.maxFallSpeedMetersPerSecond,
+     vertical-GAME_CONFIG.player.gravityMetersPerSecond2*dt);
+    direction.y=vertical*dt;
+    controller.computeColliderMovement(collider,direction,undefined,undefined,
+     other=>physics.shouldCharacterCollide(other,'HUMAN'));
+    const d=controller.computedMovement();
+    if(Math.hypot(d.x-direction.x,d.z-direction.z)>.01){
+     for(let i=0;i<controller.numComputedCollisions();i++){
+      const other=controller.computedCollision(i)?.collider;
+      const id=other&&physics.sourceSolidIdForCollider(other);
+      if(id)blockers.add(id);
+     }
+    }
+    if(controller.computedGrounded()&&vertical<0)vertical=-.5;
+    body.setNextKinematicTranslation({x:p.x+d.x,y:p.y+offset+d.y,z:p.z+d.z});
+    upward=Math.max(upward,p.y+d.y);
+   };
+   return {position,advance,sample(){
+    const foot=position();
+    const hit=support(foot,offset);
+    if(!hit||Math.abs(foot.y-hit.point.y)>.25)unsupported++;
+   },result:(goal:Vec3)=>({
+    endpointError:position().distance(goal),unsupported,maxFootY:upward,blockers:[...blockers],
+    finalFoot:position()
+   }),release(){
+    physics.world.removeCharacterController(controller);
+    physics.world.removeRigidBody(body);
+   }};
+  };
+
+  const human=createMover(centerLow,profile.humanRadiusMeters,profile.humanHalfHeightMeters);
+  const runHuman=(goal:Vec3,ticks:number)=>{
+   for(let i=0;i<ticks;i++){
+    human.advance(goal,GAME_CONFIG.player.humanSpeedMetersPerSecond);
+    physics.step();
+    human.sample();
+   }
+   return human.result(goal);
+  };
+  const approach=runHuman(centerTop,150);
+  const returned=runHuman(centerLow,120);
+  human.release();
+  expect(approach.endpointError).toBeGreaterThan(1);
+  expect(approach.unsupported).toBe(0);
+  expect(returned.endpointError).toBeLessThan(.15);
+  expect(returned.unsupported).toBe(0);
+
+  const movers=Array.from({length:GAME_CONFIG.cpu.cpuPlayers},(_,i)=>{
+   const side=i<3?-1:1;
+   const z=i<3?.2+i*1.25:-4+(i-3)*1.25;
+   const start=project(side*8,3,z);
+   const goal=project(side*5.2,3,z);
+   const agent=nav.addAgent(start);
+   agent.requestMoveTarget(nav.closestPoint(goal));
+   return {agent,goal,mover:createMover(start,cpu.radiusMeters,cpu.halfHeightMeters)};
+  });
+  for(let i=0;i<180;i++){
+   nav.fixedUpdate(dt);
+   for(const {agent,mover} of movers)
+    mover.advance(new Vec3().copy(agent.position()),GAME_CONFIG.cpu.maxSpeedMetersPerSecond);
+   physics.step();
+   for(const {mover} of movers)mover.sample();
+  }
+  const cpuLocal=movers.map(({goal,mover})=>mover.result(goal));
+  const supportedCpuArrivals=cpuLocal.filter(row=>row.endpointError<.30&&row.unsupported===0).length;
+  expect(supportedCpuArrivals).toBe(GAME_CONFIG.cpu.cpuPlayers);
+  console.log('T21_F4_LOCAL_ORIGINAL_TERRAIN',JSON.stringify({
+   signedNormals,centerProjection,centerRoute:{
+    reached:centerRoute.reachedTarget,endSnap:centerRoute.endSnapDistanceMeters,
+    endpointError:centerRoute.endpointErrorMeters
+   },ingress,approach,returned,supportedCpuArrivals,cpuLocal
+  }));
+  nav.crowd.destroy();
+  physics.world.free();
+ }
+);
+

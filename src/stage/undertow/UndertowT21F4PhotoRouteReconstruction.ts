@@ -14,6 +14,8 @@ import {undertowTemple01ModelXZToProjectXZ}
  from './UndertowSpillwayModelXZGeometry';
 import {undertowT21dConnectivityQaStage}
  from './UndertowSpillwayConnectivityQa';
+import {isT21F4OriginalTerrain,type T21F4OriginalTerrain}
+ from './UndertowT21F4OriginalTerrain';
 
 type P=readonly [number,number,number];
 type Side='POSITIVE_Z'|'NEGATIVE_Z';
@@ -189,8 +191,11 @@ export const T21_F4_RESEARCH_STAGE_LABEL='T21 V28 F4 CENTRAL ROUTE RESEARCH ONLY
 // A per-CPU 0.28s tactical decision must not rebuild and JSON-stringify
 // 26 meshes repeatedly. Slow fingerprint audit is retained for unknown objects.
 const F4_APPROVED_RESEARCH_STAGES=new WeakSet<StageDefinition>();
+const F4_ORIGINAL_TERRAIN_STAGES=new WeakSet<StageDefinition>();
 
-export function buildT21F4ResearchStage(base:StageDefinition):StageDefinition{
+export function buildT21F4ResearchStage(
+ base:StageDefinition,terrain?:T21F4OriginalTerrain
+):StageDefinition{
  const frozen=undertowT21dConnectivityQaStage();
  if(base.metadata.id!==frozen.metadata.id||
     base.solids!==frozen.solids||
@@ -198,18 +203,39 @@ export function buildT21F4ResearchStage(base:StageDefinition):StageDefinition{
     base.navigationLinks!==frozen.navigationLinks)
   throw Error('F4_RESEARCH_MUST_START_FROM_IMMUTABLE_SOURCE');
  const candidate=buildT21F4PhotoRouteExperiment();
+ if(terrain&&!isT21F4OriginalTerrain(terrain))
+  throw Error('F4_RESEARCH_REQUIRES_CHECKED_LOCAL_TERRAIN');
+ const replacements=terrain?new Map([
+  [BASE+'center-low-to-step-top-positive_z',terrain['center-floors']],
+  [BASE+'center-low-to-step-top-negative_z',terrain['center-step-sides']],
+  [BASE+'ramp-to-slope01-positive_z',terrain['floorline-positive-z']],
+  [BASE+'ramp-to-slope01-negative_z',terrain['floorline-negative-z']]
+ ]):null;
+ const solids=replacements?candidate.stage.solids.map(s=>replacements.get(s.id)??s):
+  candidate.stage.solids;
  const approved:StageDefinition={...base,
   metadata:{...base.metadata,displayName:T21_F4_RESEARCH_STAGE_LABEL},
-  solids:candidate.stage.solids};
+  solids};
  if(approved.solids.length!==51||
-    !frozen.solids.every((s,i)=>approved.solids[i]===s))
+    !frozen.solids.every((s,i)=>approved.solids[i]===s)||
+    (terrain&&Object.values(terrain).some(s=>!solids.includes(s))))
   throw Error('F4_RESEARCH_STAGE_EXACT_BASE_SOLIDS_REQUIRED');
+ if(terrain){
+  Object.freeze(approved.solids);
+  Object.freeze(approved.metadata);
+  Object.freeze(approved);
+  F4_ORIGINAL_TERRAIN_STAGES.add(approved);
+ }
  F4_APPROVED_RESEARCH_STAGES.add(approved);
  return approved;
 }
 
-/** Allow the 51-solid opt-in only if the exact 25 original solids plus
- * 26 known original/approximate additions are byte-for-byte unchanged.
+export function isT21F4OriginalTerrainStage(stage:StageDefinition):boolean{
+ return F4_ORIGINAL_TERRAIN_STAGES.has(stage);
+}
+
+/** Allow exactly the frozen 25 solids and the reviewed 26 research additions.
+ * The local-original variant must come from the checked builder above.
  */
 export function isT21F4ResearchStage(stage:StageDefinition):boolean{
  const base=undertowT21dConnectivityQaStage();

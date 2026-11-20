@@ -1,4 +1,4 @@
-import {isT21F4ResearchStage,buildT21F4PhotoRouteExperiment,t21F4PlayableCorridorGuide}
+import {isT21F4ResearchStage,isT21F4OriginalTerrainStage,buildT21F4PhotoRouteExperiment,t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3 opt-in playable preview traffic: reuse ONLY the eight genuine source
@@ -614,7 +614,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   private readonly enableOriginalSourceBattleRecovery=false
  ){
   this.routePlan=planT21F2SourceDropRoutes(stage,nav,spawns);
-  if(isT21F4ResearchStage(stage)){
+  if(isT21F4ResearchStage(stage)&&!isT21F4OriginalTerrainStage(stage)){
    const experiment=buildT21F4PhotoRouteExperiment();
    this.f4GuideByTeam.set(Team.A,
     t21F4PlayableCorridorGuide(experiment.repairs,'POSITIVE_Z'));

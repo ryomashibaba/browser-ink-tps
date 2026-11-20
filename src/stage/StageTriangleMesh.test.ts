@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StageSolidDefinition } from './StageDefinition';
 import {
+  selectStageTriangleFaces,
   stageSolidTriangleMeshErrors,
   stageSolidTriangleWorldVertices,
   validateStageTriangleMesh
@@ -16,6 +17,22 @@ const mesh = {
 };
 
 describe('StageTriangleMesh', () => {
+  it('compacts selected faces without changing winding or shared edges', () => {
+    const source = {
+      vertices: [...mesh.vertices, [2, 1, 2], [10, 10, 10]] as const,
+      indices: [0, 1, 2, 2, 1, 3, 1, 4, 3]
+    };
+    expect(selectStageTriangleFaces(source, [1, 0])).toEqual({
+      vertices: [source.vertices[2], source.vertices[1], source.vertices[3], source.vertices[0]],
+      indices: [0, 1, 2, 3, 1, 0]
+    });
+    expect(() => selectStageTriangleFaces(source, [0, 0])).toThrow('selected twice');
+    expect(() => selectStageTriangleFaces(source, [3])).toThrow('out of range');
+    expect(() => selectStageTriangleFaces({
+      vertices: [[1, 0, 0], [1 + 1e-12, 0, 0], [1, 0, 1]], indices: [0, 1, 2]
+    }, [0])).toThrow('zero area');
+  });
+
   it('validates a compact triangle list', () => {
     expect(validateStageTriangleMesh(mesh)).toEqual([]);
     expect(validateStageTriangleMesh({

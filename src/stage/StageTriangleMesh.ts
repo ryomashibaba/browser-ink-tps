@@ -5,6 +5,65 @@ import type {
   StageVector3
 } from './StageDefinition';
 
+/** Face numbers are zero-based offsets into the source triangle list. */
+export function selectStageTriangleFaces(
+  source: StageTriangleMeshGeometry,
+  faces: readonly number[]
+): StageTriangleMeshGeometry {
+  if (source.indices.length % 3 !== 0 || faces.length === 0) {
+    throw new Error('Terrain selection requires a triangle list and at least one face');
+  }
+
+  const vertices: StageVector3[] = [];
+  const indices: number[] = [];
+  const vertexMap = new Map<number, number>();
+  const seenFaces = new Set<number>();
+  const ab = new Vec3();
+  const ac = new Vec3();
+
+  for (const face of faces) {
+    const offset = face * 3;
+    if (!Number.isSafeInteger(face) || offset < 0 || offset >= source.indices.length) {
+      throw new Error(`Terrain face ${face} is out of range`);
+    }
+    if (seenFaces.has(face)) throw new Error(`Terrain face ${face} is selected twice`);
+    seenFaces.add(face);
+
+    for (let corner = 0; corner < 3; corner++) {
+      const index = source.indices[offset + corner]!;
+      const vertex = source.vertices[index];
+      if (!Number.isInteger(index) || !vertex) {
+        throw new Error(`Terrain face ${face} has an invalid vertex index`);
+      }
+      let compactIndex = vertexMap.get(index);
+      if (compactIndex === undefined) {
+        // PlayCanvas, Rapier and Recast all upload positions as float32.
+        const position: StageVector3 = [
+          Math.fround(vertex[0]), Math.fround(vertex[1]), Math.fround(vertex[2])
+        ];
+        if (position.some((coordinate) => !Number.isFinite(coordinate))) {
+          throw new Error(`Terrain face ${face} has a non-finite vertex`);
+        }
+        compactIndex = vertices.length;
+        vertices.push(position);
+        vertexMap.set(index, compactIndex);
+      }
+      indices.push(compactIndex);
+    }
+
+    const a = vertices[indices[indices.length - 3]!]!;
+    const b = vertices[indices[indices.length - 2]!]!;
+    const c = vertices[indices[indices.length - 1]!]!;
+    ab.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    ac.set(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
+    if (ab.cross(ab, ac).lengthSq() === 0) {
+      throw new Error(`Terrain face ${face} has zero area at float32 precision`);
+    }
+  }
+
+  return { vertices, indices };
+}
+
 export function validateStageTriangleMesh(
   mesh: StageTriangleMeshGeometry
 ): readonly string[] {

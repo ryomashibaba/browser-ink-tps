@@ -134,6 +134,8 @@ import {undertowT21dConnectivityQaStage}
 import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,
  t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
+import {parseT21F4OriginalTerrain,type T21F4OriginalTerrain}
+ from '../stage/undertow/UndertowT21F4OriginalTerrain';
 import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
 import {UndertowPhase14QSharedActorCollision}
@@ -282,6 +284,20 @@ export class UndertowF3PlayablePreviewApp{
   if(qaParams.get('t21Play')!=='preview'||
      frozen.activationReady!==false)
    throw Error('T21_F3_EXPLICIT_NONPRODUCTION_PREVIEW_ONLY');
+  let terrain:T21F4OriginalTerrain|undefined;
+  if(qaParams.has('t21F4Terrain')){
+   if(qaParams.getAll('t21F4Terrain').join()!=='original'||
+      qaParams.getAll('t21F4Central').join()!=='research'||
+      qaParams.has('production')||qaParams.has('scoreable')||
+      !['localhost','127.0.0.1','[::1]'].includes(location.hostname))
+    throw Error('F4_ORIGINAL_TERRAIN_LOCAL_RESEARCH_ONLY');
+   const response=await fetch('/__t21-f4-original-terrain',{
+    cache:'no-store',mode:'same-origin',redirect:'error'
+   });
+   if(!response.ok||!response.headers.get('Content-Type')?.startsWith('application/json'))
+    throw Error('F4_ORIGINAL_TERRAIN_LOCAL_SEED_REQUIRED');
+   terrain=parseT21F4OriginalTerrain(await response.json());
+  }
   await Promise.all([initializeRapier(),initializeRecastNavigation()]);
   const device=await createGraphicsDevice(canvas,{
    deviceTypes:[DEVICETYPE_WEBGL2],antialias:true,depth:true,
@@ -297,7 +313,7 @@ export class UndertowF3PlayablePreviewApp{
   app.init(options);
   app.setCanvasFillMode(FILLMODE_FILL_WINDOW);
   app.setCanvasResolution(RESOLUTION_AUTO);
-  return new UndertowF3PlayablePreviewApp(app,canvas,ui);
+  return new UndertowF3PlayablePreviewApp(app,canvas,ui,terrain);
  }
 
  private readonly stats=new PerformanceStats();
@@ -308,9 +324,7 @@ export class UndertowF3PlayablePreviewApp{
   .get('t21F4Central')==='research';
  /** F4-only read-only photo triangle centroids for genuine human WASD review.
   * These steering points are not certified human collision or navigation. */
- private readonly f4HumanResearchGuide=this.f4ResearchMode?
-  t21F4PlayableCorridorGuide(
-   buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
+ private readonly f4HumanResearchGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
@@ -643,8 +657,11 @@ export class UndertowF3PlayablePreviewApp{
  private constructor(
   private readonly app:AppBase,
   private readonly canvas:HTMLCanvasElement,
-  ui:HTMLElement
+  ui:HTMLElement,
+  terrain?:T21F4OriginalTerrain
  ){
+  this.f4HumanResearchGuide=this.f4ResearchMode&&!terrain?
+   t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
   if(this.rawStage.solids!==frozen.solids||
      this.rawStage.paintSurfaces!==frozen.paintSurfaces||
      this.rawStage.navigationLinks!==frozen.navigationLinks||
@@ -668,8 +685,9 @@ export class UndertowF3PlayablePreviewApp{
   if(this.b27KineticEnabled&&cameraEntity.camera?.fov!==B27_SOURCE_BASE_FOV_DEGREES)
    throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
   const physicalStage=this.f4ResearchMode
-   ?buildT21F4ResearchStage(this.rawStage):this.rawStage;
-  this.canvas.dataset.t21F4CentralResearch=this.f4ResearchMode
+   ?buildT21F4ResearchStage(this.rawStage,terrain):this.rawStage;
+  this.canvas.dataset.t21F4CentralResearch=terrain
+   ?'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN':this.f4ResearchMode
    ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
   // F3E optical survey MUST retain its original frozen 25-solid authority;
   // the real F4 Recast/Rapier simulation already uses physicalStage.
@@ -722,7 +740,7 @@ export class UndertowF3PlayablePreviewApp{
    this.rawStage,sourceAuditNav,sourceAuditPhysics);
   const originalStage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
   const stage=this.f4ResearchMode
-   ?buildT21F4ResearchStage(originalStage):originalStage;
+   ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
   const surfaces=defineTestSurfaces(this.ink,stage);
   this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
@@ -8056,7 +8074,7 @@ export class UndertowF3PlayablePreviewApp{
     this.stats.humanCpuDirectHits:null,
    f4RealPhysicalHitFeedback:this.f4ResearchMode?
     this.projectiles.f4RealPhysicalHitFeedbackSnapshot():null,
-   f4HumanGuideAuthority:this.f4ResearchMode?
+   f4HumanGuideAuthority:this.f4HumanResearchGuide?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,
    p1RealLocalRampPlayerCue:this.p1LiveLocalRampCue,
