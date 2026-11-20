@@ -1448,6 +1448,8 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  const outRow={status:'HOLD_F4_REAL_COMBAT_NOT_STARTED',
   actualMouse:true,actualHumanWeapon:true,requestedTicks:96,
   realAimAttempts:[],realAimConfirmedCpu:null,realFireTrace:[],
+  initialEngagementTarget:null,initialAimNativeStartTick:null,
+  initialAimNativeEndTick:null,
   postReleaseProjectileFlightTrace:[],confirmedHumanCpuDirectHits:0,
   writesToCpuStageClockOrScore:0,
   nativeStartTick:null,nativeEndTick:null,
@@ -1572,22 +1574,32 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
    crosshairDistance:crosshair?.distanceMeters??null,
    tick:afterAim.tick,status:'REAL_CDP_MOUSE_AIM_OBSERVED'};
  };
- let visibleId=null;
- // The real B-side capsule can be lower than the human and behind
- // source cover. Check a small bounded set of genuine CPU locations and
- // capsule heights, not an invisible hit cone or synthetic damage event.
- for(const c of candidates){
-  for(const height of [.68,.92,.44]){
-   const attempt=await pointAt(c.id,height);
+ // Actual 4v4 firefights last seconds, not a laboratory pause. The
+ // previous F4 pilot spent 12*6=72 native ticks scanning ALL opponents,
+ // then fired while facing the last, far-away B4 despite B1 being
+ // 13m away and closing. That prevents even a skilled shooter from
+ // hitting. Pick the nearest ACTUAL live opponent at the first tick,
+ // aim using at most two ordinary mouse movements, and START FIRING.
+ // Re-aim continuously during the actual human's physical combat,
+ // never using aim-assist, CPU pose writes or fake projectile hit.
+ const firstTarget=candidates[0]??null;
+ let visibleId=firstTarget?.id??null;
+ outRow.initialEngagementTarget=visibleId;
+ outRow.aimTargetSelection='NEAREST_LIVE_CPU_REAL_MOUSE_NO_AUTOAIM';
+ outRow.initialAimNativeStartTick=(await snap()).tick;
+ if(firstTarget){
+  for(const height of [.68,.44]){
+   const attempt=await pointAt(firstTarget.id,height);
    outRow.realAimAttempts.push(attempt);
    if(attempt.crosshairCpu?.startsWith('B')){
     visibleId=attempt.crosshairCpu;
     break;
    }
   }
-  if(visibleId)break;
  }
- outRow.realAimConfirmedCpu=visibleId;
+ outRow.initialAimNativeEndTick=(await snap()).tick;
+ outRow.realAimConfirmedCpu=outRow.realAimAttempts
+  .find(a=>a.crosshairCpu?.startsWith('B'))?.crosshairCpu??null;
  outRow.actualMouseYawAfter=(await snap()).cameraSourcePractice?.yawDegrees??null;
  outRow.actualMousePitchAfter=(await snap()).cameraSourcePractice?.pitchDegrees??null;
  if(!visibleId)outRow.aimHold='NO_EXACT_VISIBLE_REAL_CPU_CAPSULE_ON_CENTER_RAY';
@@ -1619,8 +1631,18 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
     break;
    // Real-time manual-style mouse tracking uses only the observed live
    // actor position, never modifies aim inside the gameplay systems.
-   const alive=life.find(c=>c.id===visibleId&&c.life==='ACTIVE');
+   const currentHumanFoot=last.f4HumanPhysicalFoot;
+   const selected=life.find(c=>c.id===visibleId&&c.life==='ACTIVE'&&
+    Array.isArray(c.foot)&&c.foot.length===3);
+   const alive=selected??(Array.isArray(currentHumanFoot)?
+    life.filter(c=>c.life==='ACTIVE'&&
+     Array.isArray(c.foot)&&c.foot.length===3)
+     .sort((a,b)=>Math.hypot(
+      a.foot[0]-currentHumanFoot[0],a.foot[2]-currentHumanFoot[2])-
+      Math.hypot(
+       b.foot[0]-currentHumanFoot[0],b.foot[2]-currentHumanFoot[2]))[0]:null);
    if(alive){
+    visibleId=alive.id;
     const sample={id:alive.id,foot:[...alive.foot],tick:last.tick};
     let velocity=null;
     if(previousLiveEnemy?.id===sample.id&&
