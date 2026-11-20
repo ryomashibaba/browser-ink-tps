@@ -1,4 +1,5 @@
-import {isT21F4ResearchStage,isT21F4OriginalTerrainStage,buildT21F4PhotoRouteExperiment,t21F4PlayableCorridorGuide}
+import {isT21F4ResearchStage,isT21F4OriginalTerrainStage,buildT21F4PhotoRouteExperiment,
+ f4OriginalCorridorEndpoints,t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3 opt-in playable preview traffic: reuse ONLY the eight genuine source
@@ -356,6 +357,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  readonly routePlan:T21F2RoutePlan;
  private readonly egress=new Map<string,StageVector3>();
  private readonly f4GuideByTeam=new Map<Team.A|Team.B,readonly StageVector3[]>();
+ private readonly f4OriginalPatrol=new Map<string,{route:readonly [StageVector3,StageVector3];target:0|1}>();
  private readonly f4GuideProgress=new Map<string,number>();
  /** Actual living HUMAN observation for the current F4 native step ONLY. */
  private f4LiveHuman:Readonly<{
@@ -1557,6 +1559,38 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     new Vec3(from.x,from.y,from.z),
     new Vec3(to.x,to.y,to.z),'ink-projectile'),null,range).target!==null;
  }
+ private chooseF4OriginalCorridorGoal(id:string,foot:Vec3,out:Vec3):boolean{
+  const corridors=f4OriginalCorridorEndpoints(this.stage);
+  if(!corridors.length||!this.physics||!this.isLiveRejoinedSourceCpu(id))return false;
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const supportAt=(point:Vec3)=>this.physics!.castCharacterFootSupport(
+   new Vec3(point.x,point.y+offset,point.z),offset,'HUMAN');
+  const current=supportAt(foot);
+  if(!current||Math.abs(current.point.y-foot.y)>.18)return false;
+  let patrol=this.f4OriginalPatrol.get(id);
+  if(!patrol){
+   for(const route of corridors){
+    const at=route.findIndex(point=>foot.distance(new Vec3(...point))<1.25);
+    if(at===-1)continue;
+    patrol={route,target:at===0?1:0};
+    break;
+   }
+  }
+  if(!patrol)return false;
+  const target=foot.distance(new Vec3(...patrol.route[patrol.target]))<.55?
+   (patrol.target===0?1:0):patrol.target;
+  const goal=new Vec3(...patrol.route[target]);
+  const path=this.nav.auditPath(foot,goal,.20);
+  const support=supportAt(goal);
+  if(!path.reachedTarget||path.pointCount<2||path.startSnapDistanceMeters>.30||
+     path.endSnapDistanceMeters>.30||!support||
+     Math.abs(support.point.y-goal.y)>.08)return false;
+  this.f4OriginalPatrol.set(id,{route:patrol.route,target});
+  out.copy(goal);
+  this.realGoalRequests++;
+  return true;
+ }
+
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
@@ -1596,6 +1630,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b442LastApprovedFront.delete(id);
    this.heldRequests++;return false;
   }
+  if(this.chooseF4OriginalCorridorGoal(id,realFoot,out))return true;
   // Opt-in F4 experiment: submit short native Crowd goals along the two
   // pre-existing center ramps, never a forced Actor pose or NavLink.
   // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
@@ -3729,6 +3764,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!bot||bot.lifeState!=='SPLATTED')
    throw Error('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
   this.physicallyRejoined.delete(id);
+  this.f4OriginalPatrol?.delete(id);
   this.f4GuideProgress?.delete(id);
   this.f4GuideLastAudit?.delete(id);
   this.physicallyFalling.delete(id);

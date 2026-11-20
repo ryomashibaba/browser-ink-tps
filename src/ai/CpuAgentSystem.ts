@@ -649,7 +649,7 @@ export class CpuAgentSystem {
     this.b181CachedCombat.clear();
   }
   /** Enable normal paid CPU weapons to SELECT only real visible opponents in
-   * the explicitly isolated F4 51-solid lab. Reuse the pure B181 candidate
+   * the explicitly isolated F4 lab. Reuse the pure B181 candidate
    * selector, not its 25-solid permission, moving-aim or counterfire flags.
    * Every actual bullet, hit and movement is still handled by Rapier/KCC. */
   public enableF4ResearchCpuCombatSight(
@@ -659,7 +659,6 @@ export class CpuAgentSystem {
        !this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
        !this.phase14qGroundCollision||!this.phase14eFirstDrop||
        this.b181OriginalCombatStageRay!==null||
-       this.stage.solids.length!==51||
        this.stage.paintSurfaces.length!==17||
        this.stage.navigationLinks?.length!==26||
        this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))

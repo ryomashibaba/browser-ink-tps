@@ -14,7 +14,7 @@ import {undertowTemple01ModelXZToProjectXZ}
  from './UndertowSpillwayModelXZGeometry';
 import {undertowT21dConnectivityQaStage}
  from './UndertowSpillwayConnectivityQa';
-import {isT21F4OriginalTerrain,type T21F4OriginalTerrain}
+import {isT21F4OriginalTerrain,t21F4OriginalCorridorEndpoints,type T21F4OriginalTerrain}
  from './UndertowT21F4OriginalTerrain';
 
 type P=readonly [number,number,number];
@@ -192,6 +192,23 @@ export const T21_F4_RESEARCH_STAGE_LABEL='T21 V28 F4 CENTRAL ROUTE RESEARCH ONLY
 // 26 meshes repeatedly. Slow fingerprint audit is retained for unknown objects.
 const F4_APPROVED_RESEARCH_STAGES=new WeakSet<StageDefinition>();
 const F4_ORIGINAL_TERRAIN_STAGES=new WeakSet<StageDefinition>();
+const F4_ORIGINAL_CORRIDORS=new WeakMap<StageDefinition,ReturnType<typeof t21F4OriginalCorridorEndpoints>>();
+const F4_REPLACED_SOURCE_SOLIDS=new Set([
+ 'UndertowT21D:center-low-team-a','UndertowT21D:center-low-team-b',
+ 'UndertowT21D:center-origin-step-top-face:0',
+ ...['positive-z','negative-z'].flatMap(side=>[
+  'UndertowT21D:underpass-route-slope00-outer-'+side,
+  'UndertowT21D:underpass-route-floor-concrete02-'+side
+ ]),
+ ...['positive_z','negative_z'].flatMap(side=>[
+  BASE+'concrete01-to-slope00-'+side,BASE+'slope00-to-concrete02-'+side,
+  BASE+'concrete02-to-inner-slope00-'+side,BASE+'inner-slope00-to-underpass-'+side
+ ])
+]);
+
+export function f4OriginalCorridorEndpoints(stage:StageDefinition){
+ return F4_ORIGINAL_CORRIDORS.get(stage)??[];
+}
 
 export function buildT21F4ResearchStage(
  base:StageDefinition,terrain?:T21F4OriginalTerrain
@@ -211,20 +228,24 @@ export function buildT21F4ResearchStage(
   [BASE+'ramp-to-slope01-positive_z',terrain['floorline-positive-z']],
   [BASE+'ramp-to-slope01-negative_z',terrain['floorline-negative-z']]
  ]):null;
- const solids=replacements?candidate.stage.solids.map(s=>replacements.get(s.id)??s):
+ let solids=replacements?candidate.stage.solids.map(s=>replacements.get(s.id)??s):
   candidate.stage.solids;
+ const corridorFloor=terrain?.['corridor-floors'];
+ const corridorSides=terrain?.['corridor-sides'];
+ if(corridorFloor&&corridorSides){
+  solids=[...solids.filter(s=>!F4_REPLACED_SOURCE_SOLIDS.has(s.id)),corridorFloor,corridorSides];
+ }
  const approved:StageDefinition={...base,
   metadata:{...base.metadata,displayName:T21_F4_RESEARCH_STAGE_LABEL},
   solids};
- if(approved.solids.length!==51||
-    !frozen.solids.every((s,i)=>approved.solids[i]===s)||
-    (terrain&&Object.values(terrain).some(s=>!solids.includes(s))))
+ if(terrain&&Object.values(terrain).some(s=>!solids.includes(s)))
   throw Error('F4_RESEARCH_STAGE_EXACT_BASE_SOLIDS_REQUIRED');
  if(terrain){
   Object.freeze(approved.solids);
   Object.freeze(approved.metadata);
   Object.freeze(approved);
   F4_ORIGINAL_TERRAIN_STAGES.add(approved);
+  F4_ORIGINAL_CORRIDORS.set(approved,t21F4OriginalCorridorEndpoints(terrain));
  }
  F4_APPROVED_RESEARCH_STAGES.add(approved);
  return approved;
@@ -241,11 +262,10 @@ export function isT21F4ResearchStage(stage:StageDefinition):boolean{
  const base=undertowT21dConnectivityQaStage();
  if(stage.metadata.id!==base.metadata.id||
     stage.metadata.displayName!==T21_F4_RESEARCH_STAGE_LABEL||
-    stage.solids.length!==51||
     stage.paintSurfaces!==base.paintSurfaces||
-    stage.navigationLinks!==base.navigationLinks||
-    !base.solids.every((s,i)=>stage.solids[i]===s))return false;
+    stage.navigationLinks!==base.navigationLinks)return false;
  if(F4_APPROVED_RESEARCH_STAGES.has(stage))return true;
+ if(stage.solids.length!==51||!base.solids.every((s,i)=>stage.solids[i]===s))return false;
  const expected=buildT21F4PhotoRouteExperiment().stage.solids;
  return stage.solids.every((s,i)=>i<25||
   JSON.stringify(s)===JSON.stringify(expected[i]));

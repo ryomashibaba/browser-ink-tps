@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-// Digest of the extractor's 20-face JSON. No OBJ or derived asset is bundled.
-const f4LocalTerrainDigest = '1be11fc133cabe79c65cf3ff21fd7b4a94ed6170665d930ecc1986e41c6d22bd';
+// Only deterministic extractor output is served, and only over same-origin loopback.
+const f4LocalTerrainDigests = new Set([
+  '1be11fc133cabe79c65cf3ff21fd7b4a94ed6170665d930ecc1986e41c6d22bd',
+  '0dc7619966269fd7971684d3e41460bf589e6db084c12d7dc025379500a2cd51'
+]);
 
 export default defineConfig({
   plugins: [{
@@ -27,7 +30,7 @@ export default defineConfig({
           const file = await stat(seedPath);
           if (!file.isFile() || file.size > 16384) throw Error('Invalid local terrain seed');
           const seed = await readFile(seedPath);
-          if (createHash('sha256').update(seed).digest('hex') !== f4LocalTerrainDigest)
+          if (!f4LocalTerrainDigests.has(createHash('sha256').update(seed).digest('hex')))
             throw Error('Invalid local terrain seed');
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.setHeader('Cache-Control', 'no-store');

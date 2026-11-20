@@ -131,7 +131,7 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,
+import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,f4OriginalCorridorEndpoints,
  t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {parseT21F4OriginalTerrain,type T21F4OriginalTerrain}
@@ -322,9 +322,10 @@ export class UndertowF3PlayablePreviewApp{
  private readonly rawStage=undertowT21dConnectivityQaStage();
  private readonly f4ResearchMode=new URL(location.href).searchParams
   .get('t21F4Central')==='research';
- /** F4-only read-only photo triangle centroids for genuine human WASD review.
+ /** F4-only read-only triangle centroids for genuine human WASD review.
   * These steering points are not certified human collision or navigation. */
  private readonly f4HumanResearchGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
+ private readonly f4OriginalCorridorsPresent:boolean;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
@@ -660,8 +661,6 @@ export class UndertowF3PlayablePreviewApp{
   ui:HTMLElement,
   terrain?:T21F4OriginalTerrain
  ){
-  this.f4HumanResearchGuide=this.f4ResearchMode&&!terrain?
-   t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
   if(this.rawStage.solids!==frozen.solids||
      this.rawStage.paintSurfaces!==frozen.paintSurfaces||
      this.rawStage.navigationLinks!==frozen.navigationLinks||
@@ -686,8 +685,14 @@ export class UndertowF3PlayablePreviewApp{
    throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
   const physicalStage=this.f4ResearchMode
    ?buildT21F4ResearchStage(this.rawStage,terrain):this.rawStage;
+  const originalCorridors=f4OriginalCorridorEndpoints(physicalStage);
+  this.f4OriginalCorridorsPresent=originalCorridors.length>0;
+  this.f4HumanResearchGuide=terrain?
+   (originalCorridors.length?originalCorridors.flat():null):this.f4ResearchMode?
+   t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
   this.canvas.dataset.t21F4CentralResearch=terrain
-   ?'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN':this.f4ResearchMode
+   ?originalCorridors.length?'UNOFFICIAL_LOCAL_ORIGINAL_CORRIDORS':'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN'
+   :this.f4ResearchMode
    ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
   // F3E optical survey MUST retain its original frozen 25-solid authority;
   // the real F4 Recast/Rapier simulation already uses physicalStage.
@@ -741,7 +746,7 @@ export class UndertowF3PlayablePreviewApp{
   const originalStage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
   const stage=this.f4ResearchMode
    ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
-  const surfaces=defineTestSurfaces(this.ink,stage);
+  const surfaces=defineTestSurfaces(this.ink,originalStage);
   this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
    throw Error('T21_F3_UNAUTHORIZED_TURF_SCORING');
@@ -756,7 +761,12 @@ export class UndertowF3PlayablePreviewApp{
   // production renderer and every SOURCE QA baseline retain old shading.
   const realSourceWetInkLook=this.b203FullRound&&
    new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
-  buildTestStage(app,stage,surfaces,this.atlas,realSourceWetInkLook);
+  // The atlas and paint authority retain all SOURCE registrations. Only
+  // draw a registered paint plane when its corresponding floor is present.
+  const visibleSurfaces=originalCorridors.length?surfaces.filter(surface=>
+   !stage.paintSurfaces.some(s=>s.id===surface.id&&s.backingSolidId&&
+    !stage.solids.some(solid=>solid.id===s.backingSolidId))):surfaces;
+  buildTestStage(app,stage,visibleSurfaces,this.atlas,realSourceWetInkLook);
   this.canvas.dataset.t21SourceWetInkLook=
    realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
   if(this.b203FullRound&&
@@ -1051,7 +1061,7 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
-  // The F4 lab's 51-solid Rapier world also owns CPU optical cover.
+  // The F4 lab's Rapier world also owns CPU optical cover.
   // Original B181/B212/B213 remain strictly 25-solid SOURCE only.
   if(this.f4ResearchMode)this.cpu.enableF4ResearchCpuCombatSight(
     (from,to)=>!!this.physics.castStageSegment(
@@ -1059,7 +1069,7 @@ export class UndertowF3PlayablePreviewApp{
       new Vec3(to.x,to.y,to.z),'ink-projectile'));
   // SOURCE combat uses actual CPU hit volumes on the unmodified center ray.
   // Projectiles still independently resolve muzzle-side cover, flight and HP.
-  // F4 research uses 51 real collision solids and must NOT opt into
+  // F4 research uses its own collision solids and must NOT opt into
   // B181/B212/B213's frozen-25-only SOURCE combat authority. Read-only
   // center-ray selection may still inspect the live, real Rapier CPU
   // capsules. It changes no HP, projectile, CPU AI, stage or scoring.
@@ -1277,18 +1287,12 @@ export class UndertowF3PlayablePreviewApp{
    // the human SUB real CPU-body contact. No T20 or QA mode drift.
    this.humanSub.enableNativeSourceHumanSubBodyContact();
   }else if(this.f4ResearchMode&&this.b203FullRound){
-   // F4 is an UNOFFICIAL 51-solid research stage. Reuse the real HUMAN
+   // F4 is an unofficial research stage. Reuse the real HUMAN
    // Rapier capsule/squid ball for enemy MAIN projectile contact, never
    // grant frozen 25-solid B181/B212/B351 combat authority or SUB/score.
    this.projectiles.enableNativeSourceHumanPhysicalContact(
     ()=>this.player.currentMode);
-   this.projectiles.enableF4RealPhysicalHitFeedback({
-    research:true,physicalSolids:stage.solids.length,
-    originalSolids:this.rawStage.solids.length,
-    paint:stage.paintSurfaces.length,links:stage.navigationLinks?.length??0,
-    scoreable:stage.paintSurfaces.filter(s=>
-     (s.flags&SurfaceFlags.Scoreable)!==0).length
-   });
+   this.projectiles.enableF4RealPhysicalHitFeedback(stage);
   }
   ui.innerHTML='';
   this.panel=document.createElement('section');
@@ -7924,12 +7928,12 @@ export class UndertowF3PlayablePreviewApp{
   const body=this.player.getPosition(new Vec3());
   const off=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const foot=new Vec3(body.x,body.y-off,body.z);
-  const photo=new Vec3(...guide[index]!);
-  const projected=this.nav.auditNavMeshProjection(photo);
+  const waypoint=new Vec3(...guide[index]!);
+  const projected=this.nav.auditNavMeshProjection(waypoint);
   const end=projected.nearestPoint;
   if(!projected.success||!end||projected.distanceMeters===null||
      projected.distanceMeters>.30)
-   return {admitted:false,reason:'PHOTO_GOAL_OFF_NAV',
+   return {admitted:false,reason:this.f4OriginalCorridorsPresent?'F4_GOAL_OFF_NAV':'PHOTO_GOAL_OFF_NAV',
     index,projectionMeters:projected.distanceMeters};
   const goal=new Vec3(end.x,end.y,end.z);
   const native=this.nav.auditPath(foot,goal,.30);
@@ -8074,8 +8078,8 @@ export class UndertowF3PlayablePreviewApp{
     this.stats.humanCpuDirectHits:null,
    f4RealPhysicalHitFeedback:this.f4ResearchMode?
     this.projectiles.f4RealPhysicalHitFeedbackSnapshot():null,
-   f4HumanGuideAuthority:this.f4HumanResearchGuide?
-    'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
+   f4HumanGuideAuthority:this.f4OriginalCorridorsPresent?'LOCAL_ORIGINAL_CORRIDOR_WAYPOINTS':
+    this.f4HumanResearchGuide?'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,
    p1RealLocalRampPlayerCue:this.p1LiveLocalRampCue,
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),

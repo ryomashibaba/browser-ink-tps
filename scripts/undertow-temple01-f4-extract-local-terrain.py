@@ -25,6 +25,32 @@ FACE_GROUPS = {
     "floorline-negative-z": {
         "Fld_Temple01_group21600_1__FloorLine00": (37112, 37113),
     },
+    # The two FloorSlope00 approaches around the central step. FloorLine
+    # faces here span the physical seams between the concrete and slopes.
+    "corridor-floors": {
+        "Fld_Temple01_group21600_1__FloorLine00": (
+            35982, 35983, 35996, 35997, 36024, 36025, 36030, 36031, 36036, 36037, 36052, 36053,
+            36248, 36249, 36268, 36269, 36286, 36287, 36288, 36289,
+            36483, 36494, 36495, 36514, 36515, 36531, 36532, 36533, 36544, 36545,
+        ),
+        "Fld_Temple01_pCube20989_1__FloorConcrete02": (
+            69239, 69240, 69241, 69243, 69244, 69245,
+        ),
+        "Fld_Temple01_pCube21000_1__FloorSlope00": (
+            69286, 69287, 69292, 69293, 69294, 69295,
+            69298, 69299, 69304, 69305, 69306, 69307,
+        ),
+    },
+    "corridor-sides": {
+        "FldObj_Temple01_PntSet_mesh02_low159_1__PillarBase01": (
+            6340, 6341, 6342, 6356, 6357, 6358, 6396, 6418, 6421, 6443, 6524, 6530, 6531, 6537,
+        ),
+        "Fld_Temple01_GrassSet00_1__GrassFloor00": (13264, 13332, 13333, 13805, 13850, 13851),
+        "Fld_Temple01_group21600_1__FloorLine00": (
+            36246, 36247, 36278, 36279, 36472, 36490, 36491,
+            36538, 36540, 36541, 36542, 36543, 36546, 36547,
+        ),
+    },
 }
 
 

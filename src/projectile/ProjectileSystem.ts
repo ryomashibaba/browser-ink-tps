@@ -19,6 +19,8 @@ import {sourceRegisteredPaintHitActive,
  sourceRegisteredPaintCellActive,sourceOriginalBlastPaintLineClear,
  type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import type {StageDefinition} from '../stage/StageDefinition';
+import {isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {
   DEFAULT_WEAPON_ID,
   type WeaponId,
@@ -337,18 +339,14 @@ export class ProjectileSystem {
       productionAuthorized:false as const};
   }
 
-  /** Nonproduction F4 only. The extended 51-solid physical stage is
+  /** Nonproduction F4 only. The isolated physical stage is
    * distinct from, and is NOT admitted by, B351's frozen-source gate.
    * Reuse existing physical HP-hit FX after actual human projectile
    * damage; never select a target, write HP, award turf or alter contact.
    */
-  public enableF4RealPhysicalHitFeedback(stage:Readonly<{
-    physicalSolids:number;originalSolids:number;paint:number;
-    links:number;scoreable:number;research:boolean;
-  }>):void{
-    if(stage.research!==true||stage.physicalSolids!==51||
-       stage.originalSolids!==25||stage.paint!==17||
-       stage.links!==26||stage.scoreable!==0||
+  public enableF4RealPhysicalHitFeedback(stage:StageDefinition):void{
+    if(!isT21F4ResearchStage(stage)||
+       stage.paintSurfaces.some(s=>(s.flags&SurfaceFlags.Scoreable)!==0)||
        this.surfaces.length!==17||
        this.nativeSourceHumanPhysicalMode===null||
        this.b351CueOn)
@@ -360,7 +358,7 @@ export class ProjectileSystem {
       confirmedPhysicalHumanHitCues:this.f4ConfirmedDamageCues,
       actualHpReductionOnly:true as const,
       syntheticDamage:0 as const,scoreablePromotions:0 as const,
-      stage:'UNOFFICIAL_F4_51_SOLIDS' as const,
+      stage:'UNOFFICIAL_F4_RESEARCH' as const,
       productionAuthorized:false as const};
   }
 
