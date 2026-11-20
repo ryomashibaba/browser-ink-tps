@@ -157,13 +157,13 @@ export type B250SourceView={
   authority:'25/17/26/0';productionAuthorized:false};
 };
 export function installB250SourceView(app:AppBase,camera:Entity,
- stage:StageDefinition):B250SourceView{
+ stage:StageDefinition,renderStage:StageDefinition=stage):B250SourceView{
  if(stage.solids.length!==25||stage.paintSurfaces.length!==17||
     stage.navigationLinks?.length!==26)
   throw Error('B250_IMMUTABLE_SOURCE_REQUIRED');
  const root=app.root.findByName('StageRoot');
  if(!root||!camera.camera)throw Error('B250_REGISTERED_RENDER_ROOT_MISSING');
- const visible=stage.solids.filter(s=>s.render);
+ const visible=renderStage.solids.filter(s=>s.render);
  const elevations=visible.map(b250SolidVisualElevationMeters);
  const min=Math.min(...elevations);
  const max=Math.max(...elevations);
@@ -182,7 +182,8 @@ export function installB250SourceView(app:AppBase,camera:Entity,
  // Only original paint backings with registered collision are eligible.
  const sourcePaintMeshes:{mesh:MeshInstance;originalRamp:boolean}[]=[];
  for(const paint of stage.paintSurfaces){
-  const backing=stage.solids.find(s=>s.id===paint.backingSolidId);
+  // Local F4 can replace a SOURCE backing and omit its paint overlay.
+  const backing=renderStage.solids.find(s=>s.id===paint.backingSolidId);
   if(!backing||backing.collisionEnabled===false)continue;
   const paintEntity=root.findByName('PaintSurface:'+paint.id) as Entity|null;
   const meshes=paintEntity?.render?.meshInstances;
