@@ -1252,6 +1252,19 @@ export class UndertowF3PlayablePreviewApp{
    // Only the already-authorized 25/17/26/0 full SOURCE game can give
    // the human SUB real CPU-body contact. No T20 or QA mode drift.
    this.humanSub.enableNativeSourceHumanSubBodyContact();
+  }else if(this.f4ResearchMode&&this.b203FullRound){
+   // F4 is an UNOFFICIAL 51-solid research stage. Reuse the real HUMAN
+   // Rapier capsule/squid ball for enemy MAIN projectile contact, never
+   // grant frozen 25-solid B181/B212/B351 combat authority or SUB/score.
+   this.projectiles.enableNativeSourceHumanPhysicalContact(
+    ()=>this.player.currentMode);
+   this.projectiles.enableF4RealPhysicalHitFeedback({
+    research:true,physicalSolids:stage.solids.length,
+    originalSolids:this.rawStage.solids.length,
+    paint:stage.paintSurfaces.length,links:stage.navigationLinks?.length??0,
+    scoreable:stage.paintSurfaces.filter(s=>
+     (s.flags&SurfaceFlags.Scoreable)!==0).length
+   });
   }
   ui.innerHTML='';
   this.panel=document.createElement('section');
@@ -8035,6 +8048,8 @@ export class UndertowF3PlayablePreviewApp{
    // this statistic. An exact camera crosshair or fired shot does NOT.
    f4HumanConfirmedCpuHits:this.f4ResearchMode?
     this.stats.humanCpuDirectHits:null,
+   f4RealPhysicalHitFeedback:this.f4ResearchMode?
+    this.projectiles.f4RealPhysicalHitFeedbackSnapshot():null,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,

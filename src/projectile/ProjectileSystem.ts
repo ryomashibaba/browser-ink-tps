@@ -118,6 +118,10 @@ export class ProjectileSystem {
   private b348LastPitch=0;
   private b351CueOn=false;
   private b351TrueDamageCues=0;
+  // F4 nonproduction: real-source physical HUMAN capsule and hit FX
+  // remain separate from the strict frozen 25-solid B351 authority.
+  private f4PhysicalHitCueOn=false;
+  private f4ConfirmedDamageCues=0;
   private b367Enabled=false;
   private b367SelectedRealLoadout=false;
   private b367NativeFrame=0;
@@ -330,6 +334,33 @@ export class ProjectileSystem {
     return {enabled:this.b351CueOn,realDamageCues:this.b351TrueDamageCues,
       source:'25/17/26/0' as const,syntheticHits:0 as const,
       scoreable:0 as const,NintendoVisualCertified:false as const,
+      productionAuthorized:false as const};
+  }
+
+  /** Nonproduction F4 only. The extended 51-solid physical stage is
+   * distinct from, and is NOT admitted by, B351's frozen-source gate.
+   * Reuse existing physical HP-hit FX after actual human projectile
+   * damage; never select a target, write HP, award turf or alter contact.
+   */
+  public enableF4RealPhysicalHitFeedback(stage:Readonly<{
+    physicalSolids:number;originalSolids:number;paint:number;
+    links:number;scoreable:number;research:boolean;
+  }>):void{
+    if(stage.research!==true||stage.physicalSolids!==51||
+       stage.originalSolids!==25||stage.paint!==17||
+       stage.links!==26||stage.scoreable!==0||
+       this.surfaces.length!==17||
+       this.nativeSourceHumanPhysicalMode===null||
+       this.b351CueOn)
+      throw Error('F4_HIT_FEEDBACK_REQUIRES_GENUINE_PHYSICAL_LAB');
+    this.f4PhysicalHitCueOn=true;
+  }
+  public f4RealPhysicalHitFeedbackSnapshot(){
+    return {enabled:this.f4PhysicalHitCueOn,
+      confirmedPhysicalHumanHitCues:this.f4ConfirmedDamageCues,
+      actualHpReductionOnly:true as const,
+      syntheticDamage:0 as const,scoreablePromotions:0 as const,
+      stage:'UNOFFICIAL_F4_51_SOLIDS' as const,
       productionAuthorized:false as const};
   }
 
@@ -826,12 +857,14 @@ export class ProjectileSystem {
              slot.sourceKind==='CPU'?slot.sourceId:undefined);
           this.recordB367RealCpuDamage(
            resolved,slot.weaponId,cpuHit.botId,slot.sourceKind);
+          const originalConfirmedCue=b351RealCpuDamageCue(
+           this.b351CueOn,slot.sourceKind,slot.weaponId,beforeHit,
+           this.stats.humanCpuDirectHits,this.b367SelectedRealLoadout);
           if(resolved!==null&&resolved.realHpLoss>0&&!resolved.shieldAbsorbed&&
-             resolved.botId===cpuHit.botId&&
-             b351RealCpuDamageCue(this.b351CueOn,slot.sourceKind,
-              slot.weaponId,beforeHit,this.stats.humanCpuDirectHits,
-              this.b367SelectedRealLoadout)){
-            this.b351TrueDamageCues++;
+             resolved.botId===cpuHit.botId&&resolved.sourceKind==='HUMAN'&&
+             (originalConfirmedCue||this.f4PhysicalHitCueOn)){
+            if(originalConfirmedCue)this.b351TrueDamageCues++;
+            if(this.f4PhysicalHitCueOn)this.f4ConfirmedDamageCues++;
             this.feedback.confirmedHumanCpuDamage(slot.team,combatPoint,
               weaponProfile(slot.weaponId));
           }
@@ -1532,12 +1565,14 @@ export class ProjectileSystem {
         this.recordB367RealCpuDamage(resolved,
          this.currentPlayerWeapon.id,cpuHit.botId,'HUMAN');
         // Confirmed physical HP reduction, not a ray overlap, owns the cue.
+        const originalConfirmedCue=b351RealCpuDamageCue(
+         this.b351CueOn,'HUMAN',this.currentPlayerWeapon.id,
+         beforeHit,this.stats.humanCpuDirectHits,this.b367SelectedRealLoadout);
         if(resolved!==null&&resolved.realHpLoss>0&&!resolved.shieldAbsorbed&&
-           resolved.botId===cpuHit.botId&&
-           b351RealCpuDamageCue(this.b351CueOn,'HUMAN',
-            this.currentPlayerWeapon.id,beforeHit,
-            this.stats.humanCpuDirectHits,this.b367SelectedRealLoadout)){
-          this.b351TrueDamageCues++;
+           resolved.botId===cpuHit.botId&&resolved.sourceKind==='HUMAN'&&
+           (originalConfirmedCue||this.f4PhysicalHitCueOn)){
+          if(originalConfirmedCue)this.b351TrueDamageCues++;
+          if(this.f4PhysicalHitCueOn)this.f4ConfirmedDamageCues++;
           this.feedback.confirmedHumanCpuDamage(team,cpuHit.point,
            this.currentPlayerWeapon);
         }
