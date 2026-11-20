@@ -1114,16 +1114,26 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   KeyS:{key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83},
   KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
  };
- let held=null;
+ // Real simultaneous WASD allows following a diagonal native corridor;
+ // all keys still pass through actual CDP browser input and PlayerController.
+ let held=new Set();
  const release=async()=>{
-  if(held){await cdp('Input.dispatchKeyEvent',{type:'keyUp',...keys[held]});
-   held=null;}
+  for(const key of held)
+   await cdp('Input.dispatchKeyEvent',{type:'keyUp',...keys[key]});
+  held.clear();
  };
- const setKey=async key=>{
-  if(held===key)return;
-  await release();
-  if(key){await cdp('Input.dispatchKeyEvent',{type:'keyDown',...keys[key]});
-   held=key;result.realKeyDowns++;}
+ const setKeys=async selected=>{
+  const next=new Set(selected);
+  for(const key of held)
+   if(!next.has(key)){
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',...keys[key]});
+    held.delete(key);
+   }
+  for(const key of next)
+   if(!held.has(key)){
+    await cdp('Input.dispatchKeyEvent',{type:'keyDown',...keys[key]});
+    held.add(key);result.realKeyDowns++;
+   }
  };
  try{
   const start=await snap();
@@ -1200,10 +1210,12 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    const goal=route[next];
    let steeringGoal=goal,navBridge=null;
    const directDistance=Math.hypot(goal[0]-p[0],goal[2]-p[2]);
-   if(directDistance>8||Math.abs(goal[1]-p[1])>2.5){
-    // Missing PHOTO guide samples are not missing physical terrain.
-    // Obtain a real native Recast path from the genuine human foot and
-    // a Rapier-supported <=1.25m next target; never inject a fake floor.
+   if(directDistance>8||Math.abs(goal[1]-p[1])>.28||
+      n.tick-lastMoveTick>=24){
+    // A near PHOTO goal may sit on a DIFFERENT floor (observed 0.895m
+    // discrepancy at project Z~15.7), or an already blocked straight
+    // line. Audit real native Recast and Rapier BEFORE continuing to
+    // hold a key into a wall. Never insert a floor or move the actor.
     navBridge=await evaluate(`window.__t21F3?.auditF4HumanResearchPath?.(${next})`);
     result.lastNativeBridge=navBridge??null;
     if(navBridge?.admitted!==true||
@@ -1221,10 +1233,23 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    // W/S controls -/+Z and A/D controls -/+X (not arbitrary Actor pose).
    const chosen=Math.abs(dx)>Math.abs(dz)*.8?
      (dx>0?'KeyD':'KeyA'):(dz>0?'KeyS':'KeyW');
-   await setKey(chosen);
+   const planar=Math.hypot(dx,dz);
+   // For a real camera locked near yaw=0, resolve both genuine movement
+   // axes toward the short native path leg instead of alternating one
+   // cardinal key against a diagonal wall. Recast is still read-only.
+   const chosenKeys=navBridge?.suggestedKeys?.length?
+    navBridge.suggestedKeys.filter(key=>Object.hasOwn(keys,key)):
+    [
+     ...(Math.abs(dz)>Math.max(.22,.35*planar)?
+        [dz>0?'KeyS':'KeyW']:[]),
+     ...(Math.abs(dx)>Math.max(.22,.35*planar)?
+        [dx>0?'KeyD':'KeyA']:[])
+    ];
+   if(chosenKeys.length===0)chosenKeys.push(chosen);
+   await setKeys(chosenKeys);
    if(iteration%7===0){
     result.samples.push({tick:n.tick,foot:[...p],waypoint:next,
-     target:goal,steeringGoal,key:chosen,kccGrounded:true,
+     target:goal,steeringGoal,key:chosenKeys,kccGrounded:true,
      nativeBridgeVerified:navBridge?.admitted===true});
     if(result.samples.length>24)result.samples.shift();
     save();
