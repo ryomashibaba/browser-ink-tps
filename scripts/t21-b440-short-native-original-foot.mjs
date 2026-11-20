@@ -1448,6 +1448,7 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  const outRow={status:'HOLD_F4_REAL_COMBAT_NOT_STARTED',
   actualMouse:true,actualHumanWeapon:true,requestedTicks:96,
   realAimAttempts:[],realAimConfirmedCpu:null,realFireTrace:[],
+  postReleaseProjectileFlightTrace:[],confirmedHumanCpuDirectHits:0,
   writesToCpuStageClockOrScore:0,
   nativeStartTick:null,nativeEndTick:null,
   humanShots:0,inkSpentNet:null,newRegisteredPaintCells:0,
@@ -1646,6 +1647,55 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  }
  const after=await snap();
  outRow.nativeEndTick=after.tick;
+ outRow.humanCpuHitsBefore=before.f4HumanConfirmedCpuHits??null;
+ outRow.humanCpuHitsAtMouseRelease=after.f4HumanConfirmedCpuHits??null;
+ // At 28m/s a registered CPU 10-17m away cannot be hit on the SAME
+ // native tick as a newly emitted bullet. The old witness ended when
+ // the human was splatted, BEFORE its in-flight shots could arrive.
+ // Observe 120 more genuine 60Hz game ticks with ALL inputs released,
+ // including the existing native 1.8s projectile TTL (108 ticks).
+ // No extra shots, damage injection, position, clock or stage writes.
+ let flightEnd=after,lastFlightTick=after.tick;
+ const flightMinHp=new Map(roster(after).map(c=>[c.id,c.hp]));
+ outRow.postReleaseProjectileFlightTrace.push({
+  tick:after.tick,humanHp:after.player?.hp??null,
+  humanCpuHits:after.f4HumanConfirmedCpuHits??null,
+  opponents:roster(after).map(c=>({id:c.id,hp:c.hp,life:c.life}))});
+ try{
+  for(let i=0;i<12;i++){
+   const next=await until(async()=>{
+    const n=await snap();
+    return n.tick>=lastFlightTick+10||
+     n.stopReason||n.matchState!=='PLAYING'?n:null;
+   },18000,70);
+   if(recordCpuProgress)recordCpuProgress(next);
+   flightEnd=next;lastFlightTick=next.tick;
+   const enemies=roster(next);
+   for(const c of enemies)
+    if(Number.isFinite(c.hp))
+     flightMinHp.set(c.id,Math.min(flightMinHp.get(c.id)??c.hp,c.hp));
+   outRow.postReleaseProjectileFlightTrace.push({
+    tick:next.tick,humanHp:next.player?.hp??null,
+    humanCpuHits:next.f4HumanConfirmedCpuHits??null,
+    opponents:enemies.map(c=>({id:c.id,hp:c.hp,life:c.life}))});
+   if(next.stopReason||next.matchState!=='PLAYING')break;
+  }
+ }catch(e){
+  outRow.postReleaseFlightHold=String(e).slice(0,200);
+ }
+ outRow.postReleaseFlightEndTick=flightEnd.tick;
+ outRow.humanCpuHitsAfterProjectileFlight=
+  flightEnd.f4HumanConfirmedCpuHits??null;
+ outRow.confirmedHumanCpuDirectHits=
+  Number.isFinite(outRow.humanCpuHitsBefore)&&
+  Number.isFinite(outRow.humanCpuHitsAfterProjectileFlight)?
+  Math.max(0,outRow.humanCpuHitsAfterProjectileFlight-
+   outRow.humanCpuHitsBefore):0;
+ outRow.enemyMinimumObservedHpDuringFlight=
+  Object.fromEntries(flightMinHp);
+ outRow.enemyHpAtFlightEnd=roster(flightEnd);
+ outRow.actualDelayedHumanHitObserved=
+  outRow.confirmedHumanCpuDirectHits>0;
  outRow.humanShots=Math.max(0,(after.shotsFired??0)-(before.shotsFired??0));
  outRow.inkSpentNet=Number.isFinite(before.player.ink)&&
   Number.isFinite(after.player.ink)?before.player.ink-after.player.ink:null;
@@ -1669,7 +1719,10 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
   outRow.status='F4_REAL_FIRE_INPUT_COMPLETED';
  outRow.shotEvidenceObserved=outRow.humanShots>0;
  outRow.realOriginalPaintObserved=(outRow.newRegisteredPaintCells??0)>0;
- outRow.realEnemyHpDamageObserved=outRow.actualCpuDamage.length>0;
+ // Only the real projectile-damage counter attributes damage to HUMAN.
+ // Ally-vs-enemy CPU hits cannot create a false human hit.
+ outRow.realEnemyHpDamageObserved=
+  outRow.confirmedHumanCpuDirectHits>0;
  // Inspect the existing 150-native-tick HUMAN death/revival mechanism
  // at real match clock speed. Do not invoke respawn or move any actor.
  if(after.player?.hp<=0&&after.matchState==='PLAYING'){

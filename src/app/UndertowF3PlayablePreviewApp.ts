@@ -8031,6 +8031,10 @@ export class UndertowF3PlayablePreviewApp{
    // The QA driver may OBSERVE this; it cannot award HP or aim bullets.
    f4HumanRealCpuCrosshair:this.f4ResearchMode?
     this.camera.sourceCombatAimSnapshot():null,
+   // Only actual ProjectileSystem -> CpuAgentSystem HP decreases increment
+   // this statistic. An exact camera crosshair or fired shot does NOT.
+   f4HumanConfirmedCpuHits:this.f4ResearchMode?
+    this.stats.humanCpuDirectHits:null,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,
