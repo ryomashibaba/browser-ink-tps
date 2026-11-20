@@ -7999,6 +7999,11 @@ export class UndertowF3PlayablePreviewApp{
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:nativeCamera,
    f4HumanResearchGuide:this.f4HumanResearchGuide,
+   // Snapshot player.position is Rapier capsule CENTER, not a foot.
+   // The real human review must use the native capsule's lowest point
+   // when comparing it to photo/Recast/Rapier floor elevation.
+   f4HumanPhysicalFoot:this.f4ResearchMode?
+    [pos.x,pos.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,pos.z]:null,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,

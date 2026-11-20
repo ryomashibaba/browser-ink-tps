@@ -1138,7 +1138,9 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
  try{
   const start=await snap();
   const route=start?.f4HumanResearchGuide;
-  const foot=start?.player?.position;
+  const foot=start?.f4HumanPhysicalFoot;
+  // The snapshot's player.position is a body CENTER, 0.87m above
+  // the human capsule foot. Never compare it to walkable face Y.
   if(!Array.isArray(route)||route.length<35||
      !Array.isArray(foot)||foot.length!==3||!foot.every(Number.isFinite)||
      !Number.isFinite(start?.cameraSourcePractice?.yawDegrees)||
@@ -1147,7 +1149,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
      start.matchState!=='PLAYING'||start.paused||start.stopReason){
    result.status='HOLD_REAL_HUMAN_ROUTE_OR_KCC_UNAVAILABLE';return;
   }
-  result.initialFoot=[...foot];result.lowestZ=foot[2];
+  result.initialFoot=[...foot];result.initialBodyCenter=[...start.player.position];
+  result.lowestZ=foot[2];
   result.waypointCount=route.length;
   // Start from a physically near photo point on the player's approach side;
   // never jump over a large unexplained floor gap or assume a nav link.
@@ -1160,7 +1163,7 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   let next=near.i, lastMotion=foot, lastMoveTick=start.tick;
   result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
   for(let iteration=0;iteration<310;iteration++){
-   const n=await snap(),p=n?.player?.position;
+   const n=await snap(),p=n?.f4HumanPhysicalFoot;
    if(n&&recordCpuProgress)recordCpuProgress(n);
    if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||
       n?.matchState!=='PLAYING'||n?.paused||n?.stopReason||
@@ -1174,7 +1177,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
      stopReason:n?.stopReason??null,foot:p??null};
     break;
    }
-   result.lastFoot=[...p];result.lowestZ=Math.min(result.lowestZ,p[2]);
+   result.lastFoot=[...p];result.lastBodyCenter=[...n.player.position];
+   result.lowestZ=Math.min(result.lowestZ,p[2]);
    if(p[2]<-.5&&n.nativeKccGrounded===true){
     result.status='CANDIDATE_REAL_HUMAN_KCC_CROSSING_REVIEW_REQUIRED';
     result.crossingTick=n.tick;result.crossingFoot=[...p];break;
@@ -1248,7 +1252,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    if(chosenKeys.length===0)chosenKeys.push(chosen);
    await setKeys(chosenKeys);
    if(iteration%7===0){
-    result.samples.push({tick:n.tick,foot:[...p],waypoint:next,
+    result.samples.push({tick:n.tick,foot:[...p],
+     bodyCenter:[...n.player.position],waypoint:next,
      target:goal,steeringGoal,key:chosenKeys,kccGrounded:true,
      nativeBridgeVerified:navBridge?.admitted===true});
     if(result.samples.length>24)result.samples.shift();
