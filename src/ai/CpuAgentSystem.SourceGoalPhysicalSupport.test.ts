@@ -78,6 +78,8 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
   cpu.sourceLiveNativeMotionGoal=new Map();
   cpu.sourceCrowdRefreshedThisLife=new Set();
   cpu.sourceLastPhysicalBlockedTick=new Map();
+  // Object.create skips field initializers in the real CPU constructor.
+  cpu.sourceCrowdProjectionHold=new Map();
   cpu.sourceLastRecoveryAuditTick=new Map();
   cpu.sourceNativeMotionTick=0;
   cpu.b35OptInNativeRefresh=false;
