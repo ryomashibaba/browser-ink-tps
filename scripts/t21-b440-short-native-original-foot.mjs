@@ -1106,6 +1106,7 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   initialFoot:null,lastFoot:null,lowestZ:null,
   reachedWaypoints:0,waypointCount:0,nativeTickBudget:2450,
   realCpuContactObservations:0,realCpuYieldSteps:0,lastCpuContact:null,
+  nativeSingleAxisRecoveryAttempts:0,lastSingleAxisRecovery:null,
   realKeyDowns:0,nativeBridgedSteps:0,lastNativeBridge:null,
   samples:[]};
  proof.f4HumanRealPilot=result;save();
@@ -1164,6 +1165,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   let next=near.i, progressWaypoint=-1;
   let closestGoalDistance=Infinity,lastProgressTick=start.tick;
   let physicalYieldUntilTick=-1,physicalYieldKey=null,lastYieldTick=-100;
+  let singleAxisUntilTick=-1,singleAxisKey=null,
+   lastSingleAxisTick=-120;
   result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
   for(let iteration=0;iteration<460;iteration++){
    const n=await snap(),p=n?.f4HumanPhysicalFoot;
@@ -1374,6 +1377,37 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
         [dx>0?'KeyD':'KeyA']:[])
     ];
    if(chosenKeys.length===0)chosenKeys.push(chosen);
+   // Real PHOTO/RECAST-approved bridge can request diagonal W+D,
+   // while the ACTUAL human Rapier capsule is repeatedly corrected
+   // to almost no horizontal displacement by an authentic seam.
+   // A player naturally uses a short lateral tap to enter the next
+   // corridor before pressing forward. Attempt the SAME thing with
+   // genuine CDP keys, only after a measured physical obstruction,
+   // and only when Recast + Rapier still certify the destination.
+   // No x/z injection, collision relaxation or path invention.
+   const trueKcc=n.f4HumanKccMotion;
+   const requestedXZ=trueKcc?.requested??[];
+   const acceptedXZ=trueKcc?.accepted??[];
+   const reqXZ=Math.hypot(requestedXZ[0]??0,requestedXZ[2]??0);
+   const gotXZ=Math.hypot(acceptedXZ[0]??0,acceptedXZ[2]??0);
+   const xRemaining=steeringGoal[0]-p[0],zRemaining=steeringGoal[2]-p[2];
+   if(navBridge?.admitted===true&&contacts.length===0&&
+      n.tick-lastProgressTick>=42&&n.tick-lastSingleAxisTick>=90&&
+      reqXZ>.015&&gotXZ<reqXZ*.45&&
+      Math.abs(xRemaining)>.48&&Math.abs(zRemaining)>.48&&
+      result.nativeSingleAxisRecoveryAttempts<3){
+    singleAxisKey=xRemaining>0?'KeyD':'KeyA';
+    singleAxisUntilTick=n.tick+15;
+    lastSingleAxisTick=n.tick;
+    result.nativeSingleAxisRecoveryAttempts++;
+    result.lastSingleAxisRecovery={
+     tick:n.tick,foot:[...p],key:singleAxisKey,
+     originalGoal:goal,nativeShortGoal:steeringGoal,
+     genuineRequestedXZ:reqXZ,genuineAcceptedXZ:gotXZ,
+     source:'REAL_RECAST_AND_RAPIER_SUPPORTED_SINGLE_AXIS_WASD'};
+   }
+   if(n.tick<singleAxisUntilTick&&singleAxisKey)
+    chosenKeys.splice(0,chosenKeys.length,singleAxisKey);
    await setKeys(chosenKeys);
    if(iteration%7===0){
     result.samples.push({tick:n.tick,foot:[...p],
