@@ -1361,6 +1361,93 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
  }
 }
 
+/** A single bounded REAL CDP mouse-fire observation after the player
+ * physically crossed and returned. Uses the existing 51-solid world, the
+ * existing user weapon/ink costs, and the real seven CPU actors. It never
+ * fabricates paint, HP, enemy deaths or official turf score.
+ */
+async function runF4RealHumanCombatWindow(recordCpuProgress){
+ const outRow={status:'HOLD_F4_REAL_COMBAT_NOT_STARTED',
+  actualMouse:true,actualHumanWeapon:true,requestedTicks:72,
+  writesToCpuStageClockOrScore:0,
+  nativeStartTick:null,nativeEndTick:null,
+  humanShots:0,inkSpentNet:null,newRegisteredPaintCells:0,
+  opponentHpBefore:[],opponentHpAfter:[],humanHpBefore:null,
+  humanHpAfter:null,actualCpuLifeChanges:[],actualCpuDamage:[],
+  originalScoreable:0};
+ proof.f4HumanCombatWindow=outRow;save();
+ const before=await snap();
+ const pilot=proof.f4HumanRealPilot;
+ if(pilot?.reverseStatus!=='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'||
+    before.matchState!=='PLAYING'||before.paused||before.stopReason||
+    before.player?.hp<=0||before.player?.mode!=='HUMAN'||
+    before.cpu?.physicalRejoins?.length!==7){
+  outRow.status='HOLD_F4_COMBAT_REQUIRES_REAL_GROUNDED_RETURN_AND_7CPU';
+  save();return outRow;
+ }
+ const roster=n=>(n.cpu?.cpu??[]).filter(c=>c.id?.startsWith('B'))
+  .map(c=>({id:c.id,hp:c.hp??null,life:c.lifeState??null,
+    foot:c.physicalFoot??null}));
+ const inkCells=n=>n.b23HumanInkFeedback?.humanChangedCells??null;
+ outRow.nativeStartTick=before.tick;
+ outRow.humanHpBefore=before.player.hp;
+ outRow.opponentHpBefore=roster(before);
+ outRow.humanFootBefore=before.f4HumanPhysicalFoot;
+ outRow.humanShotsBefore=before.shotsFired;
+ outRow.inkBefore=before.player.ink;
+ outRow.paintCellsBefore=inkCells(before);
+ let held=false,last=before;
+ try{
+  // Actual canvas click is a user-visible left mouse press, NOT direct
+  // invocation of ProjectileSystem, HP or PaintCoordinator.
+  await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
+   x:480,y:270,button:'left',buttons:1,clickCount:1});
+  held=true;
+  last=await until(async()=>{
+   const n=await snap();
+   if(recordCpuProgress)recordCpuProgress(n);
+   return n.tick>=before.tick+72||n.stopReason||
+    n.matchState!=='PLAYING'||n.player?.hp<=0?n:null;
+  },50000,120);
+ }catch(e){
+  outRow.status='HOLD_F4_REAL_FIRE_OBSERVATION_ERROR';
+  outRow.error=String(e).slice(0,220);
+ }finally{
+  if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
+   x:480,y:270,button:'left',buttons:0,clickCount:1});
+ }
+ const after=await snap();
+ outRow.nativeEndTick=after.tick;
+ outRow.humanShots=Math.max(0,(after.shotsFired??0)-(before.shotsFired??0));
+ outRow.inkSpentNet=Number.isFinite(before.player.ink)&&
+  Number.isFinite(after.player.ink)?before.player.ink-after.player.ink:null;
+ outRow.newRegisteredPaintCells=inkCells(before)!==null&&
+  inkCells(after)!==null?
+  Math.max(0,inkCells(after)-inkCells(before)):null;
+ outRow.opponentHpAfter=roster(after);
+ outRow.humanHpAfter=after.player?.hp??null;
+ outRow.humanFootAfter=after.f4HumanPhysicalFoot;
+ outRow.realMatchState=after.matchState;
+ outRow.stopReason=after.stopReason??null;
+ outRow.actualCpuLifeChanges=outRow.opponentHpAfter.filter(c=>
+  outRow.opponentHpBefore.some(b=>b.id===c.id&&
+   b.life!==c.life));
+ outRow.actualCpuDamage=outRow.opponentHpAfter.filter(c=>
+  Number.isFinite(c.hp)&&outRow.opponentHpBefore.some(b=>
+   b.id===c.id&&Number.isFinite(b.hp)&&c.hp<b.hp));
+ if(!outRow.status.startsWith('HOLD'))
+  outRow.status='F4_REAL_FIRE_INPUT_COMPLETED';
+ else if(outRow.status==='HOLD_F4_REAL_COMBAT_NOT_STARTED')
+  outRow.status='F4_REAL_FIRE_INPUT_COMPLETED';
+ outRow.shotEvidenceObserved=outRow.humanShots>0;
+ outRow.realOriginalPaintObserved=(outRow.newRegisteredPaintCells??0)>0;
+ outRow.realEnemyHpDamageObserved=outRow.actualCpuDamage.length>0;
+ outRow.noOfficialTurfResult=true;
+ proof.f4HumanCombatWindow=outRow;save();
+ console.log('T21_F4_REAL_HUMAN_COMBAT_WINDOW',JSON.stringify(outRow));
+ return outRow;
+}
+
 /** One actual Chromium + real 60Hz game. No Actor/CPU/clock writes:
  * trusted mouse buttons and human WASD ONLY. F4 has no formal art/QA PASS.
  */
@@ -1486,6 +1573,11 @@ async function runF4RealChrome(){
     // and full native weapon/HP/respawn rules remain active.
     await runF4HumanRealWasdPilot(recordCpuProgress);
     report.humanEarlyPilot=proof.f4HumanRealPilot?.status??'HOLD';
+    if(proof.f4HumanRealPilot?.reverseStatus===
+       'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'){
+      await runF4RealHumanCombatWindow(recordCpuProgress);
+      report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
+    }
     recordCpuProgress(await snap());
     save();
    }
