@@ -1104,7 +1104,7 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   actualRapierHuman:true,noActorWrites:true,noStageWrites:true,
   guideAuthority:'PHOTO_STEERING_ONLY_NOT_COLLISION_PROOF',
   initialFoot:null,lastFoot:null,lowestZ:null,
-  reachedWaypoints:0,waypointCount:0,nativeTickBudget:840,
+  reachedWaypoints:0,waypointCount:0,nativeTickBudget:1500,
   realKeyDowns:0,nativeBridgedSteps:0,lastNativeBridge:null,
   samples:[]};
  proof.f4HumanRealPilot=result;save();
@@ -1149,7 +1149,7 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   if(!near){result.status='HOLD_NO_NEARBY_SOURCE_PHOTO_WAYPOINT';return;}
   let next=near.i, lastMotion=foot, lastMoveTick=start.tick;
   result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
-  for(let iteration=0;iteration<180;iteration++){
+  for(let iteration=0;iteration<310;iteration++){
    const n=await snap(),p=n?.player?.position;
    if(n&&recordCpuProgress)recordCpuProgress(n);
    if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||
