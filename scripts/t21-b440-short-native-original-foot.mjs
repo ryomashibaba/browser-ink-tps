@@ -1093,8 +1093,139 @@ async function b490CaptureLocalSamePosePair(){
 }
 
 
+/** Optional same-session REAL-human continuation after CPU result is safely
+ * recorded. Only trusted keyboard events move the actual PlayerController
+ * through Rapier KCC. PHOTO points guide the observer, not player authority.
+ * A HOLD is expected when the unproven route cannot be walked; it is never
+ * a fake physical crossing, and does not invalidate the prior CPU result.
+ */
+async function runF4HumanRealWasdPilot(){
+ const result={status:'HOLD_NOT_STARTED',actualKeyboard:true,
+  actualRapierHuman:true,noActorWrites:true,noStageWrites:true,
+  guideAuthority:'PHOTO_STEERING_ONLY_NOT_COLLISION_PROOF',
+  initialFoot:null,lastFoot:null,lowestZ:null,
+  reachedWaypoints:0,waypointCount:0,nativeTickBudget:840,
+  realKeyDowns:0,samples:[]};
+ proof.f4HumanRealPilot=result;save();
+ const keys={
+  KeyW:{key:'w',code:'KeyW',windowsVirtualKeyCode:87,nativeVirtualKeyCode:87},
+  KeyA:{key:'a',code:'KeyA',windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
+  KeyS:{key:'s',code:'KeyS',windowsVirtualKeyCode:83,nativeVirtualKeyCode:83},
+  KeyD:{key:'d',code:'KeyD',windowsVirtualKeyCode:68,nativeVirtualKeyCode:68}
+ };
+ let held=null;
+ const release=async()=>{
+  if(held){await cdp('Input.dispatchKeyEvent',{type:'keyUp',...keys[held]});
+   held=null;}
+ };
+ const setKey=async key=>{
+  if(held===key)return;
+  await release();
+  if(key){await cdp('Input.dispatchKeyEvent',{type:'keyDown',...keys[key]});
+   held=key;result.realKeyDowns++;}
+ };
+ try{
+  const start=await snap();
+  const route=start?.f4HumanResearchGuide;
+  const foot=start?.player?.position;
+  if(!Array.isArray(route)||route.length<35||
+     !Array.isArray(foot)||foot.length!==3||!foot.every(Number.isFinite)||
+     !Number.isFinite(start?.cameraSourcePractice?.yawDegrees)||
+     Math.abs(start.cameraSourcePractice.yawDegrees)>5||
+     start.nativeKccGrounded!==true||
+     start.matchState!=='PLAYING'||start.paused||start.stopReason){
+   result.status='HOLD_REAL_HUMAN_ROUTE_OR_KCC_UNAVAILABLE';return;
+  }
+  result.initialFoot=[...foot];result.lowestZ=foot[2];
+  result.waypointCount=route.length;
+  // Start from a physically near photo point on the player's approach side;
+  // never jump over a large unexplained floor gap or assume a nav link.
+  const near=route.slice(0,14).map((p,i)=>({
+   i,d:Math.hypot(p[0]-foot[0],p[2]-foot[2]),
+   y:Math.abs(p[1]-foot[1])
+  })).filter(p=>p.d<4.5&&p.y<1.35)
+   .sort((a,b)=>a.d+.7*a.y-(b.d+.7*b.y))[0];
+  if(!near){result.status='HOLD_NO_NEARBY_SOURCE_PHOTO_WAYPOINT';return;}
+  let next=near.i, lastMotion=foot, lastMoveTick=start.tick;
+  result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
+  for(let iteration=0;iteration<180;iteration++){
+   const n=await snap(),p=n?.player?.position;
+   if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||
+      n?.matchState!=='PLAYING'||n?.paused||n?.stopReason||
+      n?.player?.hp<=0){
+    result.status='HOLD_ACTUAL_MATCH_OR_PLAYER_STOP';break;
+   }
+   result.lastFoot=[...p];result.lowestZ=Math.min(result.lowestZ,p[2]);
+   if(p[2]<-.5&&n.nativeKccGrounded===true){
+    result.status='CANDIDATE_REAL_HUMAN_KCC_CROSSING_REVIEW_REQUIRED';
+    result.crossingTick=n.tick;result.crossingFoot=[...p];break;
+   }
+   if(n.tick-start.tick>result.nativeTickBudget){
+    result.status='HOLD_BOUNDED_REAL_KEYBOARD_BUDGET';break;
+   }
+   if(n.nativeKccGrounded!==true){
+    result.status='HOLD_KCC_GROUND_CONTACT_LOST';break;
+   }
+   if(!Number.isFinite(n.cameraSourcePractice?.yawDegrees)||
+      Math.abs(n.cameraSourcePractice.yawDegrees)>5){
+    result.status='HOLD_REAL_CAMERA_AXIS_DRIFT';break;
+   }
+   if(Math.hypot(p[0]-lastMotion[0],p[2]-lastMotion[2])>.035){
+    lastMoveTick=n.tick;lastMotion=[...p];
+   }
+   if(n.tick-lastMoveTick>75){
+    result.status='HOLD_REAL_KCC_WASD_STALL';break;
+   }
+   while(next<route.length){
+    const goal=route[next];
+    if(!Array.isArray(goal)||!goal.every(Number.isFinite)){
+      result.status='HOLD_INVALID_PHOTO_WAYPOINT';break;
+    }
+    if(Math.hypot(goal[0]-p[0],goal[2]-p[2])>.72||
+       Math.abs(goal[1]-p[1])>1.0)break;
+    next++;
+   }
+   result.reachedWaypoints=next;
+   if(result.status.startsWith('HOLD'))break;
+   if(next===route.length){result.status='REAL_WASD_PHOTO_GUIDE_COMPLETED';break;}
+   const goal=route[next],dx=goal[0]-p[0],dz=goal[2]-p[2];
+   const distance=Math.hypot(dx,dz);
+   if(distance>8||Math.abs(goal[1]-p[1])>2.5){
+    result.status='HOLD_PHOTO_ROUTE_GEOMETRY_GAP';break;
+   }
+   // Native camera yaw was measured near zero. In this orientation,
+   // W/S controls -/+Z and A/D controls -/+X (not arbitrary Actor pose).
+   const chosen=Math.abs(dx)>Math.abs(dz)*.8?
+     (dx>0?'KeyD':'KeyA'):(dz>0?'KeyS':'KeyW');
+   await setKey(chosen);
+   if(iteration%7===0){
+    result.samples.push({tick:n.tick,foot:[...p],waypoint:next,
+     target:goal,key:chosen,kccGrounded:true});
+    if(result.samples.length>24)result.samples.shift();
+    save();
+   }
+   // Advance ONLY by the real browser's next 60Hz PlayerController frames.
+   // Small steps bound unobserved travel at sharp authentic floor seams.
+   await until(async()=>{
+    const now=await snap();
+    return now.tick>=n.tick+5||now.stopReason||now.matchState!=='PLAYING'?
+      now:null;
+   },20000,55);
+  }
+  if(result.status==='ACTUAL_REAL_KEYBOARD_IN_PROGRESS')
+   result.status='HOLD_BOUNDED_INPUT_ITERATIONS';
+ }catch(e){
+  result.status='HOLD_REAL_HUMAN_PILOT_ERROR';
+  result.error=String(e).slice(0,260);
+ }finally{
+  try{await release();}catch(e){result.releaseError=String(e).slice(0,180);}
+  proof.f4HumanRealPilot=result;save();
+  console.log('T21_F4_HUMAN_REAL_WASD_PILOT',JSON.stringify(result));
+ }
+}
+
 /** One actual Chromium + real 60Hz game. No Actor/CPU/clock writes:
- * trusted mouse buttons and human KeyW ONLY. F4 has no formal art/QA PASS.
+ * trusted mouse buttons and human WASD ONLY. F4 has no formal art/QA PASS.
  */
 async function runF4RealChrome(){
  const url=root+'?t21Play=preview&t21QaDrive=source'+
@@ -1259,6 +1390,9 @@ async function runF4RealChrome(){
   'CPU_CROSSING_OBSERVED_HUMAN_UNPROVEN';
  proof.verdict=report.verdict;save();
  console.log('T21_F4_REAL_CHROME_51_SOLID',JSON.stringify(report));
+ // Record the previously successful 7-CPU result BEFORE this additional
+ // real-human corridor attempt; a genuine unsafe foot remains an honest HOLD.
+ await runF4HumanRealWasdPilot();
 }
 async function main(){
  save();

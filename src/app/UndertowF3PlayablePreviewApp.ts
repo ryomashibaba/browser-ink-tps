@@ -131,7 +131,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {buildT21F4ResearchStage}
+import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,
+ t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {UndertowPhase14ECpuHandoff,nearestT21SourceSupportedLanding}
  from '../stage/undertow/UndertowPhase14ECpuHandoff';
@@ -305,6 +306,11 @@ export class UndertowF3PlayablePreviewApp{
  private readonly rawStage=undertowT21dConnectivityQaStage();
  private readonly f4ResearchMode=new URL(location.href).searchParams
   .get('t21F4Central')==='research';
+ /** F4-only read-only photo triangle centroids for genuine human WASD review.
+  * These steering points are not certified human collision or navigation. */
+ private readonly f4HumanResearchGuide=this.f4ResearchMode?
+  t21F4PlayableCorridorGuide(
+   buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
@@ -7894,6 +7900,9 @@ export class UndertowF3PlayablePreviewApp{
    phase:'F3',renderer:'webgl2',stageId:this.rawStage.metadata.id,
    playableSandbox:true,actualPlayerInput:true,
    cameraSourcePractice:nativeCamera,
+   f4HumanResearchGuide:this.f4HumanResearchGuide,
+   f4HumanGuideAuthority:this.f4ResearchMode?
+    'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,
    p1RealLocalRampPlayerCue:this.p1LiveLocalRampCue,
    sourceFrameQuality:this.sourceFrameQualitySnapshot(),
