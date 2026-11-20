@@ -868,6 +868,7 @@ export class UndertowF3PlayablePreviewApp{
    this.camera,this.ink,this.stats);
   // Genuine human SOURCE only: physical KCC ground contact, not a nearby
   // optical false bridge, controls the floor-ink resource effects.
+  if(this.f4ResearchMode)this.player.enableF4KccAudit();
   this.player.setNativeSourceGroundInkGuard(
    this.nativeLiveSourcePrestart,
    this.nativeLiveSourcePrestart?this.rawStage.paintSurfaces:undefined);
@@ -8004,6 +8005,8 @@ export class UndertowF3PlayablePreviewApp{
    // when comparing it to photo/Recast/Rapier floor elevation.
    f4HumanPhysicalFoot:this.f4ResearchMode?
     [pos.x,pos.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,pos.z]:null,
+   f4HumanKccMotion:this.f4ResearchMode?
+    this.player.qaF4LastKccMotion():null,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,

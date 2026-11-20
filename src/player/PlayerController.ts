@@ -187,6 +187,14 @@ export class PlayerController {
   private weaponMoveMultiplier = 1;
   private snapToGroundEnabled = true;
   private nativeSourceGroundInkGuard = false;
+  // F4 research-only KCC observation. Never changes the collision solver.
+  private f4KccAuditEnabled=false;
+  private f4LastKccMotion:Readonly<{
+    requested:readonly number[];accepted:readonly number[];
+    grounded:boolean;contacts:readonly Readonly<{
+      solidId:string|null;normal:readonly number[];
+    }>[];
+  }>|null=null;
   private sourcePaintBackingById:ReadonlyMap<string,string>|null=null;
   private sourceSupportedSolidId:string|null=null;
   private sourceFootGapMeters:number|null=null;
@@ -746,6 +754,23 @@ export class PlayerController {
     );
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
+    if(this.f4KccAuditEnabled){
+      const contacts:{solidId:string|null;normal:number[]}[]=[];
+      for(let i=0;i<this.character.numComputedCollisions();i++){
+        const hit=this.character.computedCollision(i);
+        if(!hit)continue;
+        contacts.push({
+          solidId:this.physics.sourceSolidIdForCollider(hit.collider),
+          normal:[hit.normal1.x,hit.normal1.y,hit.normal1.z]
+        });
+      }
+      this.f4LastKccMotion={
+        requested:[this.velocity.x*dt,this.verticalVelocity*dt,
+          this.velocity.z*dt],
+        accepted:[corrected.x,corrected.y,corrected.z],
+        grounded:this.grounded,contacts
+      };
+    }
     // Actual original Rapier KCC walls / teammates decide next-tick
     // momentum; no XZ motion is added or moved outside a registered solid.
     nativeSourceReconcileKccPlanarVelocity(
@@ -855,6 +880,8 @@ export class PlayerController {
 
   /** B149: read computed contacts from the ACTUAL PlayerController Rapier
    * KCC, not from an ambiguous CPU-side owner label. No new contact query. */
+  public enableF4KccAudit():void{this.f4KccAuditEnabled=true;}
+  public qaF4LastKccMotion(){return this.f4LastKccMotion;}
   public qaActualKccComputedColliderHandles():readonly number[]{
     const out:number[]=[];
     for(let i=0;i<this.character.numComputedCollisions();i++){
