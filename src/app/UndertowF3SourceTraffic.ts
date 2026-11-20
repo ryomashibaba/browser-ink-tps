@@ -31,6 +31,7 @@ import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
  from './B421RealEnemyStandoff';
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
+import {chooseB181OriginalSourceSight} from '../ai/B181OriginalSourceCombatSight';
 import {b180OriginalSourceUnownedNeighborAim} from '../ai/B180OriginalSourcePaintOpportunity';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
 import {GAME_CONFIG} from '../config/game/gameConfig';
@@ -356,6 +357,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly egress=new Map<string,StageVector3>();
  private readonly f4GuideByTeam=new Map<Team.A|Team.B,readonly StageVector3[]>();
  private readonly f4GuideProgress=new Map<string,number>();
+ /** Actual living HUMAN observation for the current F4 native step ONLY. */
+ private f4LiveHuman:Readonly<{
+  x:number;y:number;z:number;mode:'HUMAN'|'SQUID';tick:number
+ }>|null=null;
  private readonly f4GuideLastAudit=new Map<string,{
   id:string;index:number;actualFoot:[number,number,number];
   goal:[number,number,number];
@@ -1513,22 +1518,44 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      ![foot.x,foot.y,foot.z].every(Number.isFinite))return false;
   const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId));
   if(!Number.isFinite(range)||range<=0)return false;
-  const muzzle=new Vec3(foot.x,
-   foot.y+GAME_CONFIG.cpu.muzzleHeightMeters,foot.z);
-  return this.bots.some(enemy=>{
-   if(enemy.id===bot.id||enemy.team===bot.team||
-      !sourceNativeLiveRejoinedCpu(enemy,this.physicallyRejoined)||
-      ![enemy.position.x,enemy.position.y,enemy.position.z]
-       .every(Number.isFinite))return false;
-   if(Math.hypot(enemy.position.x-foot.x,
-      enemy.position.z-foot.z)>range||
-      Math.abs(enemy.position.y-foot.y)>2.4)return false;
-   // The F4 experiment's ACTUAL 51-solid Rapier stage must have a clear
-   // physical muzzle-to-body line; optical proximity grants no false hit.
-   const torso=new Vec3(enemy.position.x,
-    enemy.position.y+.68,enemy.position.z);
-   return !this.physics!.castStageSegment(muzzle,torso,'ink-projectile');
-  });
+  // Match CpuAgentSystem's real weapon-range and B181 hit-shape/cover
+  // selection exactly. Only the experimental F4 Rapier world supplies
+  // the LOS ray; ORIGINAL 25-solid source authorization is untouched.
+  const human=bot.team===Team.B&&
+   this.f4LiveHuman?.tick===this.b137NativeTick?this.f4LiveHuman:null;
+  const humanY=human?
+   human.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+
+   (human.mode==='SQUID'?
+    PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters:0):0;
+  const humanHalf=human?.mode==='SQUID'?
+   Math.min(.2,PLAYER_CHARACTER_PHYSICS.squidRadiusMeters*.6):.25;
+  const candidates=[
+   ...this.bots.filter(enemy=>enemy.id!==bot.id&&enemy.team!==bot.team&&
+     sourceNativeLiveRejoinedCpu(enemy,this.physicallyRejoined)&&
+     [enemy.position.x,enemy.position.y,enemy.position.z]
+      .every(Number.isFinite))
+    .map(enemy=>({id:enemy.id,
+      body:{x:enemy.position.x,y:enemy.position.y+.68,z:enemy.position.z},
+      alternateHitPoints:[
+       {x:enemy.position.x,
+        y:enemy.position.y+GAME_CONFIG.cpu.hitSphereOffsetsMeters[2],
+        z:enemy.position.z},
+       {x:enemy.position.x,
+        y:enemy.position.y+GAME_CONFIG.cpu.hitSphereOffsetsMeters[0],
+        z:enemy.position.z}
+      ]})),
+   ...(human?[{id:'HUMAN',body:{x:human.x,y:humanY,z:human.z},
+     alternateHitPoints:[
+      {x:human.x,y:humanY+humanHalf,z:human.z},
+      {x:human.x,y:humanY-humanHalf,z:human.z}
+     ]}]:[])
+  ];
+  const muzzle={x:foot.x,
+   y:foot.y+GAME_CONFIG.cpu.muzzleHeightMeters,z:foot.z};
+  return chooseB181OriginalSourceSight(
+   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
+    new Vec3(from.x,from.y,from.z),
+    new Vec3(to.x,to.y,to.z),'ink-projectile'),null,range).target!==null;
  }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
@@ -3267,6 +3294,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // relocation and no synthetic actor position. Even when all CPUs are
   // released, refresh validity each physical tick before CPU goal choice.
   this.b137NativeTick=frame;
+  // Genuine player foot from THIS 60Hz physics step, never historical
+  // pursuit data. F4-only: a dead or airborne HUMAN cannot freeze B CPUs.
+  this.f4LiveHuman=(this.f4GuideByTeam?.size??0)>0&&
+   humanFoot?.active===true&&humanFoot.grounded===true&&
+   [humanFoot.x,humanFoot.y,humanFoot.z].every(Number.isFinite)?
+   {x:humanFoot.x,y:humanFoot.y,z:humanFoot.z,
+    mode:humanFoot.mode==='SQUID'?'SQUID':'HUMAN',tick:frame}:null;
   // C orders time out after 900 advancing native ticks, even while
   // genuine low-HP retreat prevents A1 tactical goal selection.
   // Never change physical feet, HP, ink or original route authority.
