@@ -8,8 +8,8 @@
 import RAPIER,{type Collider,type RigidBody} from '@dimforge/rapier3d-compat';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {dirname} from 'node:path';
-import {Application,NullGraphicsDevice,Vec3} from 'playcanvas';
-import {beforeAll,describe,expect,it} from 'vitest';
+import {Application,Entity,NullGraphicsDevice,Vec3} from 'playcanvas';
+import {beforeAll,describe,expect,it,vi} from 'vitest';
 import {GAME_CONFIG} from '../src/config/game/gameConfig';
 import {PerformanceStats} from '../src/core/PerformanceStats';
 import {initializeRapier,RapierStagePhysics}
@@ -33,13 +33,23 @@ import {parseT21F4OriginalTerrain}
  from '../src/stage/undertow/UndertowT21F4OriginalTerrain';
 import {undertowTemple01ModelXZToProjectXZ}
  from '../src/stage/undertow/UndertowSpillwayModelXZGeometry';
-import {undertowT21dConnectivityQaStage}
+import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
  from '../src/stage/undertow/UndertowSpillwayConnectivityQa';
-import {planSourceSupportedT21QaSpawnSlots}
+import {planSourceSupportedT21QaSpawnSlots,withProvisionalT21QaSpawnMetadata}
  from '../src/stage/undertow/UndertowPhase14QSourceSpawnPlan';
 import {planT21F2SourceDropRoutes} from '../src/stage/undertow/UndertowF2SourceDropRoutes';
 import {ORIGINAL_SOURCE_CPU_CAPSULE,UndertowPhase14QSharedActorCollision}
  from '../src/stage/undertow/UndertowPhase14QSharedActorCollision';
+
+import {PlayerController} from '../src/player/PlayerController';
+import type {PlayerInput} from '../src/input/PlayerInput';
+import type {ThirdPersonCamera} from '../src/camera/ThirdPersonCamera';
+import {CpuAgentSystem} from '../src/ai/CpuAgentSystem';
+import {GameplayInkSystem} from '../src/ink/GameplayInkSystem';
+import {Team} from '../src/ink/types';
+import {UndertowPhase14ECpuHandoff} from '../src/stage/undertow/UndertowPhase14ECpuHandoff';
+import {UndertowF3NativeHumanCrowd} from '../src/app/UndertowF3NativeHumanCrowd';
+import {UndertowF3SourceTraffic,type F3TrafficCpu} from '../src/app/UndertowF3SourceTraffic';
 
 type P3=readonly[number,number,number];
 type OriginalTriangle={
@@ -430,10 +440,10 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
   basePhysics.world.free();
   expect(planT21F2SourceDropRoutes(stage,nav,spawns).routes).toHaveLength(8);
 
-  const createMover=(foot:Vec3,radius:number,halfHeight:number)=>{
+  const createMover=(foot:Vec3,radius:number,halfHeight:number,clearance=.035)=>{
    const offset=radius+halfHeight;
    const body=physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased()
-    .setTranslation(foot.x,foot.y+offset+.035,foot.z));
+    .setTranslation(foot.x,foot.y+offset+clearance,foot.z));
    const collider=physics.world.createCollider(RAPIER.ColliderDesc.capsule(halfHeight,radius),body);
    const controller=createConfiguredPlayerCharacterController(physics.world);
    const position=()=>{
@@ -444,6 +454,12 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
    let upward=0;
    let maxRise=0;
    let ungrounded=0;
+   let unsupportedCapsule=0;
+   let unsupportedDrop=0;
+   let lastStepY=0;
+   let unsupportedRun=0;
+   let longestUnsupportedRun=0;
+   let unsupportedRunDrop=0;
    let vertical=-.5;
    const blockers=new Set<string>();
    const advance=(target:Vec3,maxSpeed:number)=>{
@@ -457,6 +473,7 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
     controller.computeColliderMovement(collider,direction,undefined,undefined,
      other=>physics.shouldCharacterCollide(other,'HUMAN'));
     const d=controller.computedMovement();
+    lastStepY=d.y;
     if(!controller.computedGrounded())ungrounded++;
     maxRise=Math.max(maxRise,d.y);
     if(Math.hypot(d.x-direction.x,d.z-direction.z)>.01){
@@ -474,8 +491,26 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
     const foot=position();
     const hit=support(foot,offset);
     if(!hit||Math.abs(foot.y-hit.point.y)>.25)unsupported++;
+    let grounded=controller.computedGrounded();
+    if(!grounded){
+     const contact=physics.world.castShape(body.translation(),collider.rotation(),
+      {x:0,y:-1,z:0},collider.shape,0,.08,false,undefined,undefined,collider,undefined,
+      other=>physics.sourceSolidIdForCollider(other)!==null&&physics.shouldCharacterCollide(other,'HUMAN'));
+     grounded=!!contact&&contact.normal1.y>=Math.cos(profile.maxSlopeClimbAngleRadians);
+    }
+    if(grounded){
+     unsupportedRun=0;
+     unsupportedRunDrop=0;
+    }else{
+     unsupportedCapsule++;
+     unsupportedRun++;
+     unsupportedRunDrop+=Math.max(0,-lastStepY);
+     longestUnsupportedRun=Math.max(longestUnsupportedRun,unsupportedRun);
+     unsupportedDrop=Math.max(unsupportedDrop,unsupportedRunDrop);
+    }
    },result:(goal:Vec3)=>({
-    endpointError:position().distance(goal),unsupported,ungrounded,maxRise,
+    endpointError:position().distance(goal),unsupported,ungrounded,unsupportedCapsule,
+    unsupportedDrop,longestUnsupportedRun,maxRise,
     maxFootY:upward,blockers:[...blockers],
     finalFoot:position()
    }),release(){
@@ -535,25 +570,36 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
    expect(terrain['corridor-floors']?.triangleMesh?.indices.length).toBe(48*3);
    expect(terrain['corridor-sides']?.triangleMesh?.indices.length).toBe(34*3);
    const walkOnlyNav=new RecastStageNavigation({...stage,navigationLinks:[]},new PerformanceStats());
+   const expanded=!!terrain['ingress-floors'];
+   const joins=expanded?corridors.flatMap(([low,slope])=>{
+    const side=slope[2]>0?'positive-z':'negative-z';
+    const ramp=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>p.id==='right-low-ramp-'+side)!;
+    return [[ramp.from,ramp.to],[ramp.to,low]] as const;
+   }):[];
    let directedCapsulePasses=0;
-   for(const [low,slope] of corridors){
+   let directedIngressPasses=0;
+   let ingressUnsupportedTicks=0;
+   let maxIngressUnsupportedDrop=0;
+   let longestIngressUnsupportedRun=0;
+   for(const [index,[start,end]] of [...corridors,...joins].entries()){
+    const ingressLeg=index>=corridors.length;
     for(const [radius,halfHeight] of [
      [profile.humanRadiusMeters,profile.humanHalfHeightMeters],
      [cpu.radiusMeters,cpu.halfHeightMeters]
     ] as const){
-     const mover=createMover(vec(low),radius,halfHeight);
-     try{
-      for(const [from,to] of [[low,slope],[slope,low]] as const){
+     for(const [from,to] of [[start,end],[end,start]] as const){
+      const mover=createMover(vec(from),radius,halfHeight,ingressLeg?.025:.035);
+      try{
        const path=walkOnlyNav.auditPath(vec(from),vec(to),.20);
        expect(path.reachedTarget).toBe(true);
        expect(path.startSnapDistanceMeters).toBeLessThan(.30);
        expect(path.endSnapDistanceMeters).toBeLessThan(.30);
        for(const point of path.nativePathPoints.slice(1)){
         const goal=new Vec3().copy(point);
-       let ticks=0;
-       for(;ticks<900;ticks++){
-        const foot=mover.position();
-        if(Math.hypot(foot.x-goal.x,foot.z-goal.z)<=.055)break;
+        let ticks=0;
+        for(;ticks<900;ticks++){
+         const foot=mover.position();
+         if(Math.hypot(foot.x-goal.x,foot.z-goal.z)<=.055)break;
          mover.advance(goal,3.12);
          physics.step();
          mover.sample();
@@ -562,13 +608,25 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
        }
        const result=mover.result(vec(to));
        expect(result.endpointError).toBeLessThan(.12);
-       expect(result.unsupported).toBe(0);
-       expect(result.ungrounded).toBe(0);
+       if(ingressLeg){
+        // Check each step-down independently. A series of separated
+        // bevel transitions must not mask a fall through one seam.
+        expect(result.longestUnsupportedRun,'ingress route '+index).toBeLessThanOrEqual(7);
+        expect(result.unsupportedDrop,'ingress route '+index)
+         .toBeLessThan(profile.autostepMaxHeightMeters);
+        ingressUnsupportedTicks+=result.unsupportedCapsule;
+        maxIngressUnsupportedDrop=Math.max(maxIngressUnsupportedDrop,result.unsupportedDrop);
+        longestIngressUnsupportedRun=Math.max(longestIngressUnsupportedRun,result.longestUnsupportedRun);
+       }else{
+        expect(result.unsupported).toBe(0);
+        expect(result.ungrounded).toBe(0);
+       }
        expect(result.maxRise).toBeLessThan(profile.autostepMaxHeightMeters);
-       directedCapsulePasses++;
+       if(ingressLeg)directedIngressPasses++;
+       else directedCapsulePasses++;
+      }finally{
+       mover.release();
       }
-     }finally{
-      mover.release();
      }
     }
    }
@@ -597,7 +655,7 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
    for(let tick=0;tick<1200&&agents.some(a=>!a.returned);tick++){
     // All bodies are present from the start. Space their normal goal
     // requests so they do not all crowd the same seam on the first tick.
-    const joining=agents[tick/36];
+    const joining=agents[tick/(expanded?60:36)];
     if(joining)joining.agent.requestMoveTarget(crowdNav.closestPoint(joining.goal));
     crowdNav.fixedUpdate(dt);
     for(const a of agents){
@@ -624,6 +682,8 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
    crowdPhysics.world.free();
    console.log('T21_F4_ORIGINAL_CORRIDORS',JSON.stringify({
     newFloorTriangles:48,newSideTriangles:34,directedCapsulePasses,crowdRoundTrips,
+    directedIngressPasses,ingressUnsupportedTicks,longestIngressUnsupportedRun,maxIngressUnsupportedDrop,
+    renderedTriangles:signedNormals.reduce((n,g)=>n+g.length,0),
     maxRenderPhysicsError
    }));
   }
@@ -632,3 +692,117 @@ it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
  }
 );
 
+it.skipIf(!process.env.T21_F4_LOCAL_TERRAIN)(
+ 'runs the real F4 player and seven CPUs from the normal SOURCE spawns to the original low floor',
+ ({skip})=>{
+  const terrain=parseT21F4OriginalTerrain(JSON.parse(readFileSync(process.env.T21_F4_LOCAL_TERRAIN!,'utf8')));
+  if(!terrain['ingress-floors'])return skip();
+  const stub=vi.spyOn(Entity.prototype,'addComponent').mockImplementation(()=>null as never);
+  const source=undertowT21dConnectivityQaStage();
+  const stats=new PerformanceStats(),ink=new GameplayInkSystem();
+  const app={root:new Entity('F4_ACTORS')} as never;
+  const sourceNav=new RecastStageNavigation(source,stats);
+  const sourcePhysics=new RapierStagePhysics(DT,source);
+  sourcePhysics.step();
+  const slots=planSourceSupportedT21QaSpawnSlots(source,sourceNav,sourcePhysics);
+  sourceNav.crowd.destroy();
+  sourcePhysics.world.free();
+  const stage=buildT21F4ResearchStage(withProvisionalT21QaSpawnMetadata(source,slots),terrain);
+  const nav=new RecastStageNavigation(stage,stats);
+  const physics=new RapierStagePhysics(DT,stage);
+  physics.step();
+  try{
+   const input={moveX:0,moveY:0,jumpHeld:false,squidHeld:false,consumeJump:()=>false};
+   const camera={getFlatForward:(v:Vec3)=>v.set(0,0,-1)} as ThirdPersonCamera;
+   const player=new PlayerController(app,physics,input as unknown as PlayerInput,camera,ink,stats);
+   const [x,y,z]=slots.teamASlots[3]!;
+   const offset=P.humanFootOffsetMeters;
+   player.setTeam(Team.A);
+   player.teleport(new Vec3(x,y+offset+.15,z));
+   const shared=new UndertowPhase14QSharedActorCollision(physics,stage,true);
+   const handoff=new UndertowPhase14ECpuHandoff(stage,true);
+   const liveHuman=new UndertowF3NativeHumanCrowd(nav,stage);
+   const cpu=new CpuAgentSystem(app,nav,ink,{enqueue:vi.fn()} as never,stats,stage,Team.A,
+    handoff,shared,liveHuman,true);
+   const bots=(cpu as unknown as {bots:F3TrafficCpu[]}).bots;
+   const traffic=new UndertowF3SourceTraffic(stage,nav,slots,bots,physics);
+   cpu.useF3dOriginalSourceGoals(traffic);
+   const corridors=f4OriginalCorridorEndpoints(stage);
+   const centerId=terrain['center-floors'].id;
+   const own=corridors.find(([,slope])=>slope[2]>0)!;
+   const ramp=UNDERTOW_T21D_CONNECTIVITY_PROBES.find(p=>p.id==='right-low-ramp-positive-z')!;
+   const humanDrop=traffic.routePlan.routes.find(r=>r.actorId==='HUMAN')!;
+   const humanTargets=[humanDrop.originalLanding,ramp.to,own[0],own[1],own[0]];
+   const cpuArrivals=new Map<string,number>();
+   const humanCheckpoints:number[]=[];
+   let humanPhase=0,settle=0,point=0;
+   let humanPath:ReturnType<RecastStageNavigation['auditPath']>['nativePathPoints']=[];
+   for(let frame=1;frame<=6500;frame++){
+    input.moveX=input.moveY=0;
+    if(frame>=1200&&humanPhase<humanTargets.length){
+     const body=player.getPosition();
+     const foot=new Vec3(body.x,body.y-offset,body.z);
+     const goal=new Vec3(...humanTargets[humanPhase]!);
+     if(settle>0){
+      if(--settle===0){
+       const hit=physics.castCharacterFootSupport(body,offset,'HUMAN');
+       if(stats.playerGrounded&&hit&&Math.abs(hit.point.y-foot.y)<.15&&foot.distance(goal)<.35){
+        humanCheckpoints.push(frame);
+        humanPhase++;
+       }
+       humanPath=[];
+       point=0;
+      }
+     }else{
+      if(!humanPath.length){
+       const path=nav.auditPath(foot,goal,.20);
+       if(path.reachedTarget){
+        humanPath=path.nativePathPoints;
+        point=1;
+       }
+      }
+      while(point<humanPath.length){
+       const target=humanPath[point]!;
+       const dx=target.x-foot.x,dz=target.z-foot.z;
+       const distance=Math.hypot(dx,dz);
+       if(distance<.075){point++;continue;}
+       const speed=Math.min(4,1/distance);
+       input.moveX=dx*speed;
+       input.moveY=-dz*speed;
+       break;
+      }
+      if(humanPath.length&&point>=humanPath.length)settle=40;
+     }
+    }
+    player.computeFixed(DT);
+    physics.step();
+    player.syncAfterPhysics(DT);
+    const human=player.getPosition();
+    traffic.prepare(frame,{x:human.x,y:human.y-offset,z:human.z});
+    cpu.fixedUpdate(DT,true,Team.A,human,true);
+    traffic.observe(frame);
+    cpu.drainFireRequests(()=>{});
+    cpu.drainKitRequests(()=>false);
+    for(const bot of bots){
+     if(cpuArrivals.has(bot.id)||!traffic.isLiveRejoinedSourceCpu(bot.id))continue;
+     if(corridors.some(([low])=>bot.position.distance(new Vec3(...low))<=1)&&
+        shared.sourceFootSupport(bot.id,bot.position)?.solidId===centerId)
+      cpuArrivals.set(bot.id,frame);
+    }
+    if(cpuArrivals.size===bots.length&&humanPhase===humanTargets.length)break;
+   }
+   expect(traffic.nativeSourceLiveRejoinedIds()).toHaveLength(7);
+   expect(cpuArrivals.size).toBe(7);
+   expect(humanCheckpoints).toHaveLength(humanTargets.length);
+   console.log('T21_F4_ORIGINAL_SPAWN_TO_CENTER',JSON.stringify({
+    cpuArrivals:[...cpuArrivals],humanCheckpoints
+   }));
+   handoff.reset();
+   shared.dispose();
+  }finally{
+   nav.crowd.destroy();
+   physics.world.free();
+   stub.mockRestore();
+  }
+ },20000
+);

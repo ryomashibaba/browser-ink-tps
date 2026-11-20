@@ -6,7 +6,8 @@ import { createHash } from 'node:crypto';
 // Only deterministic extractor output is served, and only over same-origin loopback.
 const f4LocalTerrainDigests = new Set([
   '1be11fc133cabe79c65cf3ff21fd7b4a94ed6170665d930ecc1986e41c6d22bd',
-  '0dc7619966269fd7971684d3e41460bf589e6db084c12d7dc025379500a2cd51'
+  '0dc7619966269fd7971684d3e41460bf589e6db084c12d7dc025379500a2cd51',
+  'f1abf5d891b6ba00320eef8f0e7bb8f0596450438023f2f9efeb30ace46268da'
 ]);
 
 export default defineConfig({
@@ -28,7 +29,7 @@ export default defineConfig({
         }
         try {
           const file = await stat(seedPath);
-          if (!file.isFile() || file.size > 16384) throw Error('Invalid local terrain seed');
+          if (!file.isFile() || file.size > 48 * 1024) throw Error('Invalid local terrain seed');
           const seed = await readFile(seedPath);
           if (!f4LocalTerrainDigests.has(createHash('sha256').update(seed).digest('hex')))
             throw Error('Invalid local terrain seed');

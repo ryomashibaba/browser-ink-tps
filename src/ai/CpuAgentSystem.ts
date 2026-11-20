@@ -16,7 +16,7 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
-import {isT21F4ResearchStage}
+import {hasF4OriginalIngress,isT21F4ResearchStage}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {isAlignedOriginalSourceCrowdTarget}
  from './OriginalSourceCrowdTargetAlignment';
@@ -1380,6 +1380,10 @@ export class CpuAgentSystem {
                   const path=this.navigation.auditPath(bot.position,this.goal,.35);
                   const first=path.nativePathPoints[0];
                   const last=path.nativePathPoints.at(-1);
+                  // The traffic gate verifies that this detail height bias
+                  // lies over one Rapier floor. KCC still moves the body.
+                  const maxStartSnap=hasF4OriginalIngress(this.stage)&&
+                    first&&Math.hypot(first.x-bot.position.x,first.z-bot.position.z)<=.12?.44:.35;
                   const distance=(a:Readonly<{x:number;y:number;z:number}>,
                     b:Readonly<{x:number;y:number;z:number}>)=>
                     Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
@@ -1388,10 +1392,10 @@ export class CpuAgentSystem {
                     path.pointCount===path.nativePathPoints.length&&
                     path.nativePathPoints.every(p=>
                       [p.x,p.y,p.z].every(Number.isFinite))&&
-                    path.startSnapDistanceMeters<=.35&&
+                    path.startSnapDistanceMeters<=maxStartSnap&&
                     path.endSnapDistanceMeters<=.35&&
                     path.endpointErrorMeters<=.20&&
-                    distance(first,bot.position)<=.35&&
+                    distance(first,bot.position)<=maxStartSnap&&
                     distance(last,this.goal)<=.35?
                     {point:this.goal,reusedPrevious:false}:null;
                 })():

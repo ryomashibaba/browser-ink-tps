@@ -1,5 +1,5 @@
 import {isT21F4ResearchStage,isT21F4OriginalTerrainStage,buildT21F4PhotoRouteExperiment,
- f4OriginalCorridorEndpoints,t21F4PlayableCorridorGuide}
+ f4OriginalCorridorEndpoints,hasF4OriginalIngress,t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3 opt-in playable preview traffic: reuse ONLY the eight genuine source
@@ -1568,6 +1568,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const current=supportAt(foot);
   if(!current||Math.abs(current.point.y-foot.y)>.18)return false;
   let patrol=this.f4OriginalPatrol.get(id);
+  if(!patrol&&hasF4OriginalIngress(this.stage)){
+   const side=this.bots.find(bot=>bot.id===id)?.team===Team.A?1:-1;
+   const route=corridors.find(([,slope])=>Math.sign(slope[2])===side);
+   if(route)patrol={route,target:0};
+  }
   if(!patrol){
    for(const route of corridors){
     const at=route.findIndex(point=>foot.distance(new Vec3(...point))<1.25);
@@ -1582,7 +1587,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const goal=new Vec3(...patrol.route[target]);
   const path=this.nav.auditPath(foot,goal,.20);
   const support=supportAt(goal);
-  if(!path.reachedTarget||path.pointCount<2||path.startSnapDistanceMeters>.30||
+  const start=path.nativePathPoints[0];
+  // At a FloorSlope01 transition the detail mesh can be above the real
+  // concrete at the same XZ. Accept that height bias only on the same floor.
+  const projectedSupport=start&&path.startSnapDistanceMeters>.30?
+   supportAt(new Vec3(start.x,start.y,start.z)):null;
+  const sameFloorReentry=hasF4OriginalIngress(this.stage)&&start&&
+   path.startSnapDistanceMeters<=.44&&Math.hypot(start.x-foot.x,start.z-foot.z)<=.12&&
+   projectedSupport?.solidId===current.solidId&&
+   Math.abs(projectedSupport.point.y-current.point.y)<=.05;
+  if(!path.reachedTarget||path.pointCount<2||
+     (path.startSnapDistanceMeters>.30&&!sameFloorReentry)||
      path.endSnapDistanceMeters>.30||!support||
      Math.abs(support.point.y-goal.y)>.08)return false;
   this.f4OriginalPatrol.set(id,{route:patrol.route,target});

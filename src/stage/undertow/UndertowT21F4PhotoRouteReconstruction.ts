@@ -192,6 +192,7 @@ export const T21_F4_RESEARCH_STAGE_LABEL='T21 V28 F4 CENTRAL ROUTE RESEARCH ONLY
 // 26 meshes repeatedly. Slow fingerprint audit is retained for unknown objects.
 const F4_APPROVED_RESEARCH_STAGES=new WeakSet<StageDefinition>();
 const F4_ORIGINAL_TERRAIN_STAGES=new WeakSet<StageDefinition>();
+const F4_ORIGINAL_INGRESS_STAGES=new WeakSet<StageDefinition>();
 const F4_ORIGINAL_CORRIDORS=new WeakMap<StageDefinition,ReturnType<typeof t21F4OriginalCorridorEndpoints>>();
 const F4_REPLACED_SOURCE_SOLIDS=new Set([
  'UndertowT21D:center-low-team-a','UndertowT21D:center-low-team-b',
@@ -208,6 +209,10 @@ const F4_REPLACED_SOURCE_SOLIDS=new Set([
 
 export function f4OriginalCorridorEndpoints(stage:StageDefinition){
  return F4_ORIGINAL_CORRIDORS.get(stage)??[];
+}
+
+export function hasF4OriginalIngress(stage:StageDefinition):boolean{
+ return F4_ORIGINAL_INGRESS_STAGES.has(stage);
 }
 
 export function buildT21F4ResearchStage(
@@ -235,6 +240,14 @@ export function buildT21F4ResearchStage(
  if(corridorFloor&&corridorSides){
   solids=[...solids.filter(s=>!F4_REPLACED_SOURCE_SOLIDS.has(s.id)),corridorFloor,corridorSides];
  }
+ const ingressFloor=terrain?.['ingress-floors'];
+ const ingressSides=terrain?.['ingress-sides'];
+ if(ingressFloor&&ingressSides){
+  const replaced=new Set(['positive_z','negative_z'].flatMap(side=>[
+   BASE+'slope01-walkway-width-'+side,BASE+'slope01-to-concrete01-'+side
+  ]));
+  solids=[...solids.filter(s=>!replaced.has(s.id)),ingressFloor,ingressSides];
+ }
  const approved:StageDefinition={...base,
   metadata:{...base.metadata,displayName:T21_F4_RESEARCH_STAGE_LABEL},
   solids};
@@ -246,6 +259,7 @@ export function buildT21F4ResearchStage(
   Object.freeze(approved);
   F4_ORIGINAL_TERRAIN_STAGES.add(approved);
   F4_ORIGINAL_CORRIDORS.set(approved,t21F4OriginalCorridorEndpoints(terrain));
+  if(ingressFloor&&ingressSides)F4_ORIGINAL_INGRESS_STAGES.add(approved);
  }
  F4_APPROVED_RESEARCH_STAGES.add(approved);
  return approved;
