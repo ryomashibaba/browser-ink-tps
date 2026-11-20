@@ -326,6 +326,11 @@ export class UndertowF3PlayablePreviewApp{
   * These steering points are not certified human collision or navigation. */
  private readonly f4HumanResearchGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
  private readonly f4HumanOriginalReturnGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
+ // F4 research UI only: shows verified native steering suggestions in live
+ // windowed play. Never mutates real input, Rapier, Recast or source terrain.
+ private f4ReturnCoach:HTMLElement|null=null;
+ private f4ReturnCoachIndex=0;
+ private f4ReturnCoachActive=false;
  private readonly f4OriginalCorridorsPresent:boolean;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
@@ -1368,6 +1373,23 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc/P pause mission · click stage to resume</p>';
   ui.appendChild(this.panel);
+  if(this.f4ResearchMode&&this.f4HumanOriginalReturnGuide){
+   const coach=document.createElement('div');
+   coach.id='t21-f4-human-return-coach';
+   coach.hidden=true;
+   coach.setAttribute('role','status');
+   coach.setAttribute('aria-live','off');
+   coach.dataset.t21F4ResearchOnly='true';
+   coach.dataset.t21F4Certified='false';
+   coach.style.cssText='position:fixed;right:14px;top:14px;z-index:45;'+
+    'max-width:min(290px,calc(100vw - 28px));padding:9px 12px;'+
+    'border:1px solid #79d7d0;border-radius:9px;'+
+    'background:rgba(6,24,32,.90);color:#e3f9f7;'+
+    'font:700 12px/1.4 system-ui;white-space:pre-line;'+
+    'pointer-events:none';
+   ui.appendChild(coach);
+   this.f4ReturnCoach=coach;
+  }
   // B262 opt-in diagnostic, source QA only; full controls remain one click away.
   if(b31Params.get('t21B262')==='qaFocusAudit'){
    const tab=document.createElement('button');
@@ -7924,6 +7946,78 @@ export class UndertowF3PlayablePreviewApp{
    activeHuman:this.resources.currentHp>0
   });
  }
+ /** Windowed F4 human return cue. Reads only the existing real KCC foot,
+  * original Rapier floor and Recast/Rapier waypoint audit. Never sends
+  * WASD, resets motion, changes path topology or claims a Turf result.
+  * Unavailable/unverified native support is a visible HOLD, not a hint
+  * that the player can walk through a wall or across a floor gap. */
+ private refreshF4ReturnCoach():void{
+  const coach=this.f4ReturnCoach,guide=this.f4HumanOriginalReturnGuide;
+  if(!coach||!guide||!this.f4ResearchMode||
+     this.matchState!=='PLAYING'||this.paused||this.stopReason||
+     this.resources.currentHp<=0||
+     document.pointerLockElement!==this.canvas){
+   if(coach)coach.hidden=true;
+   return;
+  }
+  const body=this.player.getPosition(new Vec3());
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const footY=body.y-offset;
+  const near=(p:readonly number[])=>
+   Math.hypot(body.x-p[0]!,body.z-p[2]!);
+  if(this.f4ReturnCoachActive&&
+     guide.every(p=>near(p)>12)){
+   // Respawn/new run: never keep progress from a different location.
+   this.f4ReturnCoachActive=false;
+   this.f4ReturnCoachIndex=0;
+  }
+  const hit=this.physics.castCharacterFootSupport(body,offset,'HUMAN');
+  const supported=this.player.currentMode==='HUMAN'&&
+   this.stats.playerGrounded&&hit!==null&&
+   Math.abs(footY-hit.point.y)<=.12;
+  if(!this.f4ReturnCoachActive){
+   if(!supported||near(guide[0]!)>2){
+    coach.hidden=true;
+    return;
+   }
+   this.f4ReturnCoachActive=true;
+  }
+  coach.hidden=false;
+  const heading='F4 ORIGINAL RETURN · RESEARCH ONLY';
+  if(!supported){
+   coach.textContent=heading+'\\nREAL FOOT SUPPORT HOLD · DO NOT ASSUME PASS';
+   coach.dataset.t21F4ReturnState='FOOT_HOLD';
+   return;
+  }
+  while(this.f4ReturnCoachIndex<guide.length){
+   const goal=guide[this.f4ReturnCoachIndex]!;
+   if(near(goal)>.55||Math.abs(footY-goal[1])>.28)break;
+   this.f4ReturnCoachIndex++;
+  }
+  if(this.f4ReturnCoachIndex>=guide.length){
+   coach.textContent=heading+'\\nWAYPOINTS REACHED · MANUAL ACCEPTANCE STILL REQUIRED';
+   coach.dataset.t21F4ReturnState='WAYPOINTS_REACHED_UNCERTIFIED';
+   return;
+  }
+  const audit=this.auditF4HumanResearchPath(
+   this.f4ReturnCoachIndex,'return');
+  const step=guide[this.f4ReturnCoachIndex]!;
+  const label=(this.f4ReturnCoachIndex+1)+'/'+guide.length;
+  if(!audit.admitted){
+   coach.textContent=heading+'\\n'+label+' · HOLD '+audit.reason+
+    '\\nReal foot / Recast / Rapier did not authorize this hint';
+   coach.dataset.t21F4ReturnState='NATIVE_HOLD';
+   return;
+  }
+  const keys='suggestedKeys' in audit&&
+   Array.isArray(audit.suggestedKeys)?
+   audit.suggestedKeys.join(' + '):'';
+  coach.textContent=heading+'\\n'+label+' · '+near(step).toFixed(1)+
+   'm to real-floor waypoint\\nWASD suggestion: '+(keys||'ALIGN CAMERA')+
+   '\\nManual movement only · NO ROUTE CERTIFICATION';
+  coach.dataset.t21F4ReturnState='NATIVE_GUIDE';
+  coach.dataset.t21F4ReturnWaypoint=String(this.f4ReturnCoachIndex);
+ }
  /** F4-only passive original Recast/Rapier proof for genuine human WASD.
   * Neither this method nor its caller can write Actor, nav, paint or physics. */
  public auditF4HumanResearchPath(index:number,route?:'return'){
@@ -8522,6 +8616,7 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
+  this.refreshF4ReturnCoach();
   const b157Map=this.panel.querySelector<HTMLElement>(
    '#t21-f3-b157-original-map');
   if(b157Map&&b157Map.dataset.nativeReadOnlyMapReady!=='true'){
