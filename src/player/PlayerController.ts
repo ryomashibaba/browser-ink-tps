@@ -192,7 +192,7 @@ export class PlayerController {
   private f4LastKccMotion:Readonly<{
     requested:readonly number[];accepted:readonly number[];
     grounded:boolean;contacts:readonly Readonly<{
-      solidId:string|null;normal:readonly number[];
+      colliderHandle:number;solidId:string|null;normal:readonly number[];
     }>[];
   }>|null=null;
   private sourcePaintBackingById:ReadonlyMap<string,string>|null=null;
@@ -755,11 +755,12 @@ export class PlayerController {
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
     if(this.f4KccAuditEnabled){
-      const contacts:{solidId:string|null;normal:number[]}[]=[];
+      const contacts:{colliderHandle:number;solidId:string|null;normal:number[]}[]=[];
       for(let i=0;i<this.character.numComputedCollisions();i++){
         const hit=this.character.computedCollision(i);
         if(!hit?.collider)continue;
         contacts.push({
+          colliderHandle:hit.collider.handle,
           solidId:this.physics.sourceSolidIdForCollider(hit.collider),
           normal:[hit.normal1.x,hit.normal1.y,hit.normal1.z]
         });

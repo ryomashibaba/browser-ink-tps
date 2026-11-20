@@ -7986,6 +7986,21 @@ export class UndertowF3PlayablePreviewApp{
     actualRapierBody:[pos.x,pos.y,pos.z],
     actualRapierSupportId:b146Foot.lastOriginalSourceHitId
    }):null;
+  // F4-only real Rapier KCC dynamic ownership: identify which registered
+  // physical CPU capsule actually contacted the human this native tick.
+  // A null static solidId alone is not evidence of a particular teammate.
+  // No collision masks, actor positions or Crowd goals are changed.
+  const f4Kcc=this.f4ResearchMode?this.player.qaF4LastKccMotion():null;
+  const f4PhysicalCpuHits=this.f4ResearchMode&&f4Kcc?
+   (['A1','A2','A3','B1','B2','B3','B4'] as const).flatMap(id=>{
+    const actor=this.shared.qaRegisteredRealCpuCapsule(id);
+    if(!actor)return [];
+    const hit=f4Kcc.contacts.find(
+     c=>c.colliderHandle===actor.actualRapierColliderHandle);
+    return hit?[{id,colliderHandle:actor.actualRapierColliderHandle,
+     foot:[actor.foot.x,actor.foot.y,actor.foot.z],
+     normal:hit.normal}]:[];
+   }):[];
   const nativeCamera=this.camera.sourcePracticeViewSnapshot();
   // Read-only SOURCE witness; actual native held axes and current real yaw.
   const nativeInput=this.nativeLiveSourcePrestart?
@@ -8005,8 +8020,8 @@ export class UndertowF3PlayablePreviewApp{
    // when comparing it to photo/Recast/Rapier floor elevation.
    f4HumanPhysicalFoot:this.f4ResearchMode?
     [pos.x,pos.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,pos.z]:null,
-   f4HumanKccMotion:this.f4ResearchMode?
-    this.player.qaF4LastKccMotion():null,
+   f4HumanKccMotion:f4Kcc,
+   f4HumanKccCollisionActors:f4PhysicalCpuHits,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,

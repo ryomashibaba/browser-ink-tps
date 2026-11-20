@@ -1104,7 +1104,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   actualRapierHuman:true,noActorWrites:true,noStageWrites:true,
   guideAuthority:'PHOTO_STEERING_ONLY_NOT_COLLISION_PROOF',
   initialFoot:null,lastFoot:null,lowestZ:null,
-  reachedWaypoints:0,waypointCount:0,nativeTickBudget:1500,
+  reachedWaypoints:0,waypointCount:0,nativeTickBudget:2450,
+  realCpuContactObservations:0,realCpuYieldSteps:0,lastCpuContact:null,
   realKeyDowns:0,nativeBridgedSteps:0,lastNativeBridge:null,
   samples:[]};
  proof.f4HumanRealPilot=result;save();
@@ -1162,8 +1163,9 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
   if(!near){result.status='HOLD_NO_NEARBY_SOURCE_PHOTO_WAYPOINT';return;}
   let next=near.i, progressWaypoint=-1;
   let closestGoalDistance=Infinity,lastProgressTick=start.tick;
+  let physicalYieldUntilTick=-1,physicalYieldKey=null,lastYieldTick=-100;
   result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
-  for(let iteration=0;iteration<310;iteration++){
+  for(let iteration=0;iteration<460;iteration++){
    const n=await snap(),p=n?.f4HumanPhysicalFoot;
    if(n&&recordCpuProgress)recordCpuProgress(n);
    if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||
@@ -1180,6 +1182,16 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    }
    result.lastFoot=[...p];result.lastBodyCenter=[...n.player.position];
    result.lastKccMotion=n.f4HumanKccMotion??null;
+   // Read the REAL human Rapier KCC's actor-owned collider handle.
+   // Only a registered active CPU is allowed to trigger a yielding step;
+   // an unidentified contact or a static floor is never treated as A2.
+   const contacts=Array.isArray(n.f4HumanKccCollisionActors)?
+    n.f4HumanKccCollisionActors:[];
+   if(contacts.length){
+    result.realCpuContactObservations++;
+    result.lastCpuContact={tick:n.tick,actors:contacts,
+     foot:[...p],kcc:n.f4HumanKccMotion??null};
+   }
    result.lowestZ=Math.min(result.lowestZ,p[2]);
    if(p[2]<-.5&&n.nativeKccGrounded===true){
     result.status='CANDIDATE_REAL_HUMAN_KCC_CROSSING_REVIEW_REQUIRED';
@@ -1265,7 +1277,7 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
     if(!Array.isArray(goal)||!goal.every(Number.isFinite)){
       result.status='HOLD_INVALID_PHOTO_WAYPOINT';break;
     }
-    if(Math.hypot(goal[0]-p[0],goal[2]-p[2])>.72||
+    if(Math.hypot(goal[0]-p[0],goal[2]-p[2])>.94||
        Math.abs(goal[1]-p[1])>1.0)break;
     next++;
    }
@@ -1285,16 +1297,47 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
    }
    result.lastProgressTick=lastProgressTick;
    result.lastGoalDistance=goalDistance;
-   if(n.tick-lastProgressTick>75){
+   if(n.tick-lastProgressTick>105){
     result.status='HOLD_REAL_KCC_GOAL_PROGRESS_STALL';
     result.stallWitness={
       tick:n.tick,foot:[...p],goal,kcc:n.f4HumanKccMotion??null
     };
     break;
    }
+   // Give a genuinely colliding, registered CPU physical room to pass.
+   // The driver presses ordinary real WASD for at most 12 native frames;
+   // the Rapier KCC still decides the displacement and can reject it.
+   // This does not ghost teammates, teleport, modify nav, or skip a seam.
+   const blockedKcc=n.f4HumanKccMotion;
+   const requested=blockedKcc?.requested??[],accepted=blockedKcc?.accepted??[];
+   const attempted=Math.hypot(requested[0]??0,requested[2]??0);
+   const traveled=Math.hypot(accepted[0]??0,accepted[2]??0);
+   const physicalHit=contacts.find(c=>Array.isArray(c.foot)&&
+    c.foot.length===3&&c.foot.every(Number.isFinite)&&
+    Math.hypot(c.foot[0]-p[0],c.foot[2]-p[2])<1.5);
+   if(physicalHit&&attempted>.015&&traveled<attempted*.38&&
+      n.tick-lastYieldTick>65){
+    // A lateral move AWAY from the physically registered CPU, not an
+    // unsupported alternate route. Rejoin the SAME next photo waypoint.
+    physicalYieldKey=p[0]>=physicalHit.foot[0]?'KeyD':'KeyA';
+    physicalYieldUntilTick=n.tick+12;
+    lastYieldTick=n.tick;
+    result.realCpuYieldSteps++;
+    result.lastYield={tick:n.tick,actor:physicalHit.id,
+     key:physicalYieldKey,foot:[...p],cpuFoot:physicalHit.foot};
+   }
+   if(n.tick<physicalYieldUntilTick&&physicalYieldKey){
+    await setKeys([physicalYieldKey]);
+    await until(async()=>{
+     const now=await snap();
+     return now.tick>=n.tick+5||now.stopReason||
+      now.matchState!=='PLAYING'?now:null;
+    },20000,55);
+    continue;
+   }
    let steeringGoal=goal,navBridge=null;
    const directDistance=Math.hypot(goal[0]-p[0],goal[2]-p[2]);
-   if(directDistance>8||n.tick-lastProgressTick>=24){
+   if(directDistance>5.5||n.tick-lastProgressTick>=24){
     // On the authentic downhill ramps, a genuine foot-to-photo Y gap
     // can be >0.28m over a few metres without any disconnected floor.
     // Let real Rapier KCC traverse the nearby slope normally. After an
@@ -1337,7 +1380,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
      bodyCenter:[...n.player.position],waypoint:next,
      target:goal,steeringGoal,key:chosenKeys,kccGrounded:true,
      kcc:n.f4HumanKccMotion??null,
-     nativeBridgeVerified:navBridge?.admitted===true});
+     nativeBridgeVerified:navBridge?.admitted===true,
+     realCpuHits:contacts.map(c=>c.id)});
     if(result.samples.length>24)result.samples.shift();
     save();
    }
