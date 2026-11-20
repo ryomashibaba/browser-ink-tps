@@ -1202,8 +1202,12 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
     // Capture the actual centered crossing, not a later spawn screenshot.
     // Screenshot is visual evidence only; the native Rapier foot remains
     // the crossing authority.
+    // F4 combat-first trial: stage screenshots have already been captured
+    // in previous real runs. An in-match synchronous CDP screenshot pauses
+    // a vulnerable stationary human while all CPU AI and fire continue.
+    // Do not spend real live battle time on a redundant proof image.
     await release();
-    try{
+    if(!f4RealChrome)try{
      const shot=await cdp('Page.captureScreenshot',{
       format:'png',captureBeyondViewport:false});
      if(typeof shot?.data==='string'&&shot.data.length>100){
@@ -1249,7 +1253,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
     }
     await release();
     result.reverseMaxZ=bestReturnZ;
-    if(result.reverseStatus==='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'){
+    if(result.reverseStatus==='CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'&&
+       !f4RealChrome){
      try{
       const shot=await cdp('Page.captureScreenshot',{
        format:'png',captureBeyondViewport:false});
@@ -1927,6 +1932,51 @@ async function runF4RealChrome(){
     report.humanRoundTripObserved=proof.f4HumanRealPilot?.reverseStatus===
       'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW';
     recordCpuProgress(await snap());
+    // Earlier driver collected a screenshot and went back to a coarse
+    // 850ms observer. In one genuine replay it did not inspect the human
+    // again until tick 2607, AFTER a real B1 at 2.9m had splatted it.
+    // Once the 60Hz human has returned from the center, sample the live
+    // active opponent's ACTUAL feet promptly. Start ordinary mouse-fire
+    // when any enemy comes within 13.5m. Real native CPU movement alone
+    // supplies the encounter; never teleport or manufacture a hit.
+    if(report.humanRoundTripObserved&&!combatAttempted){
+     const observedReturn=proof.f4HumanRealPilot?.returnTick??-1;
+     try{
+      const encounter=await until(async()=>{
+       const t=await snap();
+       recordCpuProgress(t);
+       const foot=t.f4HumanPhysicalFoot;
+       const closest=Array.isArray(foot)&&foot.length===3?
+        (t.cpu?.cpu??[]).filter(c=>c.id?.startsWith('B')&&
+         c.lifeState==='ACTIVE'&&Array.isArray(c.physicalFoot)&&
+         c.physicalFoot.length===3&&c.physicalFoot.every(Number.isFinite))
+         .map(c=>({id:c.id,distanceMeters:Math.hypot(
+          c.physicalFoot[0]-foot[0],c.physicalFoot[2]-foot[2])}))
+         .sort((a,b)=>a.distanceMeters-b.distanceMeters)[0]:null;
+       if(t.stopReason||t.matchState!=='PLAYING'||t.player?.hp<=0||
+          t.nativeKccGrounded!==true||
+          t.tick>observedReturn+240)
+        return {hold:true,tick:t.tick,hp:t.player?.hp??null,
+         closestOpponent:closest??null};
+       if(closest&&closest.distanceMeters<=13.5)
+        return {hold:false,tick:t.tick,hp:t.player.hp,
+         foot:[...foot],opponent:closest};
+       return null;
+      },40000,75);
+      report.immediatePostReturnEncounter=encounter;
+      if(!encounter.hold){
+       combatAttempted=true;
+       report.humanCombatTrigger=encounter;
+       await runF4RealHumanCombatWindow(recordCpuProgress);
+       report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
+       report.humanCombatIndependentOfCorridor=true;
+       report.humanCombatTriggeredAtTrueCloseRange=true;
+      }
+     }catch(e){
+      report.immediatePostReturnEncounter={
+       hold:true,error:String(e).slice(0,210)};
+     }
+    }
     save();
    }
    // Previous F4: native CPU B1 approached from 11.1m to 8.3m,
