@@ -1396,6 +1396,41 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  outRow.humanShotsBefore=before.shotsFired;
  outRow.inkBefore=before.player.ink;
  outRow.paintCellsBefore=inkCells(before);
+ // Test driver: turn the REAL pointer-locked mouse toward the nearest
+ // actually observed B-side CPU; no gameplay auto-aim or projectile writes.
+ const human=before.f4HumanPhysicalFoot;
+ const target=outRow.opponentHpBefore.filter(c=>
+  Array.isArray(c.foot)&&c.foot.length===3&&
+  c.foot.every(Number.isFinite)&&
+  Array.isArray(human)&&human.length===3&&
+  c.life==='ACTIVE')
+  .sort((a,b)=>Math.hypot(a.foot[0]-human[0],a.foot[2]-human[2])-
+   Math.hypot(b.foot[0]-human[0],b.foot[2]-human[2]))[0];
+ outRow.realTargetAtAim=target??null;
+ outRow.realMouseYawBefore=before.cameraSourcePractice?.yawDegrees??null;
+ if(target&&Number.isFinite(outRow.realMouseYawBefore)){
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
+   x:480,y:270,button:'none'});
+  const base=await snap();
+  const yaw=base.cameraSourcePractice?.yawDegrees;
+  if(Number.isFinite(yaw)){
+   const dx=target.foot[0]-human[0],dz=target.foot[2]-human[2];
+   const desired=Math.atan2(dx,-dz)*180/Math.PI;
+   const delta=((desired-yaw+540)%360)-180;
+   outRow.targetYawDegrees=desired;
+   outRow.baselineYawDegrees=yaw;
+   outRow.intendedMouseYawDeltaDegrees=delta;
+   const pixels=Math.round(Math.max(-180,Math.min(180,delta/.22)));
+   if(Math.abs(delta)<75){
+    await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
+     x:480+pixels,y:270,button:'none'});
+    const aimed=await snap();
+    outRow.actualMouseYawAfter=aimed.cameraSourcePractice?.yawDegrees??null;
+    outRow.actualYawErrorDegrees=Number.isFinite(outRow.actualMouseYawAfter)?
+     ((desired-outRow.actualMouseYawAfter+540)%360)-180:null;
+   }else outRow.aimHold='TARGET_OUTSIDE_BOUNDED_REAL_MOUSE_TURN';
+  }
+ }
  let held=false,last=before;
  try{
   // Actual canvas click is a user-visible left mouse press, NOT direct
@@ -1442,6 +1477,46 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  outRow.shotEvidenceObserved=outRow.humanShots>0;
  outRow.realOriginalPaintObserved=(outRow.newRegisteredPaintCells??0)>0;
  outRow.realEnemyHpDamageObserved=outRow.actualCpuDamage.length>0;
+ // Inspect the existing 150-native-tick HUMAN death/revival mechanism
+ // at real match clock speed. Do not invoke respawn or move any actor.
+ if(after.player?.hp<=0&&after.matchState==='PLAYING'){
+  const remaining=after.humanRespawnTicksRemaining;
+  const trace=[];
+  outRow.respawnProof={
+   observedHpZeroTick:after.tick,
+   nativeRemainingAtFirstSample:remaining,
+   inferredDeathTick:Number.isFinite(remaining)?
+    after.tick-(150-remaining):null,
+   samples:trace,status:'HOLD_NO_REAL_RESPAWN_OBSERVED'};
+  let lastTrace=-30;
+  try{
+   const revive=await until(async()=>{
+    const n=await snap();
+    if(recordCpuProgress)recordCpuProgress(n);
+    if(n.tick-lastTrace>=30){
+     lastTrace=n.tick;
+     trace.push({tick:n.tick,hp:n.player?.hp??null,
+      remaining:n.humanRespawnTicksRemaining??null,
+      foot:n.f4HumanPhysicalFoot});
+     if(trace.length>12)trace.shift();
+    }
+    if(n.player?.hp>0)return n;
+    if(n.tick>after.tick+210||n.stopReason||
+       n.matchState!=='PLAYING')return {hold:true,tick:n.tick};
+    return null;
+   },65000,120);
+   if(revive&&!revive.hold){
+    outRow.respawnProof.status='REAL_NATIVE_HUMAN_RESPAWN_OBSERVED';
+    outRow.respawnProof.revivedTick=revive.tick;
+    outRow.respawnProof.revivedHp=revive.player?.hp??null;
+    outRow.respawnProof.revivedFoot=revive.f4HumanPhysicalFoot;
+    outRow.respawnProof.estimatedNativeTicksFromDeath=
+     outRow.respawnProof.inferredDeathTick===null?null:
+     revive.tick-outRow.respawnProof.inferredDeathTick;
+   }else outRow.respawnProof.status='HOLD_RESPAWN_NOT_OBSERVED_IN_BOUND';
+  }catch(e){outRow.respawnProof.status='HOLD_RESPAWN_READ_ERROR';
+    outRow.respawnProof.error=String(e).slice(0,180);}
+ }
  outRow.noOfficialTurfResult=true;
  proof.f4HumanCombatWindow=outRow;save();
  console.log('T21_F4_REAL_HUMAN_COMBAT_WINDOW',JSON.stringify(outRow));
