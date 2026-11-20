@@ -326,11 +326,14 @@ export class UndertowF3PlayablePreviewApp{
   * These steering points are not certified human collision or navigation. */
  private readonly f4HumanResearchGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
  private readonly f4HumanOriginalReturnGuide:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
+ /** 180-degree mirrored CANDIDATE ONLY. Needs real native proof on -Z. */
+ private readonly f4HumanNegativeReturnCandidate:ReturnType<typeof t21F4PlayableCorridorGuide>|null;
  // F4 research UI only: shows verified native steering suggestions in live
  // windowed play. Never mutates real input, Rapier, Recast or source terrain.
  private f4ReturnCoach:HTMLElement|null=null;
  private f4ReturnCoachIndex=0;
  private f4ReturnCoachActive=false;
+ private f4ReturnCoachRoute:'return'|'negative-candidate'='return';
  private readonly f4OriginalCorridorsPresent:boolean;
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
@@ -700,6 +703,10 @@ export class UndertowF3PlayablePreviewApp{
   this.f4HumanOriginalReturnGuide=returnGuide.length?[...returnGuide,
    UNDERTOW_T21D_CONNECTIVITY_PROBES.find(probe=>probe.id==='right-low-ramp-positive-z')!.to
   ]:null;
+  // Derived only as a navigation experiment. A map-side symmetry result
+  // is NOT proof that the human can cross negative-Z original collision.
+  this.f4HumanNegativeReturnCandidate=
+   this.f4HumanOriginalReturnGuide?.map(([x,y,z])=>[-x,y,-z] as const)??null;
   this.canvas.dataset.t21F4CentralResearch=terrain
    ?originalCorridors.length?'UNOFFICIAL_LOCAL_ORIGINAL_CORRIDORS':'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN'
    :this.f4ResearchMode
@@ -2880,7 +2887,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3SourceStage=stage.metadata.id;
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
-   auditF4HumanResearchPath:(index:number,route?:'return')=>
+   auditF4HumanResearchPath:(index:number,route?:'return'|'negative-candidate')=>
     this.auditF4HumanResearchPath(index,route),
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
    b454OriginalCpuFootTrace:()=>this.traffic.b454ReadOnlyOriginalNativeFootTrace(),
@@ -7952,8 +7959,10 @@ export class UndertowF3PlayablePreviewApp{
   * Unavailable/unverified native support is a visible HOLD, not a hint
   * that the player can walk through a wall or across a floor gap. */
  private refreshF4ReturnCoach():void{
-  const coach=this.f4ReturnCoach,guide=this.f4HumanOriginalReturnGuide;
-  if(!coach||!guide||!this.f4ResearchMode||
+  const coach=this.f4ReturnCoach;
+  const positive=this.f4HumanOriginalReturnGuide;
+  const negative=this.f4HumanNegativeReturnCandidate;
+  if(!coach||!positive||!this.f4ResearchMode||
      this.matchState!=='PLAYING'||this.paused||this.stopReason||
      this.resources.currentHp<=0||
      document.pointerLockElement!==this.canvas){
@@ -7965,25 +7974,39 @@ export class UndertowF3PlayablePreviewApp{
   const footY=body.y-offset;
   const near=(p:readonly number[])=>
    Math.hypot(body.x-p[0]!,body.z-p[2]!);
-  if(this.f4ReturnCoachActive&&
-     guide.every(p=>near(p)>12)){
-   // Respawn/new run: never keep progress from a different location.
-   this.f4ReturnCoachActive=false;
-   this.f4ReturnCoachIndex=0;
-  }
   const hit=this.physics.castCharacterFootSupport(body,offset,'HUMAN');
   const supported=this.player.currentMode==='HUMAN'&&
    this.stats.playerGrounded&&hit!==null&&
    Math.abs(footY-hit.point.y)<=.12;
+  let guide=this.f4ReturnCoachRoute==='negative-candidate'?negative:positive;
+  if(this.f4ReturnCoachActive&&
+     (!guide||guide.every(p=>near(p)>12))){
+   this.f4ReturnCoachActive=false;
+   this.f4ReturnCoachIndex=0;
+  }
   if(!this.f4ReturnCoachActive){
-   if(!supported||near(guide[0]!)>2){
+   const positiveDistance=near(positive[0]!);
+   const negativeDistance=negative?near(negative[0]!):Infinity;
+   // No guessed negative floor: a real grounded Rapier foot is required
+   // before even offering the mirrored route as an experiment.
+   if(!supported||Math.min(positiveDistance,negativeDistance)>2){
     coach.hidden=true;
     return;
    }
+   this.f4ReturnCoachRoute=negativeDistance<positiveDistance?
+    'negative-candidate':'return';
+   this.f4ReturnCoachIndex=0;
    this.f4ReturnCoachActive=true;
   }
+  guide=this.f4ReturnCoachRoute==='negative-candidate'?negative:positive;
+  if(!guide){coach.hidden=true;return;}
   coach.hidden=false;
-  const heading='F4 ORIGINAL RETURN · RESEARCH ONLY';
+  const hypothesis=this.f4ReturnCoachRoute==='negative-candidate';
+  const heading=hypothesis?
+   'F4 -Z MIRRORED ROUTE · UNVERIFIED CANDIDATE':
+   'F4 +Z ORIGINAL RETURN · RESEARCH ONLY';
+  coach.dataset.t21F4ReturnRoute=this.f4ReturnCoachRoute;
+  coach.dataset.t21F4Certified='false';
   if(!supported){
    coach.textContent=heading+'\nREAL FOOT SUPPORT HOLD · DO NOT ASSUME PASS';
    coach.dataset.t21F4ReturnState='FOOT_HOLD';
@@ -7995,12 +8018,13 @@ export class UndertowF3PlayablePreviewApp{
    this.f4ReturnCoachIndex++;
   }
   if(this.f4ReturnCoachIndex>=guide.length){
-   coach.textContent=heading+'\nWAYPOINTS REACHED · MANUAL ACCEPTANCE STILL REQUIRED';
+   coach.textContent=heading+
+    '\nCANDIDATE WAYPOINTS REACHED · MANUAL ACCEPTANCE STILL REQUIRED';
    coach.dataset.t21F4ReturnState='WAYPOINTS_REACHED_UNCERTIFIED';
    return;
   }
   const audit=this.auditF4HumanResearchPath(
-   this.f4ReturnCoachIndex,'return');
+   this.f4ReturnCoachIndex,this.f4ReturnCoachRoute);
   const step=guide[this.f4ReturnCoachIndex]!;
   const label=(this.f4ReturnCoachIndex+1)+'/'+guide.length;
   if(!audit.admitted){
@@ -8013,15 +8037,17 @@ export class UndertowF3PlayablePreviewApp{
    Array.isArray(audit.suggestedKeys)?
    audit.suggestedKeys.join(' + '):'';
   coach.textContent=heading+'\n'+label+' · '+near(step).toFixed(1)+
-   'm to real-floor waypoint\nWASD suggestion: '+(keys||'ALIGN CAMERA')+
+   'm to native-checked waypoint\nWASD suggestion: '+(keys||'ALIGN CAMERA')+
    '\nManual movement only · NO ROUTE CERTIFICATION';
   coach.dataset.t21F4ReturnState='NATIVE_GUIDE';
   coach.dataset.t21F4ReturnWaypoint=String(this.f4ReturnCoachIndex);
  }
  /** F4-only passive original Recast/Rapier proof for genuine human WASD.
   * Neither this method nor its caller can write Actor, nav, paint or physics. */
- public auditF4HumanResearchPath(index:number,route?:'return'){
-  const guide=route==='return'?this.f4HumanOriginalReturnGuide:this.f4HumanResearchGuide;
+ public auditF4HumanResearchPath(index:number,route?:'return'|'negative-candidate'){
+  const guide=route==='return'?this.f4HumanOriginalReturnGuide:
+   route==='negative-candidate'?this.f4HumanNegativeReturnCandidate:
+   this.f4HumanResearchGuide;
   if(!this.f4ResearchMode||!guide||!Number.isInteger(index)||
      index<0||index>=guide.length)
    return {admitted:false,reason:'F4_WAYPOINT_UNAVAILABLE'};
@@ -8161,6 +8187,8 @@ export class UndertowF3PlayablePreviewApp{
    cameraSourcePractice:nativeCamera,
    f4HumanResearchGuide:this.f4HumanResearchGuide,
    f4HumanOriginalReturnGuide:this.f4HumanOriginalReturnGuide,
+   f4HumanNegativeReturnCandidate:this.f4HumanNegativeReturnCandidate,
+   f4HumanReturnGuideCertified:false,
    // Snapshot player.position is Rapier capsule CENTER, not a foot.
    // The real human review must use the native capsule's lowest point
    // when comparing it to photo/Recast/Rapier floor elevation.
