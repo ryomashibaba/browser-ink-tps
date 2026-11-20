@@ -7985,7 +7985,7 @@ export class UndertowF3PlayablePreviewApp{
   coach.hidden=false;
   const heading='F4 ORIGINAL RETURN · RESEARCH ONLY';
   if(!supported){
-   coach.textContent=heading+'\\nREAL FOOT SUPPORT HOLD · DO NOT ASSUME PASS';
+   coach.textContent=heading+'\nREAL FOOT SUPPORT HOLD · DO NOT ASSUME PASS';
    coach.dataset.t21F4ReturnState='FOOT_HOLD';
    return;
   }
@@ -7995,7 +7995,7 @@ export class UndertowF3PlayablePreviewApp{
    this.f4ReturnCoachIndex++;
   }
   if(this.f4ReturnCoachIndex>=guide.length){
-   coach.textContent=heading+'\\nWAYPOINTS REACHED · MANUAL ACCEPTANCE STILL REQUIRED';
+   coach.textContent=heading+'\nWAYPOINTS REACHED · MANUAL ACCEPTANCE STILL REQUIRED';
    coach.dataset.t21F4ReturnState='WAYPOINTS_REACHED_UNCERTIFIED';
    return;
   }
@@ -8004,17 +8004,17 @@ export class UndertowF3PlayablePreviewApp{
   const step=guide[this.f4ReturnCoachIndex]!;
   const label=(this.f4ReturnCoachIndex+1)+'/'+guide.length;
   if(!audit.admitted){
-   coach.textContent=heading+'\\n'+label+' · HOLD '+audit.reason+
-    '\\nReal foot / Recast / Rapier did not authorize this hint';
+   coach.textContent=heading+'\n'+label+' · HOLD '+audit.reason+
+    '\nReal foot / Recast / Rapier did not authorize this hint';
    coach.dataset.t21F4ReturnState='NATIVE_HOLD';
    return;
   }
   const keys='suggestedKeys' in audit&&
    Array.isArray(audit.suggestedKeys)?
    audit.suggestedKeys.join(' + '):'';
-  coach.textContent=heading+'\\n'+label+' · '+near(step).toFixed(1)+
-   'm to real-floor waypoint\\nWASD suggestion: '+(keys||'ALIGN CAMERA')+
-   '\\nManual movement only · NO ROUTE CERTIFICATION';
+  coach.textContent=heading+'\n'+label+' · '+near(step).toFixed(1)+
+   'm to real-floor waypoint\nWASD suggestion: '+(keys||'ALIGN CAMERA')+
+   '\nManual movement only · NO ROUTE CERTIFICATION';
   coach.dataset.t21F4ReturnState='NATIVE_GUIDE';
   coach.dataset.t21F4ReturnWaypoint=String(this.f4ReturnCoachIndex);
  }
