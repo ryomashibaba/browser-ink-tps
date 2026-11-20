@@ -8022,6 +8022,11 @@ export class UndertowF3PlayablePreviewApp{
     [pos.x,pos.y-PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,pos.z]:null,
    f4HumanKccMotion:f4Kcc,
    f4HumanKccCollisionActors:f4PhysicalCpuHits,
+   // Actual center ray intersects a CPU only when the existing camera
+   // / original-cover query detects its live physical combat hit volume.
+   // The QA driver may OBSERVE this; it cannot award HP or aim bullets.
+   f4HumanRealCpuCrosshair:this.f4ResearchMode?
+    this.camera.sourceCombatAimSnapshot():null,
    f4HumanGuideAuthority:this.f4ResearchMode?
     'PHOTO_STEERING_ONLY_NOT_HUMAN_COLLISION_PROOF':null,
    sourceNativeHumanInputProjection:nativeInput,

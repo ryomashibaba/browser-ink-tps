@@ -1412,7 +1412,8 @@ async function runF4HumanRealWasdPilot(recordCpuProgress){
  */
 async function runF4RealHumanCombatWindow(recordCpuProgress){
  const outRow={status:'HOLD_F4_REAL_COMBAT_NOT_STARTED',
-  actualMouse:true,actualHumanWeapon:true,requestedTicks:72,
+  actualMouse:true,actualHumanWeapon:true,requestedTicks:96,
+  realAimAttempts:[],realAimConfirmedCpu:null,realFireTrace:[],
   writesToCpuStageClockOrScore:0,
   nativeStartTick:null,nativeEndTick:null,
   humanShots:0,inkSpentNet:null,newRegisteredPaintCells:0,
@@ -1440,60 +1441,126 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  outRow.humanShotsBefore=before.shotsFired;
  outRow.inkBefore=before.player.ink;
  outRow.paintCellsBefore=inkCells(before);
- // Test driver: turn the REAL pointer-locked mouse toward the nearest
- // actually observed B-side CPU; no gameplay auto-aim or projectile writes.
+ // Only real CDP pointer events can change the camera yaw/pitch;
+ // the game continues to compute physical muzzle direction, stage cover,
+ // projectile flight and real CPU HP by its ORIGINAL gameplay code.
+ // A yaw computed from the human FOOT is not sufficient: the camera eye
+ // is several metres BEHIND/ABOVE the body and may see different cover.
  const human=before.f4HumanPhysicalFoot;
- const target=outRow.opponentHpBefore.filter(c=>
+ const candidates=outRow.opponentHpBefore.filter(c=>
   Array.isArray(c.foot)&&c.foot.length===3&&
-  c.foot.every(Number.isFinite)&&
-  Array.isArray(human)&&human.length===3&&
-  c.life==='ACTIVE')
+  c.foot.every(Number.isFinite)&&Array.isArray(human)&&
+  human.length===3&&c.life==='ACTIVE')
   .sort((a,b)=>Math.hypot(a.foot[0]-human[0],a.foot[2]-human[2])-
-   Math.hypot(b.foot[0]-human[0],b.foot[2]-human[2]))[0];
- outRow.realTargetAtAim=target??null;
+   Math.hypot(b.foot[0]-human[0],b.foot[2]-human[2]));
+ outRow.realTargetAtAim=candidates[0]??null;
  outRow.realMouseYawBefore=before.cameraSourcePractice?.yawDegrees??null;
- if(target&&Number.isFinite(outRow.realMouseYawBefore)){
+ outRow.realMousePitchBefore=before.cameraSourcePractice?.pitchDegrees??null;
+ let cursorX=480,cursorY=270;
+ const wrapAngle=x=>((x+540)%360)-180;
+ // Browser pointer-lock movement remains a normal REAL mouse movement;
+ // this driver never calls camera.setYaw(), target selection, or fire code.
+ await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
+  x:cursorX,y:cursorY,button:'none'});
+ const pointAt=async (id,heightOffset)=>{
+  const now=await snap();
+  const actual=roster(now).find(c=>c.id===id);
+  const eye=now.cameraSourcePractice?.actualEye;
+  const yaw=now.cameraSourcePractice?.yawDegrees;
+  const pitch=now.cameraSourcePractice?.pitchDegrees;
+  if(!actual||actual.life!=='ACTIVE'||!Array.isArray(actual.foot)||
+     !Array.isArray(eye)||eye.length!==3||!eye.every(Number.isFinite)||
+     !Number.isFinite(yaw)||!Number.isFinite(pitch))
+   return {id,status:'HOLD_REAL_EYE_OR_LIVE_CPU_UNAVAILABLE'};
+  const dx=actual.foot[0]-eye[0],dz=actual.foot[2]-eye[2];
+  const dy=actual.foot[1]+heightOffset-eye[1];
+  const desiredYaw=Math.atan2(dx,-dz)*180/Math.PI;
+  const desiredPitch=Math.atan2(dy,Math.hypot(dx,dz))*180/Math.PI;
+  const turn=wrapAngle(desiredYaw-yaw),tilt=desiredPitch-pitch;
+  if(Math.abs(turn)>75||Math.abs(tilt)>48)
+   return {id,status:'HOLD_REAL_MOUSE_TURN_OUT_OF_BOUNDS',
+    turn,tilt};
+  const stepX=Math.round(turn/.22),stepY=Math.round(-tilt/.18);
+  cursorX+=stepX;cursorY+=stepY;
   await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
-   x:480,y:270,button:'none'});
-  const base=await snap();
-  const yaw=base.cameraSourcePractice?.yawDegrees;
-  if(Number.isFinite(yaw)){
-   const dx=target.foot[0]-human[0],dz=target.foot[2]-human[2];
-   const desired=Math.atan2(dx,-dz)*180/Math.PI;
-   const delta=((desired-yaw+540)%360)-180;
-   outRow.targetYawDegrees=desired;
-   outRow.baselineYawDegrees=yaw;
-   outRow.intendedMouseYawDeltaDegrees=delta;
-   const pixels=Math.round(Math.max(-180,Math.min(180,delta/.22)));
-   if(Math.abs(delta)<75){
-    await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
-     x:480+pixels,y:270,button:'none'});
-    const aimed=await snap();
-    outRow.actualMouseYawAfter=aimed.cameraSourcePractice?.yawDegrees??null;
-    outRow.actualYawErrorDegrees=Number.isFinite(outRow.actualMouseYawAfter)?
-     ((desired-outRow.actualMouseYawAfter+540)%360)-180:null;
-   }else outRow.aimHold='TARGET_OUTSIDE_BOUNDED_REAL_MOUSE_TURN';
+   x:cursorX,y:cursorY,button:'none'});
+  const afterAim=await until(async()=>{
+   const n=await snap();
+   return n.tick>=now.tick+3||n.stopReason||
+    n.matchState!=='PLAYING'?n:null;
+  },18000,50);
+  const crosshair=afterAim.f4HumanRealCpuCrosshair??null;
+  return {id,foot:actual.foot,heightOffset,
+   realEye:eye,desiredYaw,desiredPitch,
+   yawAfter:afterAim.cameraSourcePractice?.yawDegrees??null,
+   pitchAfter:afterAim.cameraSourcePractice?.pitchDegrees??null,
+   yawError:wrapAngle(desiredYaw-
+    (afterAim.cameraSourcePractice?.yawDegrees??yaw)),
+   pitchError:desiredPitch-
+    (afterAim.cameraSourcePractice?.pitchDegrees??pitch),
+   crosshairCpu:crosshair?.id??null,
+   crosshairGuarded:crosshair?.guarded??null,
+   crosshairDistance:crosshair?.distanceMeters??null,
+   tick:afterAim.tick,status:'REAL_CDP_MOUSE_AIM_OBSERVED'};
+ };
+ let visibleId=null;
+ // The real B-side capsule can be lower than the human and behind
+ // source cover. Check a small bounded set of genuine CPU locations and
+ // capsule heights, not an invisible hit cone or synthetic damage event.
+ for(const c of candidates){
+  for(const height of [.68,.92,.44]){
+   const attempt=await pointAt(c.id,height);
+   outRow.realAimAttempts.push(attempt);
+   if(attempt.crosshairCpu?.startsWith('B')){
+    visibleId=attempt.crosshairCpu;
+    break;
+   }
   }
+  if(visibleId)break;
  }
+ outRow.realAimConfirmedCpu=visibleId;
+ outRow.actualMouseYawAfter=(await snap()).cameraSourcePractice?.yawDegrees??null;
+ outRow.actualMousePitchAfter=(await snap()).cameraSourcePractice?.pitchDegrees??null;
+ if(!visibleId)outRow.aimHold='NO_EXACT_VISIBLE_REAL_CPU_CAPSULE_ON_CENTER_RAY';
+ // Native firing remains permitted without crosshair lock: players may
+ // shoot missed shots. Record these as missed shots, NEVER fake a hit.
  let held=false,last=before;
  try{
-  // Actual canvas click is a user-visible left mouse press, NOT direct
-  // invocation of ProjectileSystem, HP or PaintCoordinator.
   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',
-   x:480,y:270,button:'left',buttons:1,clickCount:1});
+   x:cursorX,y:cursorY,button:'left',buttons:1,clickCount:1});
   held=true;
-  last=await until(async()=>{
-   const n=await snap();
-   if(recordCpuProgress)recordCpuProgress(n);
-   return n.tick>=before.tick+72||n.stopReason||
-    n.matchState!=='PLAYING'||n.player?.hp<=0?n:null;
-  },50000,120);
+  const fireStart=await snap();
+  for(let segment=0;segment<12;segment++){
+   const untilTick=fireStart.tick+(segment+1)*8;
+   last=await until(async()=>{
+    const n=await snap();
+    if(recordCpuProgress)recordCpuProgress(n);
+    return n.tick>=untilTick||n.stopReason||
+     n.matchState!=='PLAYING'||n.player?.hp<=0?n:null;
+   },20000,75);
+   const life=roster(last);
+   outRow.realFireTrace.push({
+    tick:last.tick,shots:last.shotsFired,
+    crosshair:last.f4HumanRealCpuCrosshair?.id??null,
+    opponentHp:life.map(x=>({id:x.id,hp:x.hp,life:x.life})),
+    humanHp:last.player?.hp??null
+   });
+   if(last.stopReason||last.matchState!=='PLAYING'||last.player?.hp<=0)
+    break;
+   // Real-time manual-style mouse tracking uses only the observed live
+   // actor position, never modifies aim inside the gameplay systems.
+   const alive=life.find(c=>c.id===visibleId&&c.life==='ACTIVE');
+   if(alive){
+    const follow=await pointAt(alive.id,.68);
+    if(segment<4)outRow.realAimAttempts.push(follow);
+   }
+  }
  }catch(e){
   outRow.status='HOLD_F4_REAL_FIRE_OBSERVATION_ERROR';
   outRow.error=String(e).slice(0,220);
  }finally{
   if(held)await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',
-   x:480,y:270,button:'left',buttons:0,clickCount:1});
+   x:cursorX,y:cursorY,button:'left',buttons:0,clickCount:1});
  }
  const after=await snap();
  outRow.nativeEndTick=after.tick;

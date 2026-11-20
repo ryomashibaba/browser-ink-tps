@@ -184,7 +184,11 @@ export class ThirdPersonCamera {
    this.b258ResearchProfile=name;
   }
   public sourcePracticeViewSnapshot(){
+    const eye=this.cameraEntity.getPosition();
     return {
+      // Read-only real camera eye, needed to distinguish actual camera
+      // center-ray aim from the offset player capsule and its muzzle.
+      actualEye:[eye.x,eye.y,eye.z] as const,
       sourcePracticeOnly:this.sourcePracticeControls,
       sourceAimSensitivityMultiplier:this.sourcePracticeControls?
        this.sourceAimSensitivityMultiplier:1,
