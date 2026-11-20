@@ -1164,9 +1164,14 @@ export class CpuAgentSystem {
     // The same actual 60Hz player collider mode is passed to the shared
     // Rapier actor registration and the SOURCE-only enemy sight query.
     // Legacy T20/QA sight without B181 keeps its old HUMAN aim baseline.
-    this.b181NativeHumanColliderMode=this.b181OriginalCombatStageRay?
+    // Separate F4 51-solid optical sight must reflect the same current
+    // real HUMAN capsule / SQUID sphere as projectile contact, and age
+    // cached sight at true native ticks. 25-solid B181 remains isolated.
+    const nativeSight=this.b181OriginalCombatStageRay!==null||
+      this.f4ResearchCombatStageRay!==null;
+    this.b181NativeHumanColliderMode=nativeSight?
       humanPhysicalColliderMode:'HUMAN';
-    if(this.b181OriginalCombatStageRay)this.b181NativeFrame++;
+    if(nativeSight)this.b181NativeFrame++;
     this.b212PriorHuman=this.b212PreviousHuman;
     this.b212PreviousHuman=this.b212NativeLeadEnabled&&humanActive?
       humanPosition.clone():null;

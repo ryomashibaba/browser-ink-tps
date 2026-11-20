@@ -1566,6 +1566,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b443OriginalGoalLocks.delete(id);
    this.b442LastApprovedFront.delete(id);
    const bot=this.bots.find(b=>b.id===id);
+   // F4's genuine concurrent B-side respawns previously packed four
+   // physical capsules into a single narrow high-pad first-drop lip.
+   // Queue ONLY new F4 lives per team, ordered by ACTUAL respawn events,
+   // until the lead completes another genuine FIRST_DROP_REJOIN.
+   // No actor placement, invented link, fall bypass, or score grant.
+   if(bot&&isT21F4ResearchStage(this.stage)){
+    const lead=[...this.respawnOriginalDrops].find(otherId=>
+     this.bots.some(other=>other.id===otherId&&other.team===bot.team));
+    if(lead!==id){this.heldRequests++;return false;}
+   }
    const route=this.routeFor(id);
    const lower=new Vec3(...route.sourceGoal);
    if(!this.freeCombat||bot?.lifeState!=='ACTIVE'||
