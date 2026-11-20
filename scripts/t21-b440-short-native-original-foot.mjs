@@ -1442,9 +1442,9 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  const realGroundedEncounter=!realRoundTrip&&
   before.nativeKccGrounded===true&&
   Number.isFinite(nearbyEnemy?.distanceMeters)&&
-  nearbyEnemy.distanceMeters<=13;
+  nearbyEnemy.distanceMeters<=13.5;
  outRow.engagementBasis=realRoundTrip?'REAL_HUMAN_CENTER_ROUNDTRIP':
-  realGroundedEncounter?'REAL_GROUNDED_ENEMY_APPROACHED_WITHIN_13M':
+  realGroundedEncounter?'REAL_GROUNDED_ENEMY_APPROACHED_WITHIN_13_5M':
    'HOLD_NO_REAL_SOURCE_ENGAGEMENT';
  outRow.nearestActualOpponent=nearbyEnemy??null;
  if((!realRoundTrip&&!realGroundedEncounter)||
@@ -1790,6 +1790,7 @@ async function runF4RealChrome(){
  const key={key:'w',code:'KeyW',
   windowsVirtualKeyCode:87,nativeVirtualKeyCode:87};
  let down=false,last=playing.tick-80,combatAttempted=false;
+ report.realHumanCombatReadiness=[];
  try{
   await cdp('Input.dispatchKeyEvent',{type:'keyDown',...key});down=true;
   await until(async()=>{
@@ -1819,25 +1820,42 @@ async function runF4RealChrome(){
     recordCpuProgress(await snap());
     save();
    }
-   // In BOTH outcomes of the independent human-route pilot, shoot
-   // only when a real opponent physically closes to viable main-weapon
-   // range. A shot at a 22m camera crosshair is NOT evidence of a hit.
-   // No combat actor, physical contact or clock changes are injected.
+   // Previous F4: native CPU B1 approached from 11.1m to 8.3m,
+   // but a too-late 8.5m gate missed the living encounter. Start
+   // BEFORE the enemy is close enough to splat the passive human.
+   // Projectile and real registered Rapier cover remain authoritative.
+   const realFoot=n.f4HumanPhysicalFoot;
+   const liveOpponents=Array.isArray(realFoot)?
+    (n.cpu?.cpu??[]).filter(c=>c.id?.startsWith('B')&&
+     c.lifeState==='ACTIVE'&&Array.isArray(c.physicalFoot)&&
+     c.physicalFoot.length===3&&c.physicalFoot.every(Number.isFinite))
+     .map(c=>({id:c.id,distanceMeters:Math.hypot(
+      c.physicalFoot[0]-realFoot[0],
+      c.physicalFoot[2]-realFoot[2])}))
+     .sort((a,b)=>a.distanceMeters-b.distanceMeters):[];
+   if(report.humanEarlyPilot&&!combatAttempted&&
+      n.tick-(report.realHumanCombatReadiness.at(-1)?.tick??-100)>24){
+    report.realHumanCombatReadiness.push({
+     tick:n.tick,humanHp:n.player?.hp??null,
+     grounded:n.nativeKccGrounded??null,
+     foot:realFoot??null,
+     closestAliveOpponent:liveOpponents[0]??null});
+    if(report.realHumanCombatReadiness.length>24)
+     report.realHumanCombatReadiness.shift();
+    save();
+   }
    if(!combatAttempted&&report.humanEarlyPilot&&
       n.matchState==='PLAYING'&&!n.paused&&!n.stopReason&&
       n.nativeKccGrounded===true&&n.player?.hp>0&&
       Array.isArray(n.f4HumanPhysicalFoot)&&
-      (n.cpu?.cpu??[]).some(c=>c.id?.startsWith('B')&&
-       c.lifeState==='ACTIVE'&&
-       Array.isArray(c.physicalFoot)&&
-       Math.hypot(
-        c.physicalFoot[0]-n.f4HumanPhysicalFoot[0],
-        c.physicalFoot[2]-n.f4HumanPhysicalFoot[2])<=8.5)){
+      liveOpponents.some(c=>c.distanceMeters<=13.5)){
     combatAttempted=true;
     await runF4RealHumanCombatWindow(recordCpuProgress);
     report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
     report.humanCombatIndependentOfCorridor=true;
     report.humanCombatTriggeredAtTrueCloseRange=true;
+    report.humanCombatTrigger={tick:n.tick,hp:n.player.hp,
+     foot:[...n.f4HumanPhysicalFoot],opponent:liveOpponents[0]??null};
     recordCpuProgress(await snap());
     save();
    }
