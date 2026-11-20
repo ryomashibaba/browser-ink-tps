@@ -1035,7 +1035,11 @@ export class UndertowF3PlayablePreviewApp{
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
   // SOURCE combat uses actual CPU hit volumes on the unmodified center ray.
   // Projectiles still independently resolve muzzle-side cover, flight and HP.
-  if(b192HumanCombatEnabled&&this.b203FullRound)
+  // F4 research uses 51 real collision solids and must NOT opt into
+  // B181/B212/B213's frozen-25-only SOURCE combat authority. Read-only
+  // center-ray selection may still inspect the live, real Rapier CPU
+  // capsules. It changes no HP, projectile, CPU AI, stage or scoring.
+  if((b192HumanCombatEnabled&&this.b203FullRound)||this.f4ResearchMode)
    this.camera.enableSourceCombatAim((from,to)=>
     this.cpu.findNearestCombatHit(from,to,Team.A));
   // B234: actual 7 real CpuAgentSystem actors, *read-only* source collision

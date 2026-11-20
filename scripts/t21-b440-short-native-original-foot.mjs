@@ -1640,11 +1640,10 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
 async function runF4RealChrome(){
  const url=root+'?t21Play=preview&t21QaDrive=source'+
   '&t21W10B183=firstDropPlay&t21W10B193=allyCoop'+
-  // Enable the EXISTING genuine human-vs-CPU source-combat center ray.
-  // F4 formerly omitted B192, so it could fire real shots but could not
-  // audit the registered CPU crosshair or claim a true physical hit.
-  // This is F4 research URL only; default/T20/PAGES are unchanged.
-  '&t21W10B192=humanCombat&t21W10B203=fullRound&t21F4Central=research';
+  // F4 is a 51-solid research stage: do NOT opt into the frozen-25-only
+  // B192/B181/B212 native battle path. F4's actual CPU center-ray
+  // observation is enabled read-only in the application instead.
+  '&t21W10B203=fullRound&t21F4Central=research';
  const report={schema:'T21_V28_F4_NATIVE_CHROMIUM_51_SOLID',
   query:new URL(url).search,boot:'HOLD',sevenCpu:'HOLD',
   humanCrossed:false,cpuCrossers:[],cpuMostAdvanced:{},frames:[],
