@@ -7895,26 +7895,40 @@ export class UndertowF3PlayablePreviewApp{
   const goalSupport=this.physics.castCharacterFootSupport(
    new Vec3(goal.x,goal.y+off,goal.z),off,'HUMAN');
   const goalGap=goalSupport?Math.abs(goalSupport.point.y-goal.y):null;
+  // A downward ray can see a floor 0.9m below an airborne/stuck foot.
+  // A hit alone does NOT certify that the capsule is standing on it.
+  // In particular, the measured F4 seam near project Z=15.7 must not
+  // steer from a higher layer straight into the lower concrete02 lip.
+  const bodyGap=bodySupport?foot.y-bodySupport.point.y:null;
   if(!this.stats.playerGrounded||!bodySupport||!goalSupport||
+     bodyGap===null||Math.abs(bodyGap)>.25||
      goalGap===null||goalGap>.25||!native.reachedTarget||
      native.startSnapDistanceMeters>.45||
      native.endSnapDistanceMeters>.30||native.pointCount<2)
    return {admitted:false,reason:'REAL_FOOT_NAV_OR_RAPIER_GOAL_UNSUPPORTED',
     index,grounded:this.stats.playerGrounded,
-    realFootSupport:bodySupport?.solidId??null,
+    realFoot:[foot.x,foot.y,foot.z],
+    realFootSupport:bodySupport?.solidId??null,bodyGap,
     goalSupport:goalSupport?.solidId??null,goalGap,
+    goalFoot:[goal.x,goal.y,goal.z],
     navReached:native.reachedTarget,
     startSnap:native.startSnapDistanceMeters,
     endSnap:native.endSnapDistanceMeters,pathPoints:native.pointCount};
-  const next=native.nativePathPoints.find(p=>
-   Math.hypot(p.x-foot.x,p.z-foot.z)>.30);
+  // The native path begins at a Recast-projected foot. Interpolating
+  // directly from the UNSNAPPED capsule to a later corner can cut
+  // across another floor or a physical wall. Follow its first leg,
+  // while Rapier remains the sole authority for actual movement.
+  const path=native.nativePathPoints;
+  const start=path[0]!;
+  const next=path.slice(1).find(p=>
+   Math.hypot(p.x-start.x,p.z-start.z)>.30);
   if(!next)return {admitted:false,reason:'NATIVE_PATH_NO_FORWARD_CORNER',index};
-  const distance=Math.hypot(next.x-foot.x,next.z-foot.z);
+  const distance=Math.hypot(next.x-start.x,next.z-start.z);
   const t=Math.min(1,1.25/distance);
   const lookahead=new Vec3(
-   foot.x+(next.x-foot.x)*t,
-   foot.y+(next.y-foot.y)*t,
-   foot.z+(next.z-foot.z)*t);
+   start.x+(next.x-start.x)*t,
+   start.y+(next.y-start.y)*t,
+   start.z+(next.z-start.z)*t);
   const projectedStep=this.nav.auditNavMeshProjection(lookahead);
   const step=projectedStep.nearestPoint;
   const supported=step?this.physics.castCharacterFootSupport(
@@ -7928,10 +7942,29 @@ export class UndertowF3PlayablePreviewApp{
    return {admitted:false,reason:'NATIVE_LOOKAHEAD_LACKS_REAL_FLOOR',
     index,stepSnap:projectedStep.distanceMeters,
     stepGap,stepSolid:supported?.solidId??null};
+  // Actual human controls are camera-relative. Report the two real
+  // WASD axes against the *current* camera yaw; a held KeyA by itself
+  // is not evidence of attempted movement toward a world-X goal.
+  // This is a diagnostic hint only: no synthetic input or KCC write.
+  const forward=this.camera.getFlatForward(new Vec3());
+  const dx=step.x-foot.x,dz=step.z-foot.z;
+  const planarLength=Math.hypot(dx,dz);
+  const moveForward=planarLength>1e-6?
+   (dx*forward.x+dz*forward.z)/planarLength:0;
+  const moveRight=planarLength>1e-6?
+   (-dx*forward.z+dz*forward.x)/planarLength:0;
+  const suggestedKeys=[
+   ...(moveForward>.38?['KeyW']:moveForward<-.38?['KeyS']:[]),
+   ...(moveRight>.38?['KeyD']:moveRight<-.38?['KeyA']:[])
+  ];
   return {admitted:true,reason:'REAL_RECAST_RAPIER_READ_ONLY_GUIDE',
    index,realFoot:[foot.x,foot.y,foot.z],
+   realFootSupport:bodySupport.solidId,bodyGap,
+   navStart:[start.x,start.y,start.z],
+   nativeNextCorner:[next.x,next.y,next.z],
    shortGoal:[step.x,step.y,step.z],
    fullPhotoGoal:[goal.x,goal.y,goal.z],
+   suggestedKeys,cameraRelativeAxes:[moveRight,moveForward],
    pathPoints:native.pointCount,stepSolid:supported.solidId,
    stepGap,goalGap};
  }
