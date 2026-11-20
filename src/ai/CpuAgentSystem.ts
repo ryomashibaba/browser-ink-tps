@@ -389,6 +389,9 @@ export class CpuAgentSystem {
   // Opt-in source-only real collider visibility, never original route authority.
   private b181OriginalCombatStageRay:
     ((from:B181SightPoint,to:B181SightPoint)=>boolean)|null=null;
+  /** Isolated 51-solid F4 research ray, NOT the original 25-solid B181 authority. */
+  private f4ResearchCombatStageRay:
+    ((from:B181SightPoint,to:B181SightPoint)=>boolean)|null=null;
   private b181NativeFrame=0;
   // The real human KCC body's hit shape changes between HUMAN and SQUID.
   // Sight targets must follow the same physical mode as projectile hits.
@@ -643,6 +646,25 @@ export class CpuAgentSystem {
        this.stage.paintSurfaces.some(x=>(x.flags&SurfaceFlags.Scoreable)!==0))
       throw Error('B181_ORIGINAL_SOURCE_COMBAT_SIGHT_FORBIDDEN');
     this.b181OriginalCombatStageRay=originalStageRayBlocked;
+    this.b181CachedCombat.clear();
+  }
+  /** Enable normal paid CPU weapons to SELECT only real visible opponents in
+   * the explicitly isolated F4 51-solid lab. Reuse the pure B181 candidate
+   * selector, not its 25-solid permission, moving-aim or counterfire flags.
+   * Every actual bullet, hit and movement is still handled by Rapier/KCC. */
+  public enableF4ResearchCpuCombatSight(
+    actualResearchStageRayBlocked:(from:B181SightPoint,to:B181SightPoint)=>boolean
+  ):void{
+    if(!isT21F4ResearchStage(this.stage)||
+       !this.f3dSourceGoals||!this.phase14qF2RecoverableSteps||
+       !this.phase14qGroundCollision||!this.phase14eFirstDrop||
+       this.b181OriginalCombatStageRay!==null||
+       this.stage.solids.length!==51||
+       this.stage.paintSurfaces.length!==17||
+       this.stage.navigationLinks?.length!==26||
+       this.stage.paintSurfaces.some(p=>(p.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('F4_CPU_SIGHT_RESEARCH_STAGE_ONLY');
+    this.f4ResearchCombatStageRay=actualResearchStageRayBlocked;
     this.b181CachedCombat.clear();
   }
   public enableB212OriginalPhysicalMovingEnemyAim():void{
@@ -4428,8 +4450,12 @@ export class CpuAgentSystem {
     // Registered original-stage visibility from actual live actor bodies.
     // Use the SAME native muzzle (not a higher optical proxy) as the actual
     // CPU projectile origin. Original Rapier cover still owns every ray.
-    // Only explicit B181 source QA takes this path; T20/default is frozen.
-    if(this.b181OriginalCombatStageRay){
+    // F4 uses its own live 51-solid ray, never the ORIGINAL 25-solid
+    // B181 authorization. Both modes select ACTUAL living hit volumes;
+    // neither line-of-sight check creates a projectile, hit or movement.
+    const combatRay=this.b181OriginalCombatStageRay??
+      this.f4ResearchCombatStageRay;
+    if(combatRay){
       // In SQUID mode the same real Rapier body is lowered into a .34m
       // sphere; the HUMAN torso center was NOT an actual squid hit.
       // Aim only at the current native physical capsule/sphere interior.
@@ -4508,7 +4534,7 @@ export class CpuAgentSystem {
             // Recheck registered Rapier cover BEFORE authorizing a real CPU
             // shot; never treat a cached optical line as current sight.
             this.b181ActualStageRays++;
-            if(!this.b181OriginalCombatStageRay(origin,fresh)){
+            if(!combatRay(origin,fresh)){
               this.b182ReusedLiveNativeSight++;
               return this.b212AimAtMovingNativeActor(bot,old.actorId,fresh,dt);
             }
@@ -4523,7 +4549,7 @@ export class CpuAgentSystem {
         }
       }
       const result=chooseB181OriginalSourceSight(
-        origin,candidates,this.b181OriginalCombatStageRay,
+        origin,candidates,combatRay,
         preferredVisibleEnemy,maxMainRange);
       this.b181ActualStageRays+=result.rays;
       this.b181ActualSourceOcclusions+=result.coverRejects;

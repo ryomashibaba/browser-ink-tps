@@ -1033,6 +1033,12 @@ export class UndertowF3PlayablePreviewApp{
    realAllyRally?
     'ORIGINAL_GROUNDED_ALLY_EXPERIMENT':'FIXED_PATROL_DEFAULT';
   this.cpu.useF3dOriginalSourceGoals(this.traffic);
+  // The F4 lab's 51-solid Rapier world also owns CPU optical cover.
+  // Original B181/B212/B213 remain strictly 25-solid SOURCE only.
+  if(this.f4ResearchMode)this.cpu.enableF4ResearchCpuCombatSight(
+    (from,to)=>!!this.physics.castStageSegment(
+      new Vec3(from.x,from.y,from.z),
+      new Vec3(to.x,to.y,to.z),'ink-projectile'));
   // SOURCE combat uses actual CPU hit volumes on the unmodified center ray.
   // Projectiles still independently resolve muzzle-side cover, flight and HP.
   // F4 research uses 51 real collision solids and must NOT opt into
