@@ -1499,6 +1499,37 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.realKccB4Unsupported?.delete(id);
   this.realKccBTeamRecoveryAnchor?.delete(id);
  }
+ /**
+  * F4-only live combat: a SOURCE-rejoined CPU should not run past a
+  * visible, living opponent merely because the next PHOTO waypoint exists.
+  * This interrupts steering ONLY; the normal CPU weapon logic must still
+  * pay for/fire a physical projectile and the existing Rapier/KCC veto
+  * remains responsible for every subsequent actor step.
+  * Never enables the 25-solid ORIGINAL combat authorization in F4.
+  */
+ private f4LiveCpuFiringLane(bot:F3TrafficCpu,foot:Vec3):boolean{
+  if(!isT21F4ResearchStage(this.stage)||!this.physics||!bot.weaponId||
+     !sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)||
+     ![foot.x,foot.y,foot.z].every(Number.isFinite))return false;
+  const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId));
+  if(!Number.isFinite(range)||range<=0)return false;
+  const muzzle=new Vec3(foot.x,
+   foot.y+GAME_CONFIG.cpu.muzzleHeightMeters,foot.z);
+  return this.bots.some(enemy=>{
+   if(enemy.id===bot.id||enemy.team===bot.team||
+      !sourceNativeLiveRejoinedCpu(enemy,this.physicallyRejoined)||
+      ![enemy.position.x,enemy.position.y,enemy.position.z]
+       .every(Number.isFinite))return false;
+   if(Math.hypot(enemy.position.x-foot.x,
+      enemy.position.z-foot.z)>range||
+      Math.abs(enemy.position.y-foot.y)>2.4)return false;
+   // The F4 experiment's ACTUAL 51-solid Rapier stage must have a clear
+   // physical muzzle-to-body line; optical proximity grants no false hit.
+   const torso=new Vec3(enemy.position.x,
+    enemy.position.y+.68,enemy.position.z);
+   return !this.physics!.castStageSegment(muzzle,torso,'ink-projectile');
+  });
+ }
  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
@@ -1536,6 +1567,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const guide=bot?this.f4GuideByTeam.get(bot.team):null;
    if(!bot||bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||
       !guide||!this.physics){this.heldRequests++;return false;}
+   // Pause this CPU's route-following while a real opposing CPU is
+   // physically visible within its own catalog weapon range. It can
+   // resume the SAME photo guide as soon as the actual lane closes.
+   // No synthetic goal, damage, hit, collider or teleport is introduced.
+   if(this.f4LiveCpuFiringLane(bot,realFoot))return false;
    let next=this.f4GuideProgress.get(id)??0;
    while(next<guide.length){
     const p=guide[next]!;
