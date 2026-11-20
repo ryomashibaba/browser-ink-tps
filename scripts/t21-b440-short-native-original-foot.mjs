@@ -1484,7 +1484,7 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
  // this driver never calls camera.setYaw(), target selection, or fire code.
  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',
   x:cursorX,y:cursorY,button:'none'});
- const pointAt=async (id,heightOffset)=>{
+ const pointAt=async (id,heightOffset,velocity=null)=>{
   const now=await snap();
   const actual=roster(now).find(c=>c.id===id);
   const eye=now.cameraSourcePractice?.actualEye;
@@ -1494,7 +1494,19 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
      !Array.isArray(eye)||eye.length!==3||!eye.every(Number.isFinite)||
      !Number.isFinite(yaw)||!Number.isFinite(pitch))
    return {id,status:'HOLD_REAL_EYE_OR_LIVE_CPU_UNAVAILABLE'};
-  const dx=actual.foot[0]-eye[0],dz=actual.foot[2]-eye[2];
+  // A real moving enemy may travel >1m during its physical ink
+  // projectile flight. A QA driver can lead it with actual CDP mouse
+  // movement using observed 60Hz feet, exactly as a human might.
+  // The gameplay itself receives ONLY normal mouse input, never a
+  // projected CPU pose, hit or aim override. Bound lead to 1.3m.
+  const humanAtAim=now.f4HumanPhysicalFoot;
+  const flight=Array.isArray(humanAtAim)?
+   Math.min(.38,Math.hypot(
+    actual.foot[0]-humanAtAim[0],actual.foot[2]-humanAtAim[2])/28):0;
+  const leadX=velocity?Math.max(-1.3,Math.min(1.3,velocity.x*flight)):0;
+  const leadZ=velocity?Math.max(-1.3,Math.min(1.3,velocity.z*flight)):0;
+  const dx=actual.foot[0]+leadX-eye[0],
+   dz=actual.foot[2]+leadZ-eye[2];
   const dy=actual.foot[1]+heightOffset-eye[1];
   const desiredYaw=Math.atan2(dx,-dz)*180/Math.PI;
   const desiredPitch=Math.atan2(dy,Math.hypot(dx,dz))*180/Math.PI;
@@ -1513,7 +1525,7 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
   },18000,50);
   const crosshair=afterAim.f4HumanRealCpuCrosshair??null;
   return {id,foot:actual.foot,heightOffset,
-   realEye:eye,desiredYaw,desiredPitch,
+   realEye:eye,aimLeadMeters:[leadX,leadZ],desiredYaw,desiredPitch,
    yawAfter:afterAim.cameraSourcePractice?.yawDegrees??null,
    pitchAfter:afterAim.cameraSourcePractice?.pitchDegrees??null,
    yawError:wrapAngle(desiredYaw-
@@ -1552,8 +1564,9 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
    x:cursorX,y:cursorY,button:'left',buttons:1,clickCount:1});
   held=true;
   const fireStart=await snap();
-  for(let segment=0;segment<12;segment++){
-   const untilTick=fireStart.tick+(segment+1)*8;
+  let previousLiveEnemy=null;
+  for(let segment=0;segment<24;segment++){
+   const untilTick=fireStart.tick+(segment+1)*4;
    last=await until(async()=>{
     const n=await snap();
     if(recordCpuProgress)recordCpuProgress(n);
@@ -1573,8 +1586,21 @@ async function runF4RealHumanCombatWindow(recordCpuProgress){
    // actor position, never modifies aim inside the gameplay systems.
    const alive=life.find(c=>c.id===visibleId&&c.life==='ACTIVE');
    if(alive){
-    const follow=await pointAt(alive.id,.68);
-    if(segment<4)outRow.realAimAttempts.push(follow);
+    const sample={id:alive.id,foot:[...alive.foot],tick:last.tick};
+    let velocity=null;
+    if(previousLiveEnemy?.id===sample.id&&
+       sample.tick>previousLiveEnemy.tick){
+     const seconds=(sample.tick-previousLiveEnemy.tick)/60;
+     velocity={
+      x:Math.max(-5.2,Math.min(5.2,
+       (sample.foot[0]-previousLiveEnemy.foot[0])/seconds)),
+      z:Math.max(-5.2,Math.min(5.2,
+       (sample.foot[2]-previousLiveEnemy.foot[2])/seconds))
+     };
+    }
+    const follow=await pointAt(alive.id,.68,velocity);
+    if(segment<5)outRow.realAimAttempts.push(follow);
+    previousLiveEnemy=sample;
    }
   }
  }catch(e){
@@ -1784,22 +1810,20 @@ async function runF4RealChrome(){
     // and full native weapon/HP/respawn rules remain active.
     await runF4HumanRealWasdPilot(recordCpuProgress);
     report.humanEarlyPilot=proof.f4HumanRealPilot?.status??'HOLD';
-    if(proof.f4HumanRealPilot?.reverseStatus===
-       'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'){
-      combatAttempted=true;
-      await runF4RealHumanCombatWindow(recordCpuProgress);
-      report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
-    }
+    // Real crossing evidence is already captured. Do not immediately
+    // fire at an opponent 15-22m away and confuse misses with a broken
+    // weapon. Observe genuine enemy approach in the SAME live match;
+    // preserve the crossing verdict while attempting a close encounter.
+    report.humanRoundTripObserved=proof.f4HumanRealPilot?.reverseStatus===
+      'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW';
     recordCpuProgress(await snap());
     save();
    }
-   // After an honest human KCC route HOLD, do not discard a real CPU
-   // that later reaches the stationary, grounded human. One bounded
-   // source-combat attempt uses real CDP mouse input and live CPU HP.
-   // The failed human crossing stays FAILED; no actor/CPU repositioning.
+   // In BOTH outcomes of the independent human-route pilot, shoot
+   // only when a real opponent physically closes to viable main-weapon
+   // range. A shot at a 22m camera crosshair is NOT evidence of a hit.
+   // No combat actor, physical contact or clock changes are injected.
    if(!combatAttempted&&report.humanEarlyPilot&&
-      proof.f4HumanRealPilot?.reverseStatus!==
-       'CANDIDATE_REAL_HUMAN_WASD_CENTER_RETURN_REVIEW'&&
       n.matchState==='PLAYING'&&!n.paused&&!n.stopReason&&
       n.nativeKccGrounded===true&&n.player?.hp>0&&
       Array.isArray(n.f4HumanPhysicalFoot)&&
@@ -1808,11 +1832,12 @@ async function runF4RealChrome(){
        Array.isArray(c.physicalFoot)&&
        Math.hypot(
         c.physicalFoot[0]-n.f4HumanPhysicalFoot[0],
-        c.physicalFoot[2]-n.f4HumanPhysicalFoot[2])<=11.5)){
+        c.physicalFoot[2]-n.f4HumanPhysicalFoot[2])<=8.5)){
     combatAttempted=true;
     await runF4RealHumanCombatWindow(recordCpuProgress);
     report.humanRealCombat=proof.f4HumanCombatWindow?.status??'HOLD';
     report.humanCombatIndependentOfCorridor=true;
+    report.humanCombatTriggeredAtTrueCloseRange=true;
     recordCpuProgress(await snap());
     save();
    }
