@@ -758,7 +758,7 @@ export class PlayerController {
       const contacts:{solidId:string|null;normal:number[]}[]=[];
       for(let i=0;i<this.character.numComputedCollisions();i++){
         const hit=this.character.computedCollision(i);
-        if(!hit)continue;
+        if(!hit?.collider)continue;
         contacts.push({
           solidId:this.physics.sourceSolidIdForCollider(hit.collider),
           normal:[hit.normal1.x,hit.normal1.y,hit.normal1.z]
