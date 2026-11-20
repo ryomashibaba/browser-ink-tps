@@ -8616,7 +8616,16 @@ export class UndertowF3PlayablePreviewApp{
   // card immediately instead of leaving stale RUNNING text on screen.
   this.refreshB25PaintRun();
   const state=this.snapshot();
-  this.refreshF4ReturnCoach();
+  if(this.f4ReturnCoach){
+   // A read-only route hint is never allowed to SAFE STOP a real game.
+   try{this.refreshF4ReturnCoach();}
+   catch{
+    this.f4ReturnCoach.hidden=this.matchState!=='PLAYING'||this.paused||!!this.stopReason;
+    this.f4ReturnCoach.textContent=
+     'F4 ORIGINAL RETURN · GUIDE UNAVAILABLE\nManual physics unchanged';
+    this.f4ReturnCoach.dataset.t21F4ReturnState='AUDIT_UNAVAILABLE';
+   }
+  }
   const b157Map=this.panel.querySelector<HTMLElement>(
    '#t21-f3-b157-original-map');
   if(b157Map&&b157Map.dataset.nativeReadOnlyMapReady!=='true'){
