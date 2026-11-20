@@ -1099,7 +1099,7 @@ async function b490CaptureLocalSamePosePair(){
  * A HOLD is expected when the unproven route cannot be walked; it is never
  * a fake physical crossing, and does not invalidate the prior CPU result.
  */
-async function runF4HumanRealWasdPilot(){
+async function runF4HumanRealWasdPilot(recordCpuProgress){
  const result={status:'HOLD_NOT_STARTED',actualKeyboard:true,
   actualRapierHuman:true,noActorWrites:true,noStageWrites:true,
   guideAuthority:'PHOTO_STEERING_ONLY_NOT_COLLISION_PROOF',
@@ -1151,10 +1151,18 @@ async function runF4HumanRealWasdPilot(){
   result.status='ACTUAL_REAL_KEYBOARD_IN_PROGRESS';
   for(let iteration=0;iteration<180;iteration++){
    const n=await snap(),p=n?.player?.position;
+   if(n&&recordCpuProgress)recordCpuProgress(n);
    if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||
       n?.matchState!=='PLAYING'||n?.paused||n?.stopReason||
       n?.player?.hp<=0){
-    result.status='HOLD_ACTUAL_MATCH_OR_PLAYER_STOP';break;
+    result.status=n?.player?.hp<=0?'HOLD_ACTUAL_HUMAN_SPLAT':
+     'HOLD_ACTUAL_MATCH_OR_PLAYER_STOP';
+    result.stopWitness={tick:n?.tick??null,
+     humanHp:n?.player?.hp??null,humanSplats:n?.humanSplats??null,
+     humanRespawns:n?.humanRespawns??null,
+     gameState:n?.matchState??null,paused:n?.paused??null,
+     stopReason:n?.stopReason??null,foot:p??null};
+    break;
    }
    result.lastFoot=[...p];result.lowestZ=Math.min(result.lowestZ,p[2]);
    if(p[2]<-.5&&n.nativeKccGrounded===true){
@@ -1359,6 +1367,15 @@ async function runF4RealChrome(){
    if(down&&n.tick>=playing.tick+280){
     await cdp('Input.dispatchKeyEvent',{type:'keyUp',...key});
     down=false;report.humanKeyReleaseTick=n.tick;save();
+    // Begin the true player corridor BEFORE the ~2400-tick CPU patrol
+    // reaches the same central combat lane. The previous order delayed
+    // the human until opponents could splat it without a fair route trial.
+    // This is still one live 4v4 world: genuine inputs, real CPU movement,
+    // and full native weapon/HP/respawn rules remain active.
+    await runF4HumanRealWasdPilot(recordCpuProgress);
+    report.humanEarlyPilot=proof.f4HumanRealPilot?.status??'HOLD';
+    recordCpuProgress(await snap());
+    save();
    }
    if(n.tick-last>=60){
     last=n.tick;
@@ -1386,7 +1403,9 @@ async function runF4RealChrome(){
  const humanStart=at(playing.player?.position,2);
  const humanFinish=at(end.player?.position,2);
  report.humanCrossed=Number.isFinite(humanStart)&&
-  Number.isFinite(humanFinish)&&humanStart>.5&&humanFinish<-.5;
+  humanStart>.5&&((Number.isFinite(humanFinish)&&humanFinish<-.5)||
+   proof.f4HumanRealPilot?.status===
+    'CANDIDATE_REAL_HUMAN_KCC_CROSSING_REVIEW_REQUIRED');
  recordCpuProgress(end);
  report.endTick=end.tick;report.endState=end.matchState;
  report.humanStartZ=humanStart;report.humanFinalZ=humanFinish;
@@ -1407,9 +1426,8 @@ async function runF4RealChrome(){
   'CPU_CROSSING_OBSERVED_HUMAN_UNPROVEN';
  proof.verdict=report.verdict;save();
  console.log('T21_F4_REAL_CHROME_51_SOLID',JSON.stringify(report));
- // Record the previously successful 7-CPU result BEFORE this additional
- // real-human corridor attempt; a genuine unsafe foot remains an honest HOLD.
- await runF4HumanRealWasdPilot();
+ // The additional real-human pilot ran after the actual 280-tick W descent,
+ // before front-line CPU arrival; no synthetic respawn or Actor write.
 }
 async function main(){
  save();
