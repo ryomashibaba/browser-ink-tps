@@ -26,6 +26,14 @@ if errorlevel 1 goto :BAD_SEED
 if not exist "node_modules\.bin\vite.cmd" goto :NO_DEPS
 call npm.cmd ls --depth=0 --offline >nul 2>nul
 if errorlevel 1 goto :NO_DEPS
+REM This original F4 local research launcher explicitly opts into pinned
+REM high-detail F3L visuals. Reuse the existing SHA256-checked restore.
+REM First launch may download the 43MB original upstream OBJ and textures.
+REM No private F4 terrain JSON, screenshots, or originals are uploaded.
+echo Preparing verified original F3L optical pack for F4 research...
+node scripts\t21-f3gl-restore.mjs
+if errorlevel 1 goto :BAD_VISUAL_SOURCE
+if not exist "public\t21-f3g-source\f3l-original-textured.json" goto :BAD_VISUAL_SOURCE
 REM Open a NORMAL window, never headless. Vite's existing same-origin
 REM loopback-only middleware serves the JSON; no preview/Pages deployment.
 if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
@@ -68,6 +76,10 @@ goto :FAIL_POP
 :NO_DEPS
 echo F4 HOLD: existing offline npm dependencies are unavailable.
 echo No package installation or download was attempted.
+goto :FAIL_POP
+:BAD_VISUAL_SOURCE
+echo F4 HOLD: pinned source UV pack missing or hash validation failed.
+echo Existing game physics and private source files remain unchanged.
 goto :FAIL_POP
 :FAIL_POP
 popd
