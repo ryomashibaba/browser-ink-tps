@@ -799,7 +799,8 @@ export class UndertowF3PlayablePreviewApp{
   this.structures=buildF3OriginalOpticalStructures(app);
   // Original visual reference is read-only and source-frozen, not the
   // 51-solid experimental physics authority.
-  this.sourceCompletion=buildF3eOriginalSourceCoverage(app,this.rawStage);
+  this.sourceCompletion=buildF3eOriginalSourceCoverage(
+   app,this.rawStage,terrain!==undefined);
   // Actual SOURCE play must never present unregistered source-study
   // floor faces as its default fallback. The real 25 registered solids
   // and matching ink meshes already render via buildTestStage above.
@@ -1024,7 +1025,7 @@ export class UndertowF3PlayablePreviewApp{
    'ACTUAL_HUMAN_CPU_HP_ONLY':'OFF';
   this.canvas.dataset.t21B192HumanCombat=
    b192HumanCombatEnabled?'REAL_SOURCE_ONLY':'OFF';
-  const b214BattleInk=b214EligibleSourceBattleInk(b31Params)&&
+  const b214BattleInk=!this.f4ResearchMode&&b214EligibleSourceBattleInk(b31Params)&&
    b192HumanCombatEnabled&&this.b203FullRound;
   this.canvas.dataset.t21B214NativeBattleInk=b214BattleInk?
    'REAL_SOURCE_INK_ECONOMY':'OFF';
@@ -1137,7 +1138,7 @@ export class UndertowF3PlayablePreviewApp{
    this.cpu.enableB180OriginalPatchPaintAim();
   // B181 opt-in: only real original Rapier stage cover may veto a
   // native opponent combat aim. No actor/route/score authority added.
-  if(b31Params.get('t21Play')==='preview'&&
+  if(!this.f4ResearchMode&&b31Params.get('t21Play')==='preview'&&
      b31Params.get('t21QaDrive')==='source'&&
      (b31Params.get('t21W10B181')==='originalCombatSight'||
       b192HumanCombatEnabled))
@@ -1147,7 +1148,7 @@ export class UndertowF3PlayablePreviewApp{
         new Vec3(to.x,to.y,to.z),'ink-projectile'));
   // Genuine B207 source combat only: leading modifies accepted CPU aim,
   // with an EXTRA original Rapier cover check, not a collision/route edit.
-  if(b192HumanCombatEnabled&&this.b203FullRound){
+  if(!this.f4ResearchMode&&b192HumanCombatEnabled&&this.b203FullRound){
     this.cpu.enableB212OriginalPhysicalMovingEnemyAim();
     this.cpu.enableB213SourcePhysicalCounterfire();
     if(b214BattleInk){

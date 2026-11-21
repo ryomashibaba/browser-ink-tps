@@ -245,21 +245,23 @@ function updateSourceMaterial(m:StandardMaterial,shade:Shade,
  m.gloss=shade==='GLASS'?.57:.35;
  m.update();
 }
-function materialFor(shade:Shade,mode:F3eSourceMassingMode){
- const m=new StandardMaterial();
- updateSourceMaterial(m,shade,mode);
- return m;
-}
 /** 7 GPU batches instead of ~90 independent source draw calls.
  * Geometry retains exact vertices and triangle order; only render batching
  * and purely visual tint are transformed. */
-export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition){
+export function buildF3eOriginalSourceCoverage(
+ app:AppBase,stage:StageDefinition,hideReferenceFloorsDuringPlay=false
+){
  const {parts,manifest}=auditF3eSourceCoverage(stage);
  const root=new Entity('T21F3E:EXACT_ORIGINAL_REFERENCE_ONLY_NO_COLLISION');
  app.root.addChild(root);
  let visualMode:F3eSourceMassingMode='ARCHITECTURE';
  let registeredFloorPriority=false;
- const materials=new Map<Shade,StandardMaterial>();
+ const batches=new Map<Shade,{node:Entity;material:StandardMaterial}>();
+ const updateBatch=(kind:Shade,node:Entity,material:StandardMaterial)=>{
+  const floorReference=kind==='CONCRETE'||kind==='SLOPE'||kind==='DETAIL';
+  node.enabled=!(hideReferenceFloorsDuringPlay&&floorReference&&visualMode==='ARCHITECTURE');
+  updateSourceMaterial(material,kind,visualMode,registeredFloorPriority);
+ };
  const categories=Object.keys(manifest.categories) as Shade[];
  for(const kind of categories){
   const items=parts.filter(m=>m.shade===kind);
@@ -274,8 +276,9 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
   mesh.setIndices(new Uint32Array(indices));
   mesh.update();
   const node=new Entity('T21F3E:SOURCE_'+kind+'_UNVERIFIED_GAME_SURFACE');
-  const material=materialFor(kind,visualMode);
-  materials.set(kind,material);
+  const material=new StandardMaterial();
+  batches.set(kind,{node,material});
+  updateBatch(kind,node,material);
   node.addComponent('render',{
    meshInstances:[new MeshInstance(mesh,material)],
    castShadows:false,receiveShadows:false
@@ -289,9 +292,8 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
    if(!F3E_SOURCE_MASSING_MODES.includes(mode))
     throw Error('T21_W10B28_UNAUTHORIZED_SOURCE_VISUAL_MODE');
    if(mode===visualMode)return visualMode;
-   for(const [shade,material] of materials)
-    updateSourceMaterial(material,shade,mode,registeredFloorPriority);
    visualMode=mode;
+   for(const [kind,{node,material}] of batches)updateBatch(kind,node,material);
    return visualMode;
   },
   setRegisteredFloorPriority(on:boolean){
@@ -299,9 +301,8 @@ export function buildF3eOriginalSourceCoverage(app:AppBase,stage:StageDefinition
    if(typeof on!=='boolean')
     throw Error('T21_K1_REGISTERED_FLOOR_VISUAL_FLAG_INVALID');
    if(on===registeredFloorPriority)return;
-   for(const [shade,material] of materials)
-    updateSourceMaterial(material,shade,visualMode,on);
    registeredFloorPriority=on;
+   for(const [kind,{node,material}] of batches)updateBatch(kind,node,material);
   },
   renderAuthority:{
    source:'EXACT_PINNED_ORIGINAL_TRIANGLES_ONLY' as const,
