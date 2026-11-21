@@ -3090,8 +3090,12 @@ export class UndertowF3PlayablePreviewApp{
    // that still serve the genuine GET: do not block native SOURCE optics.
    if(this.stopReason)return;
    this.texturedF3lStatus='LOADING';
-   const installed=await loadF3lTexturedSource(this.app,false,false,
-     this.f4HighDetailStage??undefined);
+   // Canonical four-mode SOURCE keeps the original exact loader call and
+   // visual behavior. Only pinned loopback F4 supplies collision-face
+   // identity to the optional original UV material partition.
+   const installed=this.f4HighDetailStage
+    ?await loadF3lTexturedSource(this.app,false,false,this.f4HighDetailStage)
+    :await loadF3lTexturedSource(this.app);
    if(!installed){
     this.texturedF3lStatus='MISSING';
     return;
