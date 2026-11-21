@@ -193,7 +193,7 @@ import {loadF3gWholeSource,f3gSourceLayerVisibility,F3H_SOURCE_VISUAL_MODES,
 import {loadF3iEnvironmentReview,type F3iEnvironmentManifest}
  from './UndertowF3IEnvironmentPreview';
 import {originalVisualRegistration,originalCanonicalSourceVisualRegistration,
- applyOriginalVisualRegistration}
+ originalF4LocalResearchVisualRegistration,applyOriginalVisualRegistration}
  from './UndertowF3OriginalVisualRegistration';
 import {loadF3kGallery} from './UndertowF3KFamilyGallery';
 import {b254ActorRenderFlags,B254_NATIVE_VISUAL_AUTHORITY,
@@ -565,13 +565,17 @@ export class UndertowF3PlayablePreviewApp{
   new URL(location.href).searchParams.get('t21FullSource')==='review';
  private readonly b29PreferFlat=
   new URL(location.href).searchParams.get('t21F3lPref')==='flat';
- // Canonical live SOURCE previously had only the simplified stage;
- // verified original models were confined to a separate review URL.
+ // Canonical SOURCE and SHA-pinned loopback F4 research may use the
+ // locally installed original F3L stage; this does not certify any collider,
+ // NavMesh, ink, score or unplaced Actor.
  private readonly nativeVerifiedStageVisualEligible=
-  sourceCanonicalPlayableMode(location.href)!==null;
+  sourceCanonicalPlayableMode(location.href)!==null||
+  (this.f4ResearchMode&&
+   originalF4LocalResearchVisualRegistration(location.href)!==null);
  private readonly b29OriginalVisualPose=originalVisualRegistration(
   new URL(location.href).searchParams)??
-  originalCanonicalSourceVisualRegistration(location.href);
+  originalCanonicalSourceVisualRegistration(location.href)??
+  originalF4LocalResearchVisualRegistration(location.href);
  private readonly survey:UndertowF3ESourceSurvey;
  private surveyWasPaused=false;
  private readonly surveyButton:HTMLButtonElement;

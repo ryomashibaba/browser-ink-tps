@@ -31,6 +31,29 @@ export function originalCanonicalSourceVisualRegistration(href:string):
  if(sourceCanonicalPlayableMode(href)===null)return null;
  return modelToProjectVisualPose();
 }
+/** F4 original-terrain play is outside the canonical four SOURCE URLs.
+ * Reuse the F3L project pose ONLY under the existing loopback F4 launcher.
+ * The F4 bootstrap independently validates the pinned local terrain JSON.
+ * This is strictly optical, never collision, navigation or score authority.
+ */
+export function originalF4LocalResearchVisualRegistration(href:string):
+ OriginalVisualPose|null{
+ let url:URL;
+ try{url=new URL(href);}catch{return null;}
+ const q=url.searchParams;
+ const required={
+  t21Play:'preview',t21QaDrive:'source',
+  t21W10B203:'fullRound',t21F4Central:'research',
+  t21F4Terrain:'original'
+ } as const;
+ if(url.protocol!=='http:'||
+    !['127.0.0.1','localhost','[::1]'].includes(url.hostname)||
+    Object.entries(required).some(([key,value])=>
+      q.getAll(key).length!==1||q.get(key)!==value)||
+    q.has('t21QaInput')||q.has('production')||q.has('scoreable')||
+    q.has('t21FullSource')||q.has('t21F3Registration'))return null;
+ return modelToProjectVisualPose();
+}
 function modelToProjectVisualPose():OriginalVisualPose{
  const {pdfToModelScale:k,rotationDegrees,translateX:x,translateZ:z}=audit.registration;
  if(!(k>0))throw Error('T21_F3_BAD_SOURCE_SCALE');
