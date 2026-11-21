@@ -32,6 +32,21 @@ export interface GameplayInkSample {
 
 export class GameplayInkSystem {
   private readonly surfaces = new Map<string, PaintSurface>();
+  /** Optional local-F4 research gate. All 17 frozen SOURCE surface records
+   * remain registered; absent physical backings cannot read or write ink.
+   * Production, ordinary SOURCE, T20 and isolated QA remain unrestricted. */
+  private physicallyBackedSurfaceIds: ReadonlySet<string> | null = null;
+
+  public restrictToPhysicallyBackedSurfaces(ids: ReadonlySet<string>): void {
+    if (this.physicallyBackedSurfaceIds !== null)
+      throw new Error('INK_PHYSICAL_BACKING_GATE_ALREADY_SET');
+    for (const id of ids) {
+      if (!this.surfaces.has(id))
+        throw new Error('INK_PHYSICAL_BACKING_UNKNOWN_SURFACE_'+id);
+    }
+    this.physicallyBackedSurfaceIds = new Set(ids);
+  }
+
   // Reuse registration order without allocating projected-point objects
   // for distant ink planes in the 60Hz player/7 CPU sampling hot path.
   // Radius is an oversized enclosing sphere, NOT physical paint authority.
@@ -92,6 +107,8 @@ export class GameplayInkSystem {
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const {surface,radiusMeters} of this.sampleBounds) {
+      if (this.physicallyBackedSurfaceIds !== null &&
+          !this.physicallyBackedSurfaceIds.has(surface.id)) continue;
       if (acceptSurface && !acceptSurface(surface)) continue;
       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
@@ -137,6 +154,15 @@ export class GameplayInkSystem {
   public apply(event: PaintEvent): PaintApplyResult {
     const surface = this.surfaces.get(event.surfaceId);
     if (!surface) throw new Error(`PaintEvent references unknown surface '${event.surfaceId}'.`);
+    // Local F4: after a SOURCE floor is replaced by unpaintable original
+    // terrain, deny BOTH CPU ownership and GPU wetness. Do not unregister
+    // the frozen paint record, invent a replacement mask or award Turf.
+    if (this.physicallyBackedSurfaceIds !== null &&
+        !this.physicallyBackedSurfaceIds.has(surface.id))
+      return { changedCells: 0, rasterEligibleCells: 0,
+        rasterAlreadyTeamOwnedCells: 0, testedCells: 0,
+        dirtyTilesTouched: 0, scoreableAreaMeters2Changed: 0,
+        paintableRuns: [] };
     // A registered surface is not automatically paintable. Reject non-finite
     // brush input before constructing bounds: Infinity could otherwise paint
     // an entire raster, while NaN could produce an untrustworthy visual stamp.

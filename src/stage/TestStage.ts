@@ -16,6 +16,7 @@ import type { GpuInkAtlas } from '../ink/GpuInkAtlas';
 import {
   PRODUCTION_STAGE_DEFINITION,
   TEST_STAGE_DEFINITION,
+  stageSolidCollisionEnabled,
   type StageDefinition,
   type StageMaterialKey,
   type StageSolidDefinition,
@@ -25,6 +26,19 @@ import { rasterizeStageFootprint } from './StageFootprint';
 import { stageSolidTriangleMeshErrors } from './StageTriangleMesh';
 
 export { PRODUCTION_STAGE_DEFINITION, TEST_STAGE_DEFINITION } from './StageDefinition';
+
+/** The same stage supplied to Rapier decides which existing registered
+ * ink planes still have an actual physical backing. Never create a new
+ * paint plane or infer SOURCE/Phive paintability from an original OBJ. */
+export function stagePhysicallyBackedPaintSurfaceIds(
+  stage: StageDefinition
+): ReadonlySet<string> {
+  const physicalIds = new Set(stage.solids.filter(stageSolidCollisionEnabled)
+    .map(solid => solid.id));
+  return new Set(stage.paintSurfaces.filter(surface =>
+    physicalIds.has(surface.backingSolidId)).map(surface => surface.id));
+}
+
 
 export interface StageBuildResult {
   surfaces: PaintSurface[];

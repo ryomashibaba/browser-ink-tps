@@ -2,6 +2,10 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { initializeRapier, RapierStagePhysics } from '../../physics/RapierStagePhysics';
 import { initializeRecastNavigation, RecastStageNavigation } from '../../navigation/RecastStageNavigation';
 import { PerformanceStats } from '../../core/PerformanceStats';
+import { GameplayInkSystem } from '../../ink/GameplayInkSystem';
+import { PaintEventType, PaintSource, Team } from '../../ink/types';
+import { defineTestSurfaces, stagePhysicallyBackedPaintSurfaceIds }
+ from '../TestStage';
 import { UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen } from './UndertowSpillwayBlockoutGeometry';
 import { undertowT21dConnectivityQaStage } from './UndertowSpillwayConnectivityQa';
 import {
@@ -66,5 +70,37 @@ describe('Issue #13 actual registered Rapier vs Recast nearest-floor witness',()
   expect(result.originalPlayerCollisionAuthorityCertified).toBe(false);
   expect([stage.solids.length,stage.paintSurfaces.length,
    stage.navigationLinks?.length]).toEqual([25,17,26]);
+ });
+});
+
+describe('F4 original floor replacement cannot leave orphan painted SOURCE planes',()=>{
+ it('keeps all 17 registration records but denies painting where the physical backing was removed',()=>{
+  const original=undertowT21dConnectivityQaStage();
+  const removed=original.paintSurfaces.find(surface=>
+   original.solids.some(s=>s.id===surface.backingSolidId));
+  expect(removed).toBeDefined();
+  const replaced={...original,solids:original.solids.filter(s=>
+   s.id!==removed!.backingSolidId)};
+  const allowed=stagePhysicallyBackedPaintSurfaceIds(replaced);
+  expect(allowed.has(removed!.id)).toBe(false);
+  expect(stagePhysicallyBackedPaintSurfaceIds(original).has(removed!.id)).toBe(true);
+  expect(replaced.paintSurfaces).toBe(original.paintSurfaces);
+  expect(original.paintSurfaces).toBe(frozen.paintSurfaces);
+  const ink=new GameplayInkSystem();
+  defineTestSurfaces(ink,original);
+  expect(ink.getSurfaces().length).toBe(17);
+  ink.restrictToPhysicallyBackedSurfaces(allowed);
+  expect(ink.getSurfaces().length).toBe(17);
+  const denied=ink.apply({tick:1,source:PaintSource.Human,team:Team.A,
+   surfaceId:removed!.id,centerU:0.5,centerV:0.5,
+   radiusU:1,radiusV:1,angle:0,type:PaintEventType.Impact,strength:1});
+  expect(denied.changedCells).toBe(0);
+  expect(denied.rasterEligibleCells).toBe(0);
+  expect(denied.paintableRuns).toEqual([]);
+  expect(ink.getSurface(removed!.id)).toBeDefined();
+  expect(original.solids.length).toBe(25);
+  expect(original.paintSurfaces.length).toBe(17);
+  expect(original.navigationLinks?.length).toBe(26);
+  expect(frozen.activationReady).toBe(false);
  });
 });

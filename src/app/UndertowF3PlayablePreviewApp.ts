@@ -127,7 +127,8 @@ import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  b245OriginalLandingRimWarning,
  b245NativeStopReason,b245LocalSourceBuildProvenance}
  from './B245SourcePresentation';
-import {buildTestStage,defineTestSurfaces} from '../stage/TestStage';
+import {buildTestStage,defineTestSurfaces,stagePhysicallyBackedPaintSurfaceIds}
+ from '../stage/TestStage';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
@@ -770,6 +771,14 @@ export class UndertowF3PlayablePreviewApp{
    ?new RapierStagePhysics(STEP,stage):sourceAuditPhysics;
   if(this.f4ResearchMode)this.physics.step();
   const surfaces=defineTestSurfaces(this.ink,originalStage);
+  // SOURCE still owns 17 immutable paint surfaces. The optional original
+  // F4 triangle corridors replace some SOURCE support solids, so both the
+  // CPU ink raster and rendered pigment must deny those orphan planes.
+  // Do not infer original paint masks for the replacement OBJ triangles.
+  const f4PhysicalPaintIds=this.f4ResearchMode?
+   stagePhysicallyBackedPaintSurfaceIds(stage):null;
+  if(f4PhysicalPaintIds)
+   this.ink.restrictToPhysicallyBackedSurfaces(f4PhysicalPaintIds);
   this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
    throw Error('T21_F3_UNAUTHORIZED_TURF_SCORING');
@@ -784,11 +793,10 @@ export class UndertowF3PlayablePreviewApp{
   // production renderer and every SOURCE QA baseline retain old shading.
   const realSourceWetInkLook=this.b203FullRound&&
    new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
-  // The atlas and paint authority retain all SOURCE registrations. Only
-  // draw a registered paint plane when its corresponding floor is present.
-  const visibleSurfaces=originalCorridors.length?surfaces.filter(surface=>
-   !stage.paintSurfaces.some(s=>s.id===surface.id&&s.backingSolidId&&
-    !stage.solids.some(solid=>solid.id===s.backingSolidId))):surfaces;
+  // A visual paint plane without its true Rapier backing is not valid
+  // either: reuse the exact SAME F4 surface gate as gameplay ink above.
+  const visibleSurfaces=f4PhysicalPaintIds?
+   surfaces.filter(surface=>f4PhysicalPaintIds.has(surface.id)):surfaces;
   buildTestStage(app,stage,visibleSurfaces,this.atlas,realSourceWetInkLook);
   this.canvas.dataset.t21SourceWetInkLook=
    realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
