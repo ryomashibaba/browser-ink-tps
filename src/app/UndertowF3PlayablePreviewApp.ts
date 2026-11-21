@@ -116,7 +116,7 @@ import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircu
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
  sourceFinishedReplayHref,f4OriginalLocalFinishedReplayEligible,
- sourceReplayHotkeyAction,
+ f4OriginalLocalReplayHotkeyEligible,sourceReplayHotkeyAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
  sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
@@ -1349,7 +1349,9 @@ export class UndertowF3PlayablePreviewApp{
    '</details>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
    '<button id="t21-f3-pause" type="button">Pause (P)</button>'+
-   '<button id="t21-f3-reset" type="button">Reset (R)</button></div>'+
+   '<button id="t21-f3-reset" type="button">'+
+    (this.f4ResearchMode?'Replay at 180s only (R)':'Reset (R)')+
+   '</button></div>'+
    '<div id="t21-f3-b69-aim-review" hidden style="margin-top:9px;'+
     'padding:9px;border:1px solid #5e9aaf;border-radius:9px;'+
     'background:#0c2839">'+
@@ -2772,6 +2774,23 @@ export class UndertowF3PlayablePreviewApp{
       else window.location.assign(fresh);
       return;
      }
+    }
+    if(this.b203FullRound&&this.f4ResearchMode){
+     // F4 isn't a canonical SOURCE portal mode. Its B59 button already
+     // reboots the same SHA-checked local world; KeyR must use that exact
+     // evidence, or consume the key without touching the active game.
+     const decision=this.f4OriginalCorridorsPresent&&
+      f4OriginalLocalReplayHotkeyEligible({
+       ...this.sourceFinishedReplayEvidence(),
+       code:ev.code,repeat:ev.repeat,
+       modified:ev.shiftKey||ev.altKey||ev.ctrlKey||ev.metaKey,
+       editing:sourceNativeEditingHotkeyTarget(ev.target)
+      });
+     this.canvas.dataset.t21F4LocalReplayKeyR=decision?
+      'NEW_ORIGINAL_LOCAL_WORLD':'BLOCK';
+     ev.stopImmediatePropagation();
+     if(decision){ev.preventDefault();this.restart();}
+     return;
     }
     if(this.b203FullRound){
      const target=ev.target;

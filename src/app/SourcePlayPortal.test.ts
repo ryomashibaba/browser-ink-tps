@@ -6,6 +6,7 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
  f4OriginalLocalFinishedReplayEligible,
+ f4OriginalLocalReplayHotkeyEligible,
  sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
  sourceCanonicalPlayableMode,sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,
@@ -755,6 +756,34 @@ describe('F4 PRIVATE original terrain native TIME_UP replay',()=>{
    href.replace('t21F4Terrain=original','t21F4Terrain=photo'),
    href.replace('t21F4Central=research','t21F4Central=release')
   ])expect(f4OriginalLocalFinishedReplayEligible({...ready,href:url}))
+   .toBe(false);
+ });
+});
+
+describe('F4 PRIVATE local R key matches the real finished replay button',()=>{
+ const href='http://127.0.0.1:4176/?t21Play=preview&'+
+  't21QaDrive=source&t21W10B183=firstDropPlay&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline&t21W10B448=realA3Front&'+
+  't21F4Central=research&t21F4Terrain=original';
+ const valid={href,matchState:'TIME_UP',stopped:false,
+  pointerLocked:false,originalSolids:25,originalPaint:17,
+  originalLinks:26,scoreable:0,finishedVisible:true,canClick:true,
+  code:'KeyR',repeat:false,modified:false,editing:false};
+ it('uses the same checked F4 original-only 180-second TIME_UP authority',()=>{
+  expect(f4OriginalLocalReplayHotkeyEligible(valid)).toBe(true);
+  expect(f4OriginalLocalFinishedReplayEligible(valid)).toBe(true);
+  expect(sourceFinishedReplayAction(valid)).toBe('BLOCK');
+ });
+ it('refuses premature, stopped, locked, focus-held and modified replays',()=>{
+  for(const change of [
+   {matchState:'PLAYING'},{matchState:'STAGING'},
+   {stopped:true},{pointerLocked:true},{finishedVisible:false},
+   {canClick:false},{repeat:true},{modified:true},{editing:true},
+   {code:'KeyP'},{scoreable:1},{originalSolids:26},
+   {href:href+'&production=1'},
+   {href:href.replace('127.0.0.1','example.org')}
+  ])expect(f4OriginalLocalReplayHotkeyEligible({...valid,...change}))
    .toBe(false);
  });
 });

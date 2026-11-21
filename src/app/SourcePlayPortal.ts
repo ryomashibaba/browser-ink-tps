@@ -166,6 +166,17 @@ export function f4OriginalLocalFinishedReplayEligible(
    rows.every(([key,value])=>Object.hasOwn(required,key)&&
      required[key]===value);
 }
+/** F4 original PRIVATE local R-key replay uses the SAME completed-round
+ * evidence as the actual B59 button. It does not reset CPU/ink/physics in
+ * place. The live handler calls the existing guarded restart() page reload.
+ */
+export function f4OriginalLocalReplayHotkeyEligible(input:
+ SourceFinishedReplayEvidence&Readonly<{
+  code:string;repeat:boolean;modified:boolean;editing:boolean;
+ }>):boolean{
+ return input.code==='KeyR'&&!input.repeat&&!input.modified&&
+  !input.editing&&f4OriginalLocalFinishedReplayEligible(input);
+}
 export function sourceFinishedReplayAction(
  input:SourceFinishedReplayEvidence
 ):SourceFinishedReplayAction{
