@@ -18,7 +18,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as freeze}
  from './UndertowSpillwayBlockoutGeometry';
 import {nearestT21SourceSupportedLanding}
  from './UndertowPhase14ECpuHandoff';
-import {UndertowPhase14QSharedActorCollision}
+import {UndertowPhase14QSharedActorCollision,
+ f4GroundedCenterSidestepIntents}
  from './UndertowPhase14QSharedActorCollision';
 
 const DT=1/60;
@@ -55,6 +56,31 @@ function world(){
  actors.syncActualHumanFoot(humanFoot);
  return {stage,ink,stats,physics,player,realPlayer,humanFoot,actors};
 }
+describe('F4 CPU grounded sidestep intents never authorize a movement',()=>{
+ it('keeps exact 60Hz horizontal speed and forward progress for both sides',()=>{
+  for(const delta of [{x:.05,y:-.08,z:.04},{x:-.04,y:-.04,z:-.05}]){
+   const alternatives=f4GroundedCenterSidestepIntents(delta);
+   expect(alternatives).toHaveLength(2);
+   const requested=Math.hypot(delta.x,delta.z);
+   for(const candidate of alternatives){
+    expect(Math.hypot(candidate.x,candidate.z)).toBeCloseTo(requested,8);
+    expect(candidate.y).toBe(delta.y);
+    expect((candidate.x*delta.x+candidate.z*delta.z)/requested)
+     .toBeCloseTo(requested*.5,8);
+   }
+  }
+ });
+ it('rejects airborne, zero, invalid and overspeed F4 sidestep requests',()=>{
+  expect(f4GroundedCenterSidestepIntents({x:.05,y:.01,z:0}))
+   .toHaveLength(0);
+  expect(f4GroundedCenterSidestepIntents({x:0,y:0,z:0}))
+   .toHaveLength(0);
+  expect(f4GroundedCenterSidestepIntents({x:NaN,y:0,z:.04}))
+   .toHaveLength(0);
+  expect(f4GroundedCenterSidestepIntents({x:10,y:-.1,z:0}))
+   .toHaveLength(0);
+ });
+});
 describe('Phase14Q actual shared Rapier HUMAN/cpu capsule KCC authority: opt-in T21 only',()=>{
  it('drops the splatted real CPU proxy and rebinds the native respawn foot',()=>{
   const w=world();

@@ -19,6 +19,24 @@ export const ORIGINAL_SOURCE_CPU_CAPSULE=Object.freeze({
   centerOffsetMeters:.68
 });
 export type T21QFoot=Readonly<{x:number;y:number;z:number}>;
+/** Two small lateral intents for a VERIFIED grounded F4 CPU whose
+ * normal forward Rapier KCC step was blocked. Merely computes vectors;
+ * the shared-world KCC, genuine floor and all other actors must still
+ * independently authorize the resulting movement. Never for ascent.
+ */
+export function f4GroundedCenterSidestepIntents(delta:T21QFoot):
+ readonly T21QFoot[]{
+ const horizontal=Math.hypot(delta.x,delta.z);
+ if(![delta.x,delta.y,delta.z].every(Number.isFinite)||
+    delta.y>0||horizontal<.01||
+    horizontal>GAME_CONFIG.cpu.maxSpeedMetersPerSecond/60+1e-5)return [];
+ const c=.5,s=Math.sqrt(3)/2;
+ return [
+  {x:c*delta.x-s*delta.z,y:delta.y,z:s*delta.x+c*delta.z},
+  {x:c*delta.x+s*delta.z,y:delta.y,z:-s*delta.x+c*delta.z}
+ ];
+}
+
 export type T21QContactResult=Readonly<{
   source:'ORIGINAL_25_SOLID_RAPIER_SHARED_ACTOR_WORLD';
   approved:boolean;
@@ -511,14 +529,53 @@ export class UndertowPhase14QSharedActorCollision{
     const actor=this.actors.get(id);
     if(!isT21F4OriginalTerrainStage(this.stage)||!actor||
        !this.matchesSyncedFoot(actor,from))return null;
-    this.kcc.computeColliderMovement(actor.collider,delta,undefined,undefined,
-      (collider:Collider)=>collider.handle!==actor.collider.handle&&
-        this.physics.shouldCharacterCollide(collider,'HUMAN'));
+    const collides=(collider:Collider)=>
+      collider.handle!==actor.collider.handle&&
+      this.physics.shouldCharacterCollide(collider,'HUMAN');
+    this.kcc.computeColliderMovement(actor.collider,delta,
+      undefined,undefined,collides);
     const move=this.kcc.computedMovement();
     const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
     const grounded=delta.y<=0&&this.kcc.computedGrounded()&&
       !!(this.registeredOriginalSourceFootSupport(foot)||
          this.f4CapsuleSupport(actor,foot));
+    // On an ACTUAL grounded original floor, a nearby character or wall
+    // may fully veto the normal short forward step. Probe two 60-degree
+    // variants through Rapier, never by writing an actor/crowd position.
+    // These probes are NOT available airborne, against unsupported
+    // geometry, or if the original request already made forward progress.
+    const requested=Math.hypot(delta.x,delta.z);
+    if(grounded&&requested>=.01&&
+       Math.hypot(move.x,move.z)<requested*.25&&
+       !!this.sourceFootSupport(id,from)&&
+       !this.hasApproximateSameLayerOverlap(id,from)){
+      let bestForward=(move.x*delta.x+move.z*delta.z)/requested;
+      let best:{foot:T21QFoot;grounded:true}|null=null;
+      for(const attempt of f4GroundedCenterSidestepIntents(delta)){
+        this.kcc.computeColliderMovement(actor.collider,attempt,
+          undefined,undefined,collides);
+        const candidate=this.kcc.computedMovement();
+        const along=(candidate.x*delta.x+candidate.z*delta.z)/requested;
+        if(![candidate.x,candidate.y,candidate.z].every(Number.isFinite)||
+           along<=Math.max(requested*.15,bestForward+.001)||
+           Math.hypot(candidate.x,candidate.z)>requested+1e-5||
+           Math.abs(candidate.y)>.34||
+           !this.kcc.computedGrounded())continue;
+        const candidateFoot={
+          x:from.x+candidate.x,y:from.y+candidate.y,
+          z:from.z+candidate.z
+        };
+        if(this.hasApproximateSameLayerOverlap(id,candidateFoot)||
+           !(this.registeredOriginalSourceFootSupport(candidateFoot)||
+             this.f4CapsuleSupport(actor,candidateFoot)))continue;
+        bestForward=along;
+        best={foot:candidateFoot,grounded:true};
+      }
+      if(best){
+        actor.f4DescentSpeed=0;
+        return best;
+      }
+    }
     if(grounded)actor.f4DescentSpeed=0;
     return {foot,grounded};
   }
