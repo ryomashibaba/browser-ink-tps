@@ -1692,6 +1692,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!patrol)return false;
   const target=foot.distance(new Vec3(...patrol.route[patrol.target]))<.55?
    (patrol.target===0?1:0):patrol.target;
+  // Reserve the one-at-a-time center lane tentatively. This CPU has NOT
+  // been granted a real goal until the live Recast path AND Rapier goal pass
+  // below; a failed admission must not keep seven real actors queue-blocked.
+  const centerOwnerBefore=this.f4CenterOwner;
   const centerGoal=hasF4OriginalIngress(this.stage)?
    this.chooseF4CenterGoal(id,foot,Math.sign(patrol.route[1][2])===1?1:-1):null;
   const goal=new Vec3(...(centerGoal??patrol.route[target]));
@@ -1711,7 +1715,21 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!path.reachedTarget||path.pointCount<2||
      (path.startSnapDistanceMeters>.30&&!sameFloorReentry)||
      path.endSnapDistanceMeters>.30||!support||
-     Math.abs(support.point.y-goal.y)>.08)return false;
+     Math.abs(support.point.y-goal.y)>.08){
+   // chooseF4CenterGoal may have just changed LOW -> TAKEOFF and assigned
+   // the exclusive lane before this exact goal was rejected. Return only
+   // that *new* unsuccessful reservation to the bounded queue's tail.
+   // Do NOT release an older, already-accepted physical jump/shoulder
+   // transfer: only genuine landing/abort owns that lifecycle.
+   const owned=this.f4CenterPatrol.get(id);
+   if(centerOwnerBefore!==id&&this.f4CenterOwner===id&&
+      owned?.phase==='takeoff'){
+    owned.phase='low';
+    this.f4CenterOwner=null;
+    this.f4CenterWaiting.set(id,this.f4CenterNextWaitOrder++);
+   }
+   return false;
+  }
   this.f4OriginalPatrol.set(id,{route:patrol.route,target});
   out.copy(goal);
   this.realGoalRequests++;
