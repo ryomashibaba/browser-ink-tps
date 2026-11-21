@@ -696,37 +696,13 @@ export class UndertowF3PlayablePreviewApp{
   this.playerCameraEntity=cameraEntity;
   if(this.b27KineticEnabled&&cameraEntity.camera?.fov!==B27_SOURCE_BASE_FOV_DEGREES)
    throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
-  const physicalStage=this.f4ResearchMode
-   ?buildT21F4ResearchStage(this.rawStage,terrain):this.rawStage;
-  const originalCorridors=f4OriginalCorridorEndpoints(physicalStage);
-  this.f4OriginalCorridorsPresent=originalCorridors.length>0;
-  this.f4HumanResearchGuide=terrain?
-   (originalCorridors.length?originalCorridors.flat():null):this.f4ResearchMode?
-   t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
-  const returnGuide=terrain?t21F4OriginalHumanReturnGuide(terrain):[];
-  this.f4HumanOriginalReturnGuide=returnGuide.length?[...returnGuide,
-   UNDERTOW_T21D_CONNECTIVITY_PROBES.find(probe=>probe.id==='right-low-ramp-positive-z')!.to
-  ]:null;
-  // Derived only as a navigation experiment. A map-side symmetry result
-  // is NOT proof that the human can cross negative-Z original collision.
-  this.f4HumanNegativeReturnCandidate=
-   this.f4HumanOriginalReturnGuide?.map(([x,y,z])=>[-x,y,-z] as const)??null;
-  this.canvas.dataset.t21F4CentralResearch=terrain
-   ?originalCorridors.length?'UNOFFICIAL_LOCAL_ORIGINAL_CORRIDORS':'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN'
-   :this.f4ResearchMode
-   ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
-  // F3E optical survey MUST retain its original frozen 25-solid authority;
-  // the real F4 Recast/Rapier simulation already uses physicalStage.
+  // Construct the frozen SOURCE world once for independent provenance audits
+  // and the already-approved QA spawn selection. No inferred F4 floor or
+  // navigation is admitted into this source-only witness.
   this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
-  this.nav=new RecastStageNavigation(physicalStage,this.stats);
-  this.physics=new RapierStagePhysics(STEP,physicalStage);
-  this.physics.step();
-  // Preserve independent original-source audit, even in 51-solid play.
-  const sourceAuditNav=this.f4ResearchMode
-   ?new RecastStageNavigation(this.rawStage,this.stats):this.nav;
-  const sourceAuditPhysics=this.f4ResearchMode
-   ?new RapierStagePhysics(STEP,this.rawStage):this.physics;
-  if(this.f4ResearchMode)sourceAuditPhysics.step();
+  const sourceAuditNav=new RecastStageNavigation(this.rawStage,this.stats);
+  const sourceAuditPhysics=new RapierStagePhysics(STEP,this.rawStage);
+  sourceAuditPhysics.step();
   // B155/F4: read real original Recast paths and Rapier stage rays
   // once per boot; never fabricate missing walkway or NavLink.
   this.b155SourceConnectivityReview=
@@ -765,8 +741,34 @@ export class UndertowF3PlayablePreviewApp{
   const slots=planSourceSupportedT21QaSpawnSlots(
    this.rawStage,sourceAuditNav,sourceAuditPhysics);
   const originalStage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
+  // One stage definition is shared by PlayCanvas, Rapier and Recast.
+  // In F4 the pinned local faces remain experimental, NEVER official Turf
+  // collision authority. This prevents separate generated F4 stage instances
+  // from silently drifting between the visible and physical worlds.
   const stage=this.f4ResearchMode
    ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
+  const originalCorridors=f4OriginalCorridorEndpoints(stage);
+  this.f4OriginalCorridorsPresent=originalCorridors.length>0;
+  this.f4HumanResearchGuide=terrain?
+   (originalCorridors.length?originalCorridors.flat():null):this.f4ResearchMode?
+   t21F4PlayableCorridorGuide(buildT21F4PhotoRouteExperiment().repairs,'POSITIVE_Z'):null;
+  const returnGuide=terrain?t21F4OriginalHumanReturnGuide(terrain):[];
+  this.f4HumanOriginalReturnGuide=returnGuide.length?[...returnGuide,
+   UNDERTOW_T21D_CONNECTIVITY_PROBES.find(probe=>probe.id==='right-low-ramp-positive-z')!.to
+  ]:null;
+  // Derived only as a navigation experiment. A map-side symmetry result
+  // is NOT proof that the human can cross negative-Z original collision.
+  this.f4HumanNegativeReturnCandidate=
+   this.f4HumanOriginalReturnGuide?.map(([x,y,z])=>[-x,y,-z] as const)??null;
+  this.canvas.dataset.t21F4CentralResearch=terrain
+   ?originalCorridors.length?'UNOFFICIAL_LOCAL_ORIGINAL_CORRIDORS':'UNOFFICIAL_51_SOLIDS_LOCAL_ORIGINAL_TERRAIN'
+   :this.f4ResearchMode
+   ?'UNOFFICIAL_51_SOLIDS_SAME_RECAST_RAPIER':'OFF';
+  this.nav=this.f4ResearchMode
+   ?new RecastStageNavigation(stage,this.stats):sourceAuditNav;
+  this.physics=this.f4ResearchMode
+   ?new RapierStagePhysics(STEP,stage):sourceAuditPhysics;
+  if(this.f4ResearchMode)this.physics.step();
   const surfaces=defineTestSurfaces(this.ink,originalStage);
   this.b45SourceSurfaces=surfaces;
   if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
