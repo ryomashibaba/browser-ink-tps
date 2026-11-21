@@ -1421,6 +1421,16 @@ export class UndertowF3PlayablePreviewApp{
    '<p style="color:#adc6d4;margin:9px 0 0;font:11px/1.5 system-ui">'+
    'Click to lock mouse · WASD move · Space jump · Shift squid · Left fire · F sub (source practice) · Q shoulder · M radar · Esc/P pause mission · click stage to resume</p>';
   ui.appendChild(this.panel);
+  if(this.f4HighDetailStage){
+   const label=document.createElement('div');
+   label.id='t21-f4-uv-status';
+   label.setAttribute('role','status');
+   label.textContent='F4 original UV: checking verified materials and floor support...';
+   label.style.cssText='margin:7px 0;padding:6px 8px;border-radius:6px;'+
+    'background:rgba(5,31,38,.88);color:#d8eef2;'+
+    'font:11px/1.45 system-ui;pointer-events:none';
+   this.panel.appendChild(label);
+  }
   if(this.f4ResearchMode&&this.f4HumanOriginalReturnGuide){
    const coach=document.createElement('div');
    coach.id='t21-f4-human-return-coach';
@@ -3076,6 +3086,12 @@ export class UndertowF3PlayablePreviewApp{
  private async loadAvailableNativeOriginalOptics():Promise<void>{
   if(!this.nativeVerifiedStageVisualEligible||
      this.texturedF3lStatus!=='OFF')return;
+  const f4Status=(status:string,label:string)=>{
+   if(!this.f4HighDetailStage)return;
+   this.canvas.dataset.t21F4UvLoad=status;
+   const e=this.panel.querySelector('#t21-f4-uv-status');
+   if(e)e.textContent=label;
+  };
   // Native four-mode SOURCE needs only the independently hash-verified F3L
   // UV materials, not the extra 57,578-triangle F3G flat GPU scene.
   // F3G's unsplit DETAIL/METAL groups contain unlicensed FloorLine/Fence
@@ -3090,6 +3106,7 @@ export class UndertowF3PlayablePreviewApp{
    // that still serve the genuine GET: do not block native SOURCE optics.
    if(this.stopReason)return;
    this.texturedF3lStatus='LOADING';
+   f4Status('LOADING','F4 original UV: verifying original SHA256 and physical floor faces...');
    // Canonical four-mode SOURCE keeps the original exact loader call and
    // visual behavior. Only pinned loopback F4 supplies collision-face
    // identity to the optional original UV material partition.
@@ -3108,6 +3125,7 @@ export class UndertowF3PlayablePreviewApp{
     :await loadF3lTexturedSource(this.app);
    if(!installed){
     this.texturedF3lStatus='MISSING';
+    f4Status('MISSING','F4 original UV pack absent. Existing registered stage remains.');
     return;
    }
    if(this.b29OriginalVisualPose)
@@ -3126,6 +3144,12 @@ export class UndertowF3PlayablePreviewApp{
       installed.f4MatchedTriangles+'/'+installed.f4PhysicalTriangleCount;
      this.canvas.dataset.t21F4UvSupportedTriangles=
       String(installed.f4SupportedTriangles);
+     this.canvas.dataset.t21F4UvReplacedGraySolids=
+      String(this.f4CoveredGrayRenders.length);
+     f4Status('READY','F4 UV: '+installed.f4MatchedTriangles+
+      ' exact + '+installed.f4SupportedTriangles+
+      ' physics-supported source triangles / '+installed.f4PhysicalTriangleCount+
+      ' physical source faces. T compares views; still research-only.');
     }
    this.texturedF3lStatus='READY';
    const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
@@ -3166,6 +3190,7 @@ export class UndertowF3PlayablePreviewApp{
    // or fabricate missing collision; keep the unchanged registered stage.
    this.texturedF3lStatus='ERROR';
    this.texturedF3lError=String(error).slice(0,240);
+   f4Status('ERROR','F4 original UV verification failed. Registered stage left unchanged.');
    this.restoreNativeRegisteredStageWhenUvUnverified();
   }finally{
    this.refresh();
@@ -8508,6 +8533,12 @@ export class UndertowF3PlayablePreviewApp{
     materialGroups:this.texturedF3l?.manifest.materials.length??0,
     verifiedTextures:this.texturedF3l?.gate.verifiedTextures??0,
     totalOriginalTriangles:this.texturedF3l?.manifest.totalTriangles??0,
+    f4LocalOriginalResearch:this.f4HighDetailStage!==null,
+    f4ExactPhysicalSourceTriangles:this.texturedF3l?.f4MatchedTriangles??0,
+    f4SevenPointSupportedSourceTriangles:this.texturedF3l?.f4SupportedTriangles??0,
+    f4OriginalPhysicalTriangleCount:this.texturedF3l?.f4PhysicalTriangleCount??0,
+    f4ReplacedGrayRenderSolids:this.f4CoveredGrayRenders.length,
+    f4NativeHumanTraversabilityCertified:false,
     sourceUVOnly:true,physicsSolidsAdded:0,scoreableSurfacesAdded:0,
     instanceMatricesRecovered:false,productionAuthorized:false,
     sourceError:this.texturedF3lError},

@@ -68,3 +68,21 @@ test('one-click verified original UV is the SAME genuine four-mode SOURCE game, 
  assert.doesNotMatch(visualPlay,/\bgit\s+(?:push|merge|reset|checkout|rebase|pull|fetch)\b/i);
  assert.doesNotMatch(visualPlay,/--host\s+0\.0\.0\.0/);
 });
+
+test('F4 one-click restores pinned local source UV and displays grounded optical parity',()=>{
+ const f4=readFileSync(resolve(root,'PLAY_F4_ORIGINAL_RETURN_WINDOWS.cmd'),'utf8');
+ assert.match(f4,/node scripts\\t21-f3gl-restore\.mjs/);
+ assert.match(f4,/if errorlevel 1 goto :BAD_VISUAL_SOURCE/);
+ assert.match(f4,/f3l-original-textured\.json/);
+ assert.match(f4,/--host 127\.0\.0\.1 --port 4176 --strictPort/);
+ assert.match(f4,/t21F4Terrain=original/);
+ assert.doesNotMatch(f4,/\bgit\s+(?:push|merge|reset|checkout|rebase|pull|fetch)\b/i);
+ assert.doesNotMatch(f4,/--host\s+0\.0\.0\.0/);
+ const app=readFileSync(resolve(root,'src/app/UndertowF3PlayablePreviewApp.ts'),'utf8');
+ assert.match(app,/f4Status\('READY'/);
+ assert.match(app,/f4Status\('ERROR'/);
+ assert.match(app,/f4SevenPointSupportedSourceTriangles:/);
+ assert.match(app,/f4NativeHumanTraversabilityCertified:false/);
+ assert.match(app,/f4ExactPhysicalSourceTriangles:/);
+ assert.match(app,/await loadF3lTexturedSource\(this\.app\)/);
+});
