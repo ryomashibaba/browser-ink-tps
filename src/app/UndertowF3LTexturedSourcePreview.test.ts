@@ -15,6 +15,20 @@ import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
 import {UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT as audit}
  from '../stage/undertow/UndertowSpillwayRemodelGeometryAudit';
+describe('F4 supported original UV remains ink-readable and without depth claims',()=>{
+ it('does not cover registered wet ink with an opaque source-only floor',()=>{
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+   'Fld_Temple01_FloorConcrete00',false,true)).toEqual({
+   opacity:.72,depthWrite:false,opaque:false});
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+   'Fld_Temple01_FloorConcrete00',true,false)).toEqual({
+   opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',false,
+   'Fld_Temple01_FloorConcrete00',false,true)).toEqual({
+   opacity:1,depthWrite:true,opaque:true});
+ });
+});
+
 describe('F4 UV original source surfaces require real 7-point support',()=>{
  const flat=[[0,0,0],[1,0,0],[0,0,1]] as const;
  const ok=(p:readonly[number,number,number])=>({

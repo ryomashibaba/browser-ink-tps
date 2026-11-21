@@ -69,7 +69,11 @@ export function f3lNativePlayerShouldRenderSourceMaterial(
   f3lIsUnverifiedBridgeOverlay(sourceMaterialName));
 }
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
- registeredFloorPriority=false,sourceMaterialName='',f4Exact=false){
+ registeredFloorPriority=false,sourceMaterialName='',f4Exact=false,f4Supported=false){
+ // Source UV triangles supported by sampled physical floors are not
+ // exactly coplanar with the ink plane. Blend, rather than hiding ink.
+ if(registeredFloorPriority&&f4Supported)
+  return {opacity:.72,depthWrite:false,opaque:false};
  if(registeredFloorPriority&&f4Exact)
   return {opacity:1,depthWrite:true,opaque:true};
  // Real SOURCE PLAYER: those original FloorLine/FloorFence overlays used to
@@ -108,9 +112,9 @@ export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode
 }
 function applyF3lReadability(material:StandardMaterial,kind:Kind,
  mode:F3lStageReadabilityMode,registeredFloorPriority=false,
- sourceMaterialName='',f4Exact=false){
+ sourceMaterialName='',f4Exact=false,f4Supported=false){
  const style=f3lSourceReadabilityStyle(
-  kind,mode,registeredFloorPriority,sourceMaterialName,f4Exact);
+  kind,mode,registeredFloorPriority,sourceMaterialName,f4Exact,f4Supported);
  material.opacity=style.opacity;
  material.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
  material.depthWrite=style.depthWrite;
@@ -332,7 +336,7 @@ export async function loadF3lTexturedSource(
  const gpuTextures:Texture[]=[];
  const textureMap=new Map<string,Texture>();
  const materialInstances:{kind:Kind;name:string;material:StandardMaterial;
-  entity:Entity;f4Exact:boolean}[]=[];
+  entity:Entity;f4Exact:boolean;f4Supported:boolean}[]=[];
  const physicalBySolid=f4Stage?f4OriginalCollidingTriangles(f4Stage):
   new Map<string,Set<string>>();
  const physicalKeys=new Set<string>(),matchedKeys=new Set<string>();
@@ -403,9 +407,10 @@ export async function loadF3lTexturedSource(
    const all=new Uint32Array(pos.length/3);
    for(let i=0;i<all.length;i++)all[i]=i;
    const slices=split&&(split.backed.length||split.supported.length)?
-    [{indices:split.unbacked,exact:false},
-     {indices:split.backed,exact:true},
-     {indices:split.supported,exact:true}]:[{indices:all,exact:false}];
+    [{indices:split.unbacked,exact:false,supported:false},
+     {indices:split.backed,exact:true,supported:false},
+     {indices:split.supported,exact:false,supported:true}]:
+    [{indices:all,exact:false,supported:false}];
    for(const slice of slices){
     if(!slice.indices.length)continue;
     const mesh=new Mesh(app.graphicsDevice);
@@ -421,7 +426,7 @@ export async function loadF3lTexturedSource(
     m.useMetalness=true;m.metalness=material.kind==='METAL'?.32:.10;
     m.gloss=material.kind==='METAL'?.48:.23;
     applyF3lReadability(m,material.kind,visualMode,false,
-     material.name,slice.exact);
+     material.name,slice.exact,slice.supported);
     if(b256Research&&b256OpticalMaterialEligible(material.kind)){
      m.getShaderChunks(SHADERLANGUAGE_GLSL).set('opacityPS',B256_OPACITY_GLSL);
      m.shaderChunksVersion='2.22';m.update();b256Materials.push(m);
@@ -430,12 +435,12 @@ export async function loadF3lTexturedSource(
      m.setParameter('b256ApertureStrength',0);
     }
     const obj=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+
-     (slice.exact?'_EXACT_F4':'_OPTICAL_ONLY'));
+     (slice.exact?'_EXACT_F4':slice.supported?'_F4_SUPPORTED':'_OPTICAL_ONLY'));
     obj.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
      castShadows:false,receiveShadows:false});
     root.addChild(obj);
     materialInstances.push({kind:material.kind,name:material.name,
-     material:m,entity:obj,f4Exact:slice.exact});
+     material:m,entity:obj,f4Exact:slice.exact,f4Supported:slice.supported});
    }
   }
  }catch(err){
@@ -456,7 +461,7 @@ export async function loadF3lTexturedSource(
    if(mode===visualMode)return visualMode;
    for(const entry of materialInstances)
     applyF3lReadability(entry.material,entry.kind,mode,
-     registeredFloorPriority,entry.name,entry.f4Exact);
+     registeredFloorPriority,entry.name,entry.f4Exact,entry.f4Supported);
    visualMode=mode;
    // A different research UV mode must never retain an invisible aperture.
    if(b256Research)applyB256(app.graphicsDevice.width,app.graphicsDevice.height);
@@ -467,9 +472,10 @@ export async function loadF3lTexturedSource(
    if(on===registeredFloorPriority)return;
    registeredFloorPriority=on;
    for(const entry of materialInstances){
-    entry.entity.enabled=entry.f4Exact||
+    entry.entity.enabled=entry.f4Exact||entry.f4Supported||
      f3lNativePlayerShouldRenderSourceMaterial(on,entry.name);
-    applyF3lReadability(entry.material,entry.kind,visualMode,on,entry.name,entry.f4Exact);
+    applyF3lReadability(entry.material,entry.kind,visualMode,on,
+     entry.name,entry.f4Exact,entry.f4Supported);
    }
   },
   auditB257OriginalStaticRay(from:Vec3,to:Vec3){
