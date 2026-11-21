@@ -138,8 +138,8 @@ describe('F4 center transfer physical-abort integration',()=>{
   expect(bot.mobilityState).toBe('GROUND');
   expect(bot.jumpCooldownSeconds).toBe(.75);
   expect(cpu.f4CenterFlights.size).toBe(0);
-  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort)
-   .toHaveBeenCalledExactlyOnceWith('A1');
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).toHaveBeenCalledOnce();
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).toHaveBeenCalledWith('A1');
   expect(cpu.f3dSourceGoals.noteF4CenterLanding).not.toHaveBeenCalled();
  });
  it('cannot mistake the same-height floor a meter away for the original takeoff',()=>{
