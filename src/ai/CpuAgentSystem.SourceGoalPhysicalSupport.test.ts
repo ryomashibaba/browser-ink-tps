@@ -96,6 +96,28 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
   return {cpu,bot,agent,foot,destination,tick};
 }
 
+describe('SOURCE human-to-CPU live hit eligibility remains guarded',()=>{
+ const live=(state:'GROUND'|'FIRST_DROP_FALL'|'JUMP_TRAVEL',hp=100,
+  rejoined=true,lifeState:'ACTIVE'|'SPLATTED'='ACTIVE')=>{
+  const cpu:any=Object.create(CpuAgentSystem.prototype);
+  cpu.f3dSourceGoals={isLiveRejoinedSourceCpu:vi.fn(()=>rejoined)};
+  cpu.f4CenterFlights=new Map();
+  const bot:any={id:'B2',hp,lifeState,mobilityState:state,
+   position:new Vec3(0,1,0)};
+  return cpu.liveSourceCombatOpponent(bot);
+ };
+ it('allows a genuinely rejoined living SOURCE ground enemy',()=>{
+  expect(live('GROUND')).toBe(true);
+  expect(live('GROUND',100,false)).toBe(false);
+ });
+ it('holds dead, unjoined and non-F4 airborne source enemies',()=>{
+  expect(live('GROUND',0)).toBe(false);
+  expect(live('GROUND',100,true,'SPLATTED')).toBe(false);
+  expect(live('FIRST_DROP_FALL')).toBe(false);
+  expect(live('JUMP_TRAVEL')).toBe(false);
+ });
+});
+
 describe('T21 V28 original Rapier supported foot -> genuine CPU tactical native goal',()=>{
   it('reissues actual original NavMesh goal at B2 .244m physical ramp support',()=>{
     const {cpu,bot,agent,destination,tick,foot}=fixture(.24438563346862807);

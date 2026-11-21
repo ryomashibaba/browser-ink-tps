@@ -4550,9 +4550,10 @@ export class CpuAgentSystem {
     if(!Number.isFinite(enemy.hp)||enemy.hp<=0||
        enemy.lifeState!=='ACTIVE')return false;
     // SOURCE retains its strict GROUND + current-life rejoin gate.
-    if(enemy.mobilityState==='GROUND')return
+    if(enemy.mobilityState==='GROUND')return (
       !this.f3dSourceGoals.isLiveRejoinedSourceCpu||
-      this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id);
+      this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id)
+    );
     // F4 local ORIGINAL ONLY: a CPU that was genuinely rejoined before
     // this flight has a native Rapier capsule even while its Crowd agent
     // is detached for the physical central jump/drop. Require the live
