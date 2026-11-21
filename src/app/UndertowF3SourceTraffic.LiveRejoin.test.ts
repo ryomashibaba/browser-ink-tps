@@ -56,6 +56,28 @@ function fixture(){
  });
  return {traffic,bots,historical};
 }
+describe('F4 central lane cannot stay owned by a splatted CPU',()=>{
+ it('releases only the dead owner, preserving all other genuine reservations',()=>{
+  const {traffic}=fixture();const t:any=traffic;
+  t.f4CenterOwner='A1';
+  t.f4CenterPatrol=new Map([
+   ['A1',{side:1,phase:'takeoff',returnIndex:0}],
+   ['B1',{side:-1,phase:'low',returnIndex:0}]
+  ]);
+  t.f4CenterWaiting=new Map([['A1',2],['B1',3]]);
+  t.releaseF4CenterLane('B1');
+  expect(t.f4CenterOwner).toBe('A1');
+  expect(t.f4CenterPatrol.has('B1')).toBe(false);
+  expect(t.f4CenterWaiting.has('B1')).toBe(false);
+  expect(t.f4CenterPatrol.has('A1')).toBe(true);
+  t.releaseF4CenterLane('A1');
+  expect(t.f4CenterOwner).toBeNull();
+  expect(t.f4CenterPatrol.size).toBe(0);
+  // A cleared lane is not a teleport or automatic new owner selection.
+  expect(t.f4CenterWaiting.size).toBe(0);
+ });
+});
+
 describe('F3 actual native CPU life beats stale F2 physical rejoin cache',()=>{
  it('native live SOURCE human and seven CPU cannot prepaint during the 7/7 STAGING lock',()=>{
   const tick=(matchState:string,locked:boolean,remainingSeconds=180)=>

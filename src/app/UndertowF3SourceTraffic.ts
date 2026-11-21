@@ -3545,6 +3545,11 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // physical first-drop/rejoin proof. An absent CPU is NOT still 7/7.
    if(priorLife==='ACTIVE'&&bot.lifeState==='SPLATTED'){
     this.physicallyRejoined.delete(bot.id);
+    // A splatted center-flight CPU has no real Rapier capsule. Release
+    // ONLY its F4 one-at-a-time lane immediately; otherwise the dead
+    // owner's old reservation blocks living cross-team traversal until
+    // its 150-tick respawn. This does not move a survivor or grant a path.
+    this.releaseF4CenterLane(bot.id);
     this.f4GuideProgress?.delete(bot.id);
     this.f4GuideLastAudit?.delete(bot.id);
     this.originalSourceRecoveryIntent.delete(bot.id);
@@ -3871,15 +3876,20 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   * traffic.observe. Discard the prior life's landing, teammate orders,
   * and local-source tactical state immediately, without editing any
   * actual CPU foot, NavMesh, stage, shot, paint or HP. */
+ /** Release a dead actor's F4 central reservation; no Crowd/KCC writes.
+  * Also used by the existing new-life cleanup for idempotent safety. */
+ private releaseF4CenterLane(id:string):void{
+  this.f4CenterPatrol.delete(id);
+  this.f4CenterWaiting.delete(id);
+  if(this.f4CenterOwner===id)this.f4CenterOwner=null;
+ }
  onNativeSourceCpuRespawn(id:string):void{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||bot.lifeState!=='SPLATTED')
    throw Error('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
   this.physicallyRejoined.delete(id);
   this.f4OriginalPatrol?.delete(id);
-  this.f4CenterPatrol.delete(id);
-  this.f4CenterWaiting.delete(id);
-  if(this.f4CenterOwner===id)this.f4CenterOwner=null;
+  this.releaseF4CenterLane(id);
   this.f4GuideProgress?.delete(id);
   this.f4GuideLastAudit?.delete(id);
   this.physicallyFalling.delete(id);

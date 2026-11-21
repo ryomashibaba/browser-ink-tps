@@ -35,6 +35,19 @@ describe('B211 player-visible genuine source combat roster',()=>{
   expect(f4).toMatchObject({officialWinner:'NONE',sourceScoreable:0,
    naturalEnemyEncounterCertified:false});
  });
+ it('shows a genuine F4 center flight as an active life, not first-drop rejoin',()=>{
+  const f4=data();
+  f4.f4OriginalTerrainResearch=true;
+  f4.cpu=[{...f4.cpu[0]!,rejoined:false,
+   mobilityState:'F4_CENTER_TRANSFER'},...f4.cpu.slice(1)];
+  expect(make(f4)?.rows[0]).toMatchObject({
+   id:'A1',status:'ACTIVE',hp:100
+  });
+  expect(make({...f4,f4OriginalTerrainResearch:false})?.rows[0]?.status)
+   .toBe('REJOINING');
+  expect(make(f4)).toMatchObject({sourceScoreable:0,
+   officialWinner:'NONE',naturalEnemyEncounterCertified:false});
+ });
  it('refuses invented ids, source scoring, invalid HP or fake statistics',()=>{
   expect(make({...data(),stage:[25,17,26,1]})).toBeNull();
   expect(make({...data(),selected:false})).toBeNull();

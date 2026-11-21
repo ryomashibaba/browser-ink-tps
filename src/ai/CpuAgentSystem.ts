@@ -4606,7 +4606,13 @@ export class CpuAgentSystem {
         ...this.bots.filter(enemy=>
           enemy.id!==bot.id&&enemy.team!==bot.team&&
           enemy.lifeState==='ACTIVE'&&
-          enemy.mobilityState==='GROUND'&&
+          // Frozen SOURCE still sees GROUND only. In private F4, a real
+          // Rapier-verified center-flight opponent remains physically
+          // shootable; liveSourceCombatOpponent checks flight ownership
+          // and synchronised shared collider before this aim is admitted.
+          (enemy.mobilityState==='GROUND'||
+           (isT21F4OriginalTerrainStage(this.stage)&&
+            enemy.mobilityState==='F4_CENTER_TRANSFER'))&&
           this.liveSourceCombatOpponent(enemy))
           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
             y:enemy.position.y+.68,z:enemy.position.z},

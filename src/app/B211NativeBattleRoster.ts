@@ -29,7 +29,10 @@ export function b211RealNativeRoster(v:B211NativeInput){
  const rows=IDS.map(id=>{
   const x=byId.get(id)!;
   const status=x.lifeState==='SPLATTED'?'SPLAT':
-   x.lifeState==='UNKNOWN'?'UNKNOWN':x.rejoined?'ACTIVE':'REJOINING';
+   x.lifeState==='UNKNOWN'?'UNKNOWN':
+   x.rejoined||
+   (v.f4OriginalTerrainResearch===true&&
+    x.mobilityState==='F4_CENTER_TRANSFER')?'ACTIVE':'REJOINING';
   return {id,team:id[0]==='A'?'ALLY' as const:'ENEMY' as const,
    hp:x.lifeState==='ACTIVE'?x.hp:null,status};
  });
