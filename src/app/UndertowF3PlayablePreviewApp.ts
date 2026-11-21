@@ -133,6 +133,8 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
+import {auditF4FirstLegStaticRapierSamples}
+ from '../stage/undertow/UndertowOriginalFootEdgeAudit';
 import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,f4OriginalCorridorEndpoints,
  t21F4PlayableCorridorGuide}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
@@ -8188,6 +8190,25 @@ export class UndertowF3PlayablePreviewApp{
    return {admitted:false,reason:'NATIVE_LOOKAHEAD_LACKS_REAL_FLOOR',
     index,stepSnap:projectedStep.distanceMeters,
     stepGap,stepSolid:supported?.solidId??null};
+  // A valid start, lookahead endpoint and Recast path cannot prove
+  // continuous registered floor between them. Native F4 PLAYER must not
+  // recommend WASD across an unobserved gap or a mismatched height layer.
+  // Keep this check local (<=2m, <=17 samples) in the same live Rapier world.
+  const sampleBody=new Vec3();
+  const firstLeg=auditF4FirstLegStaticRapierSamples(
+   [foot.x,foot.y,foot.z],[step.x,step.y,step.z],
+   ([x,y,z])=>{
+    const h=this.physics.castCharacterFootSupport(
+     sampleBody.set(x,y+off,z),off,'HUMAN');
+    return h?{solidId:h.solidId,floorY:h.point.y}:null;
+   });
+  if(firstLeg.status!=='SAMPLED_STATIC_SUPPORT_ONLY')
+   return {admitted:false,reason:'F4_FIRST_LEG_STATIC_FLOOR_HOLD',
+    index,firstLegStatus:firstLeg.status,
+    firstUnsupportedPoint:firstLeg.firstUnsupportedPoint,
+    firstUnsupportedMeters:firstLeg.firstUnsupportedMeters,
+    staticSamples:firstLeg.sampleCount,
+    newFloorAuthorized:false as const,realKccRouteCertified:false as const};
   // Actual human controls are camera-relative. Report the two real
   // WASD axes against the *current* camera yaw; a held KeyA by itself
   // is not evidence of attempted movement toward a world-X goal.

@@ -11,7 +11,8 @@ import { undertowT21dConnectivityQaStage } from './UndertowSpillwayConnectivityQ
 import {
   ISSUE13_HISTORICAL_FLOOR_EDGE,
   registeredSourceFootprintWitnesses,
-  auditUndertowOriginalFloorEdge
+  auditUndertowOriginalFloorEdge,
+  auditF4FirstLegStaticRapierSamples
 } from './UndertowOriginalFootEdgeAudit';
 
 const sourceId='UndertowT21D:first-drop-landing-positive-z';
@@ -102,5 +103,41 @@ describe('F4 original floor replacement cannot leave orphan painted SOURCE plane
   expect(original.paintSurfaces.length).toBe(17);
   expect(original.navigationLinks?.length).toBe(26);
   expect(frozen.activationReady).toBe(false);
+ });
+});
+
+describe('F4 first-leg static Rapier continuity (not a moving KCC certificate)',()=>{
+ it('blocks a real empty strip between two independently supported endpoints',()=>{
+  const from:[number,number,number]=[0,3,0];
+  const to:[number,number,number]=[1.25,3,0];
+  // The endpoints both have a floor. Existing endpoint-only gates would
+  // incorrectly admit a WASD cue across x=.5..75m open space.
+  const floor=(p:readonly [number,number,number])=>
+   p[0]>.45&&p[0]<.80?null:{solidId:'actual-rapier',floorY:3};
+  expect(floor(from)).not.toBeNull();
+  expect(floor(to)).not.toBeNull();
+  const gap=auditF4FirstLegStaticRapierSamples(from,to,floor);
+  expect(gap.status).toBe('HOLD_RAPIER_FLOOR_MISSING');
+  expect(gap.firstUnsupportedPoint?.[0]).toBeGreaterThan(.45);
+  expect(gap.firstUnsupportedPoint?.[0]).toBeLessThan(.80);
+  expect(gap.newFloorOrNavLinkAuthorized).toBe(false);
+  expect(gap.humanKccRouteCertified).toBe(false);
+ });
+ it('accepts bounded static continuous floor samples without certifying live walk',()=>{
+  const result=auditF4FirstLegStaticRapierSamples(
+   [0,3,0],[1.25,3,0],()=>({solidId:'actual-rapier',floorY:3}));
+  expect(result.status).toBe('SAMPLED_STATIC_SUPPORT_ONLY');
+  expect(result.sampleCount).toBe(11);
+  expect(result.firstUnsupportedPoint).toBeNull();
+  expect(result.humanKccRouteCertified).toBe(false);
+ });
+ it('holds on wrong physical height, nonfinite path or unbounded shortcut',()=>{
+  const hit=()=>({solidId:'actual-rapier',floorY:1.5});
+  expect(auditF4FirstLegStaticRapierSamples(
+   [0,3,0],[1,3,0],hit).status).toBe('HOLD_RAPIER_FLOOR_HEIGHT');
+  expect(auditF4FirstLegStaticRapierSamples(
+   [0,3,0],[3,3,0],hit).status).toBe('HOLD_FIRST_LEG_LENGTH');
+  expect(auditF4FirstLegStaticRapierSamples(
+   [NaN,3,0],[1,3,0],hit).status).toBe('HOLD_NONFINITE_LEG');
  });
 });

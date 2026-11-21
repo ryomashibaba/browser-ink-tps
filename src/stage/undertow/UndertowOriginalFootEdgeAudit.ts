@@ -166,3 +166,61 @@ export function auditUndertowOriginalFloorEdge(
     originalPlayerCollisionAuthorityCertified:false
   };
 }
+
+/**
+ * F4 native human return: evidence for the INTERIOR of a planned first
+ * WASD leg, not only its two Rapier-supported endpoints. A native Recast
+ * polyline may cross a narrow open floor gap between those endpoints.
+ * Observe the SAME live Rapier world with <=0.125m sample spacing; the
+ * actual human KCC and current original Phive semantics remain unproven.
+ * No stage/actor/mesh/nav/ink write is performed here.
+ */
+export type F4FirstLegSample = Readonly<{solidId:string;floorY:number}>|null;
+export interface F4FirstLegStaticWitness {
+ readonly status:
+  'SAMPLED_STATIC_SUPPORT_ONLY'|'HOLD_NONFINITE_LEG'|
+  'HOLD_FIRST_LEG_LENGTH'|'HOLD_RAPIER_FLOOR_MISSING'|
+  'HOLD_RAPIER_FLOOR_HEIGHT';
+ readonly sampleCount:number;
+ readonly firstUnsupportedPoint:StageVector3|null;
+ readonly firstUnsupportedMeters:number|null;
+ readonly humanKccRouteCertified:false;
+ readonly newFloorOrNavLinkAuthorized:false;
+}
+export function auditF4FirstLegStaticRapierSamples(
+ from:StageVector3,to:StageVector3,
+ sample:(point:StageVector3)=>F4FirstLegSample
+):F4FirstLegStaticWitness{
+ const hold=(status:F4FirstLegStaticWitness['status'],
+  count:number,point:StageVector3|null,meters:number|null):
+  F4FirstLegStaticWitness=>({
+   status,sampleCount:count,firstUnsupportedPoint:point,
+   firstUnsupportedMeters:meters,humanKccRouteCertified:false,
+   newFloorOrNavLinkAuthorized:false
+  });
+ if(!from.every(Number.isFinite)||!to.every(Number.isFinite))
+  return hold('HOLD_NONFINITE_LEG',0,null,null);
+ const length=Math.hypot(to[0]-from[0],to[2]-from[2]);
+ // The live projected first leg is <=1.25m plus <=.45m start snap.
+ // A much longer leg is a different, unverified route, never a pass.
+ if(!Number.isFinite(length)||length<.001||length>2)
+  return hold('HOLD_FIRST_LEG_LENGTH',0,null,null);
+ const steps=Math.ceil(length/.125);
+ for(let i=0;i<=steps;i++){
+  const t=i/steps;
+  const point:StageVector3=[
+   from[0]+(to[0]-from[0])*t,
+   from[1]+(to[1]-from[1])*t,
+   from[2]+(to[2]-from[2])*t
+  ];
+  const hit=sample(point);
+  if(!hit||!hit.solidId||!Number.isFinite(hit.floorY))
+   return hold('HOLD_RAPIER_FLOOR_MISSING',i+1,point,length*t);
+  // Existing original 0.25m native support tolerance only. This is
+  // not an expanded KCC step/jump allowance or a new collision face.
+  const gap=point[1]-hit.floorY;
+  if(!Number.isFinite(gap)||Math.abs(gap)>.25)
+   return hold('HOLD_RAPIER_FLOOR_HEIGHT',i+1,point,length*t);
+ }
+ return hold('SAMPLED_STATIC_SUPPORT_ONLY',steps+1,null,null);
+}
