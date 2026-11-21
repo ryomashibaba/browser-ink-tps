@@ -108,6 +108,15 @@ export class B367RealCpuCombatTimeline {
   if(seen.length&&seen[0]!.sequence!==this.lastSequence+1){
    this.reset();return null;
   }
+  // The newest genuine native hit COUNT and the bounded event journal
+  // must describe the exact same contiguous history. Previously an event
+  // with sequence 1 could pass while physicalHumanCpuHpHits remained 0,
+  // producing a misleading "REAL HP LOSS" notification. Missing/extra
+  // records are evidence gaps, never a permit to emit a combat notice.
+  if((seen.length?seen[seen.length-1]!.sequence:this.lastSequence)!==
+      x.source.physicalHumanCpuHpHits){
+   this.reset();return null;
+  }
   for(const e of seen){
    if(!validCount(e.sequence)||e.sequence!==this.lastSequence+1||
       !validCount(e.nativeFrame)||e.nativeFrame>x.nativeTick||

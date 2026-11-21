@@ -64,6 +64,49 @@ describe('B367 original physical CPU damage and native life',()=>{
   // Missing physical projectile event and counter must fail closed.
   expect(a.observe(f)).toBeNull();
  });
+ it('refuses a fabricated event without a matching physical HP-hit count',()=>{
+  const w=new B367RealCpuCombatTimeline(),f=sample();
+  w.observe(f);
+  shot(f,60);
+  // An event alone is not enough: the true projectile counter must agree.
+  f.source.physicalHumanCpuHpHits=0;
+  f.humanDirectHits=0;
+  expect(w.observe(f)).toBeNull();
+  expect(w.currentNotice(f.nativeTick,true,false)).toBeNull();
+ });
+ it('refuses missing or extra events even with plausible human counters',()=>{
+  for(const change of [
+   (f:B367NativeCombatFrame)=>{f.source.events=[];},
+   (f:B367NativeCombatFrame)=>{
+    f.source.events=[...f.source.events,{
+     ...f.source.events[0]!,sequence:2
+    }];
+   }
+  ]){
+   const w=new B367RealCpuCombatTimeline(),f=sample();
+   w.observe(f);shot(f);change(f);
+   expect(w.observe(f)).toBeNull();
+   expect(w.currentNotice(f.nativeTick,true,false)).toBeNull();
+  }
+ });
+ it('still accepts two genuine consecutive physical events',()=>{
+  const w=new B367RealCpuCombatTimeline(),f=sample();
+  w.observe(f);shot(f,65);
+  expect(w.observe(f)?.state).toBe('ACTUAL_HP_LOSS');
+  f.nativeTick++;
+  f.humanDirectHits++;
+  f.source.physicalHumanCpuHpHits++;
+  f.source.events=[...f.source.events,{
+   sequence:2,nativeFrame:f.nativeTick,botId:'B1',
+   weaponId:'pulse-sprayer',hpBefore:65,hpAfter:40,
+   actualHpLoss:25,lethalHpZero:false
+  }];
+  f.cpu[3]!.hp=40;
+  expect(w.observe(f)).toMatchObject({
+   state:'ACTUAL_HP_LOSS',actorId:'B1',
+   certifiedDirectHumanDamage:true,officialWinner:'NONE'
+  });
+ });
  it('rejects tampered provenance, QA score, crossmap authorizations and gaps',()=>{
   for(const apply of [
    (x:B367NativeCombatFrame)=>{x.stage=[30,17,26,0];},
