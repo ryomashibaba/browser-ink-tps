@@ -6,6 +6,8 @@ export interface B211Actor {
 }
 export interface B211NativeInput {
  selected:boolean;tick:number;stage:readonly number[];
+ /** Display-only F4 ORIGINAL terrain lab marker, never official route authority. */
+ f4OriginalTerrainResearch?:boolean;
  matchState:'STAGING'|'PLAYING'|'TIME_UP';paused:boolean;stopReason:string|null;
  humanHp:number;humanDirectHits:number;humanDirectSplats:number;
  cpuSplats:number;cpuRespawns:number;cpu:readonly B211Actor[];
@@ -38,14 +40,17 @@ export function b211RealNativeRoster(v:B211NativeInput){
   humanHp:v.humanHp,realHumanHits:v.humanDirectHits,
   realHumanSplats:v.humanDirectSplats,
   cpuSplats:v.cpuSplats,cpuRespawns:v.cpuRespawns,
-  text:['REAL 1 + 7 · SOURCE COMBAT',
+  text:[v.f4OriginalTerrainResearch?
+   'REAL 1 + 7 · F4 RESEARCH COMBAT':'REAL 1 + 7 · SOURCE COMBAT',
    'YOU '+(v.humanHp===0?'SPLATTED':'ACTIVE')+' HP '+Math.round(v.humanHp),
    'ALLY · '+rows.slice(0,3).map(format).join(' | '),
    'ENEMY · '+rows.slice(3).map(format).join(' | '),
    'REAL DIRECT HITS '+v.humanDirectHits+
     ' · HUMAN CPU SPLATS '+v.humanDirectSplats,
    'REAL CPU SPLATS '+v.cpuSplats+' · RESPAWNS '+v.cpuRespawns,
-   'UNSCORED · CROSS-TEAM ROUTES 0/12 HOLD'].join('\n'),
+   v.f4OriginalTerrainResearch?
+    'UNSCORED · F4 CROSS-TEAM TRAVEL: UNOFFICIAL RESEARCH':
+    'UNSCORED · SOURCE CROSS-TEAM ROUTES 0/12 HOLD'].join('\n'),
   sourceScoreable:0 as const,officialWinner:'NONE' as const,
   naturalEnemyEncounterCertified:false as const};
 }

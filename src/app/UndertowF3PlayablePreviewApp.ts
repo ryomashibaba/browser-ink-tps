@@ -9023,6 +9023,7 @@ export class UndertowF3PlayablePreviewApp{
   // B211 reads only actual 60Hz CPU/HUMAN life state, never source authority.
   const nativeB211Roster=b211RealNativeRoster({
    selected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+   f4OriginalTerrainResearch:this.f4ResearchMode&&this.f4OriginalCorridorsPresent,
    tick:state.tick,stage:[state.originalSourceSolids,
     state.originalPaintSurfaces,state.originalSourceNavigationLinks??-1,
     state.sourceScoreablePromotions],

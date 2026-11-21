@@ -26,6 +26,15 @@ describe('B211 player-visible genuine source combat roster',()=>{
   expect(model.cpuRespawns).toBe(1);
   expect(model.text).toContain('YOU SPLATTED');
  });
+ it('separates F4 research traversal from frozen SOURCE certification',()=>{
+  const source=make(data())!;
+  const f4=make({...data(),f4OriginalTerrainResearch:true})!;
+  expect(source.text).toContain('SOURCE CROSS-TEAM ROUTES 0/12 HOLD');
+  expect(f4.text).toContain('F4 CROSS-TEAM TRAVEL: UNOFFICIAL RESEARCH');
+  expect(f4.text).not.toContain('0/12 HOLD');
+  expect(f4).toMatchObject({officialWinner:'NONE',sourceScoreable:0,
+   naturalEnemyEncounterCertified:false});
+ });
  it('refuses invented ids, source scoring, invalid HP or fake statistics',()=>{
   expect(make({...data(),stage:[25,17,26,1]})).toBeNull();
   expect(make({...data(),selected:false})).toBeNull();
