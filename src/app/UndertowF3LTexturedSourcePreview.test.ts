@@ -1,7 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
-import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
+import {auditF3lManifest,f3lSourceReadabilityStyle,f4OriginalCollidingTriangles,
+ f4PartitionOriginalUv,f3lIsUnverifiedFloorMarking,
  f3lIsUnverifiedBridgeOverlay,f3lIsUnverifiedStageSideOverlay,
  f3lNativePlayerShouldRenderSourceMaterial,
  F3L_STAGE_READABILITY_MODES,
@@ -9,6 +10,46 @@ import {auditF3lManifest,f3lSourceReadabilityStyle,f3lIsUnverifiedFloorMarking,
  from './UndertowF3LTexturedSourcePreview';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
 import {nativeF3iBackdropVisible} from './UndertowF3VerifiedSourcePresentation';
+import type {StageSolidDefinition} from '../stage/StageDefinition';
+import {undertowTemple01ModelXZToProjectXZ}
+ from '../stage/undertow/UndertowSpillwayModelXZGeometry';
+import {UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT as audit}
+ from '../stage/undertow/UndertowSpillwayRemodelGeometryAudit';
+describe('F4 UV uses only existing original Rapier and Recast triangles',()=>{
+ it('marks exact source triangles, not neighboring photo-created floors',()=>{
+  const sample=[[-8,3,40],[-7,3,40],[-8,3,41],
+   [-8,3,40],[-7,3,40],[-8,3,42]] as const;
+  const project=([x,y,z]:readonly[number,number,number])=>{
+   const [px,pz]=undertowTemple01ModelXZToProjectXZ([x,z]);
+   return [px,y+audit.projectNormalization.modelToProjectYOffset,pz] as const;
+  };
+  const original:StageSolidDefinition={
+   id:'T21V28:F4-local-original:sample',center:[0,0,0],size:[1,1,1],
+   material:'medium',render:true,projectileBlocker:true,cameraBlocker:true,
+   collisionEnabled:true,navigationEnabled:true,
+   triangleMesh:{vertices:sample.slice(0,3).map(project),indices:[0,1,2]}
+  };
+  const inferred:StageSolidDefinition={...original,id:'F4-photo-reconstruction',
+   triangleMesh:{vertices:sample.slice(3,6).map(project),indices:[0,1,2]}};
+  const faces=f4OriginalCollidingTriangles({solids:[original,inferred]});
+  expect(faces.size).toBe(1);
+  const physical=new Set([...faces.values()].flatMap(f=>[...f]));
+  const split=f4PartitionOriginalUv(new Float32Array(sample.flat()),physical);
+  expect([...split.backed]).toEqual([0,1,2]);
+  expect([...split.unbacked]).toEqual([3,4,5]);
+  expect(split.matched.size).toBe(1);
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+   'Fld_Temple01_FloorConcrete00',true)).toEqual({
+   opacity:1,depthWrite:true,opaque:true});
+  expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
+   'Fld_Temple01_FloorConcrete00',false).opacity).toBe(.14);
+  expect(f4OriginalCollidingTriangles({solids:[{
+   ...original,collisionEnabled:false}]}).size).toBe(0);
+  expect(f4OriginalCollidingTriangles({solids:[{
+   ...original,navigationEnabled:false}]}).size).toBe(0);
+ });
+});
+
 describe('F3L original static textured scene review',()=>{
  it('uses only explicit source vertex UV references, not world projected UV',()=>{
   const table=parseF3lOriginalMtl('newmtl Fld_Temple01_FloorConcrete00\n'+
