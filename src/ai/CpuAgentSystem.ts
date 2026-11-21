@@ -2028,7 +2028,18 @@ export class CpuAgentSystem {
     this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
     if(!step.grounded)return;
     flight.speedY=0;
-    const landed=Math.abs(bot.position.y-transfer.to[1])<=.12&&
+    // A genuine landing needs more than the correct Y and a reachable
+    // forward Recast path: an unrelated original ledge can meet both.
+    // Require measurable horizontal progress toward this SAME recorded
+    // transfer. The generous relative band preserves the previously
+    // observed physical landings without accepting the takeoff XZ.
+    const horizontalTransferLength=Math.hypot(
+      transfer.to[0]-transfer.from[0],transfer.to[2]-transfer.from[2]);
+    const horizontalLandingError=Math.hypot(
+      bot.position.x-transfer.to[0],bot.position.z-transfer.to[2]);
+    const landed=horizontalTransferLength>.01&&
+      horizontalLandingError<=Math.max(1.2,horizontalTransferLength*.75)&&
+      Math.abs(bot.position.y-transfer.to[1])<=.12&&
       this.f4CenterContinuation(bot.position,new Vec3(...transfer.continueTo));
     // Merely sharing the takeoff's HEIGHT is not a return to its floor.
     // Require a physically grounded, spatially nearby foot and the

@@ -151,6 +151,26 @@ describe('F4 center transfer physical-abort integration',()=>{
   expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).not.toHaveBeenCalled();
   expect(cpu.navigation.addAgent).not.toHaveBeenCalled();
  });
+ it('does not certify a same-height, reachable but WRONG F4 landing ledge',()=>{
+  const {cpu,bot}=create(true,{x:-2.58,y:1.5,z:3.36});
+  // Native Recast succeeds in this fixture. Only correct physical
+  // LOCATION may change the CPU's passage phase to the opposite side.
+  cpu.advanceF4CenterTransfer(bot,1/60);
+  expect(bot.mobilityState).toBe('F4_CENTER_TRANSFER');
+  expect(bot.agent).toBeNull();
+  expect(cpu.f4CenterFlights.has('A1')).toBe(true);
+  expect(cpu.f3dSourceGoals.noteF4CenterLanding).not.toHaveBeenCalled();
+ });
+ it('admits a physically grounded landing near the authentic F4 target',()=>{
+  const {cpu,bot,agent}=create(true,{x:-.40,y:1.5,z:2.60});
+  cpu.advanceF4CenterTransfer(bot,1/60);
+  expect(bot.mobilityState).toBe('GROUND');
+  expect(bot.agent).toBe(agent);
+  expect(cpu.f4CenterFlights.has('A1')).toBe(false);
+  expect(cpu.f3dSourceGoals.noteF4CenterLanding)
+   .toHaveBeenCalledWith('A1',true);
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).not.toHaveBeenCalled();
+ });
  it('holds the upper shoulder reservation after a real failed descent',()=>{
   const {cpu,bot,agent}=create(false,{x:1.40,y:1.5,z:-1.84});
   cpu.advanceF4CenterTransfer(bot,1/60);
