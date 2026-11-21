@@ -28,41 +28,45 @@ function nativeRig(){
 }
 
 describe('W3 isolated human Crowd projection preflight',()=>{
- it('withholds an off-seal projected neighbour, then attaches and safely detaches',()=>{
+ it('withholds a real hazardous high-spawn rim, but admits safe original interior feet',()=>{
   const rig=nativeRig();
   const crowd=new UndertowF3NativeHumanCrowd(rig.nav as never,rig.stage as never);
-  const foot={x:0,y:7.525,z:57.7};
-  crowd.syncActualPlayerFoot(foot);
-  crowd.sealAfterCrowdUpdate(foot);
-  const guard=(crowd.snapshot as unknown as {
-   projectionGuard:{status:string;horizontalMeters:number;verticalMeters:number;
-    threeDMeters:number;limitHorizontalMeters:number;productionCertified:boolean};
-   w3GuardedTicks:number;crowdAvoidanceCertified:boolean;
-  });
+  // This exact real Windows foot triggered a >111m eighth-proxy drift.
+  // Modern F3C deliberately withholds ONLY the passive steering agent,
+  // not Rapier HUMAN, any CPU capsule, original NavMesh or SOURCE solids.
+  const realRim={x:4.777252197265625,y:7.525097732543945,
+   z:57.74844741821289};
+  crowd.syncActualPlayerFoot(realRim,true);
   expect(crowd.snapshot.active).toBe(false);
-  expect(guard.projectionGuard.status).toBe('WITHHELD_NAV_PROJECTION_HORIZONTAL');
-  expect(guard.projectionGuard.horizontalMeters).toBeCloseTo(.106,5);
-  expect(guard.projectionGuard.verticalMeters).toBeCloseTo(.075,5);
-  expect(guard.projectionGuard.threeDMeters).toBeLessThan(.22);
-  expect(guard.projectionGuard.limitHorizontalMeters).toBe(.065);
-  expect(guard.w3GuardedTicks).toBe(1);
-  expect(guard.crowdAvoidanceCertified).toBe(false);
+  expect(crowd.snapshot.originalHighSpawnPassiveProxyGate?.withheld).toBe(true);
+  expect(crowd.snapshot.originalHighSpawnProxyWithheldNativeTicks).toBe(1);
   expect(rig.added()).toBe(0);
+  const interior={x:.01693030074238777,y:7.525,z:67.87103271484375};
+  // A large *real* foot displacement cannot grant an instant 60Hz proxy.
+  crowd.syncActualPlayerFoot(interior,true);
+  expect(crowd.snapshot.active).toBe(false);
+  crowd.syncActualPlayerFoot(interior,true);
+  expect(crowd.snapshot.originalHighSpawnPassiveProxyGate?.withheld).toBe(false);
+  expect(crowd.snapshot.active).toBe(true);
+  expect(rig.added()).toBe(1);
+  crowd.sealAfterCrowdUpdate(interior);
+  // Current SOURCE authority verifies actual 3D native projection <=.22m.
+  // A .36m off-nav projection removes only the passive steering proxy.
+  rig.setOffset(.36,0);
+  crowd.syncActualPlayerFoot(interior,true);
+  expect(crowd.snapshot.active).toBe(false);
+  expect(rig.removed()).toBe(1);
+  rig.setOffset(.02,0);
+  crowd.syncActualPlayerFoot(interior,true);
+  expect(crowd.snapshot.active).toBe(true);
+  expect(rig.added()).toBe(2);
+  crowd.syncActualPlayerFoot(interior,false);
+  expect(crowd.snapshot.active).toBe(false);
+  expect(rig.removed()).toBe(2);
   expect(crowd.snapshot.fakeHumanPhysicalActors).toBe(0);
   expect(crowd.snapshot.playerFootMoved).toBe(false);
   expect(crowd.snapshot.sourceNavmeshChanged).toBe(false);
-  // Reuse the original NavMesh, with a physically compatible projection.
-  rig.setOffset(.02,0);
-  crowd.syncActualPlayerFoot(foot);
-  crowd.sealAfterCrowdUpdate(foot);
-  expect(crowd.snapshot.active).toBe(true);
-  expect(rig.added()).toBe(1);
-  // Original offset returns: only the passive Crowd proxy is removed.
-  rig.setOffset(.146,.087);
-  crowd.syncActualPlayerFoot(foot);
-  crowd.sealAfterCrowdUpdate(foot);
-  expect(crowd.snapshot.active).toBe(false);
-  expect(rig.removed()).toBe(1);
+  expect(crowd.snapshot.productionAuthorized).toBe(false);
   crowd.dispose();
  });
  it('fails closed on an unrelated game stage',()=>{

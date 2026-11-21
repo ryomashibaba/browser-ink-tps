@@ -35,18 +35,9 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: TypeScript check
         run: npm run typecheck
-      - name: Integrated original F3/F4 CPU and combat regression
+      - name: Reassess all legacy and integrated tests once
         if: github.event_name == 'push'
-        run: |
-          npx vitest run \
-            src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts \
-            src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts \
-            src/app/UndertowF3SourceTraffic.test.ts \
-            src/app/UndertowF3PaintAwarePatrol.test.ts \
-            src/app/B371RealSourceMissionCue.test.ts \
-            src/app/UndertowF3OriginalAllyProximity.test.ts \
-            src/app/UndertowF3SourceSessionBoard.test.ts \
-            src/app/B367RealCpuCombatTimeline.test.ts
+        run: npm test
       - name: Entire unit test suite
         if: github.event_name != 'push'
         run: npm test
