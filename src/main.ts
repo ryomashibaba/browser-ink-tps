@@ -69,6 +69,7 @@ async function boot(): Promise<void> {
         const game=(window as unknown as {__t21F3?:{
           restart:()=>unknown;
           snapshot:()=>{matchState?:string;stopReason?:string|null;
+            tick?:number;timeRemainingSeconds?:number;
             originalSourceSolids?:number;originalPaintSurfaces?:number;
             originalSourceNavigationLinks?:number;
             sourceScoreablePromotions?:number;
@@ -82,6 +83,8 @@ async function boot(): Promise<void> {
         return {game,replay,state,evidence:{
           href:window.location.href,
           matchState:state?.matchState,stopped:!!state?.stopReason,
+          nativeTick:state?.tick,
+          timeRemainingSeconds:state?.timeRemainingSeconds,
           pointerLocked:document.pointerLockElement!==null,
           originalSolids:state?.originalSourceSolids,
           originalPaint:state?.originalPaintSurfaces,

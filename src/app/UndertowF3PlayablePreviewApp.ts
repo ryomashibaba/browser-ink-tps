@@ -5442,6 +5442,7 @@ export class UndertowF3PlayablePreviewApp{
    '#t21-f3-b59-restart');
   return {
    href:window.location.href,matchState:this.matchState,
+   nativeTick:this.clock.tick,timeRemainingSeconds:this.remainingSeconds,
    stopped:!!this.stopReason,
    pointerLocked:document.pointerLockElement===this.canvas,
    originalSolids:this.rawStage.solids.length,

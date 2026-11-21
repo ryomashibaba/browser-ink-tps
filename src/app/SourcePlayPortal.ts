@@ -131,6 +131,8 @@ export interface SourceFinishedReplayEvidence {
  href:string;matchState?:string;stopped:boolean;pointerLocked:boolean;
  originalSolids?:number;originalPaint?:number;originalLinks?:number;
  scoreable?:number;finishedVisible:boolean;canClick:boolean;
+ /** F4-only: genuine 60Hz native timeline, never inferred from UI phase. */
+ nativeTick?:number;timeRemainingSeconds?:number;
 }
 /** A completed, windowed F4 PRIVATE-local round may reload its SAME
  * checked loopback research URL. This does NOT authorize a SOURCE replay,
@@ -141,15 +143,18 @@ export function f4OriginalLocalFinishedReplayEligible(
  input:SourceFinishedReplayEvidence
 ):boolean{
  if(input.matchState!=='TIME_UP'||input.stopped||input.pointerLocked||
+    !Number.isSafeInteger(input.nativeTick)||input.nativeTick!<10800||
+    !Number.isFinite(input.timeRemainingSeconds)||
+    input.timeRemainingSeconds!<0||input.timeRemainingSeconds!>=.001||
     input.originalSolids!==25||input.originalPaint!==17||
     input.originalLinks!==26||input.scoreable!==0||
     !input.finishedVisible||!input.canClick)return false;
  let u:URL;
  try{u=new URL(input.href)}catch{return false}
- if(u.protocol!=='http:'||
+ if(u.protocol!=='http:'||u.port!=='4176'||
     !['localhost','127.0.0.1','[::1]'].includes(u.hostname)||
     u.hash!==''||
-    !(u.pathname.endsWith('/')||u.pathname.endsWith('/index.html')))
+    !(u.pathname==='/'||u.pathname==='/index.html'))
     return false;
  // Exact PLAY_F4_ORIGINAL_RETURN_WINDOWS.cmd research flags: no copied
  // production, scoreable, deterministic, arbitrary kit or remote asset URL.

@@ -731,6 +731,7 @@ describe('F4 PRIVATE original terrain native TIME_UP replay',()=>{
   't21W10B441=sourceFrontline&t21W10B448=realA3Front&'+
   't21F4Central=research&t21F4Terrain=original';
  const ready={href,matchState:'TIME_UP',stopped:false,
+  nativeTick:10800,timeRemainingSeconds:0,
   pointerLocked:false,originalSolids:25,originalPaint:17,
   originalLinks:26,scoreable:0,finishedVisible:true,canClick:true};
  it('reloads only the real finished local F4 world; keeps formal SOURCE HOLD',()=>{
@@ -743,12 +744,16 @@ describe('F4 PRIVATE original terrain native TIME_UP replay',()=>{
  it('rejects premature, interrupted, hidden or nonlocal finished actions',()=>{
   for(const changed of [
    {matchState:'PLAYING'},{stopped:true},{pointerLocked:true},
-   {finishedVisible:false},{canClick:false},{originalSolids:51},
+   {finishedVisible:false},{canClick:false},{nativeTick:10799},
+   {nativeTick:NaN},{timeRemainingSeconds:0.5},
+   {timeRemainingSeconds:-1},{originalSolids:51},
    {originalPaint:16},{originalLinks:25},{scoreable:1}
   ])expect(f4OriginalLocalFinishedReplayEligible({...ready,...changed}))
    .toBe(false);
   for(const url of [
    href.replace('127.0.0.1','example.org'),
+   href.replace('4176','4177'),
+   href.replace('4176/','4176/nested/'),
    href.replace('http:','https:'),
    href+'#forged',href+'&production=1',href+'&scoreable=1',
    href+'&t21QaInput=deterministic',
@@ -767,6 +772,7 @@ describe('F4 PRIVATE local R key matches the real finished replay button',()=>{
   't21W10B441=sourceFrontline&t21W10B448=realA3Front&'+
   't21F4Central=research&t21F4Terrain=original';
  const valid={href,matchState:'TIME_UP',stopped:false,
+  nativeTick:10800,timeRemainingSeconds:0,
   pointerLocked:false,originalSolids:25,originalPaint:17,
   originalLinks:26,scoreable:0,finishedVisible:true,canClick:true,
   code:'KeyR',repeat:false,modified:false,editing:false};
