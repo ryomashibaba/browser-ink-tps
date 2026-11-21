@@ -32,8 +32,15 @@ REM First launch may download the 43MB original upstream OBJ and textures.
 REM No private F4 terrain JSON, screenshots, or originals are uploaded.
 echo Preparing verified original F3L optical pack for F4 research...
 node scripts\t21-f3gl-restore.mjs
-if errorlevel 1 goto :BAD_VISUAL_SOURCE
-if not exist "public\t21-f3g-source\f3l-original-textured.json" goto :BAD_VISUAL_SOURCE
+if errorlevel 1 goto :UV_HOLD
+if not exist "public\t21-f3g-source\f3l-original-textured.json" goto :UV_HOLD
+goto :UV_PREPARED
+:UV_HOLD
+echo.
+echo F4 OPTICAL HOLD: pinned original F3L source is unavailable.
+echo Registered stage remains playable; do not treat grey geometry as visual PASS.
+echo No original collision, score, world or private seed was changed.
+:UV_PREPARED
 REM Open a NORMAL window, never headless. Vite's existing same-origin
 REM loopback-only middleware serves the JSON; no preview/Pages deployment.
 if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
@@ -76,10 +83,6 @@ goto :FAIL_POP
 :NO_DEPS
 echo F4 HOLD: existing offline npm dependencies are unavailable.
 echo No package installation or download was attempted.
-goto :FAIL_POP
-:BAD_VISUAL_SOURCE
-echo F4 HOLD: pinned source UV pack missing or hash validation failed.
-echo Existing game physics and private source files remain unchanged.
 goto :FAIL_POP
 :FAIL_POP
 popd

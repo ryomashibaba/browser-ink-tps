@@ -72,7 +72,10 @@ test('one-click verified original UV is the SAME genuine four-mode SOURCE game, 
 test('F4 one-click restores pinned local source UV and displays grounded optical parity',()=>{
  const f4=readFileSync(resolve(root,'PLAY_F4_ORIGINAL_RETURN_WINDOWS.cmd'),'utf8');
  assert.match(f4,/node scripts\\t21-f3gl-restore\.mjs/);
- assert.match(f4,/if errorlevel 1 goto :BAD_VISUAL_SOURCE/);
+ assert.match(f4,/if errorlevel 1 goto :UV_HOLD/);
+ assert.match(f4,/:UV_PREPARED/);
+ assert.match(f4,/Registered stage remains playable/);
+ assert.doesNotMatch(f4,/:BAD_VISUAL_SOURCE/);
  assert.match(f4,/f3l-original-textured\.json/);
  assert.match(f4,/--host 127\.0\.0\.1 --port 4176 --strictPort/);
  assert.match(f4,/t21F4Terrain=original/);
