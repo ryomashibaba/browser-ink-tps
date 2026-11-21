@@ -32,3 +32,30 @@ export function hasRegisteredOriginalSourceCpuRapierFootSupport(
     Math.abs(witness.point.y-actualFoot.y)<=
       ORIGINAL_SOURCE_CPU_RAPIER_FOOT_SUPPORT_BAND_METERS+1e-6;
 }
+
+/** A registered F4 CPU center flight physically exists even when its
+ * passive Crowd agent has been removed. Only a synchronized real Rapier
+ * capsule may receive an actual HUMAN/CPU projectile or area hit. The
+ * historical SOURCE GROUND eligibility and all T20 jumps are unchanged.
+ */
+export function f4PhysicallyPresentCenterTransferTarget(e:Readonly<{
+ originalF4:boolean;
+ mobilityState:string;
+ registeredPhysicalFlight:boolean;
+ realFoot:OriginalSourceCpuFootPoint;
+ actualCapsule:Readonly<{
+  foot:OriginalSourceCpuFootPoint;
+  actualSharedRapierBodyAndFootAgree:boolean;
+  actualSharedWorld:boolean;
+  virtualCrowdProxyUsed:boolean;
+ }>|null;
+}>):boolean{
+ const actor=e.actualCapsule;
+ if(!e.originalF4||e.mobilityState!=='F4_CENTER_TRANSFER'||
+    !e.registeredPhysicalFlight||!actor||
+    !actor.actualSharedRapierBodyAndFootAgree||
+    actor.actualSharedWorld!==true||actor.virtualCrowdProxyUsed!==false||
+    !finite(e.realFoot)||!finite(actor.foot))return false;
+ return Math.hypot(e.realFoot.x-actor.foot.x,
+   e.realFoot.y-actor.foot.y,e.realFoot.z-actor.foot.z)<=.025;
+}

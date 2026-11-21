@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {hasRegisteredOriginalSourceCpuRapierFootSupport as supported,
+ f4PhysicallyPresentCenterTransferTarget as physicalTransfer,
  ORIGINAL_SOURCE_CPU_RAPIER_FOOT_SUPPORT_BAND_METERS}
  from './OriginalSourceCpuRapierFootSupport';
 
@@ -34,5 +35,36 @@ describe('T21 V28 original SOURCE actual Rapier supported feet',()=>{
   // This module has neither Recast path input nor KCC move authority.
   // Other strict admission and collision checks must still run.
   expect(supported(foot,hit(.24438563346),registered)).toBe(true);
+ });
+});
+
+describe('F4 genuine physically synchronized CPU during center transfer',()=>{
+ const actual={foot:{x:1,y:1.7,z:-3},
+  actualSharedRapierBodyAndFootAgree:true,actualSharedWorld:true,
+  virtualCrowdProxyUsed:false};
+ const evidence={originalF4:true,mobilityState:'F4_CENTER_TRANSFER',
+  registeredPhysicalFlight:true,realFoot:{x:1,y:1.7,z:-3},
+  actualCapsule:actual};
+ it('admits only the real original-F4 transfer with an agreeing Rapier body',()=>{
+  expect(physicalTransfer(evidence)).toBe(true);
+  expect(physicalTransfer({...evidence,realFoot:{x:1.02,y:1.7,z:-3}}))
+   .toBe(true);
+  expect(physicalTransfer({...evidence,realFoot:{x:1.026,y:1.7,z:-3}}))
+   .toBe(false);
+ });
+ it('rejects unrelated, unregistered, ghost, or unsynchronized targets',()=>{
+  expect(physicalTransfer({...evidence,originalF4:false})).toBe(false);
+  expect(physicalTransfer({...evidence,mobilityState:'JUMP_TRAVEL'})).toBe(false);
+  expect(physicalTransfer({...evidence,mobilityState:'GROUND'})).toBe(false);
+  expect(physicalTransfer({...evidence,registeredPhysicalFlight:false})).toBe(false);
+  expect(physicalTransfer({...evidence,actualCapsule:null})).toBe(false);
+  expect(physicalTransfer({...evidence,actualCapsule:{...actual,
+   actualSharedRapierBodyAndFootAgree:false}})).toBe(false);
+  expect(physicalTransfer({...evidence,actualCapsule:{...actual,
+   actualSharedWorld:false}})).toBe(false);
+  expect(physicalTransfer({...evidence,actualCapsule:{...actual,
+   virtualCrowdProxyUsed:true}})).toBe(false);
+  expect(physicalTransfer({...evidence,realFoot:{x:NaN,y:1.7,z:-3}}))
+   .toBe(false);
  });
 });

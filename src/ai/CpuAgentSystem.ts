@@ -27,6 +27,7 @@ import {shouldRefreshStalledOriginalSourceCrowd,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
 import {hasRegisteredOriginalSourceCpuRapierFootSupport,
+ f4PhysicallyPresentCenterTransferTarget,
  type OriginalSourceCpuFootSupportWitness}
  from './OriginalSourceCpuRapierFootSupport';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
@@ -125,6 +126,12 @@ export interface CpuSharedGroundStepAuthority {
   /** Read-only registered static support at the current synchronized CPU foot. */
   sourceFootSupport?(id:string,foot:Readonly<{x:number;y:number;z:number}>):
     {point:Vec3;solidId:string}|null;
+  /** F4 only: read the actual shared Rapier CPU capsule while Crowd is detached. */
+  qaRegisteredRealCpuCapsule?(id:string):Readonly<{
+    foot:Readonly<{x:number;y:number;z:number}>;
+    actualSharedRapierBodyAndFootAgree:boolean;
+    actualSharedWorld:boolean;virtualCrowdProxyUsed:boolean;
+  }>|null;
   syncActualHumanFoot(foot:Readonly<{x:number;y:number;z:number}>,
     colliderActive?:boolean,mode?:'HUMAN'|'SQUID'):void;
   syncRealCpuFoot(id:string,foot:Readonly<{x:number;y:number;z:number}>):void;
@@ -4540,10 +4547,25 @@ export class CpuAgentSystem {
    * physical return. No extra shots, actor, floor or stage permission. */
   private liveSourceCombatOpponent(enemy:CpuBot):boolean{
     if(!this.f3dSourceGoals)return true; // frozen T20 behavior
-    return Number.isFinite(enemy.hp)&&enemy.hp>0&&
-      enemy.mobilityState==='GROUND'&&
-      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
-       this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id));
+    if(!Number.isFinite(enemy.hp)||enemy.hp<=0||
+       enemy.lifeState!=='ACTIVE')return false;
+    // SOURCE retains its strict GROUND + current-life rejoin gate.
+    if(enemy.mobilityState==='GROUND')return
+      !this.f3dSourceGoals.isLiveRejoinedSourceCpu||
+      this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id);
+    // F4 local ORIGINAL ONLY: a CPU that was genuinely rejoined before
+    // this flight has a native Rapier capsule even while its Crowd agent
+    // is detached for the physical central jump/drop. Require the live
+    // transfer registry AND a synchronized in-world capsule. Never turn a
+    // virtual Crowd pose, dead/respawning CPU, or T20 jump into a hit.
+    return f4PhysicallyPresentCenterTransferTarget({
+      originalF4:isT21F4OriginalTerrainStage(this.stage),
+      mobilityState:enemy.mobilityState,
+      registeredPhysicalFlight:this.f4CenterFlights.has(enemy.id),
+      realFoot:enemy.position,
+      actualCapsule:this.phase14qGroundCollision
+       ?.qaRegisteredRealCpuCapsule?.(enemy.id)??null
+    });
   }
   private chooseCombatTarget(
     bot: CpuBot,
