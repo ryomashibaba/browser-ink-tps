@@ -68,14 +68,33 @@ function makeGroup(seed: number, count: number): PackedInkGroup {
 function assertExactBuffers(groups: readonly PackedInkGroup[]): void {
   const baseline = originalPack(groups);
   const optimized = packInkBrushGpuGroups(groups);
-  expect(optimized).toEqual(baseline);
-  if (!baseline || !optimized) return;
-  expect(optimized.positions).toEqual(baseline.positions);
-  expect(optimized.uvs).toEqual(baseline.uvs);
-  expect(optimized.rectMins).toEqual(baseline.rectMins);
-  expect(optimized.rectMaxs).toEqual(baseline.rectMaxs);
-  expect(optimized.colors).toEqual(baseline.colors);
-  expect(optimized.indices).toEqual(baseline.indices);
+  if (!baseline || !optimized) {
+    expect(optimized).toBe(baseline);
+    return;
+  }
+  expect(optimized.quadCount).toBe(baseline.quadCount);
+  // The 16,383-quad limit contains millions of typed-array bytes. Deep
+  // object equality repeatedly traversed the same arrays, causing a 5s
+  // Vitest timeout under the actual parallel CI runner. Compare *every*
+  // byte once instead: this is STRONGER than numeric equality (NaN,
+  // -0 and float representations are checked exactly) and remains O(N).
+  for (const name of [
+    'positions', 'uvs', 'rectMins', 'rectMaxs', 'colors', 'indices'
+  ] as const) {
+    const actual = optimized[name], expected = baseline[name];
+    expect(actual.constructor).toBe(expected.constructor);
+    expect(actual.byteLength).toBe(expected.byteLength);
+    const gotBytes = new Uint8Array(
+      actual.buffer, actual.byteOffset, actual.byteLength);
+    const expectedBytes = new Uint8Array(
+      expected.buffer, expected.byteOffset, expected.byteLength);
+    for (let i = 0; i < gotBytes.length; i++) {
+      if (gotBytes[i] !== expectedBytes[i]) {
+        throw Error('INK_GPU_PACK_EXACT_BYTE_MISMATCH ' + name + '[' + i +
+          '] actual=' + gotBytes[i] + ' original=' + expectedBytes[i]);
+      }
+    }
+  }
 }
 
 describe('T21 V28 performance: byte-identical authorized row-run GPU packing (#21)', () => {
