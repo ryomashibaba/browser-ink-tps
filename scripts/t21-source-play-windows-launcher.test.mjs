@@ -89,3 +89,16 @@ test('F4 one-click restores pinned local source UV and displays grounded optical
  assert.match(app,/f4ExactPhysicalSourceTriangles:/);
  assert.match(app,/await loadF3lTexturedSource\(this\.app\)/);
 });
+
+test('F4 owner can save a real native UV/Rapier witness without exporting private assets',()=>{
+ const app=readFileSync(resolve(root,'src/app/UndertowF3PlayablePreviewApp.ts'),'utf8');
+ assert.match(app,/t21-f4-save-local-uv-witness/);
+ assert.match(app,/saveF4LocalUvWitness\(\)/);
+ assert.match(app,/T21_F4_LOCAL_NATIVE_UV_FLOOR_WITNESS_V1/);
+ assert.match(app,/this\.physics\.castCharacterFootSupport\(/);
+ assert.match(app,/actualNativeTick:this\.clock\.tick/);
+ assert.match(app,/sourceFilesIncluded:false,automaticUpload:false/);
+ assert.match(app,/visualAlignmentApproved:false,nativeTraversalCertified:false/);
+ assert.match(app,/document\.pointerLockElement===this\.canvas/);
+ assert.match(app,/link\.download='T21_F4_REAL_UV_FLOOR_TICK_'/);
+});

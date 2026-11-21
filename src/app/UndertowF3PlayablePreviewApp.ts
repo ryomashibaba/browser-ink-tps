@@ -1430,6 +1430,13 @@ export class UndertowF3PlayablePreviewApp{
     'background:rgba(5,31,38,.88);color:#d8eef2;'+
     'font:11px/1.45 system-ui;pointer-events:none';
    this.panel.appendChild(label);
+   const save=document.createElement('button');
+   save.type='button';save.id='t21-f4-save-local-uv-witness';
+   save.textContent='SAVE F4 FLOOR + UV CHECK · LOCAL JSON';
+   save.style.cssText='font:700 11px system-ui;padding:7px;'+
+    'margin:5px 0;border-radius:6px;cursor:pointer;pointer-events:auto';
+   save.addEventListener('click',()=>this.saveF4LocalUvWitness());
+   this.panel.appendChild(save);
   }
   if(this.f4ResearchMode&&this.f4HumanOriginalReturnGuide){
    const coach=document.createElement('div');
@@ -3078,6 +3085,49 @@ export class UndertowF3PlayablePreviewApp{
    void this.loadAvailableNativeOriginalOptics();
  }
 
+ /** User-click only: capture the real current native tick, exact local UV
+  * comparison, and one Rapier foot ray. No geometry/source file, private
+  * seed, full CPU traces, coordinates from the original OBJ, or auto-upload.
+  * This witness NEVER certifies a complete traversal or an official score. */
+ private saveF4LocalUvWitness():void{
+  if(!this.f4HighDetailStage||document.pointerLockElement===this.canvas)return;
+  const player=this.player.getPosition(new Vec3());
+  const hit=this.physics.castCharacterFootSupport(
+   player,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN');
+  const uv=this.texturedF3l;
+  const evidence={
+   schema:'T21_F4_LOCAL_NATIVE_UV_FLOOR_WITNESS_V1',
+   actualNativeTick:this.clock.tick,
+   originalSourceAuthority:'25/17/26/0',
+   derivedF4Solids:this.f4HighDetailStage.solids.length,
+   originalUv:{loadStatus:this.texturedF3lStatus,
+    active:uv?.root.enabled??false,
+    verifiedOriginalSourceTriangles:uv?.manifest.totalTriangles??0,
+    exactColliderTriangles:uv?.f4MatchedTriangles??0,
+    sevenPointSupportedTriangles:uv?.f4SupportedTriangles??0,
+    sourceColliderTriangleCount:uv?.f4PhysicalTriangleCount??0,
+    grayRenderSolidsReplaced:this.f4CoveredGrayRenders.length,
+    error:this.texturedF3lError},
+   actualPlayerRapierFoot:{
+    physicalSupportSolidId:hit?.solidId??null,
+    realFootGapMeters:hit?player.y-
+     PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters-hit.point.y:null,
+    sampledStaticRayOnly:true},
+   physicalStageMutatedByCapture:false,
+   sourceFilesIncluded:false,automaticUpload:false,
+   visualAlignmentApproved:false,nativeTraversalCertified:false,
+   fullFourVsFourCertified:false,productionAuthorized:false
+  };
+  const file=new Blob([JSON.stringify(evidence,null,2)+'\\n'],
+   {type:'application/json'});
+  const href=URL.createObjectURL(file);
+  const link=document.createElement('a');
+  link.href=href;
+  link.download='T21_F4_REAL_UV_FLOOR_TICK_'+this.clock.tick+'.json';
+  link.style.display='none';
+  document.body.appendChild(link);link.click();link.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(href),15000);
+ }
  /** Use only a pre-existing same-origin, hash-verified original display
   * pack inside canonical SOURCE rounds. No asset download, collider,
   * Actor/NavMesh/ink/score or URL mutation. A missing pack leaves the
