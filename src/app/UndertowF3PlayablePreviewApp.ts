@@ -6528,7 +6528,8 @@ export class UndertowF3PlayablePreviewApp{
   ],this.matchState,!!this.stopReason);
   const old=hud.textContent??'';
   if(!old.endsWith('NO OFFICIAL WINNER'))return;
-  hud.textContent=b401ReplaceSourceGridFooter(old,next);
+  hud.textContent=b401ReplaceSourceGridFooter(old,next,
+   this.f4ResearchMode&&this.f4OriginalCorridorsPresent);
   hud.dataset.t21B401SourceStatus=next.status;
   hud.dataset.t21B401SampleNativeTick=String(next.sampleNativeTick);
   hud.dataset.t21B401RegisteredCells=String(next.totalActiveCells);
@@ -9195,7 +9196,8 @@ export class UndertowF3PlayablePreviewApp{
       'ENEMY SIGHT '+state.b181OriginalCombatSight.visibleEnemySelections+
       ' · DIRECT HITS '+state.humanCpuDirectHits+
       ' · DIRECT CPU SPLATS '+state.humanCpuDirectSplats+'\n':'')+
-    b401SourceHudLine(b401)+
+    b401SourceHudLine(b401,
+     this.f4ResearchMode&&this.f4OriginalCorridorsPresent)+
     'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';
    this.b205RoundClock.dataset.t21B205NativePhase=phase;

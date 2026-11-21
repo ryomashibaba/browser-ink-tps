@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {B401NativeLiveSourceInkOwnership,b401SourceHudLine,b401ReplaceSourceGridFooter} from './B401NativeLiveSourceInkOwnership';
+import {B401NativeLiveSourceInkOwnership,b401SourceHudLine,b401ReplaceSourceGridFooter,b401F4RegisteredPaintedCellLead} from './B401NativeLiveSourceInkOwnership';
 import type {B400SourceGrid} from './B400RealOriginalSourceGridRecap';
 const stage=[25,17,26,0] as const;
 const grid=(id:string,raw:number[]=[0,0,0,0]):B400SourceGrid=>({
@@ -98,5 +98,43 @@ describe('B401 genuine low-FPS SOURCE HUD refresh contract',()=>{
   expect(updated.endsWith('NO OFFICIAL WINNER')).toBe(true);
   expect(b401ReplaceSourceGridFooter('unrelated text',second)).toBe('unrelated text');
   expect(b401ReplaceSourceGridFooter(updated,second)).toBe(updated);
+ });
+});
+
+describe('F4 real registered-cell lead is information, never a turf result',()=>{
+ it('shows an actual registered-cell difference and final updates only',()=>{
+  const m=new B401NativeLiveSourceInkOwnership();
+  const floor=grid('source',[1,1,-1,0]),gs=all(floor);
+  const first=m.observe(gs,stage,1,'PLAYING',true);
+  expect(b401F4RegisteredPaintedCellLead(first))
+   .toContain('TEAM A +1 REGISTERED CELLS');
+  expect(b401SourceHudLine(first,true)).toContain('F4 PAINTED GRID');
+  expect(b401SourceHudLine(first)).not.toContain('F4 PAINTED GRID');
+  const before='F4 TERRAIN RESEARCH · UNSCORED\n'+
+   b401SourceHudLine(first,true)+'NO OFFICIAL WINNER';
+  (floor.ownerGrid as Int8Array)[1]=-1;
+  const next=m.observe(gs,stage,121,'PLAYING',true);
+  const updated=b401ReplaceSourceGridFooter(before,next,true);
+  expect(updated).toContain('EVEN REGISTERED CELLS');
+  expect(updated.split('F4 PAINTED GRID').length).toBe(2);
+  expect(updated.split('LIVE SOURCE GRID').length).toBe(2);
+  expect(updated.endsWith('NO OFFICIAL WINNER')).toBe(true);
+  expect(b401ReplaceSourceGridFooter(updated,next,true)).toBe(updated);
+  expect(m.get().officialTurfScore).toBe(false);
+  expect(m.get().winner).toBe('NONE');
+ });
+ it('never invents official or partial SOURCE evidence from a bad grid',()=>{
+  const m=new B401NativeLiveSourceInkOwnership();
+  const first=m.observe(all(grid('source')),stage,1,'PLAYING',true);
+  expect(b401F4RegisteredPaintedCellLead(first))
+   .toContain('NO PAINT YET');
+  for(const corrupt of [
+   {status:'HOLD'},{registeredSurfaces:16},{winner:'A'},
+   {officialTurfScore:true},{productionAuthorized:true},{gameplayWrites:1},
+   {teamA:-1},{neutral:999},{teamA:NaN},{totalActiveCells:0}
+  ]){
+   expect(b401F4RegisteredPaintedCellLead(
+    {...first,...corrupt} as typeof first)).toBeNull();
+  }
  });
 });

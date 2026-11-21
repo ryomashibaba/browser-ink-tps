@@ -70,22 +70,50 @@ export class B401NativeLiveSourceInkOwnership{
  }
 }
 
+/** F4 original-terrain research only. Actual registered painted GRID CELLS
+ * are not comparable to full 3D stage area, so never return a winner.
+ * No SOURCE turf score is produced or changed.
+ */
+export function b401F4RegisteredPaintedCellLead(s:B401LiveState):string|null{
+ if(s.status!=='LIVE_REGISTERED_SOURCE_ONLY'||s.registeredSurfaces!==17||
+    s.originalSourceOnly!==true||s.officialTurfScore!==false||
+    s.winner!=='NONE'||s.gameplayWrites!==0||
+    s.productionAuthorized!==false||
+    ![s.totalActiveCells,s.teamA,s.teamB,s.neutral].every(n=>
+      Number.isSafeInteger(n)&&n>=0)||
+    s.totalActiveCells<1||
+    s.teamA+s.teamB+s.neutral!==s.totalActiveCells)return null;
+ const painted=s.teamA+s.teamB;
+ if(painted===0)return 'F4 PAINTED GRID · NO PAINT YET · RESEARCH ONLY';
+ const diff=Math.abs(s.teamA-s.teamB);
+ if(diff===0)return 'F4 PAINTED GRID · EVEN REGISTERED CELLS · RESEARCH ONLY';
+ const team=s.teamA>s.teamB?'A':'B';
+ return 'F4 PAINTED GRID · TEAM '+team+' +'+diff.toLocaleString('en-US')+
+  ' REGISTERED CELLS · RESEARCH ONLY';
+}
+
 /** A read-only SOURCE ownership line, explicitly NOT official Turf. */
-export function b401SourceHudLine(s:B401LiveState):string{
- if(s.status==='LIVE_REGISTERED_SOURCE_ONLY')
+export function b401SourceHudLine(s:B401LiveState,f4Research=false):string{
+ if(s.status==='LIVE_REGISTERED_SOURCE_ONLY'){
+  const research=f4Research?b401F4RegisteredPaintedCellLead(s):null;
   return (s.reason==='FINAL_NATIVE_SOURCE_OWNER_GRID'?
    'FINAL SOURCE GRID · A ':'LIVE SOURCE GRID · A ')+s.teamA.toLocaleString()+
    ' / B '+s.teamB.toLocaleString()+
    ' / NEUTRAL '+s.neutral.toLocaleString()+
-   ' · TICK '+s.sampleNativeTick+' · NOT TURF SCORE\n';
+   ' · TICK '+s.sampleNativeTick+' · NOT TURF SCORE'+
+   (research?'\n'+research:'')+'\n';
+ }
  return s.status==='HOLD'?'SOURCE GRID HOLD · '+s.reason+'\n':'';
 }
 
 /** Replace ONLY the B401 section of an existing real SOURCE round clock.
  * Never forge a newer native tick or change gameplay counts. */
-export function b401ReplaceSourceGridFooter(text:string,s:B401LiveState):string{
+export function b401ReplaceSourceGridFooter(
+ text:string,s:B401LiveState,f4Research=false
+):string{
  if(!text.endsWith('NO OFFICIAL WINNER'))return text;
  const old=text.replace(
-  /(?:(?:LIVE|FINAL) SOURCE GRID ·[^\n]*|SOURCE GRID HOLD ·[^\n]*)\n(?=NO OFFICIAL WINNER$)/,'');
- return old.replace(/NO OFFICIAL WINNER$/,b401SourceHudLine(s)+'NO OFFICIAL WINNER');
+  /(?:(?:LIVE|FINAL) SOURCE GRID ·[^\n]*\n(?:F4 PAINTED GRID ·[^\n]*\n)?|SOURCE GRID HOLD ·[^\n]*\n)(?=NO OFFICIAL WINNER$)/,'');
+ return old.replace(/NO OFFICIAL WINNER$/,
+  b401SourceHudLine(s,f4Research)+'NO OFFICIAL WINNER');
 }
