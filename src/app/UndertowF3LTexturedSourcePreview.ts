@@ -7,6 +7,13 @@ import {ADDRESS_REPEAT,BLEND_NONE,BLEND_NORMAL,CULLFACE_NONE,Color,Entity,
  FILTER_LINEAR,FILTER_LINEAR_MIPMAP_LINEAR,Mesh,MeshInstance,
  StandardMaterial,Texture,SHADERLANGUAGE_GLSL,Vec3,type AppBase} from 'playcanvas';
 import {T21_F3G_SOURCE_SHA256} from './UndertowF3GWholeSourcePreview';
+import {stageSolidCollisionEnabled,stageSolidNavigationEnabled,
+ type StageDefinition,type StageVector3} from '../stage/StageDefinition';
+import {stageSolidTriangleWorldVertices} from '../stage/StageTriangleMesh';
+import {undertowTemple01ModelXZToProjectXZ}
+ from '../stage/undertow/UndertowSpillwayModelXZGeometry';
+import {UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT as audit}
+ from '../stage/undertow/UndertowSpillwayRemodelGeometryAudit';
 import {B256_APERTURE_FOCUS,b256OpticalMaterialEligible}
  from './B256SourceOpticalAperture';
 import {traceB257SourceOpticalRays,type B257OpticalMesh}
@@ -62,7 +69,9 @@ export function f3lNativePlayerShouldRenderSourceMaterial(
   f3lIsUnverifiedBridgeOverlay(sourceMaterialName));
 }
 export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode,
- registeredFloorPriority=false,sourceMaterialName=''){
+ registeredFloorPriority=false,sourceMaterialName='',f4Exact=false){
+ if(registeredFloorPriority&&f4Exact)
+  return {opacity:1,depthWrite:true,opaque:true};
  // Real SOURCE PLAYER: those original FloorLine/FloorFence overlays used to
  // appear opaque as a false bridge. Keep real 25 Rapier solids fully visible.
  // Preview-only UV mode, wall/support materials and KCC are not modified.
@@ -99,9 +108,9 @@ export function f3lSourceReadabilityStyle(kind:Kind,mode:F3lStageReadabilityMode
 }
 function applyF3lReadability(material:StandardMaterial,kind:Kind,
  mode:F3lStageReadabilityMode,registeredFloorPriority=false,
- sourceMaterialName=''){
+ sourceMaterialName='',f4Exact=false){
  const style=f3lSourceReadabilityStyle(
-  kind,mode,registeredFloorPriority,sourceMaterialName);
+  kind,mode,registeredFloorPriority,sourceMaterialName,f4Exact);
  material.opacity=style.opacity;
  material.blendType=style.opaque?BLEND_NONE:BLEND_NORMAL;
  material.depthWrite=style.depthWrite;
@@ -221,13 +230,57 @@ void getOpacity() {
  dAlpha*=1.0-b256ApertureStrength*aperture;
 }
 `;
+/** Research-only optical correspondence. No collider is created from UV. */
+function physicalKey(v:readonly StageVector3[]):string{
+ if(v.length!==3||v.some(p=>!p.every(Number.isFinite)))
+  throw Error('F4_ORIGINAL_TRIANGLE_INVALID');
+ return v.map(p=>p.map(x=>Math.round(x*1000)).join(','))
+  .sort().join('|');
+}
+export function f4OriginalCollidingTriangles(stage:Pick<StageDefinition,'solids'>){
+ const out=new Map<string,Set<string>>();
+ for(const solid of stage.solids){
+  if(!solid.id.startsWith('T21V28:F4-local-original:')||
+     !solid.triangleMesh||!stageSolidCollisionEnabled(solid)||
+     !stageSolidNavigationEnabled(solid))continue;
+  const vs=stageSolidTriangleWorldVertices(solid),ids=solid.triangleMesh.indices;
+  if(ids.length%3)throw Error('F4_SOURCE_FACE_COUNT');
+  const keys=new Set<string>();
+  for(let i=0;i<ids.length;i+=3){
+   const a=vs[ids[i]!]!,b=vs[ids[i+1]!]!,c=vs[ids[i+2]!]!;
+   if(!a||!b||!c)throw Error('F4_SOURCE_FACE_INDEX');
+   keys.add(physicalKey([a,b,c]));
+  }
+  if(keys.size!==ids.length/3)throw Error('F4_DUPLICATE_SOURCE_FACE');
+  out.set(solid.id,keys);
+ }
+ return out;
+}
+export function f4PartitionOriginalUv(pos:Float32Array,existing:ReadonlySet<string>){
+ if(pos.length%9)throw Error('F4_INVALID_UV_TRIANGLES');
+ const backed:number[]=[],unbacked:number[]=[],matched=new Set<string>();
+ const dy=audit.projectNormalization.modelToProjectYOffset;
+ for(let i=0;i<pos.length;i+=9){
+  const world:StageVector3[]=[];
+  for(let j=i;j<i+9;j+=3){
+   const [x,z]=undertowTemple01ModelXZToProjectXZ([pos[j]!,pos[j+2]!]);
+   world.push([x,pos[j+1]!+dy,z]);
+  }
+  const key=physicalKey(world),found=existing.has(key);
+  if(found)matched.add(key);
+  (found?backed:unbacked).push(i/3,i/3+1,i/3+2);
+ }
+ return {backed:new Uint32Array(backed),unbacked:new Uint32Array(unbacked),matched};
+}
+
 const BASE_COLOR:Record<Kind,[number,number,number]>={
  FLOOR:[.46,.53,.59],SLOPE:[.64,.59,.47],METAL:[.40,.47,.51],
  GLASS:[.32,.67,.76],SUPPORT:[.54,.57,.59],STRUCTURE:[.49,.53,.56],
  DETAIL:[.66,.65,.56]
 };
 export async function loadF3lTexturedSource(
- app:AppBase,b256Research=false,b257Research=false){
+ app:AppBase,b256Research=false,b257Research=false,
+ f4Stage?:StageDefinition){
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'f3l-original-textured.json',{cache:'no-store'});
  if(response.status===404)return null;
@@ -238,7 +291,13 @@ export async function loadF3lTexturedSource(
  root.enabled=false;
  const gpuTextures:Texture[]=[];
  const textureMap=new Map<string,Texture>();
- const materialInstances:{kind:Kind;name:string;material:StandardMaterial;entity:Entity}[]=[];
+ const materialInstances:{kind:Kind;name:string;material:StandardMaterial;
+  entity:Entity;f4Exact:boolean}[]=[];
+ const physicalBySolid=f4Stage?f4OriginalCollidingTriangles(f4Stage):
+  new Map<string,Set<string>>();
+ const physicalKeys=new Set<string>(),matchedKeys=new Set<string>();
+ for(const faces of physicalBySolid.values())for(const key of faces)physicalKeys.add(key);
+ let f4MatchedTriangles=0;
  const b256Materials:StandardMaterial[]=[];
  const b257OriginalStaticMeshes:B257OpticalMesh[]=[];
  let b256ApertureRequested=false;
@@ -286,41 +345,51 @@ export async function loadF3lTexturedSource(
     pos[j++]=floats[i]!;pos[j++]=floats[i+1]!;pos[j++]=floats[i+2]!;
     uv[k++]=floats[i+3]!;uv[k++]=floats[i+4]!;
    }
-   const mesh=new Mesh(app.graphicsDevice);
-   mesh.setPositions(pos);mesh.setNormals(normals(pos));mesh.setUvs(0,uv);
-   const idx=new Uint32Array(pos.length/3);
-   for(let i=0;i<idx.length;i++)idx[i]=i;
-   mesh.setIndices(idx);mesh.update();
-   // Only exact, already SHA256-verified source position buffers. No
-   // inferred instance transform or synthetic collision.
+   // Only source triangles already colliding in F4 may display opaque UV.
+   const split=f4Stage?f4PartitionOriginalUv(pos,physicalKeys):null;
+   if(split){
+    f4MatchedTriangles+=split.backed.length/3;
+    for(const key of split.matched)matchedKeys.add(key);
+   }
    if(b257Research)b257OriginalStaticMeshes.push({
     name:material.name,kind:material.kind,vertices:pos
    });
-   const m=new StandardMaterial();
-   const [red,green,blue]=BASE_COLOR[material.kind];
-   const tex=material.texture?textureMap.get(material.texture):undefined;
-   m.diffuse=new Color(...(tex?[1,1,1] as [number,number,number]:
-    [red,green,blue] as [number,number,number]));
-   if(tex)m.diffuseMap=tex;
-   m.cull=CULLFACE_NONE;
-   m.useMetalness=true;m.metalness=material.kind==='METAL'?.32:.10;
-   m.gloss=material.kind==='METAL'?.48:.23;
-   applyF3lReadability(m,material.kind,visualMode,false,material.name);
-   if(b256Research&&b256OpticalMaterialEligible(material.kind)){
-    m.getShaderChunks(SHADERLANGUAGE_GLSL).set('opacityPS',B256_OPACITY_GLSL);
-    m.shaderChunksVersion='2.22';
-    m.update();
-    b256Materials.push(m);
-    m.setParameter('b256Aperture',B256_APERTURE_FOCUS);
-    m.setParameter('b256InvViewport',new Float32Array([1,1]));
-    m.setParameter('b256ApertureStrength',0);
+   const all=new Uint32Array(pos.length/3);
+   for(let i=0;i<all.length;i++)all[i]=i;
+   const slices=split&&split.backed.length?
+    [{indices:split.unbacked,exact:false},{indices:split.backed,exact:true}]:
+    [{indices:all,exact:false}];
+   for(const slice of slices){
+    if(!slice.indices.length)continue;
+    const mesh=new Mesh(app.graphicsDevice);
+    mesh.setPositions(pos);mesh.setNormals(normals(pos));mesh.setUvs(0,uv);
+    mesh.setIndices(slice.indices);mesh.update();
+    const m=new StandardMaterial();
+    const [red,green,blue]=BASE_COLOR[material.kind];
+    const tex=material.texture?textureMap.get(material.texture):undefined;
+    m.diffuse=new Color(...(tex?[1,1,1] as [number,number,number]:
+     [red,green,blue] as [number,number,number]));
+    if(tex)m.diffuseMap=tex;
+    m.cull=CULLFACE_NONE;
+    m.useMetalness=true;m.metalness=material.kind==='METAL'?.32:.10;
+    m.gloss=material.kind==='METAL'?.48:.23;
+    applyF3lReadability(m,material.kind,visualMode,false,
+     material.name,slice.exact);
+    if(b256Research&&b256OpticalMaterialEligible(material.kind)){
+     m.getShaderChunks(SHADERLANGUAGE_GLSL).set('opacityPS',B256_OPACITY_GLSL);
+     m.shaderChunksVersion='2.22';m.update();b256Materials.push(m);
+     m.setParameter('b256Aperture',B256_APERTURE_FOCUS);
+     m.setParameter('b256InvViewport',new Float32Array([1,1]));
+     m.setParameter('b256ApertureStrength',0);
+    }
+    const obj=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+
+     (slice.exact?'_EXACT_F4':'_OPTICAL_ONLY'));
+    obj.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
+     castShadows:false,receiveShadows:false});
+    root.addChild(obj);
+    materialInstances.push({kind:material.kind,name:material.name,
+     material:m,entity:obj,f4Exact:slice.exact});
    }
-   const object=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+'_NO_COLLISION');
-   object.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
-    castShadows:false,receiveShadows:false});
-   root.addChild(object);
-   materialInstances.push({kind:material.kind,name:material.name,
-    material:m,entity:object});
   }
  }catch(err){
   root.destroy();for(const t of gpuTextures)t.destroy();
@@ -328,7 +397,10 @@ export async function loadF3lTexturedSource(
  }
  app.root.addChild(root);
  return {
-  root,manifest,gate,disable(){root.enabled=false;},
+  root,manifest,gate,f4MatchedTriangles,f4PhysicalTriangleCount:physicalKeys.size,
+  f4CoveredSolidIds:[...physicalBySolid].filter(([,faces])=>
+   [...faces].every(key=>matchedKeys.has(key))).map(([id])=>id),
+  disable(){root.enabled=false;},
   getReadabilityMode:()=>visualMode,
   setReadabilityMode(mode:F3lStageReadabilityMode){
    if(!F3L_STAGE_READABILITY_MODES.includes(mode))
@@ -336,7 +408,7 @@ export async function loadF3lTexturedSource(
    if(mode===visualMode)return visualMode;
    for(const entry of materialInstances)
     applyF3lReadability(entry.material,entry.kind,mode,
-     registeredFloorPriority,entry.name);
+     registeredFloorPriority,entry.name,entry.f4Exact);
    visualMode=mode;
    // A different research UV mode must never retain an invisible aperture.
    if(b256Research)applyB256(app.graphicsDevice.width,app.graphicsDevice.height);
@@ -347,8 +419,9 @@ export async function loadF3lTexturedSource(
    if(on===registeredFloorPriority)return;
    registeredFloorPriority=on;
    for(const entry of materialInstances){
-    entry.entity.enabled=f3lNativePlayerShouldRenderSourceMaterial(on,entry.name);
-    applyF3lReadability(entry.material,entry.kind,visualMode,on,entry.name);
+    entry.entity.enabled=entry.f4Exact||
+     f3lNativePlayerShouldRenderSourceMaterial(on,entry.name);
+    applyF3lReadability(entry.material,entry.kind,visualMode,on,entry.name,entry.f4Exact);
    }
   },
   auditB257OriginalStaticRay(from:Vec3,to:Vec3){
