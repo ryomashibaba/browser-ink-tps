@@ -1,4 +1,4 @@
-import {isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
+import {hasF4OriginalIngress,isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 /**
  * F3C opt-in live human Crowd presence. Only the actual grounded source-
  * supported Rapier player's FOOT is projected as a passive steering
@@ -40,6 +40,8 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  attaches=0;
  detaches=0;
  private excluded=0;
+ private f4ProxyRetryTicks=0;
+ private f4DriftingProxyRemovals=0;
  constructor(
   private readonly nav:RecastStageNavigation,
   private readonly stage:StageDefinition
@@ -54,6 +56,12 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
  syncActualPlayerFoot(foot:Foot,rapierGrounded=true){
   if(![foot.x,foot.y,foot.z].every(Number.isFinite))
    throw Error('T21_F3C_HUMAN_NONFINITE_PHYSICAL_FOOT');
+  if(this.f4ProxyRetryTicks>0){
+   this.f4ProxyRetryTicks--;
+   this.excluded++;
+   this.previous={...foot};
+   return;
+  }
   // B280: physical Rapier KCC may be airborne while source Recast
   // closestPoint coincidentally reports a 0m projection residual.
   // The eighth nonphysical HUMAN steering proxy MUST be withheld until
@@ -135,10 +143,22 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
    foot.x-this.lastFoot.x,foot.y-this.lastFoot.y,
    foot.z-this.lastFoot.z)>1e-5)
    throw Error('T21_F3C_HUMAN_PROXY_REAL_FOOT_DRIFT');
-  // Preserve the measured pre/post actual Recast tick even if the
-  // original strict >2m safety fence throws before a restoration.
-  try{this.anchor.sealAfterCrowdUpdate(foot);}
-  finally{this.b118Witness=this.anchor.lastB118RealCrowdWitness;}
+  const anchor=this.anchor;
+  try{anchor.sealAfterCrowdUpdate(foot);}
+  catch(error){
+   // In F4 a newly attached passive agent can inherit native off-mesh
+   // motion from a recycled Crowd slot during combat. Remove the invalid
+   // steering neighbour. The real player and CPU capsules stay in Rapier.
+   if(!hasF4OriginalIngress(this.stage)||
+      !anchor.lastB118RealCrowdWitness?.unboundedOriginalCrowdDrift||
+      !(error instanceof Error)||
+      !error.message.startsWith('T21_PHASE14Q_UNBOUNDED_CROWD_DRIFT '))
+    throw error;
+   this.suspend();
+   this.f4ProxyRetryTicks=60;
+   this.f4DriftingProxyRemovals++;
+  }
+  finally{this.b118Witness=anchor.lastB118RealCrowdWitness;}
  }
  private suspend(){
   if(this.anchor){this.anchor.dispose();this.anchor=null;this.detaches++;}
@@ -148,6 +168,7 @@ export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
   return {active:!!this.anchor,attaches:this.attaches,
    detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,
    b118LastRealCrowdDriftWitness:this.b118Witness,
+   f4DriftingProxyRemovals:this.f4DriftingProxyRemovals,
    originalHighSpawnPassiveProxyGate:this.originalHighSpawnLastGuard,
    originalHighSpawnProxyWithheldNativeTicks:
     this.originalHighSpawnProxyWithheldTicks,

@@ -64,6 +64,26 @@ type Terrain=Readonly<Record<Group,StageSolidDefinition>&Partial<Record<Corridor
 const T21_F4_ORIGINAL_CORRIDOR_ENDPOINTS=[
  [69151,69292],[69153,69304]
 ] as const;
+// Measured approaches on the registered original center floors. Each upper
+// entry was reached by a real human jump, and each shoulder opens onto the
+// opposite low floor. These points are steering targets, not geometry.
+export const T21_F4_CPU_CENTER_STEPS={
+ positive:{
+  takeoff:[-2.58,0,3.36],
+  upper:[-.55,1.5,2.4],
+  shoulder:[-1.40,1.5,1.84],
+  low:[-3.3,0,4.15],
+  rampReturn:[[-5.915,1.5,17.293],[-7.895,.167,11.533]]
+ },
+ negative:{
+  takeoff:[2.85,0,-3.55],
+  upper:[.40,1.5,-2.30],
+  shoulder:[1.40,1.5,-1.84],
+  low:[3.8,0,-4.6],
+  rampReturn:[[5.915,1.5,-17.293],[7.895,.256,-11.533]]
+ }
+} as const;
+
 const checkedTerrain=new WeakSet<Terrain>();
 
 function triangleCorners(solid:StageSolidDefinition,face:number):StageVector3[]{

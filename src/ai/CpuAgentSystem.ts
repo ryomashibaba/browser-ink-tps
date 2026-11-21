@@ -161,6 +161,8 @@ export interface CpuSharedGroundStepAuthority {
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,dt:number
   ):Readonly<{x:number;y:number;z:number}>|null;
+  moveF4CenterTransfer?(id:string,from:Vec3,delta:Vec3):
+    Readonly<{foot:Readonly<{x:number;y:number;z:number}>;grounded:boolean}>|null;
   tryF4GroundStep?(
     id:string,from:Readonly<{x:number;y:number;z:number}>,
     to:Readonly<{x:number;y:number;z:number}>,maxDistance:number
@@ -176,8 +178,17 @@ export interface CpuHumanCrowdFootAuthority {
   sealAfterCrowdUpdate(foot:Readonly<{x:number;y:number;z:number}>):unknown;
 }
 
+export interface F4CpuCenterTransfer {
+  readonly from:readonly [number,number,number];
+  readonly to:readonly [number,number,number];
+  readonly continueTo:readonly [number,number,number];
+  readonly jump:boolean;
+}
+
 /** F3D ONLY: source-audited destinations. Never edit real Crowd/Rapier feet. */
 export interface CpuQaSourceGoalAuthority {
+  f4CenterTransfer?(id:string):F4CpuCenterTransfer|null;
+  noteF4CenterLanding?(id:string,jump:boolean):void;
   chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3,
     f4Support?:OriginalSourceCpuFootSupportWitness|null):boolean;
   /** Optional original-source aim, not a new movement or scoring goal. */
@@ -244,6 +255,7 @@ type CpuMobilityState =
   | 'JUMP_PREP'
   | 'JUMP_TRAVEL'
   | 'JUMP_LANDING'
+  | 'F4_CENTER_TRANSFER'
   | 'FIRST_DROP_FALL'
   | 'FIRST_DROP_REJOIN';
 
@@ -341,6 +353,9 @@ export class CpuAgentSystem {
   private readonly sourceCrowdProjectionHold=new Map<string,number>();
   /** Source-only expensive failed recovery probes are bounded to 90 ticks. */
   private readonly sourceLastRecoveryAuditTick=new Map<string,number>();
+  private readonly f4CenterFlights=new Map<string,{
+    transfer:F4CpuCenterTransfer;speedY:number;elapsed:number
+  }>();
   private sourceNativeMotionTick=0;
   private b35OptInNativeRefresh=false;
   private b35RealNativeRequests=0;
@@ -1008,6 +1023,7 @@ export class CpuAgentSystem {
     this.sourceCrowdProjectionHold.clear();
     this.sourceLastRecoveryAuditTick.clear();
     this.sourceNativeMotionTick=0;
+    this.f4CenterFlights.clear();
     this.b35LastNativeTarget.clear();
     this.b35RealNativeRequests=0;
     this.b35DuplicateNativeRequestsSuppressed=0;
@@ -1228,6 +1244,10 @@ export class CpuAgentSystem {
         bot.specialDecisionCooldownSeconds - dt
       );
       bot.previousPosition.copy(bot.position);
+      if(bot.mobilityState==='F4_CENTER_TRANSFER'){
+        this.advanceF4CenterTransfer(bot,dt);
+        continue;
+      }
       if (bot.mobilityState === 'FIRST_DROP_FALL') {
         const frame=this.phase14eFirstDrop?.advance(bot.id,dt);
         if (!frame||!frame.continuous)
@@ -1333,6 +1353,7 @@ export class CpuAgentSystem {
           bot.thinkRemaining=GAME_CONFIG.cpu.tacticalThinkSeconds;
           continue;
         }
+        if(this.tryStartF4CenterTransfer(bot))continue;
         // A QA source-local patrol must not invoke a jump to an
         // unbound central/high island. Ordinary T20 jump logic is intact.
         const jumpStarted=this.f3dSourceGoals?false:
@@ -1935,6 +1956,77 @@ export class CpuAgentSystem {
       bot.id,bot.position);
     return hasRegisteredOriginalSourceCpuRapierFootSupport(
       bot.position,foot,this.stage.solids);
+  }
+
+  private f4CenterContinuation(from:Vec3,to:Vec3):boolean{
+    const path=this.navigation.auditPath(from,to,.20);
+    return path.querySuccess&&path.reachedTarget&&path.pointCount>=2&&
+      path.startSnapDistanceMeters<=.30&&path.endSnapDistanceMeters<=.30;
+  }
+
+  private tryStartF4CenterTransfer(bot:CpuBot):boolean{
+    if(!hasF4OriginalIngress(this.stage)||!bot.agent||
+       bot.jumpCooldownSeconds>0||
+       !this.phase14qGroundCollision?.moveF4CenterTransfer||
+       !this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id))return false;
+    const transfer=this.f3dSourceGoals.f4CenterTransfer?.(bot.id);
+    if(!transfer||bot.position.distance(new Vec3(...transfer.from))>.20)
+      return false;
+    const support=this.phase14qGroundCollision.sourceFootSupport?.(
+      bot.id,bot.position);
+    if(!support||Math.abs(support.point.y-bot.position.y)>.09||
+       !this.phase14qGroundCollision.moveF4CenterTransfer(
+         bot.id,bot.position,new Vec3(0,-.01,0))?.grounded||
+       !this.f4CenterContinuation(new Vec3(...transfer.to),
+         new Vec3(...transfer.continueTo)))return false;
+    this.navigation.removeAgent(bot.agent);
+    bot.agent=null;
+    this.sourceLiveNativeMotionGoal.delete(bot.id);
+    this.sourceLastAdmittedRouteGoal.delete(bot.id);
+    this.b35LastNativeTarget.delete(bot.id);
+    this.qaMotionGoals.delete(bot.id);
+    // Match the F4 human jump's rim clearance using the smaller CPU
+    // capsule and CPU move speed. The shoulder step starts without a jump.
+    this.f4CenterFlights.set(bot.id,{
+      transfer,speedY:transfer.jump?10.2:0,elapsed:0
+    });
+    bot.mobilityState='F4_CENTER_TRANSFER';
+    return true;
+  }
+
+  private advanceF4CenterTransfer(bot:CpuBot,dt:number):void{
+    const flight=this.f4CenterFlights.get(bot.id);
+    if(!flight)return;
+    const {transfer}=flight;
+    flight.elapsed+=dt;
+    flight.speedY=Math.max(
+      flight.speedY-GAME_CONFIG.player.gravityMetersPerSecond2*dt,
+      -GAME_CONFIG.player.maxFallSpeedMetersPerSecond);
+    const delta=new Vec3(transfer.to[0]-bot.position.x,0,
+      transfer.to[2]-bot.position.z);
+    const speed=GAME_CONFIG.cpu.maxSpeedMetersPerSecond;
+    const distance=delta.length();
+    if(distance>speed*dt)delta.mulScalar(speed*dt/distance);
+    delta.y=flight.speedY*dt;
+    const step=this.phase14qGroundCollision?.moveF4CenterTransfer?.(
+      bot.id,bot.position,delta);
+    if(!step)return;
+    bot.position.set(step.foot.x,step.foot.y,step.foot.z);
+    this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
+    if(!step.grounded)return;
+    flight.speedY=0;
+    const landed=Math.abs(bot.position.y-transfer.to[1])<=.12&&
+      this.f4CenterContinuation(bot.position,new Vec3(...transfer.continueTo));
+    const backAtStart=!landed&&flight.elapsed>.55&&
+      Math.abs(bot.position.y-transfer.from[1])<=.12&&
+      this.f4CenterContinuation(bot.position,new Vec3(...transfer.from));
+    if(!landed&&!backAtStart)return;
+    bot.agent=this.navigation.addAgent(bot.position);
+    bot.mobilityState='GROUND';
+    bot.thinkRemaining=0;
+    if(landed)this.f3dSourceGoals?.noteF4CenterLanding?.(bot.id,transfer.jump);
+    else bot.jumpCooldownSeconds=.75;
+    this.f4CenterFlights.delete(bot.id);
   }
 
   private reconcileBlockedT21F2CrowdProxy(bot:CpuBot):void{
@@ -5061,6 +5153,7 @@ export class CpuAgentSystem {
   }
 
   private splatBot(bot: CpuBot): void {
+    this.f4CenterFlights.delete(bot.id);
     if (bot.lifeState === 'SPLATTED') return;
     this.selectedSourcePaintSaturation.delete(bot.id);
     this.selectedSourceEmptyAimStreak.delete(bot.id);

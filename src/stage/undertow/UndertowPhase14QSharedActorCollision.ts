@@ -506,6 +506,23 @@ export class UndertowPhase14QSharedActorCollision{
     return foot;
   }
 
+  /** Fixed-step movement of the actual CPU capsule in the shared F4 world. */
+  public moveF4CenterTransfer(id:string,from:T21QFoot,delta:T21QFoot){
+    const actor=this.actors.get(id);
+    if(!isT21F4OriginalTerrainStage(this.stage)||!actor||
+       !this.matchesSyncedFoot(actor,from))return null;
+    this.kcc.computeColliderMovement(actor.collider,delta,undefined,undefined,
+      (collider:Collider)=>collider.handle!==actor.collider.handle&&
+        this.physics.shouldCharacterCollide(collider,'HUMAN'));
+    const move=this.kcc.computedMovement();
+    const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
+    const grounded=delta.y<=0&&this.kcc.computedGrounded()&&
+      !!(this.registeredOriginalSourceFootSupport(foot)||
+         this.f4CapsuleSupport(actor,foot));
+    if(grounded)actor.f4DescentSpeed=0;
+    return {foot,grounded};
+  }
+
   /** Authorize only a swept downward step toward nearby walkable terrain. */
   private hasF4ShortDescentFloor(foot:T21QFoot):boolean{
     const p=PLAYER_CHARACTER_PHYSICS;

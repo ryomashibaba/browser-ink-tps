@@ -9,6 +9,8 @@ import {isT21F4ResearchStage,isT21F4OriginalTerrainStage,buildT21F4PhotoRouteExp
  * result while the human is controlled by real PlayerInput.
  */
 import {Vec3} from 'playcanvas';
+import {T21_F4_CPU_CENTER_STEPS}
+ from '../stage/undertow/UndertowT21F4OriginalTerrain';
 import type {CrowdAgent} from 'recast-navigation';
 import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
@@ -56,7 +58,7 @@ import {B484TrueNativeA1FollowThrough} from './B484TrueNativeA1FollowThrough';
 import {B486NativeSourceEncounterTrace} from './B486NativeSourceEncounterTrace';
 import {b487ActualOriginalCrossTeamTopology} from './B487TrueOriginalCrossTeamTopology';
 import {b488OriginalCrossTeamGapDecision} from './B488OriginalCrossTeamGapDecision';
-import type {CpuQaSourceGoalAuthority} from '../ai/CpuAgentSystem';
+import type {CpuQaSourceGoalAuthority,F4CpuCenterTransfer} from '../ai/CpuAgentSystem';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES,
  UNDERTOW_FULL_STAGE_CONNECTIVITY_AUDIT}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
@@ -359,6 +361,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  readonly routePlan:T21F2RoutePlan;
  private readonly egress=new Map<string,StageVector3>();
  private readonly f4GuideByTeam=new Map<Team.A|Team.B,readonly StageVector3[]>();
+ private readonly f4CenterPatrol=new Map<string,{
+  side:1|-1;phase:'low'|'takeoff'|'shoulder'|'ramp'|'returnLow';returnIndex:0|1
+ }>();
+ private f4CenterOwner:string|null=null;
+ private readonly f4CenterWaiting=new Map<string,number>();
+ private f4CenterNextWaitOrder=0;
  private readonly f4OriginalPatrol=new Map<string,{route:readonly [StageVector3,StageVector3];target:0|1}>();
  private readonly f4GuideProgress=new Map<string,number>();
  /** Actual living HUMAN observation for the current F4 native step ONLY. */
@@ -1561,6 +1569,84 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     new Vec3(from.x,from.y,from.z),
     new Vec3(to.x,to.y,to.z),'ink-projectile'),null,range).target!==null;
  }
+ f4CenterTransfer(id:string):F4CpuCenterTransfer|null{
+  const patrol=this.f4CenterPatrol.get(id);
+  if(!patrol||this.f4CenterOwner!==id)return null;
+  const here=T21_F4_CPU_CENTER_STEPS[patrol.side===1?'positive':'negative'];
+  const there=T21_F4_CPU_CENTER_STEPS[patrol.side===1?'negative':'positive'];
+  if(patrol.phase==='takeoff')return {
+   from:here.takeoff,to:here.upper,continueTo:there.shoulder,jump:true
+  };
+  const corridor=f4OriginalCorridorEndpoints(this.stage)
+   .find(([,ramp])=>Math.sign(ramp[2])===-patrol.side);
+  return patrol.phase==='shoulder'&&corridor?{
+   from:there.shoulder,to:there.low,continueTo:corridor[1],jump:false
+  }:null;
+ }
+
+ noteF4CenterLanding(id:string,jump:boolean):void{
+  const patrol=this.f4CenterPatrol.get(id);
+  if(!patrol||this.f4CenterOwner!==id)return;
+  if(jump){patrol.phase='shoulder';return;}
+  patrol.side=patrol.side===1?-1:1;
+  patrol.phase='ramp';
+  this.f4CenterOwner=null;
+ }
+
+ private chooseF4CenterGoal(id:string,foot:Vec3,side:1|-1):StageVector3|null{
+  let patrol=this.f4CenterPatrol.get(id);
+  if(!patrol){
+   patrol={side,phase:'low',returnIndex:0};
+   this.f4CenterPatrol.set(id,patrol);
+  }
+  const corridor=f4OriginalCorridorEndpoints(this.stage)
+   .find(([,ramp])=>Math.sign(ramp[2])===patrol.side);
+  if(!corridor)return null;
+  const near=(p:StageVector3,distance=.62)=>foot.distance(new Vec3(...p))<distance;
+  const lane=T21_F4_CPU_CENTER_STEPS[patrol.side===1?'positive':'negative'];
+  if(patrol.phase==='ramp'&&near(corridor[1])){
+   patrol.phase='returnLow';
+   patrol.returnIndex=0;
+  }
+  if(patrol.phase==='returnLow'){
+   // The direct lower Recast target clips the side wall on the way
+   // back from the ramp. Steer through the sampled interior first.
+   if(!near(lane.rampReturn[patrol.returnIndex],.38))
+    return lane.rampReturn[patrol.returnIndex];
+   if(patrol.returnIndex===0){
+    patrol.returnIndex=1;
+    return lane.rampReturn[1];
+   }
+   patrol.phase='low';
+  }
+  if(patrol.phase==='low'&&near(corridor[0],.82)){
+   if(!this.f4CenterWaiting.has(id))
+    this.f4CenterWaiting.set(id,this.f4CenterNextWaitOrder++);
+   const order=this.f4CenterWaiting.get(id)!;
+   const waitingAhead=this.bots.some(bot=>{
+    if((this.f4CenterWaiting.get(bot.id)??Infinity)>=order||
+       !this.isLiveRejoinedSourceCpu(bot.id))return false;
+    const waiting=this.f4CenterPatrol.get(bot.id);
+    if(waiting?.phase!=='low')return false;
+    const approach=f4OriginalCorridorEndpoints(this.stage)
+     .find(([,ramp])=>Math.sign(ramp[2])===waiting.side)?.[0];
+    return approach&&bot.position.distance(new Vec3(...approach))<.82;
+   });
+   if(this.f4CenterOwner===null&&!waitingAhead){
+    // One CPU at a time through the narrow opposing approaches.
+    this.f4CenterWaiting.delete(id);
+    this.f4CenterOwner=id;
+    patrol.phase='takeoff';
+   }
+  }
+  if(patrol.phase==='ramp')return corridor[1];
+  if(patrol.phase==='takeoff')
+   return T21_F4_CPU_CENTER_STEPS[patrol.side===1?'positive':'negative'].takeoff;
+  if(patrol.phase==='shoulder')
+   return T21_F4_CPU_CENTER_STEPS[patrol.side===1?'negative':'positive'].shoulder;
+  return corridor[0];
+ }
+
  private chooseF4OriginalCorridorGoal(id:string,foot:Vec3,out:Vec3,
   f4Support:OriginalSourceCpuFootSupportWitness|null|undefined):boolean{
   const corridors=f4OriginalCorridorEndpoints(this.stage);
@@ -1589,7 +1675,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(!patrol)return false;
   const target=foot.distance(new Vec3(...patrol.route[patrol.target]))<.55?
    (patrol.target===0?1:0):patrol.target;
-  const goal=new Vec3(...patrol.route[target]);
+  const centerGoal=hasF4OriginalIngress(this.stage)?
+   this.chooseF4CenterGoal(id,foot,Math.sign(patrol.route[1][2])===1?1:-1):null;
+  const goal=new Vec3(...(centerGoal??patrol.route[target]));
   const path=this.nav.auditPath(foot,goal,.20);
   const support=supportAt(goal);
   const start=path.nativePathPoints[0];
@@ -1654,6 +1742,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.heldRequests++;return false;
   }
   if(this.chooseF4OriginalCorridorGoal(id,realFoot,out,f4Support))return true;
+  if(this.f4CenterPatrol.has(id))return false;
   // Opt-in F4 experiment: submit short native Crowd goals along the two
   // pre-existing center ramps, never a forced Actor pose or NavLink.
   // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
@@ -3788,6 +3877,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    throw Error('T21_F3_SOURCE_RESPAWN_REQUIRES_REAL_SPLATTED_CPU');
   this.physicallyRejoined.delete(id);
   this.f4OriginalPatrol?.delete(id);
+  this.f4CenterPatrol.delete(id);
+  this.f4CenterWaiting.delete(id);
+  if(this.f4CenterOwner===id)this.f4CenterOwner=null;
   this.f4GuideProgress?.delete(id);
   this.f4GuideLastAudit?.delete(id);
   this.physicallyFalling.delete(id);
