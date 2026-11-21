@@ -129,6 +129,16 @@ export class B367RealCpuCombatTimeline {
       e.lethalHpZero!==(e.hpAfter===0)){
     this.reset();return null;
    }
+   // Read the genuine CPU's post-projectile HP, not just a claimed
+   // event. Other physical hits in this tick can only lower final HP.
+   // Native respawn cannot complete within this same 60Hz frame.
+   const actualTarget=x.cpu.find(c=>c.id===e.botId);
+   if(actualTarget?.hp===null||actualTarget?.hp===undefined||
+      actualTarget.hp>e.hpAfter+1e-5||
+      actualTarget.lifeState==='UNKNOWN'||
+      (actualTarget.lifeState==='SPLATTED'&&actualTarget.hp!==0)){
+    this.reset();return null;
+   }
    this.lastSequence=e.sequence;
    if(e.lethalHpZero){
     const actual=x.cpu.find(c=>c.id===e.botId);

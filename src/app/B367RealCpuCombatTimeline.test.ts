@@ -64,6 +64,31 @@ describe('B367 original physical CPU damage and native life',()=>{
   // Missing physical projectile event and counter must fail closed.
   expect(a.observe(f)).toBeNull();
  });
+ it('does not show HP damage absent from the actual named CPU',()=>{
+  for(const realHp of [100,66]){
+   const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+   timeline.observe(frame);shot(frame,60);
+   frame.cpu[3]!.hp=realHp;
+   expect(timeline.observe(frame)).toBeNull();
+   expect(timeline.currentNotice(frame.nativeTick,true,false)).toBeNull();
+  }
+ });
+ it('accepts two same-frame genuine hits with the true final lower CPU HP',()=>{
+  const timeline=new B367RealCpuCombatTimeline(),frame=sample();
+  timeline.observe(frame);shot(frame,65);
+  frame.source.events=[...frame.source.events,{
+   sequence:2,nativeFrame:frame.nativeTick,botId:'B1',
+   weaponId:'pulse-sprayer',hpBefore:65,hpAfter:40,
+   actualHpLoss:25,lethalHpZero:false
+  }];
+  frame.source.physicalHumanCpuHpHits=2;
+  frame.humanDirectHits=2;
+  frame.cpu[3]!.hp=40;
+  expect(timeline.observe(frame)).toMatchObject({
+   state:'ACTUAL_HP_LOSS',actorId:'B1',
+   officialWinner:'NONE',gameplayWrites:0
+  });
+ });
  it('refuses a fabricated event without a matching physical HP-hit count',()=>{
   const w=new B367RealCpuCombatTimeline(),f=sample();
   w.observe(f);
@@ -290,20 +315,22 @@ describe('F3D immediate real SOURCE HP-zero splat integration (read-only)',()=>{
   expect(timeline.observe(frame)?.state).toBe('ACTUAL_CPU_SPLAT');
  });
  it('never promotes HP-zero without observed actor splat or both count deltas',()=>{
-  for(const edit of [
+  const edits=[
    (f:B367NativeCombatFrame)=>{f.cpu[3]!.lifeState='ACTIVE';},
    (f:B367NativeCombatFrame)=>{f.cpu[3]!.hp=1;},
    (f:B367NativeCombatFrame)=>{f.humanDirectSplats=0;},
    (f:B367NativeCombatFrame)=>{f.cpuSplats=0;},
    (f:B367NativeCombatFrame)=>{f.source.events[0]!.nativeFrame=f.nativeTick-1;}
-  ]){
+  ];
+  for(const [index,edit] of edits.entries()){
    const timeline=new B367RealCpuCombatTimeline(),frame=sample();
    timeline.observe(frame);
    shot(frame,0);frame.cpu[3]!.lifeState='SPLATTED';
    frame.humanDirectSplats=1;frame.cpuSplats=1;
    edit(frame);
-   expect(timeline.observe(frame)?.state)
-    .toBe('LETHAL_HP_ZERO_PENDING_SPLAT');
+   // A fake HP 1 cannot even create a 'HP ZERO pending' notice.
+   expect(timeline.observe(frame)?.state).toBe(
+    index===1?undefined:'LETHAL_HP_ZERO_PENDING_SPLAT');
   }
  });
  it('rejects reducing cumulative splats within a single physical game',()=>{
