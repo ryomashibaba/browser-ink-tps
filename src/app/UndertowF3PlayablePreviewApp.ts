@@ -1317,6 +1317,7 @@ export class UndertowF3PlayablePreviewApp{
    this.projectiles.enableNativeSourceHumanPhysicalContact(
     ()=>this.player.currentMode);
    this.projectiles.enableF4RealPhysicalHitFeedback(stage);
+   this.projectiles.enableF4ActualHumanCpuLifecycleEvidence(stage);
   }
   ui.innerHTML='';
   this.panel=document.createElement('section');
@@ -2371,7 +2372,8 @@ export class UndertowF3PlayablePreviewApp{
    createB211RealBattleRoster(ui):null;
   if(b192HumanCombatEnabled&&this.b203FullRound&&
      (b31Params.get('t21W10B367')==='realCpuLifecycle'||
-      this.b384Circuit||b473NativeLifeReadout)){
+      this.b384Circuit||b473NativeLifeReadout||
+      this.f4ResearchMode&&this.f4OriginalCorridorsPresent)){
    const n=document.createElement('aside');
    n.id='t21-f3-b367-real-cpu-lifecycle';
    n.hidden=true;

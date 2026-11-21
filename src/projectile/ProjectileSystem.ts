@@ -20,7 +20,8 @@ import {sourceRegisteredPaintHitActive,
  type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
 import type {StageDefinition} from '../stage/StageDefinition';
-import {isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
+import {isT21F4OriginalTerrainStage,isT21F4ResearchStage}
+ from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {
   DEFAULT_WEAPON_ID,
   type WeaponId,
@@ -360,6 +361,26 @@ export class ProjectileSystem {
       syntheticDamage:0 as const,scoreablePromotions:0 as const,
       stage:'UNOFFICIAL_F4_RESEARCH' as const,
       productionAuthorized:false as const};
+  }
+
+  /** The same native physical HP-hit ledger is usable in the true
+   * SHA-verified, PRIVATE F4 original-terrain round. This gate adds only
+   * read-only post-projectile telemetry for existing 12-weapon hits,
+   * splats and respawns. It cannot create a hit, grant an arena route,
+   * award turf or enable the frozen SOURCE B351 chain.
+   */
+  public enableF4ActualHumanCpuLifecycleEvidence(stage:StageDefinition):void{
+    if(!isT21F4OriginalTerrainStage(stage)||
+       !this.f4PhysicalHitCueOn||this.b351CueOn||
+       !this.nativeSourceHumanPhysicalMode||
+       this.b367Enabled||this.b343SourceVolleyAtomic||
+       this.surfaces.length!==17||
+       stage.paintSurfaces.length!==17||
+       stage.paintSurfaces.some(p=>
+        (p.flags&SurfaceFlags.Scoreable)!==0))
+      throw Error('F4_REAL_HUMAN_CPU_LIFECYCLE_REQUIRES_ORIGINAL_LOCAL_RAPIER');
+    this.b367Enabled=true;
+    this.b367SelectedRealLoadout=true;
   }
 
   /** B367 opt-in only after the genuine B351 physical projectile pipeline.

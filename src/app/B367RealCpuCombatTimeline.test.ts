@@ -1,4 +1,5 @@
 import {describe,it,expect} from 'vitest';
+import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {B367RealCpuCombatTimeline,type B367NativeCombatFrame}
  from './B367RealCpuCombatTimeline';
 const sample=():B367NativeCombatFrame=>({
@@ -272,5 +273,25 @@ describe('F3D immediate real SOURCE HP-zero splat integration (read-only)',()=>{
   frame.nativeTick++;frame.humanDirectSplats=1;
   // Once reset, a stale count increment alone cannot create an event.
   expect(timeline.observe(frame)).toBeNull();
+ });
+});
+
+describe('F4 original physical 12-weapon human CPU lifecycle witness',()=>{
+ it('accepts the real HP-loss event for each existing native weapon, but never creates score',()=>{
+  expect(WEAPON_ORDER).toHaveLength(12);
+  for(const weaponId of WEAPON_ORDER){
+   const timeline=new B367RealCpuCombatTimeline();
+   const frame=sample();
+   timeline.observe(frame);
+   shot(frame,55);
+   frame.source.events[0]!.weaponId=weaponId;
+   expect(timeline.observe(frame)).toMatchObject({
+    state:'ACTUAL_HP_LOSS',actorId:'B1',
+    certifiedDirectHumanDamage:true,gameplayWrites:0,
+    sourceScoreablePromotions:0,officialWinner:'NONE',
+    naturalEnemyRouteCertified:false
+   });
+   expect(timeline.observe(frame)?.state).toBe('ACTUAL_HP_LOSS');
+  }
  });
 });
