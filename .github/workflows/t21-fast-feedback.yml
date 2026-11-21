@@ -35,9 +35,21 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: TypeScript check
         run: npm run typecheck
-      - name: Reassess all legacy and integrated tests once
+      - name: Validate real physical HUMAN shared-collision and F3/F4 regression
         if: github.event_name == 'push'
-        run: npm test
+        run: |
+          npx vitest run \
+            src/stage/undertow/UndertowPhase14QRealCpuGroundGate.test.ts \
+            src/app/UndertowF3NativeHumanCrowd.W3.test.ts \
+            src/core/InkBrushGpuPacking.test.ts \
+            src/ai/CpuAgentSystem.F3LethalLifecycle.test.ts \
+            src/app/UndertowF3SourceTraffic.LiveRejoin.test.ts \
+            src/app/UndertowF3SourceTraffic.test.ts \
+            src/app/UndertowF3PaintAwarePatrol.test.ts \
+            src/app/B371RealSourceMissionCue.test.ts \
+            src/app/UndertowF3OriginalAllyProximity.test.ts \
+            src/app/UndertowF3SourceSessionBoard.test.ts \
+            src/app/B367RealCpuCombatTimeline.test.ts
       - name: Entire unit test suite
         if: github.event_name != 'push'
         run: npm test

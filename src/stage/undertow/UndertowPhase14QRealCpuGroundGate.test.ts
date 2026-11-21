@@ -108,6 +108,10 @@ function scenario(radius:number,withInternalHumanAnchor=false){
  b1.agent.requestMoveTarget(nav.closestPoint(new Vec3(human.x,human.y,human.z)));
  return {cpu,collision,body,human,stats,b1,adapter,stage,internalAnchor};
 }
+// Physical HUMAN is alive in this real Rapier fixture while AI target
+// selection is explicitly disabled. FixedUpdate's last flag MUST be true;
+// otherwise the adapter removes the HUMAN collider and can falsely allow a
+// 0.14m overlap without exercising a physical contact check.
 describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting',()=>{
  it('blocks an actual moving Recast B1 foot on real HUMAN collider without mutating its visible foot or teleporting its Crowd agent',()=>{
   const w=scenario(.69);
@@ -115,7 +119,7 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
   for(let frame=1;frame<=110;frame++){
    const before=w.b1.position.clone();
    try{
-    w.cpu.fixedUpdate(DT,true,Team.A,w.body,false);
+    w.cpu.fixedUpdate(DT,true,Team.A,w.body,false,true,true,true);
    }catch(e){
     reason=String(e);blockedAt=frame;footBefore=before;break;
    }
@@ -159,7 +163,7 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
     const humanProxy=anchor.syncActualPlayerFoot(w.human);
     expect(humanProxy.footToCrowdHorizontalMeters).toBeLessThan(.065);
     const old=w.b1.position.clone();
-    try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false);}
+    try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false,true,true,true);}
     catch(err){
       rejectedAt=frame;reason=String(err);
       expect(w.b1.position.distance(old)).toBeLessThan(1e-7);
@@ -202,7 +206,7 @@ describe('T21 Phase14Q M2 real CpuAgentSystem ground step shared Rapier vetting'
   let peakPostSealDrift=0;
   let vetoReason:string|null=null;
   for(let i=0;i<90;i++){
-   try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false);}
+   try{w.cpu.fixedUpdate(DT,true,Team.A,w.body,false,true,true,true);}
    catch(error){vetoReason=String(error);break;}
    completedFrames++;
    const proxy=w.internalAnchor!.rawCrowdPosition;
