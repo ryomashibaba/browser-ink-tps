@@ -86,7 +86,9 @@ export class SubWeaponSystem {
     private readonly feedback: GameFeedback,
     private readonly stats: PerformanceStats,
     /** Optional QA observer; default production path supplies none. */
-    private readonly onNativeExplosion?: (w:SubWeaponNativeExplosionWitness)=>void
+    private readonly onNativeExplosion?: (w:SubWeaponNativeExplosionWitness)=>void,
+    /** F4-only physical backing for original SOURCE paint-plane rays. */
+    private readonly f4PhysicallyBackedPaint?: (surfaceId:string)=>boolean
   ) {
     this.materialA = makeBombMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeBombMaterial(GAME_CONFIG.visual.teamB);
@@ -451,6 +453,8 @@ export class SubWeaponSystem {
       | null = null;
 
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
       if (!projected.inside || projected.planeDistance > maxPlaneDistance ||
@@ -498,6 +502,8 @@ export class SubWeaponSystem {
   private findNearestSurfaceHit(from: Vec3, to: Vec3): SurfaceRayHit | null {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       const hit = surface.intersectSegment(from, to);
       // Native SOURCE human SUB must not detonate on a raster hole
       // that its paid ink cannot paint; original solid collision still

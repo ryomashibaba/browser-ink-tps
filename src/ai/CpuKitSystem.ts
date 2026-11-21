@@ -137,7 +137,9 @@ export class CpuKitSystem {
     private readonly stats: PerformanceStats,
     /** Exact canonical SOURCE 180s mode only; historic manual kit QA
      * and frozen T20 retain their original stage-only SUB collision. */
-    private readonly nativeOriginalSourceCombatantSubContactEnabled = false
+    private readonly nativeOriginalSourceCombatantSubContactEnabled = false,
+    /** F4-only mask: never strike or detonate against removed SOURCE paint. */
+    private readonly f4PhysicallyBackedPaint?: (surfaceId:string)=>boolean
   ) {
     this.materialA = makeCpuKitMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeCpuKitMaterial(GAME_CONFIG.visual.teamB);
@@ -704,6 +706,8 @@ export class CpuKitSystem {
       | null = null;
 
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
       if (
@@ -760,6 +764,8 @@ export class CpuKitSystem {
   ): SurfaceRayHit | null {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       const hit = surface.intersectSegment(from, to);
       // Actual original SOURCE bomb flight respects the same live
       // paint raster as MAIN/CHARGER. Registered Rapier cover still wins.

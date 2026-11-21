@@ -797,6 +797,11 @@ export class UndertowF3PlayablePreviewApp{
   // either: reuse the exact SAME F4 surface gate as gameplay ink above.
   const visibleSurfaces=f4PhysicalPaintIds?
    surfaces.filter(surface=>f4PhysicalPaintIds.has(surface.id)):surfaces;
+  // Preserve all 17 constructor registrations for native source combat,
+  // but stop the weapon ray/area selectors from treating orphan paint
+  // planes as actual physical floor collisions in the local F4 world.
+  const f4PhysicalPaintEligible=f4PhysicalPaintIds?
+   (id:string)=>f4PhysicalPaintIds.has(id):undefined;
   buildTestStage(app,stage,visibleSurfaces,this.atlas,realSourceWetInkLook);
   this.canvas.dataset.t21SourceWetInkLook=
    realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
@@ -1226,7 +1231,7 @@ export class UndertowF3PlayablePreviewApp{
    this.cpu.enableB35SourceNativeRetargetSuppression();
   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
    this.coordinator,this.resources,combatTargets,this.cpu,
-   this.feedback,this.stats);
+   this.feedback,this.stats,f4PhysicalPaintEligible);
   // The four authenticated, human-selected SOURCE-only 180s game
   // entrances now reuse the proven real physical-slot budget: a full
   // projectile pool must NOT spend the human's real ink for zero shots.
@@ -1294,7 +1299,7 @@ export class UndertowF3PlayablePreviewApp{
     ?witness=>{
       this.b43BombWitnesses.push(witness);
       if(this.b43BombWitnesses.length>32)this.b43BombWitnesses.shift();
-     }:undefined);
+     }:undefined,f4PhysicalPaintEligible);
   this.stats.playerSubWeaponName=subWeaponProfile(
    weaponKit(this.projectiles.currentPlayerWeapon.id).sub).displayName;
   // The genuine human-selected 180s SOURCE game previously built ZERO
@@ -1317,7 +1322,7 @@ export class UndertowF3PlayablePreviewApp{
   this.cpuKit=(this.cpuKitQaEnabled||nativeSourceCpuKits)
    ?new CpuKitSystem(app,surfaces,
    this.physics,this.coordinator,this.projectiles,this.cpu,
-   this.feedback,this.stats,nativeSourceCpuKits) : null;
+   this.feedback,this.stats,nativeSourceCpuKits,f4PhysicalPaintEligible) : null;
   if(nativeSourceCpuKits){
    this.projectiles.enableNativeSourceHumanPhysicalContact(
     ()=>this.player.currentMode);

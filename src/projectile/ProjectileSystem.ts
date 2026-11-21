@@ -171,7 +171,9 @@ export class ProjectileSystem {
     private readonly combatTargets: CombatTargetSystem,
     private readonly cpuAgents: CpuAgentSystem,
     private readonly feedback: GameFeedback,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    /** F4-only mask; preserve original 17 registrations and SOURCE gates. */
+    private readonly f4PhysicallyBackedPaint?: (surfaceId: string) => boolean
   ) {
     this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
     this.materialB = makeProjectileMaterial(GAME_CONFIG.visual.teamB);
@@ -2734,6 +2736,8 @@ export class ProjectileSystem {
       :null;
     if(originalMeleeSourceFoot&&!sourceSupportedId)return false;
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       if(sourceSupportedId&&surface.id!==sourceSupportedId)continue;
       if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const projected = surface.projectWorldPoint(worldPoint);
@@ -2913,6 +2917,8 @@ export class ProjectileSystem {
   private findNearestSurfaceHit(from: Vec3, to: Vec3): SurfaceRayHit | null {
     let best: SurfaceRayHit | null = null;
     for (const surface of this.surfaces) {
+      if (this.f4PhysicallyBackedPaint &&
+          !this.f4PhysicallyBackedPaint(surface.id)) continue;
       const hit = surface.intersectSegment(from, to);
       // Genuine SOURCE bullets and CHARGER rays may hit only an ACTIVE
       // paint cell. Otherwise a ghost paint-plane stops live physical
