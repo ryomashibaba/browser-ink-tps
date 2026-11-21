@@ -235,15 +235,23 @@ export function f4NativeFirstWalkingLookahead(
  const first=nativePath[0];
  if(!first||![first.x,first.y,first.z,maxAheadMeters].every(Number.isFinite)||
     maxAheadMeters<=0||maxAheadMeters>1.25)return null;
- const next=nativePath.slice(1).find(point=>
-  [point.x,point.y,point.z].every(Number.isFinite)&&
-  Math.hypot(point.x-first.x,point.z-first.z)>.30);
- if(!next)return null;
- const span=Math.hypot(next.x-first.x,next.z-first.z);
- const t=Math.min(1,maxAheadMeters/span);
- return [
-  first.x+(next.x-first.x)*t,
-  first.y+(next.y-first.y)*t,
-  first.z+(next.z-first.z)*t
- ];
+ // A native corner may be only 10cm away. Skipping it and aiming at
+ // a later vertex cuts across the interior of a wall or off a floor.
+ // Discard only numerical duplicates (<=1cm), not real route corners.
+ for(const point of nativePath.slice(1)){
+  if(![point.x,point.y,point.z].every(Number.isFinite))return null;
+  const span=Math.hypot(point.x-first.x,point.z-first.z);
+  if(span<=.01){
+   // A pure vertical jump is not a legal walking leg.
+   if(Math.abs(point.y-first.y)>.05)return null;
+   continue;
+  }
+  const t=Math.min(1,maxAheadMeters/span);
+  return [
+   first.x+(point.x-first.x)*t,
+   first.y+(point.y-first.y)*t,
+   first.z+(point.z-first.z)*t
+  ];
+ }
+ return null;
 }

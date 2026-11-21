@@ -154,7 +154,25 @@ describe('F4 CPU follows actual first Recast leg, not invented through-floor str
  });
  it('rejects absent path, no forward leg or unbounded lookahead',()=>{
   expect(f4NativeFirstWalkingLookahead([])).toBeNull();
-  expect(f4NativeFirstWalkingLookahead([{x:0,y:0,z:0},{x:.1,y:0,z:0}])).toBeNull();
+  expect(f4NativeFirstWalkingLookahead([{x:0,y:0,z:0},{x:.1,y:0,z:0}]))
+   .toEqual([.1,0,0]);
   expect(f4NativeFirstWalkingLookahead([{x:0,y:0,z:0},{x:1,y:0,z:0}],2)).toBeNull();
+ });
+ it('preserves tight 10cm native corners rather than cutting a diagonal',()=>{
+  const path=[
+   {x:0,y:0,z:0},{x:0,y:0,z:.10},{x:2,y:0,z:.10}
+  ];
+  expect(f4NativeFirstWalkingLookahead(path)).toEqual([0,0,.10]);
+  expect(f4NativeFirstWalkingLookahead([
+   {x:0,y:0,z:0},{x:0,y:0,z:.005},{x:0,y:0,z:.10}
+  ])).toEqual([0,0,.10]);
+ });
+ it('rejects vertical-only jump and nonfinite corners instead of inventing a walk',()=>{
+  expect(f4NativeFirstWalkingLookahead([
+   {x:0,y:0,z:0},{x:0,y:1.5,z:0},{x:1,y:1.5,z:0}
+  ])).toBeNull();
+  expect(f4NativeFirstWalkingLookahead([
+   {x:0,y:0,z:0},{x:NaN,y:0,z:0},{x:1,y:0,z:0}
+  ])).toBeNull();
  });
 });

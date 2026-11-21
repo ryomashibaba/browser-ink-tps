@@ -133,7 +133,7 @@ import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
-import {auditF4FirstLegStaticRapierSamples}
+import {auditF4FirstLegStaticRapierSamples,f4NativeFirstWalkingLookahead}
  from '../stage/undertow/UndertowOriginalFootEdgeAudit';
 import {buildT21F4ResearchStage,buildT21F4PhotoRouteExperiment,f4OriginalCorridorEndpoints,
  t21F4PlayableCorridorGuide}
@@ -8166,17 +8166,11 @@ export class UndertowF3PlayablePreviewApp{
   // directly from the UNSNAPPED capsule to a later corner can cut
   // across another floor or a physical wall. Follow its first leg,
   // while Rapier remains the sole authority for actual movement.
-  const path=native.nativePathPoints;
-  const start=path[0]!;
-  const next=path.slice(1).find(p=>
-   Math.hypot(p.x-start.x,p.z-start.z)>.30);
-  if(!next)return {admitted:false,reason:'NATIVE_PATH_NO_FORWARD_CORNER',index};
-  const distance=Math.hypot(next.x-start.x,next.z-start.z);
-  const t=Math.min(1,1.25/distance);
-  const lookahead=new Vec3(
-   start.x+(next.x-start.x)*t,
-   start.y+(next.y-start.y)*t,
-   start.z+(next.z-start.z)*t);
+  const firstCorner=f4NativeFirstWalkingLookahead(
+   native.nativePathPoints);
+  if(!firstCorner)
+   return {admitted:false,reason:'NATIVE_PATH_NO_FORWARD_CORNER',index};
+  const lookahead=new Vec3(...firstCorner);
   const projectedStep=this.nav.auditNavMeshProjection(lookahead);
   const step=projectedStep.nearestPoint;
   const supported=step?this.physics.castCharacterFootSupport(

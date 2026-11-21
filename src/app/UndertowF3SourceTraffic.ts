@@ -367,6 +367,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   side:1|-1;phase:'low'|'takeoff'|'shoulder'|'ramp'|'returnLow';returnIndex:0|1
  }>();
  private f4CenterOwner:string|null=null;
+ /** A new central lane claim requires the *real* Crowd to accept a goal. */
+ private readonly f4PendingNativeCenterClaims=new Set<string>();
  private readonly f4CenterWaiting=new Map<string,number>();
  private f4CenterNextWaitOrder=0;
  private readonly f4OriginalPatrol=new Map<string,{route:readonly [StageVector3,StageVector3];target:0|1}>();
@@ -1603,6 +1605,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.f4CenterWaiting.delete(id);
   this.f4CenterOwner=null;
  }
+ /** Final native Crowd admission veto for a newly claimed central lane.
+  * A failed follow-up audit cannot monopolize the shared central crossing.
+  * Previously accepted takeoff/flight reservations are NOT rolled back. */
+ noteF4CenterNativeGoalDecision(id:string,accepted:boolean):void{
+  if(!this.f4PendingNativeCenterClaims.delete(id)||accepted)return;
+  const patrol=this.f4CenterPatrol.get(id);
+  if(!patrol||patrol.phase!=='takeoff'||this.f4CenterOwner!==id)return;
+  patrol.phase='low';
+  this.f4CenterOwner=null;
+  this.f4CenterWaiting.set(id,this.f4CenterNextWaitOrder++);
+ }
  noteF4CenterLanding(id:string,jump:boolean):void{
   const patrol=this.f4CenterPatrol.get(id);
   if(!patrol||this.f4CenterOwner!==id)return;
@@ -1765,6 +1778,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    return false;
   }
   this.f4OriginalPatrol.set(id,{route:patrol.route,target});
+  if(centerOwnerBefore!==id&&this.f4CenterOwner===id&&
+     this.f4CenterPatrol.get(id)?.phase==='takeoff')
+   this.f4PendingNativeCenterClaims.add(id);
   // A certified original target can be far beyond the next stair/corner.
   // Instruct only the native Recast first physical walking leg per tick.
   out.copy(nativeStep);
@@ -3958,6 +3974,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // No F4-only lane exists in older non-F4 isolated director fixtures.
   // In a real game these maps are always constructed and remain strict.
   this.f4CenterPatrol?.delete(id);
+  this.f4PendingNativeCenterClaims?.delete(id);
   this.f4CenterWaiting?.delete(id);
   if(this.f4CenterOwner===id)this.f4CenterOwner=null;
  }

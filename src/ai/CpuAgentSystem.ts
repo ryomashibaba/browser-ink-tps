@@ -199,6 +199,8 @@ export interface CpuQaSourceGoalAuthority {
   /** A genuine F4 takeoff physically lands back at its own start.
    * Release only its central lane claim; no bot/KCC/Crowd relocation. */
   noteF4CenterTakeoffAbort?(id:string):void;
+  /** Final real-Crowd admission for a newly claimed F4 center lane. */
+  noteF4CenterNativeGoalDecision?(id:string,accepted:boolean):void;
   chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3,
     f4Support?:OriginalSourceCpuFootSupportWitness|null):boolean;
   /** Optional original-source aim, not a new movement or scoring goal. */
@@ -1535,8 +1537,22 @@ export class CpuAgentSystem {
             if (this.phase14qGroundCollision && bot.agent) {
               this.qaMotionGoals.set(bot.id, new Vec3(goal.x, goal.y, goal.z));
             }
+            // SourceTraffic may have provisionally reserved the one-CPU
+            // center crossing. Confirm only after this *same physical
+            // agent* truly owns the admitted native movement goal.
+            if(sourceGoal&&isT21F4OriginalTerrainStage(this.stage)){
+              const active=this.sourceLiveNativeMotionGoal.get(bot.id);
+              const sameGoal=!!active&&active.agent===bot.agent&&
+               Math.hypot(active.goal.x-goal.x,active.goal.y-goal.y,
+                active.goal.z-goal.z)<=.025;
+              this.f3dSourceGoals?.noteF4CenterNativeGoalDecision?.(
+               bot.id,sameGoal);
+            }
             this.stats.cpuTacticalRetargets += 1;
           } else {
+            if(isT21F4OriginalTerrainStage(this.stage))
+              this.f3dSourceGoals?.noteF4CenterNativeGoalDecision?.(
+               bot.id,false);
             bot.agent?.resetMoveTarget();
             this.b35LastNativeTarget.delete(bot.id);
             this.sourceLiveNativeMotionGoal.delete(bot.id);
