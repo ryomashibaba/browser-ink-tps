@@ -293,6 +293,15 @@ export function f4UvFaceHasPhysicalSupport(
  }
  return id!==null;
 }
+/** The three canonical SOURCE diagnostic passes B259/B260/B261 depend on
+ * exactly one original material node named *_NO_COLLISION. The newer F4
+ * research mesh partitions MUST NEVER change canonical SOURCE identity. */
+export function f3lOriginalMaterialNodeName(
+ materialName:string,f4Local:boolean,exact:boolean,supported:boolean):string{
+ const suffix=!f4Local?'_NO_COLLISION':exact?'_EXACT_F4':
+  supported?'_F4_SUPPORTED':'_OPTICAL_ONLY';
+ return 'T21F3L:ORIGINAL_STATIC_'+materialName+suffix;
+}
 export function f4PartitionOriginalUv(
  pos:Float32Array,existing:ReadonlySet<string>,
  probe?:F4OriginalFootProbe,budget?:{remaining:number}){
@@ -434,8 +443,8 @@ export async function loadF3lTexturedSource(
      m.setParameter('b256InvViewport',new Float32Array([1,1]));
      m.setParameter('b256ApertureStrength',0);
     }
-    const obj=new Entity('T21F3L:ORIGINAL_STATIC_'+material.name+
-     (slice.exact?'_EXACT_F4':slice.supported?'_F4_SUPPORTED':'_OPTICAL_ONLY'));
+    const obj=new Entity(f3lOriginalMaterialNodeName(
+     material.name,!!f4Stage,slice.exact,slice.supported));
     obj.addComponent('render',{meshInstances:[new MeshInstance(mesh,m)],
      castShadows:false,receiveShadows:false});
     root.addChild(obj);

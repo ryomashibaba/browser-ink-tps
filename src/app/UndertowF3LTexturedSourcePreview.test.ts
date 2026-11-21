@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
 import {auditF3lManifest,f3lSourceReadabilityStyle,f4OriginalCollidingTriangles,
- f4PartitionOriginalUv,f4UvFaceHasPhysicalSupport,f3lIsUnverifiedFloorMarking,
+ f4PartitionOriginalUv,f4UvFaceHasPhysicalSupport,
+ f3lOriginalMaterialNodeName,f3lIsUnverifiedFloorMarking,
  f3lIsUnverifiedBridgeOverlay,f3lIsUnverifiedStageSideOverlay,
  f3lNativePlayerShouldRenderSourceMaterial,
  F3L_STAGE_READABILITY_MODES,
@@ -15,6 +16,21 @@ import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
 import {UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT as audit}
  from '../stage/undertow/UndertowSpillwayRemodelGeometryAudit';
+describe('F3L canonical exact source draw identity protected from F4 split',()=>{
+ it('retains the expected one original source node per material in SOURCE',()=>{
+  expect(f3lOriginalMaterialNodeName('Fld_Temple01_Glass01',false,false,false))
+   .toBe('T21F3L:ORIGINAL_STATIC_Fld_Temple01_Glass01_NO_COLLISION');
+  expect(f3lOriginalMaterialNodeName('Fld_Temple01_FloorConcrete00',false,false,false))
+   .toBe('T21F3L:ORIGINAL_STATIC_Fld_Temple01_FloorConcrete00_NO_COLLISION');
+  expect(f3lOriginalMaterialNodeName('Fld_Temple01_FloorConcrete00',true,false,false))
+   .toBe('T21F3L:ORIGINAL_STATIC_Fld_Temple01_FloorConcrete00_OPTICAL_ONLY');
+  expect(f3lOriginalMaterialNodeName('Fld_Temple01_FloorConcrete00',true,true,false))
+   .toBe('T21F3L:ORIGINAL_STATIC_Fld_Temple01_FloorConcrete00_EXACT_F4');
+  expect(f3lOriginalMaterialNodeName('Fld_Temple01_FloorConcrete00',true,false,true))
+   .toBe('T21F3L:ORIGINAL_STATIC_Fld_Temple01_FloorConcrete00_F4_SUPPORTED');
+ });
+});
+
 describe('F4 supported original UV remains ink-readable and without depth claims',()=>{
  it('does not cover registered wet ink with an opaque source-only floor',()=>{
   expect(f3lSourceReadabilityStyle('FLOOR','ORIGINAL_UV',true,
