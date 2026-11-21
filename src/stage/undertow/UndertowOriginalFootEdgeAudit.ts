@@ -224,3 +224,26 @@ export function auditF4FirstLegStaticRapierSamples(
  }
  return hold('SAMPLED_STATIC_SUPPORT_ONLY',steps+1,null,null);
 }
+
+/** F4 physical CPU path: take only the FIRST existing native Recast leg,
+ * at most 1.25m ahead. The original nav path remains unmodified, and this
+ * is not a new corridor or an inferred walking surface. */
+export function f4NativeFirstWalkingLookahead(
+ nativePath:readonly Readonly<{x:number;y:number;z:number}>[],
+ maxAheadMeters=1.25
+):StageVector3|null{
+ const first=nativePath[0];
+ if(!first||![first.x,first.y,first.z,maxAheadMeters].every(Number.isFinite)||
+    maxAheadMeters<=0||maxAheadMeters>1.25)return null;
+ const next=nativePath.slice(1).find(point=>
+  [point.x,point.y,point.z].every(Number.isFinite)&&
+  Math.hypot(point.x-first.x,point.z-first.z)>.30);
+ if(!next)return null;
+ const span=Math.hypot(next.x-first.x,next.z-first.z);
+ const t=Math.min(1,maxAheadMeters/span);
+ return [
+  first.x+(next.x-first.x)*t,
+  first.y+(next.y-first.y)*t,
+  first.z+(next.z-first.z)*t
+ ];
+}

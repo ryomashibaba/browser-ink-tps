@@ -12,7 +12,8 @@ import {
   ISSUE13_HISTORICAL_FLOOR_EDGE,
   registeredSourceFootprintWitnesses,
   auditUndertowOriginalFloorEdge,
-  auditF4FirstLegStaticRapierSamples
+  auditF4FirstLegStaticRapierSamples,
+  f4NativeFirstWalkingLookahead
 } from './UndertowOriginalFootEdgeAudit';
 
 const sourceId='UndertowT21D:first-drop-landing-positive-z';
@@ -139,5 +140,21 @@ describe('F4 first-leg static Rapier continuity (not a moving KCC certificate)',
    [0,3,0],[3,3,0],hit).status).toBe('HOLD_FIRST_LEG_LENGTH');
   expect(auditF4FirstLegStaticRapierSamples(
    [NaN,3,0],[1,3,0],hit).status).toBe('HOLD_NONFINITE_LEG');
+ });
+});
+
+describe('F4 CPU follows actual first Recast leg, not invented through-floor straight line',()=>{
+ it('chooses bounded native first corner rather than jumping to the distant goal',()=>{
+  const path=[{x:0,y:0,z:0},{x:0,y:0,z:10},{x:8,y:1.5,z:10}];
+  const target=f4NativeFirstWalkingLookahead(path);
+  expect(target).not.toBeNull();
+  expect(target![0]).toBe(0);
+  expect(target![1]).toBe(0);
+  expect(target![2]).toBeCloseTo(1.25,6);
+ });
+ it('rejects absent path, no forward leg or unbounded lookahead',()=>{
+  expect(f4NativeFirstWalkingLookahead([])).toBeNull();
+  expect(f4NativeFirstWalkingLookahead([{x:0,y:0,z:0},{x:.1,y:0,z:0}])).toBeNull();
+  expect(f4NativeFirstWalkingLookahead([{x:0,y:0,z:0},{x:1,y:0,z:0}],2)).toBeNull();
  });
 });

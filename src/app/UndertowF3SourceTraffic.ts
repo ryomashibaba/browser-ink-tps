@@ -15,6 +15,8 @@ import type {CrowdAgent} from 'recast-navigation';
 import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
 import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
 import type {StageDefinition,StageVector3} from '../stage/StageDefinition';
+import {auditF4FirstLegStaticRapierSamples,f4NativeFirstWalkingLookahead}
+ from '../stage/undertow/UndertowOriginalFootEdgeAudit';
 import {SurfaceFlags,Team} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {B34_GROUNDED_STALL_TICKS,rankOriginalSourcePatrolGoals,existingOriginalSourceInkOpportunity,prioritizeExistingInFlightSourceGoal,mayReconsiderStalledOriginalGoal,distributeOriginalSourceGoalCoverage} from './UndertowF3PaintAwarePatrol';
@@ -1664,6 +1666,36 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return corridor[0];
  }
 
+
+ /** Submit the first actually supportable Recast walking leg, not a long
+  * path's straight-line destination. F4 only: the native NavMesh decides
+  * direction and the CURRENT Rapier stage verifies each 12.5cm of floor.
+  * This NEVER modifies KCC motion, source triangles, links or scoring. */
+ private f4SupportedNativeWalkingGoal(
+  realFoot:Vec3,
+  path:ReturnType<RecastStageNavigation['auditPath']>
+ ):Vec3|null{
+  if(!this.physics||!path.reachedTarget||path.pointCount<2)return null;
+  const candidate=f4NativeFirstWalkingLookahead(path.nativePathPoints);
+  if(!candidate)return null;
+  const projected=this.nav.auditNavMeshProjection(new Vec3(...candidate));
+  if(!projected.success||!projected.nearestPoint||
+     projected.distanceMeters===null||
+     projected.distanceMeters>.30)return null;
+  const p=projected.nearestPoint;
+  const near=new Vec3(p.x,p.y,p.z);
+  const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
+  const body=new Vec3();
+  const actual=auditF4FirstLegStaticRapierSamples(
+   [realFoot.x,realFoot.y,realFoot.z],[p.x,p.y,p.z],
+   ([x,y,z])=>{
+    const hit=this.physics!.castCharacterFootSupport(
+     body.set(x,y+offset,z),offset,'HUMAN');
+    return hit?{solidId:hit.solidId,floorY:hit.point.y}:null;
+   });
+  return actual.status==='SAMPLED_STATIC_SUPPORT_ONLY'?near:null;
+ }
+
  private chooseF4OriginalCorridorGoal(id:string,foot:Vec3,out:Vec3,
   f4Support:OriginalSourceCpuFootSupportWitness|null|undefined):boolean{
   const corridors=f4OriginalCorridorEndpoints(this.stage);
@@ -1712,10 +1744,12 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    current&&Math.abs(current.point.y-foot.y)<=.18&&
    projectedSupport?.solidId===current.solidId&&
    Math.abs(projectedSupport.point.y-current.point.y)<=.05;
+  const nativeStep=path.reachedTarget?
+   this.f4SupportedNativeWalkingGoal(foot,path):null;
   if(!path.reachedTarget||path.pointCount<2||
      (path.startSnapDistanceMeters>.30&&!sameFloorReentry)||
      path.endSnapDistanceMeters>.30||!support||
-     Math.abs(support.point.y-goal.y)>.08){
+     Math.abs(support.point.y-goal.y)>.08||!nativeStep){
    // chooseF4CenterGoal may have just changed LOW -> TAKEOFF and assigned
    // the exclusive lane before this exact goal was rejected. Return only
    // that *new* unsuccessful reservation to the bounded queue's tail.
@@ -1731,7 +1765,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    return false;
   }
   this.f4OriginalPatrol.set(id,{route:patrol.route,target});
-  out.copy(goal);
+  // A certified original target can be far beyond the next stair/corner.
+  // Instruct only the native Recast first physical walking leg per tick.
+  out.copy(nativeStep);
   this.realGoalRequests++;
   return true;
  }
@@ -1831,13 +1867,16 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     target.x,target.y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
     target.z),PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,'HUMAN'):null;
    const gap=support?Math.abs(support.point.y-target.y):null;
+   const nativeStep=native?.reachedTarget?
+    this.f4SupportedNativeWalkingGoal(realFoot,native):null;
    const admitted=projectValid&&native!==null&&native.reachedTarget&&
       native.startSnapDistanceMeters<=.35&&
-      native.endSnapDistanceMeters<=.30&&native.pointCount>0&&
-      support!==null&&gap!==null&&gap<=.25;
+      native.endSnapDistanceMeters<=.30&&native.pointCount>1&&
+      support!==null&&gap!==null&&gap<=.25&&nativeStep!==null;
    this.f4GuideLastAudit.set(id,{
     id,index:next,actualFoot:[realFoot.x,realFoot.y,realFoot.z],
-    goal:[target.x,target.y,target.z],
+    goal:[nativeStep?.x??target.x,nativeStep?.y??target.y,
+     nativeStep?.z??target.z],
     nativeReached:native?.reachedTarget??false,
     nativeStartSnap:native?.startSnapDistanceMeters??Infinity,
     nativeEndSnap:native?.endSnapDistanceMeters??Infinity,
@@ -1845,8 +1884,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     footSupportSolid:support?.solidId??null,
     supportGapMeters:gap,admitted
    });
-   if(!admitted){this.heldRequests++;return false;}
-   out.copy(target);this.realGoalRequests++;return true;
+   if(!admitted||!nativeStep){this.heldRequests++;return false;}
+   out.copy(nativeStep);this.realGoalRequests++;return true;
   }
   const candidates=this.patrolGoals.get(id);
   const bot=this.bots.find(b=>b.id===id);
