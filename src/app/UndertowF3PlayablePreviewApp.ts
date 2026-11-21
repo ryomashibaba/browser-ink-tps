@@ -129,6 +129,7 @@ import {b388VisibleNativeDescentWarning,b388SuppressDuplicateRampWarning,
  from './B245SourcePresentation';
 import {buildTestStage,defineTestSurfaces,stagePhysicallyBackedPaintSurfaceIds}
  from '../stage/TestStage';
+import type {StageDefinition} from '../stage/StageDefinition';
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {UNDERTOW_T21D_CONNECTIVITY_PROBES,undertowT21dConnectivityQaStage}
@@ -342,6 +343,8 @@ export class UndertowF3PlayablePreviewApp{
  private f4ReturnCoachActive=false;
  private f4ReturnCoachRoute:'return'|'negative-candidate'='return';
  private readonly f4OriginalCorridorsPresent:boolean;
+ private readonly f4HighDetailStage:StageDefinition|null;
+ private readonly f4CoveredGrayRenders:Entity[]=[];
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private readonly nav:RecastStageNavigation;
@@ -754,6 +757,7 @@ export class UndertowF3PlayablePreviewApp{
   // from silently drifting between the visible and physical worlds.
   const stage=this.f4ResearchMode
    ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
+  this.f4HighDetailStage=this.f4ResearchMode&&terrain?stage:null;
   const originalCorridors=f4OriginalCorridorEndpoints(stage);
   this.f4OriginalCorridorsPresent=originalCorridors.length>0;
   this.f4HumanResearchGuide=terrain?
@@ -2717,7 +2721,8 @@ export class UndertowF3PlayablePreviewApp{
    // F3G/F3L replace F3E's visual study after loading: same real
    // PLAYER/F8 floor priority, with unchanged source and native physics.
    this.sourceSetRegisteredFloorPriority?.(priority);
-   this.texturedF3l?.setRegisteredFloorPriority(priority);
+   this.texturedF3l?.setRegisteredFloorPriority(
+     this.f4HighDetailStage!==null||priority);
    this.refreshB36PlayFocus();
   });
   // KeyQ also belongs to source-only camera shoulder. Capture only a
@@ -3085,7 +3090,8 @@ export class UndertowF3PlayablePreviewApp{
    // that still serve the genuine GET: do not block native SOURCE optics.
    if(this.stopReason)return;
    this.texturedF3lStatus='LOADING';
-   const installed=await loadF3lTexturedSource(this.app);
+   const installed=await loadF3lTexturedSource(this.app,false,false,
+     this.f4HighDetailStage??undefined);
    if(!installed){
     this.texturedF3lStatus='MISSING';
     return;
@@ -3093,7 +3099,17 @@ export class UndertowF3PlayablePreviewApp{
    if(this.b29OriginalVisualPose)
     applyOriginalVisualRegistration(installed.root,this.b29OriginalVisualPose);
    this.texturedF3l=installed;
-   installed.setRegisteredFloorPriority(this.realPlayerFloorPriority);
+   installed.setRegisteredFloorPriority(
+     this.f4HighDetailStage!==null||this.realPlayerFloorPriority);
+    if(this.f4HighDetailStage){
+     const stageRoot=this.app.root.findByName('StageRoot');
+     for(const id of installed.f4CoveredSolidIds){
+      const solid=stageRoot?.findByName(id);
+      if(solid?.render)this.f4CoveredGrayRenders.push(solid);
+     }
+     this.canvas.dataset.t21F4UvPhysicalTriangles=
+      installed.f4MatchedTriangles+'/'+installed.f4PhysicalTriangleCount;
+    }
    this.texturedF3lStatus='READY';
    const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
    if(button)button.hidden=false;
@@ -5056,6 +5072,10 @@ export class UndertowF3PlayablePreviewApp{
   if(this.wholeSourceRoot)this.wholeSourceRoot.enabled=false;
   this.texturedF3l.root.enabled=visible;
   this.texturedF3lActive=visible;
+   // Only replace complete, exact original F4 solid renderings. The
+   // corresponding Rapier and Recast meshes remain fully unchanged.
+   for(const solid of this.f4CoveredGrayRenders)
+    if(solid.render)solid.render.enabled=!visible;
   // T toggles verified F3L against the actual registered 25-solid stage.
   // A "not F3L" state is not permission to draw F3E's unregistered
   // floor/slope study or the noncolliding architectural reference group.
