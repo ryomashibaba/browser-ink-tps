@@ -256,9 +256,45 @@ export function f4OriginalCollidingTriangles(stage:Pick<StageDefinition,'solids'
  }
  return out;
 }
-export function f4PartitionOriginalUv(pos:Float32Array,existing:ReadonlySet<string>){
+/** Research-only source UV support: uses existing Rapier physics and
+ * navigation-authorized stage solids. Never creates any collision. */
+export type F4OriginalFootProbe=(point:StageVector3)=>{
+ solidId:string;surfaceY:number}|null;
+/** Seven barycentric samples including all edges and the center. Decline
+ * large faces, steep decorations, inferred repairs and holes. */
+export function f4UvFaceHasPhysicalSupport(
+ v:readonly StageVector3[],probe:F4OriginalFootProbe):boolean{
+ if(v.length!==3||v.some(p=>p.some(q=>!Number.isFinite(q))))return false;
+ const a=v[0]!,b=v[1]!,c=v[2]!;
+ const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2];
+ const vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+ const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+ const area2=Math.hypot(nx,ny,nz);
+ if(area2<.003||area2>3.2||Math.abs(ny)/area2<.78||
+  Math.hypot(ux,uz)>2.5||Math.hypot(vx,vz)>2.5||
+  Math.hypot(c[0]-b[0],c[2]-b[2])>2.5)return false;
+ const weights=[[.85,.075,.075],[.075,.85,.075],[.075,.075,.85],
+  [.5,.5,0],[0,.5,.5],[.5,0,.5],[1/3,1/3,1/3]] as const;
+ let id:string|null=null;
+ for(const [wa,wb,wc] of weights){
+  const p:StageVector3=[a[0]*wa+b[0]*wb+c[0]*wc,
+   a[1]*wa+b[1]*wb+c[1]*wc,
+   a[2]*wa+b[2]*wb+c[2]*wc];
+  const hit=probe(p);
+  if(!hit||!Number.isFinite(hit.surfaceY)||
+   hit.solidId.startsWith('T21V28:F4-photo-reconstruction:')||
+   Math.abs(hit.surfaceY-p[1])>.075||
+   (id!==null&&id!==hit.solidId))return false;
+  id=hit.solidId;
+ }
+ return id!==null;
+}
+export function f4PartitionOriginalUv(
+ pos:Float32Array,existing:ReadonlySet<string>,
+ probe?:F4OriginalFootProbe,budget?:{remaining:number}){
  if(pos.length%9)throw Error('F4_INVALID_UV_TRIANGLES');
- const backed:number[]=[],unbacked:number[]=[],matched=new Set<string>();
+ const backed:number[]=[],supported:number[]=[],unbacked:number[]=[],
+  matched=new Set<string>();
  const dy=audit.projectNormalization.modelToProjectYOffset;
  for(let i=0;i<pos.length;i+=9){
   const world:StageVector3[]=[];
@@ -268,9 +304,13 @@ export function f4PartitionOriginalUv(pos:Float32Array,existing:ReadonlySet<stri
   }
   const key=physicalKey(world),found=existing.has(key);
   if(found)matched.add(key);
-  (found?backed:unbacked).push(i/3,i/3+1,i/3+2);
+  const tryProbe=!found&&!!probe&&!!budget&&budget.remaining>=7;
+  if(tryProbe)budget.remaining-=7;
+  const observed=tryProbe&&f4UvFaceHasPhysicalSupport(world,probe!);
+  (found?backed:observed?supported:unbacked).push(i/3,i/3+1,i/3+2);
  }
- return {backed:new Uint32Array(backed),unbacked:new Uint32Array(unbacked),matched};
+ return {backed:new Uint32Array(backed),supported:new Uint32Array(supported),
+  unbacked:new Uint32Array(unbacked),matched};
 }
 
 const BASE_COLOR:Record<Kind,[number,number,number]>={
@@ -280,7 +320,7 @@ const BASE_COLOR:Record<Kind,[number,number,number]>={
 };
 export async function loadF3lTexturedSource(
  app:AppBase,b256Research=false,b257Research=false,
- f4Stage?:StageDefinition){
+ f4Stage?:StageDefinition,f4FootProbe?:F4OriginalFootProbe){
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
  const response=await fetch(base+'f3l-original-textured.json',{cache:'no-store'});
  if(response.status===404)return null;
@@ -297,7 +337,8 @@ export async function loadF3lTexturedSource(
   new Map<string,Set<string>>();
  const physicalKeys=new Set<string>(),matchedKeys=new Set<string>();
  for(const faces of physicalBySolid.values())for(const key of faces)physicalKeys.add(key);
- let f4MatchedTriangles=0;
+ let f4MatchedTriangles=0,f4SupportedTriangles=0;
+ const footProbeBudget={remaining:42000};
  const b256Materials:StandardMaterial[]=[];
  const b257OriginalStaticMeshes:B257OpticalMesh[]=[];
  let b256ApertureRequested=false;
@@ -345,10 +386,15 @@ export async function loadF3lTexturedSource(
     pos[j++]=floats[i]!;pos[j++]=floats[i+1]!;pos[j++]=floats[i+2]!;
     uv[k++]=floats[i+3]!;uv[k++]=floats[i+4]!;
    }
-   // Only source triangles already colliding in F4 may display opaque UV.
-   const split=f4Stage?f4PartitionOriginalUv(pos,physicalKeys):null;
+   // Never promote original FloorLine, FloorFence, StageSide or BridgeMetal.
+   const floor=!!f4Stage&&!!f4FootProbe&&
+    (material.kind==='FLOOR'||material.kind==='SLOPE')&&
+    /^Fld_Temple01_Floor(?:Concrete|Slope)[0-9]{2}$/.test(material.name);
+   const split=f4Stage?f4PartitionOriginalUv(pos,physicalKeys,
+    floor?f4FootProbe:undefined,floor?footProbeBudget:undefined):null;
    if(split){
     f4MatchedTriangles+=split.backed.length/3;
+    f4SupportedTriangles+=split.supported.length/3;
     for(const key of split.matched)matchedKeys.add(key);
    }
    if(b257Research)b257OriginalStaticMeshes.push({
@@ -356,9 +402,10 @@ export async function loadF3lTexturedSource(
    });
    const all=new Uint32Array(pos.length/3);
    for(let i=0;i<all.length;i++)all[i]=i;
-   const slices=split&&split.backed.length?
-    [{indices:split.unbacked,exact:false},{indices:split.backed,exact:true}]:
-    [{indices:all,exact:false}];
+   const slices=split&&(split.backed.length||split.supported.length)?
+    [{indices:split.unbacked,exact:false},
+     {indices:split.backed,exact:true},
+     {indices:split.supported,exact:true}]:[{indices:all,exact:false}];
    for(const slice of slices){
     if(!slice.indices.length)continue;
     const mesh=new Mesh(app.graphicsDevice);
@@ -397,7 +444,8 @@ export async function loadF3lTexturedSource(
  }
  app.root.addChild(root);
  return {
-  root,manifest,gate,f4MatchedTriangles,f4PhysicalTriangleCount:physicalKeys.size,
+  root,manifest,gate,f4MatchedTriangles,f4SupportedTriangles,
+  f4PhysicalTriangleCount:physicalKeys.size,
   f4CoveredSolidIds:[...physicalBySolid].filter(([,faces])=>
    [...faces].every(key=>matchedKeys.has(key))).map(([id])=>id),
   disable(){root.enabled=false;},

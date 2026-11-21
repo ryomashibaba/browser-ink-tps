@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {createF3lUvCollector,parseF3lOriginalMtl}
  from '../../scripts/t21-f3l-textured-source.mjs';
 import {auditF3lManifest,f3lSourceReadabilityStyle,f4OriginalCollidingTriangles,
- f4PartitionOriginalUv,f3lIsUnverifiedFloorMarking,
+ f4PartitionOriginalUv,f4UvFaceHasPhysicalSupport,f3lIsUnverifiedFloorMarking,
  f3lIsUnverifiedBridgeOverlay,f3lIsUnverifiedStageSideOverlay,
  f3lNativePlayerShouldRenderSourceMaterial,
  F3L_STAGE_READABILITY_MODES,
@@ -15,6 +15,38 @@ import {undertowTemple01ModelXZToProjectXZ}
  from '../stage/undertow/UndertowSpillwayModelXZGeometry';
 import {UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT as audit}
  from '../stage/undertow/UndertowSpillwayRemodelGeometryAudit';
+describe('F4 UV original source surfaces require real 7-point support',()=>{
+ const flat=[[0,0,0],[1,0,0],[0,0,1]] as const;
+ const ok=(p:readonly[number,number,number])=>({
+  solidId:'center-low-team-a',surfaceY:p[1]});
+ it('accepts one compact same-physical-surface original triangle',()=>{
+  expect(f4UvFaceHasPhysicalSupport(flat,ok)).toBe(true);
+  const x=f4PartitionOriginalUv(new Float32Array([
+   0,3,0,1,3,0,0,3,1]),new Set(),ok,{remaining:7});
+  expect([...x.supported]).toEqual([0,1,2]);
+  expect([...x.unbacked]).toEqual([]);
+ });
+ it('rejects holes, photo repairs, floating and broad or vertical faces',()=>{
+  expect(f4UvFaceHasPhysicalSupport(flat,p=>p[0]>.4?null:ok(p)))
+   .toBe(false);
+  expect(f4UvFaceHasPhysicalSupport(flat,p=>({
+   solidId:'T21V28:F4-photo-reconstruction:fake',surfaceY:p[1]})))
+   .toBe(false);
+  expect(f4UvFaceHasPhysicalSupport(flat,p=>({
+   solidId:'center-low-team-a',surfaceY:p[1]+.1}))).toBe(false);
+  expect(f4UvFaceHasPhysicalSupport([[0,0,0],[10,0,0],[0,0,10]],ok))
+   .toBe(false);
+  expect(f4UvFaceHasPhysicalSupport([[0,0,0],[0,1,0],[0,0,1]],ok))
+   .toBe(false);
+ });
+ it('preserves original source optical-only when probe budget is exhausted',()=>{
+  const x=f4PartitionOriginalUv(new Float32Array([
+   0,3,0,1,3,0,0,3,1]),new Set(),ok,{remaining:6});
+  expect([...x.unbacked]).toEqual([0,1,2]);
+  expect([...x.supported]).toEqual([]);
+ });
+});
+
 describe('F4 UV uses only existing original Rapier and Recast triangles',()=>{
  it('marks exact source triangles, not neighboring photo-created floors',()=>{
   const sample=[[-8,3,40],[-7,3,40],[-8,3,41],

@@ -3093,8 +3093,18 @@ export class UndertowF3PlayablePreviewApp{
    // Canonical four-mode SOURCE keeps the original exact loader call and
    // visual behavior. Only pinned loopback F4 supplies collision-face
    // identity to the optional original UV material partition.
+   const supportedPhysical=new Set(this.f4HighDetailStage?.solids.filter(s=>
+    s.collisionEnabled!==false&&s.navigationEnabled!==false&&
+    !s.id.startsWith('T21V28:F4-photo-reconstruction:'))
+     .map(s=>s.id)??[]);
    const installed=this.f4HighDetailStage
-    ?await loadF3lTexturedSource(this.app,false,false,this.f4HighDetailStage)
+    ?await loadF3lTexturedSource(this.app,false,false,
+      this.f4HighDetailStage,p=>{
+       const hit=this.physics.castCharacterFootSupport(
+        new Vec3(p[0],p[1],p[2]),0,'HUMAN');
+       return hit&&supportedPhysical.has(hit.solidId)
+        ?{solidId:hit.solidId,surfaceY:hit.point.y}:null;
+      })
     :await loadF3lTexturedSource(this.app);
    if(!installed){
     this.texturedF3lStatus='MISSING';
@@ -3114,6 +3124,8 @@ export class UndertowF3PlayablePreviewApp{
      }
      this.canvas.dataset.t21F4UvPhysicalTriangles=
       installed.f4MatchedTriangles+'/'+installed.f4PhysicalTriangleCount;
+     this.canvas.dataset.t21F4UvSupportedTriangles=
+      String(installed.f4SupportedTriangles);
     }
    this.texturedF3lStatus='READY';
    const button=this.panel.querySelector('#t21-f3l-textured') as HTMLButtonElement|null;
