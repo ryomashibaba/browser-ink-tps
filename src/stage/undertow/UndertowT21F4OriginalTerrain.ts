@@ -10,6 +10,7 @@ const FACE_GROUPS={
  'floorline-positive-z':[37118,37119],
  'floorline-negative-z':[37112,37113]
 } as const;
+const CENTER_STEP_RIM_FACES=[1810,1811,1816,1817,1822,1823,1826,1827] as const;
 const CORRIDOR_FACE_GROUPS={
  'corridor-floors':[
   35982,35983,35996,35997,36024,36025,36030,36031,36036,36037,36052,36053,
@@ -123,9 +124,10 @@ export function parseT21F4OriginalTerrain(input:unknown):Terrain{
   const rows=seed.groups[group];
   // Accept the previously pinned local seeds and the revised corridor.
   // Both layouts still require an exact ordered face list.
-  const faceIds=group==='corridor-floors'&&Array.isArray(rows)&&
-   rows.length===originalFaceIds.length+CORRIDOR_SEAM_FLOOR_FACES.length
-   ?[...originalFaceIds,...CORRIDOR_SEAM_FLOOR_FACES]:originalFaceIds;
+  const addedFaces=group==='center-floors'?CENTER_STEP_RIM_FACES:
+   group==='corridor-floors'?CORRIDOR_SEAM_FLOOR_FACES:[];
+  const faceIds=Array.isArray(rows)&&rows.length===originalFaceIds.length+addedFaces.length
+   ?[...originalFaceIds,...addedFaces]:originalFaceIds;
   if(!Array.isArray(rows)||rows.length!==faceIds.length)
    throw Error('F4_ORIGINAL_TERRAIN_FACE_COUNT_'+group);
   const vertices:StageVector3[]=[];

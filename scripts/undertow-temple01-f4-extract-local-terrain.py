@@ -13,6 +13,7 @@ FACE_GROUPS = {
     "center-floors": {
         "FldObj_Temple01_PntSet_A4_1__FloorConcrete00": (110, 111),
         "Fld_Temple01_pCube20989_1__FloorConcrete02": (69150, 69151, 69152, 69153),
+        "FldObj_Temple01_PntSet_group21602_1__FloorLine00": (1810, 1811, 1816, 1817, 1822, 1823, 1826, 1827),
     },
     "center-step-sides": {
         "FldObj_Temple01_PntSet_mesh02_low159_1__PillarBase01": (
