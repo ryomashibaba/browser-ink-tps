@@ -112,6 +112,13 @@ FACE_GROUPS = {
     },
 }
 
+# Verified sections of the sloped floor around both central seam openings
+# in the previous selection. Append to preserve the original face ordering.
+CORRIDOR_SEAM_FLOORS = {
+    "Fld_Temple01_group21600_1__FloorLine00": (36482, 36530),
+    "Fld_Temple01_mesh02_low127_1__PillarBase01": (55372, 55373, 55462, 55463, 55783, 55784, 55877, 55878),
+}
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -127,7 +134,10 @@ def main():
     groups = {}
     for name, expected in FACE_GROUPS.items():
         groups[name] = []
-        for source_object, face_ids in expected.items():
+        objects = expected.items()
+        if name == "corridor-floors":
+            objects = (*objects, *CORRIDOR_SEAM_FLOORS.items())
+        for source_object, face_ids in objects:
             for face_id in face_ids:
                 vertex_ids, actual_object, _ = faces[face_id]
                 if actual_object != source_object:

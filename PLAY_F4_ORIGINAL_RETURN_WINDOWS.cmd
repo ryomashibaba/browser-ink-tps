@@ -21,7 +21,7 @@ node -e "const [m,n]=process.versions.node.split('.').map(Number);process.exit((
 if errorlevel 1 goto :BAD_NODE
 REM Reuse Vite's pinned private-seed allowlist. Fail before starting a
 REM browser if the supplied file is the wrong OBJ extraction/version.
-node -e "try{const f=require('node:fs'),c=require('node:crypto'),p=process.env.T21_F4_LOCAL_TERRAIN,s=f.statSync(p);const hashes=new Set(['1be11fc133cabe79c65cf3ff21fd7b4a94ed6170665d930ecc1986e41c6d22bd','0dc7619966269fd7971684d3e41460bf589e6db084c12d7dc025379500a2cd51','f1abf5d891b6ba00320eef8f0e7bb8f0596450438023f2f9efeb30ace46268da']);process.exit(s.isFile()&&s.size<=49152&&hashes.has(c.createHash('sha256').update(f.readFileSync(p)).digest('hex'))?0:2)}catch{process.exit(2)}"
+node -e "try{const f=require('node:fs'),c=require('node:crypto'),p=process.env.T21_F4_LOCAL_TERRAIN,s=f.statSync(p);const hashes=new Set(['1be11fc133cabe79c65cf3ff21fd7b4a94ed6170665d930ecc1986e41c6d22bd','0dc7619966269fd7971684d3e41460bf589e6db084c12d7dc025379500a2cd51','f1abf5d891b6ba00320eef8f0e7bb8f0596450438023f2f9efeb30ace46268da','6cf07d15c26501a37dc2b1482e69ba0675c5c93d3bddee6a7c41a82e126046d5']);process.exit(s.isFile()&&s.size<=49152&&hashes.has(c.createHash('sha256').update(f.readFileSync(p)).digest('hex'))?0:2)}catch{process.exit(2)}"
 if errorlevel 1 goto :BAD_SEED
 if not exist "node_modules\.bin\vite.cmd" goto :NO_DEPS
 call npm.cmd ls --depth=0 --offline >nul 2>nul

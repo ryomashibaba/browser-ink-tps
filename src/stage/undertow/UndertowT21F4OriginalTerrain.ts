@@ -24,6 +24,7 @@ const CORRIDOR_FACE_GROUPS={
   36490,36491,36538,36540,36541,36542,36543,36546,36547
  ]
 } as const;
+const CORRIDOR_SEAM_FLOOR_FACES=[36482,36530,55372,55373,55462,55463,55783,55784,55877,55878] as const;
 const INGRESS_FACE_GROUPS={
  'ingress-floors':[
   1314, 1315, 1320, 1321, 1326, 1327, 1332, 1333, 1758, 1759, 1764, 1765, 1770, 1771, 1776, 1777,
@@ -118,8 +119,13 @@ export function parseT21F4OriginalTerrain(input:unknown):Terrain{
  const terrain={} as Record<Group|CorridorGroup,StageSolidDefinition>;
  const modelVertices=new Map<number,StageVector3>();
  const yOffset=UNDERTOW_TEMPLE01_REMODEL_GEOMETRY_AUDIT.projectNormalization.modelToProjectYOffset;
- for(const [group,faceIds] of Object.entries(groups) as [Group|CorridorGroup,readonly number[]][]){
+ for(const [group,originalFaceIds] of Object.entries(groups) as [Group|CorridorGroup,readonly number[]][]){
   const rows=seed.groups[group];
+  // Accept the previously pinned local seeds and the revised corridor.
+  // Both layouts still require an exact ordered face list.
+  const faceIds=group==='corridor-floors'&&Array.isArray(rows)&&
+   rows.length===originalFaceIds.length+CORRIDOR_SEAM_FLOOR_FACES.length
+   ?[...originalFaceIds,...CORRIDOR_SEAM_FLOOR_FACES]:originalFaceIds;
   if(!Array.isArray(rows)||rows.length!==faceIds.length)
    throw Error('F4_ORIGINAL_TERRAIN_FACE_COUNT_'+group);
   const vertices:StageVector3[]=[];
