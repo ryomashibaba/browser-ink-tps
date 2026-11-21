@@ -2314,6 +2314,15 @@ export class UndertowF3PlayablePreviewApp{
   // Activity and end screen are read from the same 60Hz F3 snapshot.
   this.b58SessionBoard=createF3SourceSessionBoard(
    ui,()=>this.restart(),()=>this.saveW10B62NativeEvidence());
+  if(this.f4ResearchMode&&terrain&&this.f4OriginalCorridorsPresent){
+   const replay=this.b58SessionBoard.finish.querySelector<HTMLButtonElement>(
+    '#t21-f3-b59-restart');
+   if(replay){
+    replay.textContent='REPLAY F4 LOCAL · FRESH 180s RESEARCH ROUND';
+    replay.dataset.t21F4ResearchOnly='true';
+    replay.dataset.officialWinner='NONE';
+   }
+  }
   if(sourceModeMenu){
    const endMenu=document.createElement('button');
    endMenu.id='t21-f3-source-mode-menu-after-match';
@@ -9140,7 +9149,8 @@ export class UndertowF3PlayablePreviewApp{
    const actualStop=state.stopReason?
     'NATIVE STOP · TICK '+state.tick+' · '+
     state.stopReason.slice(0,160)+'\n':'';
-   this.b205RoundClock.textContent='FULL SOURCE ROUND · UNSCORED\n'+
+   this.b205RoundClock.textContent=(this.f4ResearchMode?
+    'F4 TERRAIN RESEARCH · UNSCORED\n':'FULL SOURCE ROUND · UNSCORED\n')+
     clock+' · '+phase+'\n'+actualStop+
     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
