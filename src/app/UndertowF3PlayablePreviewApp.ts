@@ -1317,7 +1317,10 @@ export class UndertowF3PlayablePreviewApp{
    this.projectiles.enableNativeSourceHumanPhysicalContact(
     ()=>this.player.currentMode);
    this.projectiles.enableF4RealPhysicalHitFeedback(stage);
-   this.projectiles.enableF4ActualHumanCpuLifecycleEvidence(stage);
+   // Photo-estimated/partial F4 stages are not SHA-verified ORIGINAL.
+   // Their unchanged research boot must not acquire this lifecycle gate.
+   if(this.f4OriginalCorridorsPresent)
+    this.projectiles.enableF4ActualHumanCpuLifecycleEvidence(stage);
   }
   ui.innerHTML='';
   this.panel=document.createElement('section');
@@ -9237,7 +9240,8 @@ export class UndertowF3PlayablePreviewApp{
       this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
       this.rawStage.navigationLinks?.length??0,0
      ]);
-    this.b58SessionBoard.setSourceGridRecap(this.b400FinalOriginalGrid);
+    this.b58SessionBoard.setSourceGridRecap(this.b400FinalOriginalGrid,
+     this.f4ResearchMode&&this.f4OriginalCorridorsPresent);
    }
    const completed=this.b62NativeEvidence.report();
    if(completed)this.b58SessionBoard.setPaintTempo(

@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {b400RealOriginalSourceGridRecap,b400SourceGridDownloadRecap,
+ b400F4ResearchRegisteredCellLine,
  b400Real180SourceEndGate,type B400SourceGrid} from './B400RealOriginalSourceGridRecap';
 const stage=[25,17,26,0] as const;
 const source=(name:string,owner:number[]= [1,-1,0,0],
@@ -68,5 +69,39 @@ describe('B400 genuine 180s registered-source ownership (never official turf)',(
    all(source('original',[0,0,3,0])),true,stage).status).toBe('HOLD');
   expect(b400RealOriginalSourceGridRecap(
    all(source('original',[0,1,0,0],false)),true,stage).status).toBe('HOLD');
+ });
+});
+
+describe('private F4 read-only final registered-grid advantage',()=>{
+ it('reports only actual final registered cells without official score',()=>{
+  const f=b400RealOriginalSourceGridRecap(
+   all(source('original',[1,1,-1,0])),true,stage);
+  expect(b400F4ResearchRegisteredCellLine(f))
+   .toContain('TEAM A +1 PAINT CELLS');
+  expect(b400F4ResearchRegisteredCellLine(f))
+   .toContain('NO TURF RESULT');
+  expect(f.winner).toBe('NONE');expect(f.scoreableCells).toBe(0);
+  const equal=b400RealOriginalSourceGridRecap(
+   all(source('original',[1,-1,0,0])),true,stage);
+  expect(b400F4ResearchRegisteredCellLine(equal))
+   .toContain('EVEN REGISTERED PAINT CELLS');
+  const unpainted=b400RealOriginalSourceGridRecap(
+   all(source('original',[0,0,0,0])),true,stage);
+  expect(b400F4ResearchRegisteredCellLine(unpainted))
+   .toContain('NO PAINT');
+ });
+ it('refuses incomplete, fake score, invalid and area-forged grid recaps',()=>{
+  const a=b400RealOriginalSourceGridRecap(
+   all(source('original',[1,1,-1,0])),true,stage);
+  for(const modified of [
+   {status:'HOLD'},{observedSurfaces:16},
+   {scoreableCells:1},{winner:'A'},{productionAuthorized:true},
+   {gameplayWrites:1},{countsAreNotOfficialTurfArea:false},
+   {teamACells:-1},{teamACells:NaN},{teamBCells:99},
+   {teamAPercentOfRegisteredCells:77}
+  ]){
+   expect(b400F4ResearchRegisteredCellLine(
+    {...a,...modified} as typeof a)).toBeNull();
+  }
  });
 });

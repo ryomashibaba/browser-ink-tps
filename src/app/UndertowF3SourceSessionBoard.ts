@@ -4,7 +4,8 @@
  * opposing-team 4v4 contact claim. Zero gameplay writes.
  */
 import type {sourceCpuInkTempo} from './UndertowF3CpuInkTempo';
-import type {B400SourceRecap} from './B400RealOriginalSourceGridRecap';
+import {b400F4ResearchRegisteredCellLine,
+ type B400SourceRecap} from './B400RealOriginalSourceGridRecap';
 import {B463_LOCAL_KEY,b463FromRealTimeUp,b463ReadPreviousSourceRound,
  b463FormatSourceRoundComparison} from './B463SourceReplayMemory';
 
@@ -425,7 +426,7 @@ export function createF3SourceSessionBoard(
  finish.querySelector<HTMLElement>('#t21-f3-b59-scroll-stats')!
   .appendChild(priorRecap);
  const sourceGrid=finish.querySelector<HTMLElement>('#t21-f3-b400-source-grid-recap')!;
- const setSourceGridRecap=(s:B400SourceRecap)=>{
+ const setSourceGridRecap=(s:B400SourceRecap,f4Research=false)=>{
   if(finish.dataset.t21B59State!=='FINISHED')return;
   sourceGrid.hidden=false;
   sourceGrid.replaceChildren();
@@ -460,6 +461,16 @@ export function createF3SourceSessionBoard(
    share('TEAM A',s.teamACells,s.teamAPercentOfRegisteredCells,'#6adbd2');
    share('TEAM B',s.teamBCells,s.teamBPercentOfRegisteredCells,'#d288c1');
    share('NEUTRAL',s.neutralCells,s.neutralPercentOfRegisteredCells,'#91a9b5');
+   // F4 may show a plain reference cell advantage; it is explicitly NOT
+   // the game's official result and has no effect on native paint/score.
+   const reference=f4Research?b400F4ResearchRegisteredCellLine(s):null;
+   if(reference){
+    const note=document.createElement('div');
+    note.style.cssText='margin-top:8px;color:#b6f0dc;'+
+     'font:750 11px/1.45 system-ui';
+    note.textContent=reference;
+    sourceGrid.appendChild(note);
+   }
   }
   finish.dataset.t21B400Status=s.status;
   finish.dataset.t21B400SourceOnly='true';

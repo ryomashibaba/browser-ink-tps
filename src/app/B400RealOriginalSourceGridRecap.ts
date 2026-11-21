@@ -68,6 +68,39 @@ export function b400RealOriginalSourceGridRecap(
  };
 }
 
+
+/** Read-only RESEARCH comparison of the FINAL 17 registered ink-grid cells.
+ * Different surfaces' cells are not certified to represent equal area;
+ * this can never provide an official Turf winner or score. */
+export function b400F4ResearchRegisteredCellLine(s:B400SourceRecap):string|null{
+ if(s.status!=='FINAL_REGISTERED_SOURCE_ONLY'||
+    s.observedSurfaces!==17||s.scoreableCells!==0||
+    s.winner!=='NONE'||s.productionAuthorized!==false||
+    s.gameplayWrites!==0||s.countsAreNotOfficialTurfArea!==true||
+    ![s.activeOriginalGridCells,s.teamACells,s.teamBCells,s.neutralCells]
+      .every(n=>Number.isSafeInteger(n)&&n>=0)||
+    s.activeOriginalGridCells<1||
+    s.teamACells+s.teamBCells+s.neutralCells!==s.activeOriginalGridCells||
+    ![s.teamAPercentOfRegisteredCells,s.teamBPercentOfRegisteredCells,
+      s.neutralPercentOfRegisteredCells].every(Number.isFinite)||
+    Math.abs(s.teamAPercentOfRegisteredCells-
+      100*s.teamACells/s.activeOriginalGridCells)>1e-6||
+    Math.abs(s.teamBPercentOfRegisteredCells-
+      100*s.teamBCells/s.activeOriginalGridCells)>1e-6||
+    Math.abs(s.neutralPercentOfRegisteredCells-
+      100*s.neutralCells/s.activeOriginalGridCells)>1e-6)
+  return null;
+ const painted=s.teamACells+s.teamBCells;
+ if(painted===0)
+  return 'F4 RESEARCH GRID · NO PAINT · NO TURF RESULT';
+ if(s.teamACells===s.teamBCells)
+  return 'F4 RESEARCH GRID · EVEN REGISTERED PAINT CELLS · NO TURF RESULT';
+ return 'F4 RESEARCH GRID · TEAM '+
+  (s.teamACells>s.teamBCells?'A':'B')+' +'+
+  Math.abs(s.teamACells-s.teamBCells).toLocaleString('en-US')+
+  ' PAINT CELLS · NO TURF RESULT';
+}
+
 // Only this compact aggregate is included when the owner voluntarily
 // downloads a B62 session JSON. No source geometry, position, ownerGrid
 // raster, source filenames, hardware identifiers or simulated Turf score.
