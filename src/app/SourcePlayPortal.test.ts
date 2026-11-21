@@ -787,3 +787,17 @@ describe('F4 PRIVATE local R key matches the real finished replay button',()=>{
    .toBe(false);
  });
 });
+
+
+describe('F4 original native capture does not swallow a genuine local replay',()=>{
+ it('connects native R and B59 only via the checked local finished gate',()=>{
+  const main=readFileSync(new URL('../main.ts',import.meta.url),'utf8');
+  expect(main).toContain('f4OriginalLocalReplayHotkeyEligible({');
+  expect(main).toContain('f4OriginalLocalFinishedReplayEligible(evidence)');
+  expect(main).toContain("q.get('t21F4Terrain')==='original'");
+  expect(main).toContain('ev.stopImmediatePropagation();return;');
+  // Existing frozen SOURCE and canonical replay remain independently gated.
+  expect(main).toContain('sourceNativeReplayOwnsKeyR({');
+  expect(main).toContain('sourceFinishedReplayAction(evidence)');
+ });
+});

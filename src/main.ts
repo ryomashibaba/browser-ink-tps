@@ -61,7 +61,9 @@ async function boot(): Promise<void> {
     // native controls, player/CPU state, the clock, or replay thresholds.
     if(q.get('t21QaDrive')==='source'&&q.get('t21W10B203')==='fullRound'){
       const {sourceReplayHotkeyAction,sourceFinishedReplayAction,
-       sourceNativeReplayOwnsKeyR}=
+       sourceNativeReplayOwnsKeyR,
+       f4OriginalLocalReplayHotkeyEligible,
+       f4OriginalLocalFinishedReplayEligible}=
         await import('./app/SourcePlayPortal');
       const liveReplay=()=>{
         const game=(window as unknown as {__t21F3?:{
@@ -106,6 +108,19 @@ async function boot(): Promise<void> {
         // physical STOP or A1 CLEAR handler. Modified keys remain here.
         const plainR=!ev.repeat&&!ev.shiftKey&&!ev.altKey&&
           !ev.ctrlKey&&!ev.metaKey;
+        // F4 is NOT canonical SOURCE. Only the genuine finished local
+        // original-terrain B59 evidence may reach its native handler.
+        // An unsafe/live F4 R never reaches legacy in-world reset.
+        const f4Intent=q.get('t21F4Central')==='research'&&
+          q.get('t21F4Terrain')==='original';
+        if(f4Intent){
+          if(plainR&&f4OriginalLocalReplayHotkeyEligible({
+            ...evidence,code:ev.code,repeat:ev.repeat,
+            modified:ev.shiftKey||ev.ctrlKey||ev.altKey||ev.metaKey,
+            editing:editable
+          }))return;
+          ev.stopImmediatePropagation();return;
+        }
         // Capture is for blocking unsafe legacy reset, NOT for swallowing
         // the native game's genuine A1 CLEAR or proven physical-fall R.
         // The existing bubble listener owns both with stronger live gates.
@@ -141,6 +156,11 @@ async function boot(): Promise<void> {
           '#t21-f3-b59-restart,#t21-f3-b58-restart');
         if(!button||!appUiRoot.contains(button))return;
         const {game,evidence}=liveReplay();
+        // The genuine F4 B59 click will call restart() and re-check
+        // the local original-terrain SHA-verified research boundary.
+        if(q.get('t21F4Central')==='research'&&
+           q.get('t21F4Terrain')==='original'&&
+           f4OriginalLocalFinishedReplayEligible(evidence))return;
         const action=sourceFinishedReplayAction(evidence);
         if(action==='CLICK_REAL_REPLAY')return;
         ev.stopImmediatePropagation();
