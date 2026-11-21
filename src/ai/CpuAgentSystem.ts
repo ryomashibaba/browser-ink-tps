@@ -16,7 +16,7 @@ import {shouldReissueOriginalSourceNativeTarget}
  from './OriginalSourceNativeTargetRefresh';
 import {chooseAuditedOriginalSourceCpuGoal}
  from './OriginalSourceGoalAdmission';
-import {hasF4OriginalIngress,isT21F4ResearchStage}
+import {hasF4OriginalIngress,isT21F4OriginalTerrainStage,isT21F4ResearchStage}
  from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
 import {isAlignedOriginalSourceCrowdTarget}
  from './OriginalSourceCrowdTargetAlignment';
@@ -26,7 +26,8 @@ import {shouldRefreshStalledOriginalSourceCrowd,
  SOURCE_CROWD_STALL_SECONDS,
  SOURCE_CROWD_RECOVERY_AUDIT_INTERVAL_TICKS}
  from './CpuSourceCrowdStallRecovery';
-import {hasRegisteredOriginalSourceCpuRapierFootSupport}
+import {hasRegisteredOriginalSourceCpuRapierFootSupport,
+ type OriginalSourceCpuFootSupportWitness}
  from './OriginalSourceCpuRapierFootSupport';
 import {originalGoalInkSweep} from './UndertowF3OriginalSourceInkSweep';
 import {b180OriginalSourcePatchOpportunity,
@@ -177,7 +178,8 @@ export interface CpuHumanCrowdFootAuthority {
 
 /** F3D ONLY: source-audited destinations. Never edit real Crowd/Rapier feet. */
 export interface CpuQaSourceGoalAuthority {
-  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean;
+  chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3,
+    f4Support?:OriginalSourceCpuFootSupportWitness|null):boolean;
   /** Optional original-source aim, not a new movement or scoring goal. */
   chooseSourceAllySupportInkTarget?(
     id:string,realFoot:Vec3,out:Vec3
@@ -1339,8 +1341,12 @@ export class CpuAgentSystem {
           );
 
         if (!jumpStarted) {
+          const f4Support=isT21F4OriginalTerrainStage(this.stage)&&
+            this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)===true
+            ?this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position)??null
+            :undefined;
           let sourceGoal=this.f3dSourceGoals?.chooseSourceGoal(
-            bot.id,bot.position,this.goal)??false;
+            bot.id,bot.position,this.goal,f4Support)??false;
           // Distinguish the real SOURCE original goal approval from the
           // final native Crowd endpoint. These are NOT equivalent on a
           // multi-floor Recast mesh; no unapproved projection is submitted.
@@ -1363,8 +1369,8 @@ export class CpuAgentSystem {
               ?.isLiveRejoinedSourceCpu?.(bot.id)===true;
             const firstDrop=this.f3dSourceGoals
               ?.isLiveRejoinedSourceCpu?.(bot.id)===false;
-            const physical=this.phase14qGroundCollision
-              ?.sourceFootSupport?.(bot.id,bot.position);
+            const physical=f4Support===undefined?this.phase14qGroundCollision
+              ?.sourceFootSupport?.(bot.id,bot.position):f4Support;
             const footSupported=
               hasRegisteredOriginalSourceCpuRapierFootSupport(
                 bot.position,physical,this.stage.solids);

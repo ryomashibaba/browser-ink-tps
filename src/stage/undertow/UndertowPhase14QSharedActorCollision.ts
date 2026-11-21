@@ -1,4 +1,5 @@
-import {isT21F4ResearchStage} from './UndertowT21F4PhotoRouteReconstruction';
+import {isT21F4OriginalTerrainStage,isT21F4ResearchStage}
+ from './UndertowT21F4PhotoRouteReconstruction';
 import RAPIER, {type Collider,type RigidBody} from '@dimforge/rapier3d-compat';
 import {Vec3} from 'playcanvas';
 import {GAME_CONFIG} from '../../config/game/gameConfig';
@@ -52,6 +53,7 @@ interface ActorBody{
   body:RigidBody;
   collider:Collider;
   sourceFoot:T21QFoot;
+  f4DescentSpeed:number;
 }
 
 /**
@@ -137,7 +139,7 @@ export class UndertowPhase14QSharedActorCollision{
       const collider=this.physics.world.createCollider(
         RAPIER.ColliderDesc.capsule(this.cpuHalfHeight,this.cpuRadius),body
       );
-      actor={body,collider,sourceFoot:{...foot}};
+      actor={body,collider,sourceFoot:{...foot},f4DescentSpeed:0};
       this.actors.set(id,actor);
       this.ownerByHandle.set(collider.handle,id);
     }else{
@@ -156,12 +158,14 @@ export class UndertowPhase14QSharedActorCollision{
    * grants neither movement nor new collision/paint authority. */
   public sourceFootSupport(id:string,foot:T21QFoot){
     const actor=this.actors.get(id);
-    if(!actor||![foot.x,foot.y,foot.z].every(Number.isFinite)||
-       Math.hypot(actor.sourceFoot.x-foot.x,actor.sourceFoot.y-foot.y,
-         actor.sourceFoot.z-foot.z)>1e-5)
-      return null;
+    if(!actor||!this.matchesSyncedFoot(actor,foot))return null;
     return this.registeredOriginalSourceFootSupport(foot)??
       (this.f4Research?this.f4CapsuleSupport(actor,foot):null);
+  }
+
+  private matchesSyncedFoot(actor:ActorBody,foot:T21QFoot):boolean{
+    return Math.hypot(actor.sourceFoot.x-foot.x,actor.sourceFoot.y-foot.y,
+      actor.sourceFoot.z-foot.z)<=1e-5;
   }
 
   /** Static SOURCE physical support for an observed OR candidate foot.
@@ -464,28 +468,56 @@ export class UndertowPhase14QSharedActorCollision{
       corrected:null;
   }
 
-  /** Follow Crowd's horizontal intent using the shared world's grounded KCC. */
+  /** Follow Crowd's horizontal intent using the shared world's Rapier KCC. */
   public tryF4GroundStep(
     id:string,from:T21QFoot,to:T21QFoot,maxDistance:number
   ):T21QFoot|null{
     const actor=this.actors.get(id);
-    if(!this.f4Research||!actor||!this.sourceFootSupport(id,from)||
-       this.hasApproximateSameLayerOverlap(id,from))return null;
+    if(!this.f4Research||!actor||!this.matchesSyncedFoot(actor,from)||
+       this.hasApproximateSameLayerOverlap(id,from))
+      return null;
+    const localOriginal=isT21F4OriginalTerrainStage(this.stage);
+    const supported=!!this.sourceFootSupport(id,from);
+    if(!supported&&(!localOriginal||!this.hasF4ShortDescentFloor(from)))return null;
     const dx=to.x-from.x,dz=to.z-from.z;
     const distance=Math.hypot(dx,dz);
     const fraction=distance>maxDistance?maxDistance/distance:1;
-    // The player uses the same downward bias after grounded contact.
+    // Keep the normal grounded bias, and apply player gravity between the
+    // shoulder and the independently verified lower floor.
+    const descentSpeed=supported&&actor.f4DescentSpeed===0?.5:Math.min(
+      actor.f4DescentSpeed+GAME_CONFIG.player.gravityMetersPerSecond2/60,
+      GAME_CONFIG.player.maxFallSpeedMetersPerSecond);
     this.kcc.computeColliderMovement(actor.collider,
-      {x:dx*fraction,y:-.5/60,z:dz*fraction},
+      {x:dx*fraction,y:-descentSpeed/60,z:dz*fraction},
       undefined,undefined,(collider:Collider)=>
         collider.handle!==actor.collider.handle&&
         this.physics.shouldCharacterCollide(collider,'HUMAN'));
     const move=this.kcc.computedMovement();
     const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
-    return Math.hypot(move.x,move.z)<=maxDistance+1e-5&&
-      !this.hasApproximateSameLayerOverlap(id,foot)&&
-      (this.registeredOriginalSourceFootSupport(foot)||
-        this.f4CapsuleSupport(actor,foot))?foot:null;
+    if(Math.hypot(move.x,move.z)>maxDistance+1e-5||
+       this.hasApproximateSameLayerOverlap(id,foot))return null;
+    const landed=!!(this.registeredOriginalSourceFootSupport(foot)||
+      this.f4CapsuleSupport(actor,foot));
+    if(!landed&&(!localOriginal||move.y>=0||!this.hasF4ShortDescentFloor(foot)))
+      return null;
+    const descending=!landed||
+      (actor.f4DescentSpeed>0&&!this.kcc.computedGrounded());
+    actor.f4DescentSpeed=descending?descentSpeed:0;
+    return foot;
+  }
+
+  /** Authorize only a swept downward step toward nearby walkable terrain. */
+  private hasF4ShortDescentFloor(foot:T21QFoot):boolean{
+    const p=PLAYER_CHARACTER_PHYSICS;
+    const hit=this.physics.castCharacterFootSupport(
+      new Vec3(foot.x,foot.y+p.humanFootOffsetMeters,foot.z),p.humanFootOffsetMeters,'HUMAN');
+    const drop=hit?foot.y-hit.point.y:Infinity;
+    const maxDrop=p.autostepMaxHeightMeters+2*p.controllerOffsetMeters;
+    if(!hit||drop<=0||drop>maxDrop)return false;
+    const ray=new RAPIER.Ray({x:foot.x,y:foot.y+p.controllerOffsetMeters,z:foot.z},
+      {x:0,y:-1,z:0});
+    const face=hit.collider.castRayAndGetNormal(ray,drop+2*p.controllerOffsetMeters,true);
+    return !!face&&face.normal.y>=Math.cos(p.maxSlopeClimbAngleRadians);
   }
 
   /**

@@ -32,6 +32,8 @@ import {eligibleB192SourceHumanPursuit} from './B192SourceHumanPursuit';
 import {b421RealEnemyStandoff,type B421OriginalWeaponLane}
  from './B421RealEnemyStandoff';
 import {cpuWeaponRangeMeters} from '../ai/CpuAgentSystem';
+import {hasRegisteredOriginalSourceCpuRapierFootSupport,
+ type OriginalSourceCpuFootSupportWitness} from '../ai/OriginalSourceCpuRapierFootSupport';
 import {chooseB181OriginalSourceSight} from '../ai/B181OriginalSourceCombatSight';
 import {b180OriginalSourceUnownedNeighborAim} from '../ai/B180OriginalSourcePaintOpportunity';
 import {weaponProfile,type WeaponId} from '../weapons/WeaponCatalog';
@@ -1559,14 +1561,17 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     new Vec3(from.x,from.y,from.z),
     new Vec3(to.x,to.y,to.z),'ink-projectile'),null,range).target!==null;
  }
- private chooseF4OriginalCorridorGoal(id:string,foot:Vec3,out:Vec3):boolean{
+ private chooseF4OriginalCorridorGoal(id:string,foot:Vec3,out:Vec3,
+  f4Support:OriginalSourceCpuFootSupportWitness|null|undefined):boolean{
   const corridors=f4OriginalCorridorEndpoints(this.stage);
   if(!corridors.length||!this.physics||!this.isLiveRejoinedSourceCpu(id))return false;
+  // A capsule can be supported by an original shoulder beside its center
+  // ray. Use the same Rapier witness as the physical step and CPU admission.
+  if(!hasRegisteredOriginalSourceCpuRapierFootSupport(
+      foot,f4Support,this.stage.solids))return false;
   const offset=PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
   const supportAt=(point:Vec3)=>this.physics!.castCharacterFootSupport(
    new Vec3(point.x,point.y+offset,point.z),offset,'HUMAN');
-  const current=supportAt(foot);
-  if(!current||Math.abs(current.point.y-foot.y)>.18)return false;
   let patrol=this.f4OriginalPatrol.get(id);
   if(!patrol&&hasF4OriginalIngress(this.stage)){
    const side=this.bots.find(bot=>bot.id===id)?.team===Team.A?1:-1;
@@ -1592,8 +1597,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // concrete at the same XZ. Accept that height bias only on the same floor.
   const projectedSupport=start&&path.startSnapDistanceMeters>.30?
    supportAt(new Vec3(start.x,start.y,start.z)):null;
+  const current=projectedSupport?supportAt(foot):null;
   const sameFloorReentry=hasF4OriginalIngress(this.stage)&&start&&
    path.startSnapDistanceMeters<=.44&&Math.hypot(start.x-foot.x,start.z-foot.z)<=.12&&
+   current&&Math.abs(current.point.y-foot.y)<=.18&&
    projectedSupport?.solidId===current.solidId&&
    Math.abs(projectedSupport.point.y-current.point.y)<=.05;
   if(!path.reachedTarget||path.pointCount<2||
@@ -1606,7 +1613,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return true;
  }
 
- chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3):boolean{
+ chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3,
+  f4Support?:OriginalSourceCpuFootSupportWitness|null):boolean{
   // Post-splat respawn starts at the genuine ORIGINAL upper source spawn.
   // Reuse exactly the F2-assigned one-way offmesh FIRST DROP. The virtual
   // Recast agent gets only a goal; real feet remain under Rapier KCC.
@@ -1645,7 +1653,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.b442LastApprovedFront.delete(id);
    this.heldRequests++;return false;
   }
-  if(this.chooseF4OriginalCorridorGoal(id,realFoot,out))return true;
+  if(this.chooseF4OriginalCorridorGoal(id,realFoot,out,f4Support))return true;
   // Opt-in F4 experiment: submit short native Crowd goals along the two
   // pre-existing center ramps, never a forced Actor pose or NavLink.
   // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
