@@ -260,6 +260,9 @@ import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
 const STEP=1/60;
+// The original rim is +1.55m. With gravity applied before each 60Hz
+// physics step, 10.2m/s gives the human capsule about 1.77m of rise.
+const F4_ORIGINAL_HUMAN_JUMP_SPEED_METERS_PER_SECOND=10.2;
 type W10B14Actor={
  id:string;position:Vec3;previousPosition:Vec3;entity:Entity;
  lifeState:'ACTIVE'|'SPLATTED';hp:number;
@@ -912,7 +915,8 @@ export class UndertowF3PlayablePreviewApp{
      (this.b203FullRound&&qa.get('t21QaInput')!=='deterministic'))
    this.camera.enableSourcePracticeSmartOcclusion();
   this.player=new PlayerController(app,this.physics,this.input,
-   this.camera,this.ink,this.stats);
+   this.camera,this.ink,this.stats,
+   terrain?F4_ORIGINAL_HUMAN_JUMP_SPEED_METERS_PER_SECOND:undefined);
   // Genuine human SOURCE only: physical KCC ground contact, not a nearby
   // optical false bridge, controls the floor-ink resource effects.
   if(this.f4ResearchMode)this.player.enableF4KccAudit();

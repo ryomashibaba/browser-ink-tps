@@ -216,7 +216,9 @@ export class PlayerController {
     private readonly input: PlayerInput,
     private readonly camera: ThirdPersonCamera,
     private readonly gameplayInk: GameplayInkSystem,
-    private readonly stats: PerformanceStats
+    private readonly stats: PerformanceStats,
+    private readonly humanJumpSpeedMetersPerSecond: number =
+      GAME_CONFIG.player.jumpSpeedMetersPerSecond
   ) {
     this.body = physics.world.createRigidBody(
       RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, 1.15, 4.6)
@@ -737,7 +739,7 @@ export class PlayerController {
           : tuning.groundAccelerationMetersPerSecond2,
         dt
       );
-      this.tryJump(jumpPressed, tuning.jumpSpeedMetersPerSecond);
+      this.tryJump(jumpPressed, this.humanJumpSpeedMetersPerSecond);
       this.applyGravity(dt);
     }
 
