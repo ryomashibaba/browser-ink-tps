@@ -4,7 +4,8 @@ import {undertowT21dConnectivityQaStage}
 import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
  from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
 import {PRODUCTION_STAGE_DEFINITION} from '../stage/StageDefinition';
-import {auditF3eSourceCoverage,f3eSourceMassingStyle,F3E_SOURCE_MASSING_MODES}
+import {auditF3eSourceCoverage,f3eSourceMassingStyle,F3E_SOURCE_MASSING_MODES,
+ f3eUnverifiedReferenceBatchVisible}
  from './UndertowF3EOriginalSourceCoverage';
 
 describe('F3E all source backed architectural visual terrain only',()=>{
@@ -72,6 +73,18 @@ describe('W10-B28 visual massing on actual source-only architecture',()=>{
   for(const kind of ['WALL','SUPPORT','HIGH','GLASS'] as const)
    expect(f3eSourceMassingStyle(kind,'ARCHITECTURE',true))
     .toEqual(f3eSourceMassingStyle(kind,'ARCHITECTURE'));
+ });
+ it('keeps F4 real PLAYER unverified reference floors hidden even in HOLOGRAM, but preserves F8 QA',()=>{
+  for(const mode of F3E_SOURCE_MASSING_MODES){
+   for(const shade of ['CONCRETE','SLOPE','DETAIL'] as const){
+    expect(f3eUnverifiedReferenceBatchVisible(shade,mode,true,true)).toBe(false);
+    expect(f3eUnverifiedReferenceBatchVisible(shade,mode,false,false)).toBe(true);
+   }
+   for(const shade of ['WALL','SUPPORT','HIGH','GLASS'] as const)
+    expect(f3eUnverifiedReferenceBatchVisible(shade,mode,true,true)).toBe(true);
+  }
+  expect(f3eUnverifiedReferenceBatchVisible('SLOPE','ARCHITECTURE',false,true)).toBe(false);
+  expect(f3eUnverifiedReferenceBatchVisible('SLOPE','HOLOGRAM',false,true)).toBe(true);
  });
  it('exact same source mesh audit and 25/17/26 original authority across both styles',()=>{
   const stage=undertowT21dConnectivityQaStage();

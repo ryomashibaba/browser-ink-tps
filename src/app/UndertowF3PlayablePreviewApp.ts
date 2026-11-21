@@ -923,9 +923,13 @@ export class UndertowF3PlayablePreviewApp{
   // Genuine human SOURCE only: physical KCC ground contact, not a nearby
   // optical false bridge, controls the floor-ink resource effects.
   if(this.f4ResearchMode)this.player.enableF4KccAudit();
+  // F4 local floors may look paintable without a matching certified SOURCE
+  // paint backing. Only actual matching Rapier KCC support may grant
+  // OWN refill, ENEMY ink effects or squid-floor movement in F4 too.
+  const physicalFloorInkGuard=this.nativeLiveSourcePrestart||this.f4ResearchMode;
   this.player.setNativeSourceGroundInkGuard(
-   this.nativeLiveSourcePrestart,
-   this.nativeLiveSourcePrestart?this.rawStage.paintSurfaces:undefined);
+   physicalFloorInkGuard,
+   physicalFloorInkGuard?this.rawStage.paintSurfaces:undefined);
   this.player.setTeam(Team.A);
   this.humanSpawn=new Vec3(
    slots.teamASlots[3]![0],
@@ -2682,7 +2686,13 @@ export class UndertowF3PlayablePreviewApp{
    // F8 QA displays the original exact-source architectural references.
    // Real PLAYER displays reference-only floor shapes as faint optics,
    // while approved stage Rapier colliders keep their original rendering.
-   const priority=nativeHumanMode&&ui.dataset.t21B245Presentation==='PLAYER';
+   // The local F4 return is a real manually controlled PLAYER round, not
+   // one of the canonical portal URLs. Its reference-only unbacked floors
+   // must never look like traversable collision while F8 QA stays inspectable.
+   const physicalPlayerView=nativeHumanMode||
+    (this.f4ResearchMode&&this.b203FullRound&&
+     query.get('t21QaInput')!=='deterministic');
+   const priority=physicalPlayerView&&ui.dataset.t21B245Presentation==='PLAYER';
    this.realPlayerFloorPriority=priority;
    this.sourceCompletion.setRegisteredFloorPriority(priority);
    // F3G/F3L replace F3E's visual study after loading: same real

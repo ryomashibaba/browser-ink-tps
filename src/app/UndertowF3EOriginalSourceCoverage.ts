@@ -248,6 +248,17 @@ function updateSourceMaterial(m:StandardMaterial,shade:Shade,
 /** 7 GPU batches instead of ~90 independent source draw calls.
  * Geometry retains exact vertices and triangle order; only render batching
  * and purely visual tint are transformed. */
+/** Source-only floor/ledge optics have NO live KCC authority. Real
+ * PLAYER hides them in both material modes, while F8 QA can inspect them.
+ * Previously switching to HOLOGRAM re-exposed false floor silhouettes. */
+export function f3eUnverifiedReferenceBatchVisible(
+ kind:Shade,mode:F3eSourceMassingMode,
+ registeredFloorPriority=false,hideReferenceFloorsDuringPlay=false
+):boolean{
+ const floorReference=kind==='CONCRETE'||kind==='SLOPE'||kind==='DETAIL';
+ return !floorReference||!(registeredFloorPriority||
+  hideReferenceFloorsDuringPlay&&mode==='ARCHITECTURE');
+}
 export function buildF3eOriginalSourceCoverage(
  app:AppBase,stage:StageDefinition,hideReferenceFloorsDuringPlay=false
 ){
@@ -258,8 +269,8 @@ export function buildF3eOriginalSourceCoverage(
  let registeredFloorPriority=false;
  const batches=new Map<Shade,{node:Entity;material:StandardMaterial}>();
  const updateBatch=(kind:Shade,node:Entity,material:StandardMaterial)=>{
-  const floorReference=kind==='CONCRETE'||kind==='SLOPE'||kind==='DETAIL';
-  node.enabled=!(hideReferenceFloorsDuringPlay&&floorReference&&visualMode==='ARCHITECTURE');
+  node.enabled=f3eUnverifiedReferenceBatchVisible(
+   kind,visualMode,registeredFloorPriority,hideReferenceFloorsDuringPlay);
   updateSourceMaterial(material,kind,visualMode,registeredFloorPriority);
  };
  const categories=Object.keys(manifest.categories) as Shade[];
