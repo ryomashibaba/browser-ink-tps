@@ -65,12 +65,16 @@ describe('F4 central lane cannot stay owned by a splatted CPU',()=>{
    ['B1',{side:-1,phase:'low',returnIndex:0}]
   ]);
   t.f4CenterWaiting=new Map([['A1',2],['B1',3]]);
+  // An ACTIVE CPU may never release its own reservation by posing as a splat.
+  traffic.onNativeSourceCpuSplat('B1');
+  expect(t.f4CenterPatrol.has('B1')).toBe(true);
   t.releaseF4CenterLane('B1');
   expect(t.f4CenterOwner).toBe('A1');
   expect(t.f4CenterPatrol.has('B1')).toBe(false);
   expect(t.f4CenterWaiting.has('B1')).toBe(false);
   expect(t.f4CenterPatrol.has('A1')).toBe(true);
-  t.releaseF4CenterLane('A1');
+  t.bots[0].lifeState='SPLATTED';
+  traffic.onNativeSourceCpuSplat('A1');
   expect(t.f4CenterOwner).toBeNull();
   expect(t.f4CenterPatrol.size).toBe(0);
   // A cleared lane is not a teleport or automatic new owner selection.

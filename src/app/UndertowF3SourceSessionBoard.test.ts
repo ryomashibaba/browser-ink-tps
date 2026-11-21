@@ -33,6 +33,29 @@ describe('W10-B58 actual source-local session recap gate',()=>{
   v.stopReason='SOURCE_PHYSICAL_STOP';
   expect(sourceSessionSummary(v)).toMatchObject({state:'SAFE_STOP',finished:false});
  });
+ it('shows genuine human HP hits/splats for ordinary full-round F4 combat',()=>{
+  const v=input();v.matchState='TIME_UP';v.tick=10800;
+  v.timeRemainingSeconds=0;v.humanCpuDirectHits=9;
+  v.humanCpuDirectSplats=2;
+  expect(sourceSessionSummary(v)).toMatchObject({
+   finished:true,realHumanCpuHits:9,realHumanCpuSplats:2,
+   officialWinner:'NONE',officialScoreableSurfaces:0
+  });
+  const old=input();
+  expect(sourceSessionSummary(old).realHumanCpuHits).toBeNull();
+  expect(sourceSessionSummary(old).realHumanCpuSplats).toBeNull();
+ });
+ it('rejects incomplete or impossible actual human combat ledgers',()=>{
+  const v=input();v.humanCpuDirectHits=3;
+  expect(()=>sourceSessionSummary(v))
+   .toThrow('W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT');
+  v.humanCpuDirectSplats=4;
+  expect(()=>sourceSessionSummary(v))
+   .toThrow('W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT');
+  v.humanCpuDirectSplats=1;v.humanCpuDirectHits=NaN;
+  expect(()=>sourceSessionSummary(v))
+   .toThrow('W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT');
+ });
  it('fails closed on data/source drift, invalid CPU ids and fabricated score',()=>{
   const v=input();v.sourceScoreablePromotions=1;
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_SOURCE_AUTHORITY_GATE');

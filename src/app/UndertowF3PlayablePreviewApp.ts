@@ -9188,7 +9188,8 @@ export class UndertowF3PlayablePreviewApp{
        b217.actualCpuChangedPaintCells+' REAL INK CELLS\n':
        'CPU ACTIVITY · WAITING FOR 5s REAL NATIVE SAMPLE\n')+
       'ENEMY SIGHT '+state.b181OriginalCombatSight.visibleEnemySelections+
-      ' · DIRECT HITS '+state.humanCpuDirectHits+'\n':'')+
+      ' · DIRECT HITS '+state.humanCpuDirectHits+
+      ' · DIRECT CPU SPLATS '+state.humanCpuDirectSplats+'\n':'')+
     b401SourceHudLine(b401)+
     'NO OFFICIAL WINNER';
    this.b205RoundClock.style.whiteSpace='pre-line';

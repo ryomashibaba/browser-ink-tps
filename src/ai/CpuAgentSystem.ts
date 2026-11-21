@@ -208,6 +208,9 @@ export interface CpuQaSourceGoalAuthority {
   /** Real CPU respawn starts a new SOURCE life before traffic.observe.
    * Invalidate prior physical-rejoin evidence before another bot can aim. */
   onNativeSourceCpuRespawn?(id:string):void;
+  /** F4 ONLY: real lethal HP-zero immediately releases the one-CPU
+   * central traversal reservation, without moving any live body. */
+  onNativeSourceCpuSplat?(id:string):void;
   /** Report only REAL 60 Hz Rapier KCC decisions for an already-rejoined
    * original CPU. These never grant movement, paint, actor or NavLink. */
   noteRealSourceKccRejectedStep?(
@@ -5249,6 +5252,11 @@ export class CpuAgentSystem {
     this.stats.cpuSplats += 1;
     if (bot.lethalHumanDirect) this.stats.humanCpuDirectSplats += 1;
     bot.lethalHumanDirect = false;
+    // The real F4 center crossing releases its narrow-lane reservation
+    // on THIS physical lethal tick. traffic.observe() retains its fallback
+    // cleanup, but cannot strand a lane while another projectile resolves.
+    if(isT21F4OriginalTerrainStage(this.stage))
+      this.f3dSourceGoals?.onNativeSourceCpuSplat?.(bot.id);
   }
 
   private respawnBot(bot: CpuBot): void {

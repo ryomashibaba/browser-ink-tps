@@ -3883,6 +3883,14 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   this.f4CenterWaiting.delete(id);
   if(this.f4CenterOwner===id)this.f4CenterOwner=null;
  }
+ /** Called only for genuine F4 lethal HP-zero from CpuAgentSystem,
+  * after the physical capsule has been removed. A dead actor cannot
+  * reserve the single-file center while other real CPUs are alive. */
+ onNativeSourceCpuSplat(id:string):void{
+  const bot=this.bots.find(b=>b.id===id);
+  if(!bot||bot.lifeState!=='SPLATTED')return;
+  this.releaseF4CenterLane(id);
+ }
  onNativeSourceCpuRespawn(id:string):void{
   const bot=this.bots.find(b=>b.id===id);
   if(!bot||bot.lifeState!=='SPLATTED')

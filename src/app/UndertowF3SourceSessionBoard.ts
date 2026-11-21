@@ -151,6 +151,21 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length)
   throw Error('W10_B58_INVALID_NATIVE_SESSION_VALUES');
 
+ // The ordinary 180s F4 combat round already supplies post-HP human
+ // direct-hit and direct-splat counters. Expose them regardless of the
+ // separately opted-in B343/B384 SOURCE circuit. Absent old callers are
+ // UNKNOWN, never invented zero hits; malformed partial ledgers fail closed.
+ const hasHumanDirect=s.humanCpuDirectHits!==undefined||
+  s.humanCpuDirectSplats!==undefined;
+ if(hasHumanDirect&&(
+  !Number.isSafeInteger(s.humanCpuDirectHits)||
+  !Number.isSafeInteger(s.humanCpuDirectSplats)||
+  s.humanCpuDirectHits!<0||s.humanCpuDirectSplats!<0||
+  s.humanCpuDirectSplats!>s.humanCpuDirectHits!))
+  throw Error('W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT');
+ const realHumanCpuHits=hasHumanDirect?s.humanCpuDirectHits!:null;
+ const realHumanCpuSplats=hasHumanDirect?s.humanCpuDirectSplats!:null;
+
  // B395: a native human bomb ledger is not an official score or CPU hit.
  // Missing historical data stays UNKNOWN rather than a fabricated zero.
  const humanInk=s.b23HumanInkFeedback;
@@ -270,6 +285,7 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
   actualCpuSplats:s.cpuSplats,
   actualHumanSplats:s.humanSplats,
   actualHumanRespawns:s.humanRespawns,
+  realHumanCpuHits,realHumanCpuSplats,
   cpuPhysicallyRejoined:s.cpu.physicalRejoins.length,
   sourcePaintableSurfaces:17 as const,
   officialScoreableSurfaces:0 as const,
@@ -510,6 +526,9 @@ export function createF3SourceSessionBoard(
    v.actualCpuImpactInkCells+' changed impact cells\n'+
    'SPLATS · human '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
    ' · human returns '+v.actualHumanRespawns+
+   (v.realHumanCpuHits!==null?
+    '\nHUMAN→CPU · '+v.realHumanCpuHits+' actual HP hits / '+
+     v.realHumanCpuSplats+' direct splats · NOT TURF SCORE':'')+
    (v.bombRecap?'\nHUMAN SUB · '+v.bombRecap.actualHumanExplosions+
     ' native bursts / '+v.bombRecap.actualSourceBombStamps+
     ' source stamps / '+v.bombRecap.actualChangedSourceCells+
@@ -549,6 +568,9 @@ export function createF3SourceSessionBoard(
    v.actualCpuImpactInkCells+' changed source cells\n'+
    'SPLATS   HUMAN '+v.actualHumanSplats+' / CPU '+v.actualCpuSplats+
    ' · HUMAN RESPAWNS '+v.actualHumanRespawns+
+   (v.realHumanCpuHits!==null?
+    '\nHUMAN→CPU ACTUAL HP HITS '+v.realHumanCpuHits+
+    ' · DIRECT SPLATS '+v.realHumanCpuSplats:'')+
    (v.bombRecap?'\nHUMAN SUB · '+v.bombRecap.actualHumanExplosions+
     ' native bursts · '+v.bombRecap.actualSourceBombStamps+
     ' source stamps · '+v.bombRecap.actualChangedSourceCells+
@@ -585,6 +607,10 @@ export function createF3SourceSessionBoard(
   finish.dataset.t21B59State=v.finished?'FINISHED':'HIDDEN';
   finish.dataset.t21B59OriginalWinner='NONE';
   finish.dataset.t21B59HumanInk=String(v.realHumanImpactInkCells);
+  finish.dataset.t21B59RealHumanCpuHits=
+   String(v.realHumanCpuHits??'NOT_MEASURED');
+  finish.dataset.t21B59RealHumanCpuSplats=
+   String(v.realHumanCpuSplats??'NOT_MEASURED');
   finish.dataset.b373RealSourceCircuit=
    v.sourceShooter?.currentLifeStatus??'UNSELECTED';
   finish.dataset.b373RealHumanCpuHits=
