@@ -9105,7 +9105,9 @@ export class UndertowF3PlayablePreviewApp{
   }
   this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
    this.survey.snapshot().active||this.galleryIndex>=0);
-  this.b58SessionBoard.render(state);
+  this.b58SessionBoard.render({...state,
+   f4OriginalTerrainResearch:this.f4ResearchMode&&this.f4OriginalCorridorsPresent
+  });
   if(this.b205RoundClock){
    // Read at most every 180 REAL native ticks, no synthetic match clock.
    const b401=this.b401LiveSourceInk.observe(

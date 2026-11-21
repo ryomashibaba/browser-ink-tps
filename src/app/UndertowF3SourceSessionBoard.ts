@@ -97,6 +97,8 @@ export interface SourceSessionMetrics {
  productionAuthorized:boolean;
  unrestricted4v4Certified:boolean;
  cpu:{physicalRejoins:readonly string[]};
+ /** Label-only private F4 mode; never authorizes scoring or stage changes. */
+ f4OriginalTerrainResearch?:boolean;
  b23HumanInkFeedback:{
   humanChangedCells:number;humanChangedImpactCount:number;
   /** Optional actual post-PaintCoordinator B41 source evidence. */
@@ -273,8 +275,11 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
    done?'COMPLETE' as const:s.matchState,
   finished:done,
   headline:s.stopReason?'SOURCE SAFETY STOP':
-   done?'SOURCE SESSION FINISHED':s.matchState==='PLAYING'?
-    'LIVE SOURCE-LOCAL PLAY':'SOURCE-STAGED ENTRY',
+   s.f4OriginalTerrainResearch===true?
+    (done?'F4 RESEARCH ROUND FINISHED':s.matchState==='PLAYING'?
+     'LIVE F4 RESEARCH COMBAT':'F4 RESEARCH STAGING'):
+    done?'SOURCE SESSION FINISHED':s.matchState==='PLAYING'?
+     'LIVE SOURCE-LOCAL PLAY':'SOURCE-STAGED ENTRY',
   result:'NO OFFICIAL TURF RESULT' as const,
   timeRemainingSeconds:Number(s.timeRemainingSeconds.toFixed(2)),
   genuineHumanShots:s.shotsFired,

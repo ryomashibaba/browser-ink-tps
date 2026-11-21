@@ -1,3 +1,5 @@
+import {WEAPON_ORDER,type WeaponId} from '../weapons/WeaponCatalog';
+
 /** B364 genuine user center-ray CPU alignment. Pure HUD, zero gameplay writes.
  * Real target source is the already-resolved ThirdPersonCamera original Rapier
  * cover/paint-first selection and CpuAgentSystem physical hit sphere.
@@ -28,7 +30,9 @@ export function b364RealSourceCrosshair(x:B364SourceAimInput){
   x.productionAuthorized!==false||x.unrestricted4v4Certified!==false||
   !Number.isSafeInteger(x.nativeTick)||x.nativeTick<0||
   !Number.isFinite(x.playerHp)||x.playerHp<=0||
-  x.weaponId!=='pulse-sprayer'||!c||
+  (x.weaponId!=='pulse-sprayer'&&
+   !(x.f4OriginalTerrainResearch===true&&
+     WEAPON_ORDER.includes(x.weaponId as WeaponId)))||!c||
   !['B1','B2','B3','B4'].includes(c.id)||
   typeof c.guarded!=='boolean'||
   !Number.isFinite(c.distanceMeters)||c.distanceMeters<=0||

@@ -1,4 +1,5 @@
 import {describe,expect,it} from 'vitest';
+import {WEAPON_ORDER} from '../weapons/WeaponCatalog';
 import {b364RealSourceCrosshair,type B364SourceAimInput}
  from './B364RealSourceCrosshair';
 const sample=():B364SourceAimInput=>({
@@ -36,6 +37,21 @@ describe('B364 exact native physical CPU crosshair (not bullet hit)',()=>{
   x.f4OriginalTerrainResearch=true;
   x.cpu=[{...x.cpu[0]!,rejoined:false,mobilityState:'FIRST_DROP_FALL'}];
   expect(b364RealSourceCrosshair(x)).toBeNull();
+ });
+ it('shows genuine F4 camera aim across the existing native 12-weapon catalog',()=>{
+  expect(WEAPON_ORDER).toHaveLength(12);
+  for(const weaponId of WEAPON_ORDER){
+   const x=sample();x.f4OriginalTerrainResearch=true;x.weaponId=weaponId;
+   const v=b364RealSourceCrosshair(x);
+   expect(v).toMatchObject({id:'B1',realHp:66,scoreable:0,
+    gameplayWrites:0,directHpDamageCertified:false,
+    opponentRouteCertified:false});
+  }
+  const ordinary=sample();ordinary.weaponId='needle-smg';
+  expect(b364RealSourceCrosshair(ordinary)).toBeNull();
+  ordinary.f4OriginalTerrainResearch=true;
+  ordinary.weaponId='forged-paid-gun';
+  expect(b364RealSourceCrosshair(ordinary)).toBeNull();
  });
  it('rejects other actors, fake HP, missing native CPU or malformed hit',()=>{
   for(const apply of [

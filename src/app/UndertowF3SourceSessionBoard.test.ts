@@ -56,6 +56,19 @@ describe('W10-B58 actual source-local session recap gate',()=>{
   expect(()=>sourceSessionSummary(v))
    .toThrow('W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT');
  });
+ it('labels private F4 completion without assigning an official winner',()=>{
+  const v=input();v.f4OriginalTerrainResearch=true;v.matchState='TIME_UP';
+  v.tick=10800;v.timeRemainingSeconds=0;
+  expect(sourceSessionSummary(v)).toMatchObject({
+   state:'COMPLETE',finished:true,headline:'F4 RESEARCH ROUND FINISHED',
+   result:'NO OFFICIAL TURF RESULT',officialWinner:'NONE',
+   officialScoreableSurfaces:0,matchVictoryCertified:false
+  });
+  const baseline=input();baseline.matchState='TIME_UP';
+  baseline.tick=10800;baseline.timeRemainingSeconds=0;
+  expect(sourceSessionSummary(baseline).headline)
+   .toBe('SOURCE SESSION FINISHED');
+ });
  it('fails closed on data/source drift, invalid CPU ids and fabricated score',()=>{
   const v=input();v.sourceScoreablePromotions=1;
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_SOURCE_AUTHORITY_GATE');
