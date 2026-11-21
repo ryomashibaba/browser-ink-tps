@@ -3109,7 +3109,8 @@ export class UndertowF3PlayablePreviewApp{
      const stageRoot=this.app.root.findByName('StageRoot');
      for(const id of installed.f4CoveredSolidIds){
       const solid=stageRoot?.findByName(id);
-      if(solid?.render)this.f4CoveredGrayRenders.push(solid);
+      if(solid instanceof Entity&&solid.render)
+       this.f4CoveredGrayRenders.push(solid);
      }
      this.canvas.dataset.t21F4UvPhysicalTriangles=
       installed.f4MatchedTriangles+'/'+installed.f4PhysicalTriangleCount;
