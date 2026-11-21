@@ -1,6 +1,12 @@
 name: T21 fast feedback - full unit and type checks
 
 on:
+  # One bounded validation of the existing integrated research HEAD.
+  # The narrow workflow-file path avoids running a full suite for every
+  # subsequent gameplay commit; it remains manually dispatchable.
+  push:
+    branches: [research/t21-integrated-a1-c-patrol-four-mode-20261105]
+    paths: [.github/workflows/t21-fast-feedback.yml]
   pull_request:
     branches: ["main"]
     types: [opened, reopened, synchronize, ready_for_review, labeled]
