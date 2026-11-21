@@ -196,6 +196,9 @@ export interface F4CpuCenterTransfer {
 export interface CpuQaSourceGoalAuthority {
   f4CenterTransfer?(id:string):F4CpuCenterTransfer|null;
   noteF4CenterLanding?(id:string,jump:boolean):void;
+  /** A genuine F4 takeoff physically lands back at its own start.
+   * Release only its central lane claim; no bot/KCC/Crowd relocation. */
+  noteF4CenterTakeoffAbort?(id:string):void;
   chooseSourceGoal(id:string,realFoot:Vec3,out:Vec3,
     f4Support?:OriginalSourceCpuFootSupportWitness|null):boolean;
   /** Optional original-source aim, not a new movement or scoring goal. */
@@ -2027,15 +2030,27 @@ export class CpuAgentSystem {
     flight.speedY=0;
     const landed=Math.abs(bot.position.y-transfer.to[1])<=.12&&
       this.f4CenterContinuation(bot.position,new Vec3(...transfer.continueTo));
+    // Merely sharing the takeoff's HEIGHT is not a return to its floor.
+    // Require a physically grounded, spatially nearby foot and the
+    // existing real native navigation continuation before rejoining.
     const backAtStart=!landed&&flight.elapsed>.55&&
-      Math.abs(bot.position.y-transfer.from[1])<=.12&&
+      bot.position.distance(new Vec3(...transfer.from))<=.35&&
       this.f4CenterContinuation(bot.position,new Vec3(...transfer.from));
     if(!landed&&!backAtStart)return;
     bot.agent=this.navigation.addAgent(bot.position);
     bot.mobilityState='GROUND';
     bot.thinkRemaining=0;
     if(landed)this.f3dSourceGoals?.noteF4CenterLanding?.(bot.id,transfer.jump);
-    else bot.jumpCooldownSeconds=.75;
+    else{
+      bot.jumpCooldownSeconds=.75;
+      // A failed UPWARD takeoff has returned to its authentic lower
+      // physical floor: the CPU must requeue rather than monopolizing
+      // the one-CPU F4 crossing until its next 0.75s retry.
+      // A failed shoulder DESCENT still owns the narrow upper passage:
+      // releasing that reservation would admit a collision from below.
+      if(transfer.jump)
+        this.f3dSourceGoals?.noteF4CenterTakeoffAbort?.(bot.id);
+    }
     this.f4CenterFlights.delete(bot.id);
   }
 

@@ -1584,6 +1584,23 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }:null;
  }
 
+ /** Called only after genuine Rapier-grounded return to the original
+  * F4 takeoff. A failed jump must NOT keep the central passage reserved.
+  * On success the existing noteF4CenterLanding path remains unchanged.
+  * A failed upper-shoulder descent intentionally retains its lane. */
+ noteF4CenterTakeoffAbort(id:string):void{
+  const patrol=this.f4CenterPatrol.get(id);
+  const bot=this.bots.find(b=>b.id===id);
+  if(!patrol||this.f4CenterOwner!==id||
+     patrol.phase!=='takeoff'||!bot||
+     bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND')return;
+  const actualTakeoff=T21_F4_CPU_CENTER_STEPS[
+   patrol.side===1?'positive':'negative'].takeoff;
+  if(bot.position.distance(new Vec3(...actualTakeoff))>.35)return;
+  patrol.phase='low';
+  this.f4CenterWaiting.delete(id);
+  this.f4CenterOwner=null;
+ }
  noteF4CenterLanding(id:string,jump:boolean):void{
   const patrol=this.f4CenterPatrol.get(id);
   if(!patrol||this.f4CenterOwner!==id)return;

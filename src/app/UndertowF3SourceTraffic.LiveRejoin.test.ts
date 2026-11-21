@@ -8,6 +8,8 @@ import {originalNativeLandingFootReprojection}
  from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
 import {Vec3} from 'playcanvas';
 import {Team} from '../ink/types';
+import {T21_F4_CPU_CENTER_STEPS}
+ from '../stage/undertow/UndertowT21F4OriginalTerrain';
 import {undertowT21dConnectivityQaStage}
  from '../stage/undertow/UndertowSpillwayConnectivityQa';
 import {proposeB441OriginalFrontline,proposeB441OriginalRampLocalGoals}
@@ -56,6 +58,42 @@ function fixture(){
  });
  return {traffic,bots,historical};
 }
+describe('F4 aborted original takeoff yields the real central passage',()=>{
+ it('releases only a genuine grounded takeoff, never an upper-shoulder abort',()=>{
+  const {traffic,bots}=fixture(),t:any=traffic;
+  const takeoff=T21_F4_CPU_CENTER_STEPS.positive.takeoff;
+  t.f4CenterOwner='A1';
+  t.f4CenterPatrol=new Map([
+   ['A1',{side:1,phase:'takeoff',returnIndex:0}],
+   ['B1',{side:-1,phase:'low',returnIndex:0}]
+  ]);
+  t.f4CenterWaiting=new Map([['A1',1],['B1',2]]);
+  bots[0]!.position.set(...takeoff);
+  bots[0]!.mobilityState='GROUND';
+  t.noteF4CenterTakeoffAbort('B1'); // not the lane owner
+  expect(t.f4CenterOwner).toBe('A1');
+  bots[0]!.position.z+=1;
+  t.noteF4CenterTakeoffAbort('A1'); // not the real takeoff floor
+  expect(t.f4CenterOwner).toBe('A1');
+  bots[0]!.position.set(...takeoff);
+  t.f4CenterPatrol.get('A1').phase='shoulder';
+  t.noteF4CenterTakeoffAbort('A1'); // shoulder remains reserved
+  expect(t.f4CenterOwner).toBe('A1');
+  t.f4CenterPatrol.get('A1').phase='takeoff';
+  bots[0]!.mobilityState='F4_CENTER_TRANSFER';
+  t.noteF4CenterTakeoffAbort('A1'); // airborne cannot release
+  expect(t.f4CenterOwner).toBe('A1');
+  bots[0]!.mobilityState='GROUND';
+  t.noteF4CenterTakeoffAbort('A1');
+  expect(t.f4CenterOwner).toBeNull();
+  expect(t.f4CenterPatrol.get('A1').phase).toBe('low');
+  expect(t.f4CenterWaiting.has('A1')).toBe(false);
+  expect(t.f4CenterWaiting.has('B1')).toBe(true);
+  expect(t.f4CenterPatrol.has('B1')).toBe(true);
+  expect(bots[0]!.position).toMatchObject({
+   x:takeoff[0],y:takeoff[1],z:takeoff[2]});
+ });
+});
 describe('F4 central lane cannot stay owned by a splatted CPU',()=>{
  it('releases only the dead owner, preserving all other genuine reservations',()=>{
   const {traffic}=fixture();const t:any=traffic;
