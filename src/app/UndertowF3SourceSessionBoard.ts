@@ -150,7 +150,9 @@ export function sourceSessionSummary(s:SourceSessionMetrics){
     !Number.isFinite(s.timeRemainingSeconds)||s.timeRemainingSeconds<0||
     s.timeRemainingSeconds>180.01||
     s.cpu.physicalRejoins.length>7||
-    new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length)
+    new Set(s.cpu.physicalRejoins).size!==s.cpu.physicalRejoins.length||
+    s.cpu.physicalRejoins.some(id=>
+     !['A1','A2','A3','B1','B2','B3','B4'].includes(id)))
   throw Error('W10_B58_INVALID_NATIVE_SESSION_VALUES');
 
  // The ordinary 180s F4 combat round already supplies post-HP human

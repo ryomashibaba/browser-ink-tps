@@ -76,6 +76,11 @@ describe('W10-B58 actual source-local session recap gate',()=>{
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_SOURCE_AUTHORITY_GATE');
   v.unrestricted4v4Certified=false;v.cpu.physicalRejoins=['A1','A1'];
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_INVALID_NATIVE_SESSION_VALUES');
+  v.cpu.physicalRejoins=['NOT_A_CPU'];
+  expect(()=>sourceSessionSummary(v))
+   .toThrow('W10_B58_INVALID_NATIVE_SESSION_VALUES');
+  v.cpu.physicalRejoins=['A1','A2','A3','B1','B2','B3','B4'];
+  expect(sourceSessionSummary(v).cpuPhysicallyRejoined).toBe(7);
   v.cpu.physicalRejoins=[];v.b23HumanInkFeedback.humanChangedCells=-1;
   expect(()=>sourceSessionSummary(v)).toThrow('W10_B58_INVALID_NATIVE_SESSION_VALUES');
  });
