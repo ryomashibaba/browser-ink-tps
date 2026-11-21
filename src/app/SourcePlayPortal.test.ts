@@ -5,6 +5,7 @@ import {sourcePlayPortalDestinations,sourcePlayWeaponModeDestinations,
  sourcePlayPortalReturnUrl,
  sourcePlayFrontlineResearchUrl,sourceReplayHotkeyAction,
  sourceFinishedReplayAction,sourceFinishedReplayHref,
+ f4OriginalLocalFinishedReplayEligible,
  sourcePlayStoreWeaponSelection,SOURCE_PLAY_WEAPON_STORAGE_KEY,
  sourceCanonicalPlayableMode,sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,
@@ -719,5 +720,41 @@ describe('real native SOURCE B389 replay uses live registered surface scoreabili
     'this.b45SourceSurfaces.filter(s=>s.isScoreable).length');
    expect(call).not.toMatch(/navigationLinks\?\.length\?\?0,\s*0\]/);
   }
+ });
+});
+
+describe('F4 PRIVATE original terrain native TIME_UP replay',()=>{
+ const href='http://127.0.0.1:4176/?t21Play=preview&'+
+  't21QaDrive=source&t21W10B183=firstDropPlay&'+
+  't21W10B192=humanCombat&t21W10B203=fullRound&'+
+  't21W10B441=sourceFrontline&t21W10B448=realA3Front&'+
+  't21F4Central=research&t21F4Terrain=original';
+ const ready={href,matchState:'TIME_UP',stopped:false,
+  pointerLocked:false,originalSolids:25,originalPaint:17,
+  originalLinks:26,scoreable:0,finishedVisible:true,canClick:true};
+ it('reloads only the real finished local F4 world; keeps formal SOURCE HOLD',()=>{
+  expect(f4OriginalLocalFinishedReplayEligible(ready)).toBe(true);
+  expect(sourceFinishedReplayAction(ready)).toBe('BLOCK');
+  expect(sourceCanonicalPlayableMode(href)).toBeNull();
+  expect(f4OriginalLocalFinishedReplayEligible({
+   ...ready,href:href.replace('127.0.0.1','localhost')})).toBe(true);
+ });
+ it('rejects premature, interrupted, hidden or nonlocal finished actions',()=>{
+  for(const changed of [
+   {matchState:'PLAYING'},{stopped:true},{pointerLocked:true},
+   {finishedVisible:false},{canClick:false},{originalSolids:51},
+   {originalPaint:16},{originalLinks:25},{scoreable:1}
+  ])expect(f4OriginalLocalFinishedReplayEligible({...ready,...changed}))
+   .toBe(false);
+  for(const url of [
+   href.replace('127.0.0.1','example.org'),
+   href.replace('http:','https:'),
+   href+'#forged',href+'&production=1',href+'&scoreable=1',
+   href+'&t21QaInput=deterministic',
+   href+'&t21QaDrive=source',
+   href.replace('t21F4Terrain=original','t21F4Terrain=photo'),
+   href.replace('t21F4Central=research','t21F4Central=release')
+  ])expect(f4OriginalLocalFinishedReplayEligible({...ready,href:url}))
+   .toBe(false);
  });
 });

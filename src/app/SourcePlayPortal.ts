@@ -132,6 +132,40 @@ export interface SourceFinishedReplayEvidence {
  originalSolids?:number;originalPaint?:number;originalLinks?:number;
  scoreable?:number;finishedVisible:boolean;canClick:boolean;
 }
+/** A completed, windowed F4 PRIVATE-local round may reload its SAME
+ * checked loopback research URL. This does NOT authorize a SOURCE replay,
+ * persist actor/paint state, promote scoring or permit arbitrary QA flags.
+ * The next page boot still verifies the local pinned original-terrain seed.
+ */
+export function f4OriginalLocalFinishedReplayEligible(
+ input:SourceFinishedReplayEvidence
+):boolean{
+ if(input.matchState!=='TIME_UP'||input.stopped||input.pointerLocked||
+    input.originalSolids!==25||input.originalPaint!==17||
+    input.originalLinks!==26||input.scoreable!==0||
+    !input.finishedVisible||!input.canClick)return false;
+ let u:URL;
+ try{u=new URL(input.href)}catch{return false}
+ if(u.protocol!=='http:'||
+    !['localhost','127.0.0.1','[::1]'].includes(u.hostname)||
+    u.hash!==''||
+    !(u.pathname.endsWith('/')||u.pathname.endsWith('/index.html')))
+    return false;
+ // Exact PLAY_F4_ORIGINAL_RETURN_WINDOWS.cmd research flags: no copied
+ // production, scoreable, deterministic, arbitrary kit or remote asset URL.
+ const required:Readonly<Record<string,string>>={
+  t21Play:'preview',t21QaDrive:'source',
+  t21W10B183:'firstDropPlay',t21W10B192:'humanCombat',
+  t21W10B203:'fullRound',t21W10B441:'sourceFrontline',
+  t21W10B448:'realA3Front',t21F4Central:'research',
+  t21F4Terrain:'original'
+ };
+ const rows=[...u.searchParams.entries()];
+ return rows.length===Object.keys(required).length&&
+   new Set(rows.map(([key])=>key)).size===rows.length&&
+   rows.every(([key,value])=>Object.hasOwn(required,key)&&
+     required[key]===value);
+}
 export function sourceFinishedReplayAction(
  input:SourceFinishedReplayEvidence
 ):SourceFinishedReplayAction{

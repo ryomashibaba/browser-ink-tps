@@ -115,7 +115,8 @@ import {b382NativeSourceUserSubEnabled} from './B382NativeSourceUserSubGate';
 import {b384SourceCircuitHref,b384SourceCircuitSelected} from './B384SourceCircuit';
 import {b389NativeNewRoundHref,b389NativeBootWeapon} from './B389NativeSourceRoundReplay';
 import {sourcePlayPortalReturnUrl,sourceFinishedReplayAction,
- sourceFinishedReplayHref,sourceReplayHotkeyAction,
+ sourceFinishedReplayHref,f4OriginalLocalFinishedReplayEligible,
+ sourceReplayHotkeyAction,
  sourcePlayStoreWeaponSelection,sourceCanonicalPlayableMode,
  sourceHumanFullRoundPrestartGuard,
  sourceFreshSelectedModeHref,sourceCoopPracticeFreshReplayHref,
@@ -5426,6 +5427,14 @@ export class UndertowF3PlayablePreviewApp{
   // CPU/paint/clock/source actors before a page navigation.
   if(this.b203FullRound){
    const evidence=this.sourceFinishedReplayEvidence();
+   // The pinned PRIVATE F4 original-terrain launcher is intentionally not
+   // a canonical SOURCE portal mode. A truly finished F4 local world may
+   // start a fresh one only by reloading the unchanged SHA-checked URL.
+   // No in-world actor reset and no SOURCE scoring/winner promotion.
+   if(this.f4ResearchMode&&this.f4OriginalCorridorsPresent&&
+      f4OriginalLocalFinishedReplayEligible(evidence)){
+     window.location.reload();return;
+   }
    const decision=sourceFinishedReplayAction(evidence);
    if(decision==='BLOCK')return;
    // Retain the user's actual current weapon, not the stale launch URL.
