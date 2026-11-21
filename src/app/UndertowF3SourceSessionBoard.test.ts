@@ -132,7 +132,7 @@ describe('B373 real native 180s shooter circuit and combat recap',()=>{
   expect(x.actualHumanRespawns).toBe(1);
  });
  it('source/route tampering and invented real CPU hit counters fail closed',()=>{
-  for(const edit of [
+  for(const [caseIndex,edit] of [
    (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.officialWinner='TEAM_A';},
    (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.naturalCrossTeamRouteProven=true;},
    (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.sourceScoreablePromotions=1;},
@@ -141,9 +141,14 @@ describe('B373 real native 180s shooter circuit and combat recap',()=>{
    (f:SourceSessionMetrics)=>{f.humanCpuDirectHits=-1;},
    (f:SourceSessionMetrics)=>{f.humanCpuDirectSplats=1;},
    (f:SourceSessionMetrics)=>{f.b186RealOriginalHumanCircuit!.status='INVENTED_CLEAR';},
-  ]){
+  ].entries()){
    const f=source();edit(f);
-   expect(()=>sourceSessionSummary(f)).toThrow('B373_UNTRUSTED_SOURCE_PRACTICE_RECAP');
+   // The newer native direct-hit gate validates these two counters
+   // before the older B373 source-practice provenance gate.
+   const expected=caseIndex===5||caseIndex===6?
+    'W10_B58_INVALID_REAL_HUMAN_CPU_COMBAT':
+    'B373_UNTRUSTED_SOURCE_PRACTICE_RECAP';
+   expect(()=>sourceSessionSummary(f)).toThrow(expected);
   }
  });
  it('genuine B384 and real B343 slot protection coexist without an invented benchmark conflict',()=>{

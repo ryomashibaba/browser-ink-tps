@@ -1759,7 +1759,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    this.heldRequests++;return false;
   }
   if(this.chooseF4OriginalCorridorGoal(id,realFoot,out,f4Support))return true;
-  if(this.f4CenterPatrol.has(id))return false;
+  // F4 lane state exists on every real constructed director, but the
+  // older non-F4 source-policy fixtures bypass the F4 constructor fields.
+  if(this.f4CenterPatrol?.has(id))return false;
   // Opt-in F4 experiment: submit short native Crowd goals along the two
   // pre-existing center ramps, never a forced Actor pose or NavLink.
   // CpuAgentSystem's true Recast admission and shared Rapier KCC stay final.
@@ -3896,8 +3898,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  /** Release a dead actor's F4 central reservation; no Crowd/KCC writes.
   * Also used by the existing new-life cleanup for idempotent safety. */
  private releaseF4CenterLane(id:string):void{
-  this.f4CenterPatrol.delete(id);
-  this.f4CenterWaiting.delete(id);
+  // No F4-only lane exists in older non-F4 isolated director fixtures.
+  // In a real game these maps are always constructed and remain strict.
+  this.f4CenterPatrol?.delete(id);
+  this.f4CenterWaiting?.delete(id);
   if(this.f4CenterOwner===id)this.f4CenterOwner=null;
  }
  /** Called only for genuine F4 lethal HP-zero from CpuAgentSystem,

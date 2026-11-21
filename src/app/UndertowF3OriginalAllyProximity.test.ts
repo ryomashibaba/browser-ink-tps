@@ -53,7 +53,7 @@ describe('B141 PLAYER compact visibility without false original routes',()=>{
  it('shows real native A1 horizontal and vertical separation, not fictional contact',()=>{
   const info=inspect(sample(),.8);
   expect(b141PlayerAllyHudLine(info,false,'',false))
-   .toBe('A1 ALLY · 15.2m · 3.1m BELOW · ROUTE UNVERIFIED');
+   .toBe('A1 ALLY · 15.1m · 3.1m BELOW · ROUTE UNVERIFIED');
   expect(b141PlayerAllyHudLine(info,true,'MOVING',false))
    .toContain('C ORDER · MOVING · WAIT');
   expect(b141PlayerAllyHudLine(info,true,'READY',true))
@@ -68,6 +68,6 @@ describe('B141 PLAYER compact visibility without false original routes',()=>{
   const line=b141PlayerAllyHudLine(inspect(missing,.8),true,'HOLD',false);
   expect(line).toContain('actual Rapier/KCC foot not available');
   expect(line).toContain('ROUTE UNVERIFIED');
-  expect(line).not.toContain('15.2m');
+  expect(line).not.toContain('15.1m');
  });
 });

@@ -38,6 +38,9 @@ function fixture(originalF3: boolean) {
   // This isolated real-method fixture deliberately bypasses the constructor.
   system.pendingShots = [];
   system.pendingKitRequests = [];
+  // Object.create bypasses the F4 Map's real constructor initializer;
+  // splatBot owns an unconditional genuine in-flight cleanup.
+  system.f4CenterFlights = new Map();
   system.sourceCommittedPaintAims = new Map();
   // Object.create bypasses real constructor fields, including native
   // SOURCE enemy-ink movement speed state and splat/respawn cleanup.
