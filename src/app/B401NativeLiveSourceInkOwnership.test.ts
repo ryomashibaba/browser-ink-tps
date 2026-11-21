@@ -112,7 +112,9 @@ describe('F4 real registered-cell lead is information, never a turf result',()=>
   expect(b401SourceHudLine(first)).not.toContain('F4 PAINTED GRID');
   const before='F4 TERRAIN RESEARCH · UNSCORED\n'+
    b401SourceHudLine(first,true)+'NO OFFICIAL WINNER';
-  (floor.ownerGrid as Int8Array)[1]=-1;
+  // A=2/B=1 initially. Paint the one remaining neutral cell for B,
+  // so the true second 120-tick sample becomes A=2/B=2 (even).
+  (floor.ownerGrid as Int8Array)[3]=-1;
   const next=m.observe(gs,stage,121,'PLAYING',true);
   const updated=b401ReplaceSourceGridFooter(before,next,true);
   expect(updated).toContain('EVEN REGISTERED CELLS');
