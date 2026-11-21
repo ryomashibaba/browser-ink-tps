@@ -23,6 +23,20 @@ describe('B364 exact native physical CPU crosshair (not bullet hit)',()=>{
   expect(b364RealSourceCrosshair(x)?.state).toBe('REAL_CPU_GUARD_CENTER_RAY');
   expect(b364RealSourceCrosshair(x)?.text).toContain('SHIELD');
  });
+ it('shows actual F4 center-flight camera contact without granting SOURCE combat',()=>{
+  const x=sample();x.f4OriginalTerrainResearch=true;
+  x.cpu=[{...x.cpu[0]!,rejoined:false,
+   mobilityState:'F4_CENTER_TRANSFER'}];
+  expect(b364RealSourceCrosshair(x)).toMatchObject({
+   state:'REAL_CPU_BODY_CENTER_RAY',directHpDamageCertified:false,
+   opponentRouteCertified:false,scoreable:0
+  });
+  x.f4OriginalTerrainResearch=false;
+  expect(b364RealSourceCrosshair(x)).toBeNull();
+  x.f4OriginalTerrainResearch=true;
+  x.cpu=[{...x.cpu[0]!,rejoined:false,mobilityState:'FIRST_DROP_FALL'}];
+  expect(b364RealSourceCrosshair(x)).toBeNull();
+ });
  it('rejects other actors, fake HP, missing native CPU or malformed hit',()=>{
   for(const apply of [
    (x:B364SourceAimInput)=>{x.actual!.id='UNIT_ONLY_B1';},

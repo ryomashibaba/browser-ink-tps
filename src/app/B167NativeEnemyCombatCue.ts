@@ -6,12 +6,14 @@ import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 type Foot=readonly [number,number,number];
 export interface B167SourceOpponent{
  id:string;rejoined:boolean;physicalFoot:readonly number[];
+ mobilityState?:string;
  lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';hp:number|null;
 }
 export interface B167NativeCombatCueInput{
  nativeTick:number;sourceStage:readonly number[];
  matchState:'STAGING'|'PLAYING'|'TIME_UP';
  paused:boolean;stopReason:string|null;
+ f4OriginalTerrainResearch?:boolean;
  human:{body:readonly number[];grounded:boolean;alive:boolean};
  aim:readonly number[];cpu:readonly B167SourceOpponent[];
  stageRayBlocked:(from:Foot,to:Foot)=>boolean;
@@ -28,7 +30,9 @@ export function sourceB167EnemyCombatCue(input:B167NativeCombatCueInput){
   !finite3(input.human.body)||!finite3(input.aim))return null;
  const footY=input.human.body[1]!-
   PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters;
- const possible=input.cpu.filter(c=>enemyIds.has(c.id)&&c.rejoined&&
+ const possible=input.cpu.filter(c=>enemyIds.has(c.id)&&
+  (c.rejoined||(input.f4OriginalTerrainResearch===true&&
+    c.mobilityState==='F4_CENTER_TRANSFER'))&&
   c.lifeState==='ACTIVE'&&c.hp!==null&&Number.isFinite(c.hp)&&
   c.hp>0&&c.hp<=100&&finite3(c.physicalFoot))
   .map(c=>({c,d:Math.hypot(c.physicalFoot[0]!-input.human.body[0]!,

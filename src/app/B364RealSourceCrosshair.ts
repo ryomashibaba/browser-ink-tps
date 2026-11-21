@@ -7,13 +7,15 @@ export interface B364PhysicalAimContact {
 }
 export interface B364RealCpu {
  id:string;lifeState:'ACTIVE'|'SPLATTED'|'UNKNOWN';
- hp:number|null;rejoined:boolean;
+ hp:number|null;rejoined:boolean;mobilityState?:string;
 }
 export interface B364SourceAimInput {
  stage:readonly number[];nativeTick:number;matchState:string;
  paused:boolean;stopReason:string|null;playerView:boolean;
  pointerLocked:boolean;playerHp:number;weaponId:string;
  sourceCombatSelected:boolean;
+ /** Unofficial PRIVATE F4 terrain, never frozen SOURCE certification. */
+ f4OriginalTerrainResearch?:boolean;
  productionAuthorized:boolean;unrestricted4v4Certified:boolean;
  actual: B364PhysicalAimContact|null;
  cpu:readonly B364RealCpu[];
@@ -32,7 +34,14 @@ export function b364RealSourceCrosshair(x:B364SourceAimInput){
   !Number.isFinite(c.distanceMeters)||c.distanceMeters<=0||
   c.distanceMeters>80)return null;
  const living=x.cpu.find(y=>y.id===c.id);
- if(!living||living.lifeState!=='ACTIVE'||!living.rejoined||
+ // The camera contact already originates from the genuine CPU
+ // physical-hit query. In F4 only, the actual center-flight CPU remains
+ // a valid living capsule even while its passive Crowd rejoin reads false.
+ // Formal SOURCE retains its exact historical rejoin requirement.
+ const physicalF4Flight=x.f4OriginalTerrainResearch===true&&
+  living?.mobilityState==='F4_CENTER_TRANSFER';
+ if(!living||living.lifeState!=='ACTIVE'||
+  (!living.rejoined&&!physicalF4Flight)||
   !Number.isFinite(living.hp)||living.hp===null||
   living.hp<=0||living.hp>100)return null;
  const shield=c.guarded;

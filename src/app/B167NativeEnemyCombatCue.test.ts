@@ -34,6 +34,21 @@ describe('B167 native CPU source contact awareness',()=>{
   f.human.grounded=false;expect(cue(f)).toBeNull();
   f.human.grounded=true;f.human.alive=false;expect(cue(f)).toBeNull();
  });
+ it('keeps the existing F4 airborne enemy visible without certifying a shot',()=>{
+  const f=sample();f.cpu=[{...f.cpu[0]!,rejoined:false,
+   mobilityState:'F4_CENTER_TRANSFER'}];
+  expect(cue(f)).toBeNull();
+  f.f4OriginalTerrainResearch=true;
+  expect(cue(f)).toMatchObject({
+   actorId:'B1',nativeProjectileHitCertified:false,
+   originalCrossMapRouteCertified:false,officialWinner:'NONE'
+  });
+  f.cpu=[{...f.cpu[0]!,rejoined:false,mobilityState:'FIRST_DROP_FALL'}];
+  expect(cue(f)).toBeNull();
+  f.cpu=[{...f.cpu[0]!,rejoined:false,
+   mobilityState:'F4_CENTER_TRANSFER',lifeState:'SPLATTED',hp:0}];
+  expect(cue(f)).toBeNull();
+ });
  it('rejects teammate, unrejoined, splatted, bad and far CPU contacts',()=>{
   const f=sample();
   f.cpu=[{id:'A1',physicalFoot:[1,3.1,47],rejoined:true,

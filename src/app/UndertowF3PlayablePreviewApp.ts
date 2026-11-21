@@ -8852,7 +8852,9 @@ export class UndertowF3PlayablePreviewApp{
   // Camera look is observation only: no retargeting or auto-aim.
   this.camera.getAimDirection(this.aim);
   const cue=sourceB167EnemyCombatCue({
-   nativeTick:state.tick,sourceStage:[state.originalSourceSolids,
+   nativeTick:state.tick,
+   f4OriginalTerrainResearch:this.f4ResearchMode&&this.f4OriginalCorridorsPresent,
+   sourceStage:[state.originalSourceSolids,
     state.originalPaintSurfaces,state.originalSourceNavigationLinks??-1,0],
    matchState:state.matchState,paused:state.paused,stopReason:state.stopReason,
    human:{body:state.player.position,grounded:this.stats.playerGrounded,
@@ -9001,6 +9003,7 @@ export class UndertowF3PlayablePreviewApp{
     pointerLocked:document.pointerLockElement===this.canvas,
     playerHp:state.player.hp,weaponId:this.projectiles.currentPlayerWeapon.id,
     sourceCombatSelected:this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+    f4OriginalTerrainResearch:this.f4ResearchMode&&this.f4OriginalCorridorsPresent,
     productionAuthorized:state.productionAuthorized,
     unrestricted4v4Certified:state.unrestricted4v4Certified,
     actual:this.camera.sourceCombatAimSnapshot(),
