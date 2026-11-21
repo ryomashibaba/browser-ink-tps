@@ -96,6 +96,72 @@ function fixture(physicalGapMeters:number,routeStartSnap=0){
   return {cpu,bot,agent,foot,destination,tick};
 }
 
+describe('F4 center transfer physical-abort integration',()=>{
+ const create=(jump:boolean,landedFoot:Readonly<{x:number;y:number;z:number}>)=>{
+  const from=jump?([-2.58,0,3.36] as const):
+   ([1.40,1.5,-1.84] as const);
+  const to=jump?([-.55,1.5,2.4] as const):
+   ([3.8,0,-4.6] as const);
+  const bot:any={id:'A1',position:new Vec3(...from),
+   mobilityState:'F4_CENTER_TRANSFER',jumpCooldownSeconds:0,
+   agent:null,thinkRemaining:5};
+  const cpu:any=Object.create(CpuAgentSystem.prototype);
+  cpu.f4CenterFlights=new Map([['A1',{
+   transfer:{from,to,continueTo:[-1,1.5,0] as const,jump},
+   speedY:0,elapsed:.6
+  }]]);
+  cpu.phase14qGroundCollision={
+   moveF4CenterTransfer:vi.fn(()=>({
+    foot:landedFoot,grounded:true
+   })),
+   syncRealCpuFoot:vi.fn()
+  };
+  const agent={id:'REJOINED_NATIVE_CROWD'};
+  cpu.navigation={
+   auditPath:vi.fn(()=>({
+    querySuccess:true,reachedTarget:true,pointCount:2,
+    startSnapDistanceMeters:0,endSnapDistanceMeters:0
+   })),
+   addAgent:vi.fn(()=>agent)
+  };
+  cpu.f3dSourceGoals={
+   noteF4CenterTakeoffAbort:vi.fn(),noteF4CenterLanding:vi.fn()
+  };
+  return {cpu,bot,agent,from};
+ };
+ it('requeues a verified return to its own original takeoff without moving the CPU',()=>{
+  const from={x:-2.58,y:0,z:3.36};
+  const {cpu,bot,agent}=create(true,from);
+  cpu.advanceF4CenterTransfer(bot,1/60);
+  expect(bot.position).toMatchObject(from);
+  expect(bot.agent).toBe(agent);
+  expect(bot.mobilityState).toBe('GROUND');
+  expect(bot.jumpCooldownSeconds).toBe(.75);
+  expect(cpu.f4CenterFlights.size).toBe(0);
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort)
+   .toHaveBeenCalledExactlyOnceWith('A1');
+  expect(cpu.f3dSourceGoals.noteF4CenterLanding).not.toHaveBeenCalled();
+ });
+ it('cannot mistake the same-height floor a meter away for the original takeoff',()=>{
+  const {cpu,bot}=create(true,{x:-1.58,y:0,z:3.36});
+  cpu.advanceF4CenterTransfer(bot,1/60);
+  expect(bot.mobilityState).toBe('F4_CENTER_TRANSFER');
+  expect(bot.agent).toBeNull();
+  expect(cpu.f4CenterFlights.has('A1')).toBe(true);
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).not.toHaveBeenCalled();
+  expect(cpu.navigation.addAgent).not.toHaveBeenCalled();
+ });
+ it('holds the upper shoulder reservation after a real failed descent',()=>{
+  const {cpu,bot,agent}=create(false,{x:1.40,y:1.5,z:-1.84});
+  cpu.advanceF4CenterTransfer(bot,1/60);
+  expect(bot.mobilityState).toBe('GROUND');
+  expect(bot.agent).toBe(agent);
+  expect(cpu.f4CenterFlights.size).toBe(0);
+  expect(cpu.f3dSourceGoals.noteF4CenterTakeoffAbort).not.toHaveBeenCalled();
+  expect(cpu.f3dSourceGoals.noteF4CenterLanding).not.toHaveBeenCalled();
+ });
+});
+
 describe('SOURCE human-to-CPU live hit eligibility remains guarded',()=>{
  const live=(state:'GROUND'|'FIRST_DROP_FALL'|'JUMP_TRAVEL',hp=100,
   rejoined=true,lifeState:'ACTIVE'|'SPLATTED'='ACTIVE')=>{
