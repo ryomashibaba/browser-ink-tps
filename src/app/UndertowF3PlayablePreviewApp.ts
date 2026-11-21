@@ -8221,8 +8221,17 @@ export class UndertowF3PlayablePreviewApp{
   return {admitted:true,reason:'REAL_RECAST_RAPIER_READ_ONLY_GUIDE',
    index,realFoot:[foot.x,foot.y,foot.z],
    realFootSupport:bodySupport.solidId,bodyGap,
-   navStart:[start.x,start.y,start.z],
-   nativeNextCorner:[next.x,next.y,next.z],
+   navStart:[native.nativePathPoints[0]!.x,
+    native.nativePathPoints[0]!.y,native.nativePathPoints[0]!.z],
+   // The first genuine Recast turn, not the truncated 1.25m lookahead.
+   // All native vertices were already admitted by the same path check.
+   nativeNextCorner:(()=>{
+    const a=native.nativePathPoints[0]!;
+    const corner=native.nativePathPoints.slice(1).find(p=>
+     Math.hypot(p.x-a.x,p.z-a.z)>.01);
+    return corner?[corner.x,corner.y,corner.z]:
+     [step.x,step.y,step.z];
+   })(),
    shortGoal:[step.x,step.y,step.z],
    fullPhotoGoal:[goal.x,goal.y,goal.z],
    suggestedKeys,cameraRelativeAxes:[moveRight,moveForward],
