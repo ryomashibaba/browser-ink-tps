@@ -1,0 +1,23 @@
+import assert from "node:assert/strict";
+import {startUltraShot,stepUltraShot,orbitalOffsets,laserDamagePulse,acceptLaserContact,crabShotDamage,stampThrowDamage} from "./special720-next.mjs";
+function check(name,b){if(!b)throw Error(name);checks.push(name)}
+const checks=[];
+let s=startUltraShot(0,"round","life");const i=(tick,trigger=true,extra={})=>({tick,roundId:"round",lifeId:"life",trigger,alive:true,...extra});let calls=[];const launch=v=>{calls.push(v);return true};
+let a=stepUltraShot(s,i(17),launch);check("arming",a.event==="arming"&&calls.length===0);
+a=stepUltraShot(s,i(18),launch);check("delay",a.state.pending===33);
+a=stepUltraShot(a.state,i(32,false),launch);check("no early launch",calls.length===0);
+a=stepUltraShot(a.state,i(33,false),launch);check("volley",a.event==="launched"&&calls[0].count===3);
+a=stepUltraShot(a.state,i(34),launch);check("repeat",a.state.pending===88);
+a=stepUltraShot(a.state,i(88,false),launch);a=stepUltraShot(a.state,i(89),launch);a=stepUltraShot(a.state,i(143,false),launch);check("cap",a.finished&&calls.length===3&&stepUltraShot(a.state,i(200),launch).state===null);
+check("death",stepUltraShot(s,i(30,true,{alive:false}),launch).state===null);
+check("round",stepUltraShot(s,i(30,true,{roundId:"new"}),launch).state===null);
+check("timeout",stepUltraShot(s,i(360),launch).state===null);
+a=stepUltraShot(s,i(18),launch);a=stepUltraShot(a.state,i(33),()=>false);check("rejected",a.state.count===0&&a.event==="rejected");
+const o=orbitalOffsets(10,2,.1);check("spiral",o.every(v=>Math.abs(Math.hypot(...v)-2)<1e-8)&&Math.abs(o.reduce((a,v)=>a+v[0],0))<1e-8);
+check("beam cadence",Array.from({length:240},(_,n)=>laserDamagePulse(n)).filter(Boolean).length===36);
+let ledger=new Set(),hit={roundId:"r",beamId:"a",targetLifeId:"t",ageF:36,liveEnemy:true,beamOverlap:true};
+check("dedup",acceptLaserContact(ledger,hit)===3.5&&acceptLaserContact(ledger,hit)===0&&acceptLaserContact(ledger,{...hit,beamId:"b"})===3.5);
+check("no overlap",acceptLaserContact(ledger,{...hit,beamOverlap:false,ageF:41})===0);
+check("crab",crabShotDamage(0)===32&&crabShotDamage(17)===24&&crabShotDamage(25)===16);
+check("stamp",stampThrowDamage({direct:true,physicalContact:false})===0&&stampThrowDamage({near:true,physicalContact:true})===60);
+console.log(checks.length+" PASS");
