@@ -1,0 +1,216 @@
+{
+  "version": "7.2.0",
+  "source": "https://github.com/Leanny/splat3/tree/main/data/parameter/720/weapon",
+  "status": "Selected raw extracted parameters; original-to-T21 mappings are candidates. Omitted fields are unknown/default-dependent. No world-meter conversion is authorized by this file.",
+  "weapons": {
+    "metro-roller": {
+      "candidate": "スプラローラー",
+      "file": "WeaponRollerNormal.game__GameParameterTable.json",
+      "blob": "cb52528a74803323713d0866ab099b3c07c21141",
+      "roll": {
+        "damageRaw": 1250,
+        "widthHalfMaxRaw": 2.8,
+        "collisionWidthHalfRaw": 1.4,
+        "speedNormalRaw": 0.108,
+        "speedDashRaw": 0.132,
+        "dashFrame": 90,
+        "inkMinFractionPerFrame": 0.0002,
+        "inkMaxFractionPerFrame": 0.001,
+        "speedInkMinRaw": 0.02,
+        "speedInkMaxRaw": 0.132,
+        "recoverStopF": 20
+      },
+      "horizontal": {
+        "swingF": 21,
+        "inkFraction": 0.085,
+        "recoverStopF": 45,
+        "groups": [
+          {
+            "count": 12,
+            "speedBaseRaw": 1.05,
+            "speedRandomRaw": 0.36,
+            "spreadRawDeg": 18,
+            "paintHalfNearRaw": 1.89,
+            "paintHalfFarRaw": 1.6275
+          },
+          {
+            "count": 1,
+            "countSource": "Wiki unit table; raw BulletNum omitted",
+            "speedBaseRaw": 0.48,
+            "speedRandomRaw": 0.11,
+            "spreadRawDeg": 4
+          }
+        ]
+      },
+      "vertical": {
+        "swingF": 26,
+        "inkFraction": 0.085,
+        "recoverStopF": 60,
+        "splashCount": 5,
+        "splashFirstLengthRaw": 1.2,
+        "splashBetweenLengthRaw": 4.6,
+        "groups": [
+          {
+            "count": 1,
+            "countSource": "Wiki unit table; raw BulletNum omitted",
+            "speedBaseRaw": 1.8338,
+            "pitchRawDeg": 7.5
+          },
+          {
+            "count": 2,
+            "speedBaseRaw": 1.6338,
+            "pitchRawDeg": 5
+          },
+          {
+            "count": 2,
+            "speedBaseRaw": 1.2338
+          }
+        ]
+      }
+    },
+    "dash-brush": {
+      "candidate": "パブロ",
+      "file": "WeaponBrushMini.game__GameParameterTable.json",
+      "blob": "8868dbb174c597b3e65597a3870b0b524314571a",
+      "roll": {
+        "damageRaw": 200,
+        "widthHalfMinRaw": 0.6,
+        "widthHalfMaxRaw": 0.6,
+        "speedNormalRaw": 0.198,
+        "inkMinFractionPerFrame": 0.00125,
+        "inkMaxFractionPerFrame": 0.00125,
+        "toPaintFrameRaw": 12,
+        "swingRepeatFrameRaw": 6,
+        "noOpInkEffect": true
+      },
+      "swing": {
+        "inkFraction": 0.02,
+        "recoverStopF": 30,
+        "nearestLoop": 6,
+        "nearestOrder": 2,
+        "groups": [
+          {
+            "count": 2,
+            "speedBaseRaw": 0.72,
+            "speedRandomRaw": 0.12,
+            "spreadRawDeg": 18,
+            "yawLRRawDeg": -10,
+            "yawRLRawDeg": 10,
+            "paintHalfRaw": 2.551
+          },
+          {
+            "count": 1,
+            "speedBaseRaw": 0.45,
+            "speedRandomRaw": 0.12,
+            "spreadRawDeg": 22,
+            "yawLRRawDeg": -10,
+            "yawRLRawDeg": 10,
+            "paintHalfRaw": 1.814
+          }
+        ]
+      }
+    },
+    "twin-comets": {
+      "candidate": "スプラマニューバー",
+      "file": "WeaponManeuverNormal.game__GameParameterTable.json",
+      "blob": "196f84be05c48650e359e4cc633031f2952b43f5",
+      "repeatF": 5,
+      "postRollRepeatF": 4,
+      "inkFraction": 0.0072,
+      "standSpreadRawDeg": 2,
+      "jumpSpreadRawDeg": 7.5,
+      "postRollSpreadRawDeg": 0,
+      "damageMaxRaw": 300,
+      "damageMinRaw": 150,
+      "decayStartF": 7,
+      "decayEndF": 15,
+      "rollInkFraction": 0.07,
+      "rollMoveF": 12,
+      "splashBetweenRaw": 14,
+      "splashNumRaw": 1,
+      "splitNumRaw": 7
+    },
+    "wave-slosher": {
+      "candidate": "バケットスロッシャー",
+      "file": "WeaponSlosherStrong.game__GameParameterTable.json",
+      "blob": "a4e47d19984e970fbf67a0c7a1e1af769c6bff88",
+      "inkFraction": 0.07,
+      "recoverStopF": 40,
+      "repeatFrameRaw": 29,
+      "liftFrameRaw": 12,
+      "groups": [
+        {
+          "count": 4,
+          "groundSpeedRaw": 1.7609,
+          "airSpeedRaw": 1.6852,
+          "unitDelayF": 0,
+          "offsetDelayF": 1
+        },
+        {
+          "count": 5,
+          "groundSpeedRaw": 1.1,
+          "airSpeedRaw": 1,
+          "unitDelayF": 4,
+          "offsetDelayF": 2
+        }
+      ]
+    },
+    "rotor-splatling": {
+      "candidate": "バレルスピナー",
+      "file": "WeaponSpinnerStandard.game__GameParameterTable.json",
+      "blob": "52646400cf7cfab6027de5d6fc3a665dbb66c867",
+      "repeatF": 4,
+      "inkFractionRaw": 0.225,
+      "recoverStopF": 40,
+      "damageMaxRaw": 300,
+      "damageMinRaw": 150,
+      "decayStartF": 11,
+      "decayEndF": 19,
+      "splashBetweenRaw": 20,
+      "splashNumRaw": 1,
+      "splitNumRaw": 8
+    },
+    "canopy-guard": {
+      "candidate": "パラシェルター",
+      "file": "WeaponShelterNormal.game__GameParameterTable.json",
+      "blob": "3e370c5d80c41774de031642487aa0db1233ab88",
+      "pelletGroups": [
+        1,
+        6,
+        4
+      ],
+      "groupHorizontalDegreesRaw": [
+        0,
+        6,
+        2
+      ],
+      "groupVerticalDegreesRaw": [
+        0,
+        4,
+        3
+      ],
+      "pelletDamageMaxRaw": 162,
+      "pelletDamageMinRaw": 108,
+      "totalDamageCapRaw": 810,
+      "canopyInkFractionRaw": 0.3,
+      "canopyNakedFrameRaw": 330
+    },
+    "ink-saber": {
+      "candidate": "ドライブワイパー",
+      "file": "WeaponSaberLite.game__GameParameterTable.json",
+      "blob": "3320010997c85c5134b227f7defcc0b61a500221",
+      "weakSwingInkFraction": 0.03,
+      "fullChargeInkFraction": 0.06,
+      "chargeMinF": 5,
+      "chargeFullF": 16,
+      "horizontalProjectileDamageRaw": 300,
+      "verticalProjectileDamageRaw": 600,
+      "horizontalSlashDamageRaw": 150,
+      "verticalSlashDamageRaw": 1200,
+      "horizontalSplashIntervalRaw": 2,
+      "horizontalSplashMaxRaw": 8,
+      "verticalSplashIntervalRaw": 1.5,
+      "verticalSplashMaxRaw": 14
+    }
+  }
+}

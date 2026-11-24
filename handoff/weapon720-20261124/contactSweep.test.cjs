@@ -1,0 +1,13 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const {collectContactCells,inkPercentPerRollTick,brushSwingPhase}=require('./build/contactSweep.js');
+const seg=(x,z,grounded=true)=>({from:{x:0,y:0,z:0},to:{x,y:0,z},continuousGrounded:grounded});
+const hit=(p)=>({point:p,surfaceId:'a',cellId:`${p.x.toFixed(3)},${p.z.toFixed(3)}`});
+test('width perpendicular to real travel, includes edges',()=>{const r=collectContactCells([seg(2,0)],.5,.25,hit);assert.equal(Math.min(...r.map(v=>v.point.z)),-.5);assert.equal(Math.max(...r.map(v=>v.point.z)),.5);assert.ok(r.some(v=>v.point.x===2));});
+test('no stationary or ungrounded paint candidates',()=>{assert.deepEqual(collectContactCells([seg(0,0),seg(3,0,false)],.5,.25,hit),[]);});
+test('unsupported gap is not filled',()=>{const r=collectContactCells([seg(2,0)],.5,.25,p=>p.x>.5&&p.x<1.5?null:hit(p));assert.ok(r.length);assert.ok(r.every(v=>v.point.x<=.5||v.point.x>=1.5));});
+test('blocked outer lanes do not paint',()=>{const r=collectContactCells([seg(2,0)],.5,.25,p=>p.z>.1?null:hit(p));assert.ok(r.every(v=>v.point.z<=.1));});
+test('duplicate cell IDs dedup only within surface',()=>{const r=collectContactCells([seg(2,0)],.5,.25,p=>({point:p,surfaceId:p.x<1?'a':'b',cellId:'same'}));assert.equal(r.length,2);});
+test('bad inputs and oversized sweeps fail closed',()=>{assert.throws(()=>collectContactCells([seg(2,0)],.5,0,hit));assert.throws(()=>collectContactCells([seg(200,0)],.5,.001,hit,10));});
+test('roller ink reference endpoints, percent per tick',()=>{assert.equal(inkPercentPerRollTick(.02,.02,.132,.0002,.001),.02);assert.equal(inkPercentPerRollTick(.132,.02,.132,.0002,.001),.1);});
+test('brush constant ink cost',()=>{assert.equal(inkPercentPerRollTick(.198,.198,.198,.00125,.00125),.125);});
+test('brush phase sequence and reset ordinal',()=>{assert.deepEqual([1,2,3,4,5,6,7,8].filter(i=>brushSwingPhase(i).nearestSplash),[2,8]);assert.equal(brushSwingPhase(1).yawSign,-brushSwingPhase(2).yawSign);assert.throws(()=>brushSwingPhase(0));});
