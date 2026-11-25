@@ -1,0 +1,74 @@
+{
+  "base": "70dee6efbba6d0d94d92a762c67f02f5e377fc88",
+  "previous": "d00d9bce27100e70ba67e996ee2c13fb3b01e22a",
+  "passed": [
+    {
+      "id": "weapon-input",
+      "patches": [
+        {
+          "p": "weapon/weapon-input-recovery.patch",
+          "sha": "6a50c3f5357d35632fc19b38b9304da7943f03dd"
+        }
+      ]
+    },
+    {
+      "id": "weapon-responsiveness",
+      "patches": [
+        {
+          "p": "weapon/weapon-responsiveness-followup.patch",
+          "sha": "865dc61949b0d194822494ea9421d0b860f904a8"
+        }
+      ]
+    },
+    {
+      "id": "weapon-arbitration",
+      "patches": [
+        {
+          "p": "weapon/weapon-input-arbitration.patch",
+          "sha": "7fe21dc4f3acdec377c3b3db439e7f5c7517d02f"
+        }
+      ]
+    },
+    {
+      "id": "weapon-charge-sub",
+      "patches": [
+        {
+          "p": "weapon/weapon-charge-sub-priority.patch",
+          "sha": "6392c9a6ba2c15ca51fa231d2e3a677e528f462c"
+        }
+      ]
+    },
+    {
+      "id": "player-intent",
+      "patches": [
+        {
+          "p": "player/f4-player-intent.patch",
+          "sha": "ca178581503f003b94163d57d7656faa63b88e28"
+        }
+      ]
+    },
+    {
+      "id": "player-camera-lifecycle",
+      "patches": [
+        {
+          "p": "player/f4-camera-lifecycle.patch",
+          "sha": "00c0c6b1496b7e6c1982ae0aac89af190521e9be"
+        }
+      ]
+    }
+  ],
+  "held": [],
+  "relaxed": [],
+  "blobs": {
+    "src/projectile/ProjectileSystem.ts": "ce40e1ba42c400d4e7e2a32279d845a0f1b283f2",
+    "src/input/PlayerInput.ts": "877cf9c641d8cee3fc5b7091d7e4f9fb95920e2f",
+    "src/combat/PlayerResources.ts": "6b9599e72099ec30c29e5b1bfd7c39bd2f7164a0",
+    "src/player/PlayerController.ts": "b003456f0b67a5caec9caee35bd74c65ddbe0450",
+    "src/subweapon/SubWeaponSystem.ts": "d15c3608118e8a085666c88f90c0a33a1258731d",
+    "src/camera/ThirdPersonCamera.ts": "63a19c350eccda0310f75ee730fbac065003216c",
+    "src/app/UndertowF3PlayablePreviewApp.ts": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b"
+  },
+  "replay": 79,
+  "files": 32,
+  "nativeBuild": "NOT_RUN"
+}
