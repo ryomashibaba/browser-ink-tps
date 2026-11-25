@@ -1,0 +1,159 @@
+diff --git a/src/player/F4ZipReticleAim.mjs b/src/player/F4ZipReticleAim.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4ZipReticleAim.mjs
+@@ -0,0 +1,12 @@
++// F4 provisional natural Zipcaster reticle geometry. No physical authority.
++export function f4ZipReticleWitnessMatches(expected,actual,tolerance=.15){
++ if(!expected||!actual||![expected.x,expected.y,expected.z,actual.x,actual.y,actual.z,tolerance].every(Number.isFinite)||tolerance<0)return false;
++ return Math.hypot(expected.x-actual.x,expected.y-actual.y,expected.z-actual.z)<=tolerance;
++}
++
++export function f4ZipReticleDirection(out,origin,target,maxRange=18){
++ if(![origin.x,origin.y,origin.z,target.x,target.y,target.z,maxRange].every(Number.isFinite)||maxRange<1)return false;
++ const x=target.x-origin.x,y=target.y-origin.y,z=target.z-origin.z,d=Math.hypot(x,y,z);
++ if(d<1||d>maxRange)return false;
++ out.set(x/d,y/d,z/d);return true;
++}
+diff --git a/src/player/F4ZipReticleAim.d.mts b/src/player/F4ZipReticleAim.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4ZipReticleAim.d.mts
+@@ -0,0 +1,3 @@
++interface Point { readonly x:number;readonly y:number;readonly z:number }
++export function f4ZipReticleWitnessMatches(expected:Point|null|undefined,actual:Point|null|undefined,tolerance?:number):boolean;
++export function f4ZipReticleDirection(out:{set(x:number,y:number,z:number):unknown},origin:Point,target:Point,maxRange?:number):boolean;
+diff --git a/src/camera/ThirdPersonCamera.ts b/src/camera/ThirdPersonCamera.ts
+--- a/src/camera/ThirdPersonCamera.ts
++++ b/src/camera/ThirdPersonCamera.ts
+@@ -452,5 +452,24 @@
+   }
+ 
+-  public getAimTarget(out = new Vec3(), fallbackDistance = 80): Vec3 {
++  /** Natural Zip only: actual first stage contact under the live reticle. */
++  public getF4ZipReticleStagePoint(out:Vec3):boolean{
++    const camera=this.cameraEntity.camera;
++    if(!this.f4StableAimEnabled||!this.physics.hasF4WholeResearchTrimesh||
++       this.b258ResearchEnabled||!camera)return false;
++    const rect=this.canvas.getBoundingClientRect();
++    if(rect.width<=0||rect.height<=0)return false;
++    const from=camera.screenToWorld(rect.width*.5,rect.height*.5,camera.nearClip);
++    const direction=this.getAimDirection();
++    if(![from.x,from.y,from.z,direction.x,direction.y,direction.z].every(Number.isFinite)||
++       direction.lengthSq()<1e-8)return false;
++    // Up to 9.5m camera arm plus 18m actual muzzle range.
++    const end=this.rayEnd.copy(direction).mulScalar(30).add(from);
++    const hit=this.physics.castStageSegment(from,end,'ink-projectile');
++    if(!hit?.normal||!Number.isFinite(hit.distance)||hit.distance<=0||
++       ![hit.point.x,hit.point.y,hit.point.z].every(Number.isFinite))return false;
++    out.copy(hit.point);return true;
++  }
++
++  public getAimTarget(out = new Vec3(), fallbackDistance = 80): Vec3 {
+     this.sourceCombatAimContact=null;
+     const camera = this.cameraEntity.camera;
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -6,5 +6,6 @@
+ import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+ import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+-import {f4KeepRollIntent,f4AirborneSquidSpeed} from './F4PlayerIntent.mjs';
++import {f4KeepRollIntent,f4AirborneSquidSpeed} from './F4PlayerIntent.mjs';
++import {f4ZipReticleWitnessMatches} from './F4ZipReticleAim.mjs';
+ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+  type B248Visual} from '../app/B248SourceActorVisuals';
+@@ -309,5 +310,5 @@
+ 
+   /** Current physical hook candidate audit only; no traversal or body movement occurs here. */
+-  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number,returnAnchor?:Vec3) {
++  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number,returnAnchor?:Vec3,reticlePoint?:Vec3) {
+     const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
+     if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||(!this.grounded&&!returnAnchor)||
+@@ -333,5 +334,8 @@
+     if(!hit?.normal||hit.distance<=.05||hit.normal.lengthSq()<1e-8)
+       return {status:'HOLD',reason:'NO_FIRST_PHYSICAL_HOOK_CONTACT',body:v(body)};
+-    const normal=hit.normal.clone().normalize();
++    // The same trimesh can contain multiple intervening walls.
++    if(reticlePoint&&!f4ZipReticleWitnessMatches(reticlePoint,hit.point))
++      return {status:'HOLD',reason:'MUZZLE_OCCLUDES_RETICLE_HOOK',body:v(body)};
++    const normal=hit.normal.clone().normalize();
+     if(normal.dot(direction)>0)normal.mulScalar(-1);
+     const witness={solidId:hit.solidId,colliderHandle:hit.collider.handle,
+@@ -362,5 +366,5 @@
+ 
+   /** Isolated experiment only. Aimed variant uses current physical wall, never original hook authority. */
+-  public beginF4ZipResearch(origin: Vec3, aim: Vec3,variant:'reviewed'|'aimed'|'natural'='reviewed'): void {
++  public beginF4ZipResearch(origin: Vec3, aim: Vec3,variant:'reviewed'|'aimed'|'natural'='reviewed',reticlePoint?:Vec3): void {
+     if(this.f4ZipResearchActive)return;
+     this.f4ZipResearch=null;
+@@ -373,5 +377,6 @@
+     }
+     // 18m is the existing experiment's maximum, not a certified game range.
+-    const audit=this.auditF4ZipGeometry(origin,aim,variant==='reviewed'?20:18);
++    const audit=this.auditF4ZipGeometry(origin,aim,variant==='reviewed'?20:18,undefined,
++      variant==='natural'?reticlePoint:undefined);
+     if(!audit.witness||!audit.goal||!audit.returnLanding?.solidId||
+        !audit.outbound?.clear||!audit.reverse?.clear||
+@@ -410,8 +415,8 @@
+     return this.f4ZipNaturalActive?Math.max(0,540-(this.f4ZipResearch?.ticks??0)):0;
+   }
+-  public tryF4ZipNaturalRehook(origin:Vec3,aim:Vec3):boolean {
+-    const run=this.f4ZipResearch;
+-    if(!run||!this.f4ZipNaturalCanFire||run.ticks>=540||run.hookCount>=6)return false;
+-    const audit=this.auditF4ZipGeometry(origin,aim,18,run.start);
++  public tryF4ZipNaturalRehook(origin:Vec3,aim:Vec3,reticlePoint?:Vec3):boolean {
++    const run=this.f4ZipResearch;
++    if(!run||!this.f4ZipNaturalCanFire||run.ticks>=540||run.hookCount>=6)return false;
++    const audit=this.auditF4ZipGeometry(origin,aim,18,run.start,reticlePoint);
+     if(!audit.witness||!audit.goal||!audit.outbound?.clear||!audit.reverse?.clear||
+        audit.returnLanding?.solidId!==run.returnSupportId||
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -26,5 +26,6 @@
+ import {SourcePracticeAudio} from '../audio/SourcePracticeAudio';
+ import {GameplayInkSystem} from '../ink/GameplayInkSystem';
+-import {f4ProvisionalTurfLabel} from '../ink/F4ProvisionalTurf.mjs';
++import {f4ProvisionalTurfLabel} from '../ink/F4ProvisionalTurf.mjs';
++import {f4ZipReticleDirection} from '../player/F4ZipReticleAim.mjs';
+ import {GpuInkAtlas} from '../ink/GpuInkAtlas';
+ import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
+@@ -6091,17 +6092,24 @@
+        (!this.player.f4ZipNaturalActive&&f4SpecialPressed&&this.player.canShoot&&
+         this.remainingSeconds>750/60&&this.f4Special.naturalZipReady(actor,nextSpecialTick))){
+-      const aim=new Vec3();this.camera.getAimDirection(aim);
+-      const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(aim));
+-      if(this.player.f4ZipNaturalActive)this.player.tryF4ZipNaturalRehook(origin,aim);
+-      else{
+-       this.player.beginF4ZipResearch(origin,aim,'natural');
+-       if(this.player.f4ZipNaturalActive){
+-        if(this.f4Special.consumeNaturalZip(actor,nextSpecialTick)){
+-         this.resources.refillF4SpecialInk();
+-         this.feedback.f4SpecialEvent('zipcaster',Team.A,origin);
+-        }
+-        else this.player.cancelF4ZipResearch('GAUGE_ADMISSION_REJECTED');
+-       }
+-      }
++      // Hook input precedes the ordinary post-KCC camera update.
++      const body=this.player.getPosition();
++      this.camera.update(body);
++      const aim=this.camera.getAimDirection();
++      const origin=this.projectiles.clipF4SpecialMuzzle(body,this.player.getMuzzlePosition(aim));
++      const point=new Vec3();
++      if(this.camera.getF4ZipReticleStagePoint(point)&&
++         f4ZipReticleDirection(aim,origin,point)){
++       if(this.player.f4ZipNaturalActive)this.player.tryF4ZipNaturalRehook(origin,aim,point);
++       else{
++        this.player.beginF4ZipResearch(origin,aim,'natural',point);
++        if(this.player.f4ZipNaturalActive){
++         if(this.f4Special.consumeNaturalZip(actor,nextSpecialTick)){
++          this.resources.refillF4SpecialInk();
++          this.feedback.f4SpecialEvent('zipcaster',Team.A,origin);
++         }
++         else this.player.cancelF4ZipResearch('GAUGE_ADMISSION_REJECTED');
++        }
++       }
++      }
+      }
+     }
