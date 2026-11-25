@@ -1,0 +1,269 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -47,7 +47,8 @@
+ import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
+ import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
+ import { predictF4Lead } from './F4FlightLead';
+-import { chooseRailRelease, reachablePreference } from './F4CpuAttackPolicy.mjs';
++import { chooseRailRelease, reachablePreference } from './F4CpuAttackPolicy.mjs';
++import { sameCpuFireLife, unemittedCpuMainDisposition } from './F4CpuCommitment.mjs';
+ import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
+ import { recoveringInk, recoveryAction, shouldThrowCombatSub, mergedRecovery } from './F4CpuRecoveryPolicy.mjs';
+ import { F4_SABER_TIMING, railCharge, weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
+@@ -234,7 +235,9 @@
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+   /** An already audited SOURCE floor aim, not enemy or path authority. */
+   sourceFloorPaint?: true;
+-  f4Opponent?: { id: string; offsetY: number; life: symbol | null };
++  f4Opponent?: { id: string; offsetY: number; life: symbol | null };
++  /** Actual physical CPU life at paid request creation; never reused across splat. */
++  f4SourceLifeSerial?: number;
+   /** SOURCE-only paid main shot awaiting an actual physical projectile
+    * slot. Failure to dispatch must restore the same bot's real ink.
+    * Not provided by T20 or synthetic requests. */
+@@ -543,7 +546,10 @@
+     cancel(actorId:string):void;
+     splat(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):void;
+   };
+-  private readonly f4PendingSpawns = new Set<string>();
++  private f4CommittedMainQuery?: (actorId:string)=>boolean;
++  public useF4CommittedMainQuery(query:(actorId:string)=>boolean):void {this.f4CommittedMainQuery=query;}
++  private hasF4MainWindup(bot:CpuBot):boolean {return this.f4WholeNavigation&&this.f4CommittedMainQuery?.(bot.id)===true;}
++  private readonly f4PendingSpawns = new Set<string>();
+   private f4FirstSpawn: Vec3 | null = null;
+   private f4FirstCpuMoved = false;
+   private f4SpawnRetry = 0;
+@@ -2182,7 +2188,7 @@
+     const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
+     const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+     const aim=target?target.clone().sub(origin).normalize():bot.weaponFacing;
+-    const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0;
++    const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0&&!this.hasF4MainWindup(bot);
+     const result=natural.step({actorId:bot.id,foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
+       hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial),distance:target?origin.distance(target):null,
+       hp:bot.hp,ink:bot.ink,recentHit:bot.b213ActualHitTick>=0&&this.b181NativeFrame-bot.b213ActualHitTick<=60,
+@@ -2194,7 +2200,7 @@
+   private tryBeginF4CpuZip(bot:CpuBot,actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string},tick:number,humanTeam:Team.A|Team.B,humanPosition:Vec3,humanActive:boolean):boolean{
+     const c=this.phase14qGroundCollision,n=this.f4NaturalSpecial;
+     if(!this.f4WholeNavigation||!bot.agent||!n||!c?.probeF4CpuZip||!c.stepF4CpuZip||!c.canF4CpuZipReturn||!c.moveF4WholeDrop||
+-      !this.sourceCpuMayStartActions(bot)||bot.weaponGuarding||bot.f4CanopyOpen||bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0)return false;
++      !this.sourceCpuMayStartActions(bot)||bot.weaponGuarding||bot.f4CanopyOpen||bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0||this.hasF4MainWindup(bot))return false;
+     const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
+     if(!target)return false;
+     const aim=target.clone().sub(bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)));
+@@ -2592,7 +2598,7 @@
+       return;
+     const tx=request.sourceInkTransaction;
+     const bot=this.bots.find(b=>b.id===request.sourceId);
+-    if(!tx||!bot||bot.lifeState!=='ACTIVE'||bot.hp<=0||
++    if(!tx||!bot||!sameCpuFireLife(request,bot)||bot.lifeState!=='ACTIVE'||bot.hp<=0||
+        bot.weaponId!==request.weaponId||bot.team!==request.team||
+        !Number.isFinite(tx.chargedInkCost)||tx.chargedInkCost<=0||
+        Math.abs(tx.chargedInkCost-cpuWeaponInkCost(
+@@ -2671,10 +2677,10 @@
+        this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa')
+       return true;
+     const bot=this.bots.find(b=>b.id===request.sourceId);
+-    if(bot?.team===request.team&&bot.weaponId===request.weaponId&&
+-       this.sourceCpuMayStartActions(bot))return true;
+-    if(bot?.lifeState==='ACTIVE'&&Number.isFinite(bot.hp)&&bot.hp>0&&
+-       bot.team===request.team&&bot.weaponId===request.weaponId){
++    if(bot?.team===request.team&&bot.weaponId===request.weaponId&&
++       sameCpuFireLife(request,bot)&&this.sourceCpuMayStartActions(bot))return true;
++    if(bot?.lifeState==='ACTIVE'&&Number.isFinite(bot.hp)&&bot.hp>0&&
++       bot.team===request.team&&bot.weaponId===request.weaponId&&sameCpuFireLife(request,bot)){
+       // The physical rejoin was lost, but the original shooter is alive:
+       // an unlaunched action does not charge ink or cooldown.
+       this.rollbackUndeliveredSourceCpuMainShot(request);
+@@ -2686,10 +2692,19 @@
+     return false;
+   }
+ 
+-  public getCommittedMainFoot(request: CpuFireRequest): Vec3 | null {
+-    const bot = this.bots.find(candidate => candidate.id === request.sourceId);
+-    return bot?.lifeState === 'ACTIVE' && bot.hp > 0 && bot.team === request.team &&
+-      bot.weaponId === request.weaponId && this.sourceCpuMayStartActions(bot)
++  /** Called only by the physical pending-map cancellation before first emission. */
++  public rejectF4UnemittedMain(request:CpuFireRequest):void {
++    if(!this.f4WholeNavigation)return;
++    const bot=this.bots.find(b=>b.id===request.sourceId);
++    const disposition=unemittedCpuMainDisposition(request,bot);
++    if(disposition==='REFUND')this.rollbackUndeliveredSourceCpuMainShot(request);
++    else if(disposition==='DROP_COUNT')this.stats.cpuShots=Math.max(0,this.stats.cpuShots-1);
++  }
++
++  public getCommittedMainFoot(request: CpuFireRequest): Vec3 | null {
++    const bot = this.bots.find(candidate => candidate.id === request.sourceId);
++    return bot?.lifeState === 'ACTIVE' && bot.hp > 0 && bot.team === request.team &&
++      bot.weaponId === request.weaponId && sameCpuFireLife(request,bot) && this.sourceCpuMayStartActions(bot)
+       ? bot.position : null;
+   }
+ 
+@@ -3586,9 +3601,10 @@
+        !this.p2OuterOriginalBackfill||
+        !this.phase14qF2RecoverableSteps||
+        !this.sourceCpuMayStartActions(bot)||
+-       bot.weaponGuarding||bot.weaponChargeSeconds>0||
+-       bot.weaponBurstShotsRemaining>0||
+-       bot.subCooldownSeconds>0)return false;
++       bot.weaponGuarding||bot.weaponChargeSeconds>0||
++       bot.weaponBurstShotsRemaining>0||
++       (this.f4WholeNavigation&&(bot.f4CanopyOpen||this.hasF4MainWindup(bot)))||
++       bot.subCooldownSeconds>0)return false;
+     const subId=weaponKit(bot.weaponId,this.f4SharedBombsEnabled).sub;
+     if(bot.ink+1e-6<subWeaponProfile(subId).inkCost)
+       return false;
+@@ -3645,7 +3661,16 @@
+     bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,
+     humanPosition:Vec3,humanActive:boolean,groundTravel?:GroundTravel
+   ):void{
+-    // F4 only: an actual low tank earns a quiet recovery window. Preserve
++    // A real reserved volley owns the main action until emitted/cancelled.
++    // Keep real weapon timers ticking once; never start another paid action.
++    if(this.hasF4MainWindup(bot)){
++      const profile=weaponProfile(bot.weaponId,true);
++      this.advanceCpuWeaponTimers(bot,dt,Boolean(profile.shooter||profile.blaster||
++        profile.contactWeapon||profile.slosher||profile.canopy));
++      bot.contactMovingFrames=0;
++      return;
++    }
++    // F4 only: an actual low tank earns a quiet recovery window. Preserve
+     // committed charge/burst and allow paid close-defense shots; no forced
+     // refill, invented movement or change to the actual recovery rates.
+     if(this.f4WholeNavigation&&this.f4ResearchCombatStageRay){
+@@ -3781,13 +3806,14 @@
+     return true;
+   }
+ 
+-  private updateCpuKit(
+-    bot: CpuBot,
+-    humanTeam: Team.A | Team.B,
+-    humanPosition: Vec3,
+-    humanActive: boolean
+-  ): void {
+-    if (
++  private updateCpuKit(
++    bot: CpuBot,
++    humanTeam: Team.A | Team.B,
++    humanPosition: Vec3,
++    humanActive: boolean
++  ): void {
++    if(this.f4WholeNavigation&&(bot.f4CanopyOpen||this.hasF4MainWindup(bot)))return;
++    if (
+       bot.lifeState !== 'ACTIVE' ||
+       bot.mobilityState !== 'GROUND' ||
+       bot.weaponGuarding ||
+@@ -5026,7 +5052,8 @@
+       origin,
+       bodyPosition: bot.position.clone(),
+       target: target.clone(),
+-      f4Opponent: sourceFloorPaint ? undefined : this.f4LeadTargets?.get(target),
++      f4Opponent: sourceFloorPaint ? undefined : this.f4LeadTargets?.get(target),
++      f4SourceLifeSerial: this.f4WholeNavigation ? bot.f4LifeSerial : undefined,
+       weaponId: bot.weaponId,
+       charge,
+       action,
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -1,6 +1,7 @@
+ import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+ import { cpuWeaponRangeMeters, type CpuAgentSystem, type CpuFireRequest } from '../ai/CpuAgentSystem';
+-import { f4FlightArrivalTicks } from '../ai/F4FlightLead';
++import { f4FlightArrivalTicks } from '../ai/F4FlightLead';
++import { hasCpuMainWindup } from '../ai/F4CpuCommitment.mjs';
+ import type { CombatTargetSystem } from '../combat/CombatTargetSystem';
+ import type { PlayerResources } from '../combat/PlayerResources';
+ import { GAME_CONFIG } from '../config/game/gameConfig';
+@@ -515,7 +516,9 @@
+     private readonly feedback: GameFeedback,
+     private readonly stats: PerformanceStats
+   ) {
+-    this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
++    this.cpuAgents.useF4CommittedMainQuery(id=>hasCpuMainWindup(id,
++      this.pendingSloshes,this.pendingCanopyVolleys,this.pendingSaberSwings));
++    this.materialA = makeProjectileMaterial(GAME_CONFIG.visual.teamA);
+     this.materialB = makeProjectileMaterial(GAME_CONFIG.visual.teamB);
+ 
+     for (let i = 0; i < GAME_CONFIG.projectile.poolSize; i += 1) {
+@@ -1108,7 +1111,8 @@
+       groundTravel: travel && { from: travel.from.clone(), to: travel.to.clone() },
+       qaSourceAim:request.qaSourceAim,
+       sourceFloorPaint:request.sourceFloorPaint,
+-      f4Opponent:request.f4Opponent,
++      f4Opponent:request.f4Opponent,
++      f4SourceLifeSerial:request.f4SourceLifeSerial,
+       sourceInkTransaction:request.sourceInkTransaction
+     });
+   }
+@@ -2327,9 +2331,13 @@
+     if (swing) this.cancelSlosh(swing);
+   }
+ 
+-  private cancelSlosh(swing: SlosherSwing): void {
+-    for (let i = swing.next; i < swing.reserved.length; i++) swing.reserved[i]!.reservedForVolley = false;
+-    this.pendingSloshes?.delete(swing.actor);
++  private cancelSlosh(swing: SlosherSwing): void {
++    // Remove ownership before refund so one physical cancellation is counted once.
++    if(this.pendingSloshes?.get(swing.actor)!==swing)return;
++    for (let i = swing.next; i < swing.reserved.length; i++) swing.reserved[i]!.reservedForVolley = false;
++    this.pendingSloshes?.delete(swing.actor);
++    if(swing.next===0&&swing.request?.f4SourceLifeSerial!==undefined)
++      this.cpuAgents.rejectF4UnemittedMain(swing.request);
+   }
+ 
+   private emitPendingSloshes(
+@@ -2359,8 +2367,8 @@
+       const launch = this.clipF4Muzzle(anchor, origin);
+       const target = request && this.f4CpuLaunchTarget(request,swing.profile,launch);
+       if (request && !target) {
+-        if (swing.next === 0 && request.sourceInkTransaction)
+-          this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
++        if (swing.next === 0 && request.sourceInkTransaction&&request.f4SourceLifeSerial===undefined)
++          this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+         this.cancelSlosh(swing);
+         continue;
+       }
+@@ -2530,8 +2538,10 @@
+   private cancelCanopyVolley(actor: string): void {
+     const volley = this.pendingCanopyVolleys?.get(actor);
+     if (!volley) return;
+-    for (const slot of volley.slots) slot.reservedForVolley = false;
+-    this.pendingCanopyVolleys?.delete(actor);
++    for (const slot of volley.slots) slot.reservedForVolley = false;
++    this.pendingCanopyVolleys?.delete(actor);
++    if(volley.request?.f4SourceLifeSerial!==undefined)
++      this.cpuAgents.rejectF4UnemittedMain(volley.request);
+   }
+ 
+   public discardF4Canopy(actor: string): void {
+@@ -2556,9 +2566,10 @@
+       const actorBody = foot ? foot.clone().add(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)) : body;
+       const weaponOrigin = foot?.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+       const target = request && weaponOrigin && this.f4CpuLaunchTarget(request,profile,weaponOrigin);
+-      if (request && !target) {
+-        if (request.sourceInkTransaction) this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+-        this.cancelCanopyVolley(actor);
++      if (request && !target) {
++        if (request.sourceInkTransaction&&request.f4SourceLifeSerial===undefined)
++          this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
++        this.cancelCanopyVolley(actor);
+         continue;
+       }
+       const cpuAim = target && weaponOrigin ? target.clone().sub(weaponOrigin).normalize() : aim;
+@@ -2907,9 +2918,11 @@
+   private cancelSaberSwing(actor: string): void {
+     const swing = this.pendingSaberSwings?.get(actor);
+     if (!swing) return;
+-    if (!swing.slashEmitted) swing.slots[0].reservedForVolley = false;
+-    swing.slots[1].reservedForVolley = false;
+-    this.pendingSaberSwings?.delete(actor);
++    if (!swing.slashEmitted) swing.slots[0].reservedForVolley = false;
++    swing.slots[1].reservedForVolley = false;
++    this.pendingSaberSwings?.delete(actor);
++    if(!swing.slashEmitted&&swing.request?.f4SourceLifeSerial!==undefined)
++      this.cpuAgents.rejectF4UnemittedMain(swing.request);
+   }
+ 
+   private emitSaberSwings(muzzle: Vec3, humanBody: Vec3, humanAllowed: boolean, cpuAllowed: boolean): void {
