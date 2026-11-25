@@ -1,0 +1,37 @@
+{
+  "base": "6c74487098dd7c19d642d07eaa690d33175b2c6c",
+  "previous": "7f80b5b3610432a41b18779bbfe27601b393dba9",
+  "passed": [
+    {
+      "id": "ui-match-flow",
+      "patch": "fc1c52d8724cb3e6c010fdffcb54389e1cf3a534",
+      "modules": [
+        {
+          "path": "F4PlayerPresentation.mjs",
+          "sha": "edb7cae8755075314ed57f1b72c7e994eb38cdae"
+        },
+        {
+          "path": "F4PlayerPresentation.d.mts",
+          "sha": "b7e488a9636820fbfc88695f064359ac2cf8ff53"
+        },
+        {
+          "path": "F4MatchFlowExtras.mjs",
+          "sha": "d4fcf53aebe8905fe8f277f7e71d44e8f5c5dbc2"
+        },
+        {
+          "path": "F4MatchFlowExtras.d.mts",
+          "sha": "72b3823c65966c5529f9fdda6e180ace774dc401"
+        }
+      ],
+      "appAnchors": 3
+    }
+  ],
+  "held": [],
+  "blobs": {
+    "src/app/CompactF4Hud.mjs": "6f06b271af2d82628121e1d043627f0219ec196f",
+    "src/app/UndertowF3PlayablePreviewApp.ts": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b"
+  },
+  "replay": 46,
+  "files": 64,
+  "nativeBuild": "NOT_RUN"
+}
