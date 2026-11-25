@@ -1,0 +1,343 @@
+diff --git a/src/app/UndertowF3LTexturedSourcePreview.ts b/src/app/UndertowF3LTexturedSourcePreview.ts
+--- a/src/app/UndertowF3LTexturedSourcePreview.ts
++++ b/src/app/UndertowF3LTexturedSourcePreview.ts
+@@ -398,5 +398,7 @@
+     if(i!==vertices.length)throw Error('T21_F4_RESEARCH_TRIANGLE_DRIFT');
+     return vertices;
+-   };
+-   const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
+-   const {center,ingress,walkable}=f4RetainedSeedModelVertices;
++   };
++   const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
++   const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
++   const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
++   const {center,ingress,walkable}=f4RetainedSeedModelVertices;
+@@ -410,7 +412,7 @@
+    wholeNavWorld.set(originalStatic);
+    wholeNavWorld.set(retainedSeed,originalStatic.length);
+-   f4ResearchPositionGroups.length=0;
+-   return {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld};
+-  },
++   f4ResearchPositionGroups.length=0;
++   return {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld};
++  },
+   getReadabilityMode:()=>visualMode,
+   setReadabilityMode(mode:F3lStageReadabilityMode){
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -56,5 +56,11 @@
+ 
+ export class PaintCoordinator {
+-  private readonly requests: Readonly<PaintRequest>[] = [];
+-  public lastEvent: PaintEvent | null = null;
+-
++  private readonly requests: Readonly<PaintRequest>[] = [];
++  public lastEvent: PaintEvent | null = null;
++  private f4WallAtlas:GpuInkAtlas|null=null;
++  public attachF4WallAtlas(atlas:GpuInkAtlas):void{
++    if(this.f4WallAtlas)throw Error('F4_WALL_ATLAS_ALREADY_ATTACHED');
++    this.f4WallAtlas=atlas;
++  }
++  public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
++
+@@ -141,5 +147,6 @@
+           lastQueuedBrush.event, lastQueuedBrush.runs,
+           event, result.paintableRuns
+-        )) {
+-          this.gpu.queue(event, result.paintableRuns);
+-          lastQueuedBrush = { event, runs: result.paintableRuns };
++        )) {
++          const atlas=event.surfaceId.startsWith('F4ProvisionalWall:')?this.f4WallAtlas:this.gpu;
++          atlas?.queue(event, result.paintableRuns);
++          lastQueuedBrush = { event, runs: result.paintableRuns };
+@@ -169,7 +176,8 @@
+   public clear(): void {
+     this.requests.length = 0;
+-    this.gameplay.reset();
+-    this.gpu.clear();
+-    this.lastEvent = null;
++    this.gameplay.reset();
++    this.gpu.clear();
++    this.f4WallAtlas?.clear();
++    this.lastEvent = null;
+     this.stats.cpuInkCellsChanged = 0;
+     this.stats.cpuImpactInkCellsChanged = 0;
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -13,5 +13,6 @@
+  TextureHandler,Vec3
+ } from 'playcanvas';
+-import {CpuAgentSystem} from '../ai/CpuAgentSystem';
+-import {f4BelowInstalledGeometry} from '../stage/F4PhysicalStageSafety.mjs';
+-import {CpuKitSystem,nativeSourceSubBallisticAim} from '../ai/CpuKitSystem';
++import {CpuAgentSystem} from '../ai/CpuAgentSystem';
++import {f4BelowInstalledGeometry} from '../stage/F4PhysicalStageSafety.mjs';
++import {prepareF4ProvisionalWalls} from '../stage/F4ProvisionalWalls';
++import {CpuKitSystem,nativeSourceSubBallisticAim} from '../ai/CpuKitSystem';
+@@ -357,5 +358,6 @@
+  private f4ReturnCoachRoute:'return'|'negative-candidate'='return';
+  private readonly f4OriginalCorridorsPresent:boolean;
+- private readonly physics:RapierStagePhysics;
+- private b45SourceSurfaces:readonly PaintSurface[]=[];
+- private nav:RecastStageNavigation;
++ private readonly physics:RapierStagePhysics;
++ private b45SourceSurfaces:readonly PaintSurface[]=[];
++ private f4PhysicalPaintSurfaces:PaintSurface[]=[];
++ private nav:RecastStageNavigation;
+@@ -819,5 +821,6 @@
+   const stage=this.f4ResearchMode
+    ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
+-  const surfaces=defineTestSurfaces(this.ink,originalStage);
+-  this.b45SourceSurfaces=surfaces;
+-  if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
++  const surfaces=defineTestSurfaces(this.ink,originalStage);
++  this.b45SourceSurfaces=[...surfaces];
++  this.f4PhysicalPaintSurfaces=surfaces;
++  if(surfaces.length!==17||surfaces.some(s=>s.isScoreable))
+@@ -3278,5 +3281,6 @@
+   // bridge markings. Keep existing 25-solid gameplay visuals until F3L
+   // has passed its own exact source/UV/texture SHA verification.
+-  let installed:Awaited<ReturnType<typeof loadF3lTexturedSource>>=null;
+-  let restoreF4InkGeometry:(()=>void)|undefined;
+-  try{
++  let installed:Awaited<ReturnType<typeof loadF3lTexturedSource>>=null;
++  let restoreF4InkGeometry:(()=>void)|undefined;
++  let f4WallVertices:Float32Array|null=null;
++  try{
+@@ -3308,6 +3312,7 @@
+     const stageRoot=this.app.root.findByName('StageRoot');
+     if(!(stageRoot instanceof Entity))
+-     throw Error('T21_F4_RESEARCH_STAGE_ROOT_MISSING');
+-    const {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld}=
+-     installed.takeWholeF4ResearchWorldVertices();
+-    // Keep F4 paused unless Recast accepts the exact world geometry
++     throw Error('T21_F4_RESEARCH_STAGE_ROOT_MISSING');
++    const {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld}=
++     installed.takeWholeF4ResearchWorldVertices();
++    f4WallVertices=wallConcreteWorld;
++    // Keep F4 paused unless Recast accepts the exact world geometry
+@@ -3326,3 +3331,3 @@
+     this.ink.setPhysicalPaintBacking((surface,u,v)=>
+      this.physics.hasF4PaintBacking(surface,u,v));
+-    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
++    // Defer score admission until all provisional wall surfaces are registered.
+@@ -3374,6 +3379,24 @@
+      this.f4HumanOriginalReturnGuide,this.f4HumanNegativeReturnCandidate);
+     this.nav=this.f4WholeStudyNav;
+-    this.f4WholeCpuConnected=true;
+-    this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
+-   }
+-   // Preserve the same separately verified source background as the
++    this.f4WholeCpuConnected=true;
++    this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
++    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&f4WallVertices){
++     try{
++      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices);
++      if(walls){
++       // Original 17-surface QA list remains separate. Existing weapon
++       // runtimes share the mutable physical array, not a copied snapshot.
++       for(const surface of walls.surfaces){
++        if(this.ink.getSurface(surface.id))throw Error('F4_DUPLICATE_WALL');
++       }
++       this.coordinator.attachF4WallAtlas(walls.atlas);
++       for(const surface of walls.surfaces){this.ink.registerSurface(surface);this.f4PhysicalPaintSurfaces.push(surface);}
++       this.canvas.dataset.t21F4ProvisionalWalls=String(walls.surfaces.length);
++      }else this.canvas.dataset.t21F4ProvisionalWalls='HOLD_NO_ACCESSIBLE_CONCRETE';
++     }catch(error){this.canvas.dataset.t21F4ProvisionalWalls='HOLD '+String(error).slice(0,180);}
++    }
++    // registerSurface invalidates the provisional accumulator. Initialize
++    // only after the complete surface set is fixed, before first live tick.
++    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
++   }
++   // Preserve the same separately verified source background as the
+@@ -5944,5 +5967,6 @@
+    this.player.render(1,this.visual);this.cpu.render(1);
+    this.projectiles.render(1);this.humanSub.render(1);this.cpuKit?.render(1);
+-   this.camera.update(this.visual);
+-   this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+-   this.refresh();
++   this.camera.update(this.visual);
++   this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
++   this.coordinator.flushF4WallAtlas(16);
++   this.refresh();
+@@ -7133,5 +7157,6 @@
+    }
+    this.b20ProfileStop('entityAndCameraPreparation',entityRenderStart);
+-   const atlasStart=this.b20ProfileStart();
+-   this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+-   this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
++   const atlasStart=this.b20ProfileStart();
++   this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
++   this.coordinator.flushF4WallAtlas(16);
++   this.b20ProfileStop('inkAtlasMeshBuild',atlasStart);
+@@ -9574,7 +9599,7 @@
+    const registeredSolid=this.physics.castStageSegment(
+     muzzle,cameraTarget,'ink-projectile');
+-   if(f4Contact){
+-    paintHit=this.physics.f4PaintAtStageHit(registeredSolid,this.b45SourceSurfaces);
+-   }else{
++   if(f4Contact){
++    paintHit=this.physics.f4PaintAtStageHit(registeredSolid,this.f4PhysicalPaintSurfaces);
++   }else{
+     for(const surface of this.b45SourceSurfaces){
+      const hit=surface.intersectSegment(muzzle,cameraTarget);
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -15,3 +15,4 @@
+ import type { PlayerInput } from '../input/PlayerInput';
+ import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+-import { f4WalkableSupportNormal } from '../stage/F4PhysicalStageSafety.mjs';
++import { f4WalkableSupportNormal } from '../stage/F4PhysicalStageSafety.mjs';
++import { f4CarryCrestMomentum } from '../stage/F4WallContinuity.mjs';
+@@ -956,5 +957,6 @@
+         // when releasing Shift into HUMAN. Do not create airborne ascent
+         // from a missing wall or change genuine SURGE/roll jump impulses.
+-        if(this.nativeSourceGroundInkGuard)
+-          this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
+-            this.locomotionState,this.verticalVelocity);
++        if(this.nativeSourceGroundInkGuard&&
++           !this.f4CanCarryWallCrest(bodyPosition))
++          this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
++            this.locomotionState,this.verticalVelocity);
+@@ -1147,7 +1149,22 @@
+         this.sourceFootCastPosition.set(p.x,p.y,p.z),
+         PlayerController.humanFootOffset,this.mode):null;
+-      // Never treat a side or ceiling as floor ink; preserve real KCC motion.
+-      const hit=this.physics.hasF4WholeResearchTrimesh&&
+-        !f4WalkableSupportNormal(candidate?.normal?.y,
+-          PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)?null:candidate;
+-      this.sourceSupportedSolidId=hit?.solidId??null;
++      // Never treat a side or ceiling as floor ink; preserve real KCC motion.
++      let hit=this.physics.hasF4WholeResearchTrimesh&&
++        (!f4WalkableSupportNormal(candidate?.normal?.y,
++          PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)||
++         !candidate||Math.abs(p.y-PlayerController.humanFootOffset-candidate.point.y)>.12)?null:candidate;
++      // At an actual floor seam, use a real grounded KCC contact, not
++      // an invented center floor ray. Restrict its witness to current foot.
++      if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
++        const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
++        for(let i=0;i<this.character.numComputedCollisions();i++){
++          const c=this.character.computedCollision(i);
++          if(!c?.collider||!f4WalkableSupportNormal(c.normal1.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))continue;
++          const id=this.physics.sourceSolidIdForCollider(c.collider),w=c.witness1;
++          if(!id||Math.abs(p.y-PlayerController.humanFootOffset-w.y)>.12||
++             Math.hypot(w.x-p.x,w.z-p.z)>radius+.075)continue;
++          hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
++            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};break;
++        }
++      }
++      this.sourceSupportedSolidId=hit?.solidId??null;
+@@ -1170,3 +1187,8 @@
+       this.inkRelation=this.sourceFloorInk(this.relationFor(debugSample),debugSample);
+     }
+-    this.stats.playerInkRelation = this.currentInkRelation;
++    // Ownership cannot survive a real departure from a painted wall for
++    // even one resource-update tick. No state/velocity/position change.
++    if(this.physics.hasF4WholeResearchTrimesh&&this.wallSurfaceId.startsWith('F4ProvisionalWall:')&&
++       (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')&&
++       !this.findOwnWallSample(p))this.inkRelation='NONE';
++    this.stats.playerInkRelation = this.currentInkRelation;
+@@ -1343,3 +1365,27 @@
+   }
+ 
+-  private findOwnWallSample(bodyPosition: { x: number; y: number; z: number }): OwnWallSample | null {
++  // Retain existing upward momentum at a real wall lip, never create a
++  // new climb impulse. Standard dry squid acceleration/gravity + KCC own
++  // the next movement; floor ray is only a gate, not a landing guarantee.
++  private f4CanCarryWallCrest(body:{x:number;y:number;z:number}):boolean{
++    if(!this.physics.hasF4WholeResearchTrimesh||this.locomotionState!=='SWIM_WALL'||
++       !this.wallSurfaceId.startsWith('F4ProvisionalWall:')||this.verticalVelocity<=0||
++       !this.input.sourceLiveInputAvailable)return false;
++    const surface=this.gameplayInk.getSurface(this.wallSurfaceId);
++    if(!surface)return false;
++    const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
++    const signed=surface.projectWorldPoint(center).signedPlaneDistance;
++    if(Math.abs(signed)>PlayerController.squidRadius+.20)return false;
++    const inward=surface.normal.clone().mulScalar(signed>=0?-1:1);
++    const toward=this.desired.dot(inward);
++    if(toward<GAME_CONFIG.player.wallAttachInputThreshold)return false;
++    const across=center.clone().add(inward.mulScalar(Math.abs(signed)+PlayerController.squidRadius+.14));
++    const footY=body.y-PlayerController.humanFootOffset;
++    const support=this.physics.castCharacterFootSupport(new Vec3(across.x,footY+.42,across.z),0,'SQUID');
++    if(!support)return false;
++    const clear=!this.physics.castStageSegment(center,across,'ink-projectile');
++    return f4CarryCrestMomentum(support.point.y-footY,support.normal?.y,
++      this.verticalVelocity,toward,GAME_CONFIG.player.gravityMetersPerSecond2,clear);
++  }
++
++  private findOwnWallSample(bodyPosition: { x: number; y: number; z: number }): OwnWallSample | null {
+@@ -1348,5 +1394,6 @@
+     const tuning = GAME_CONFIG.player;
+     this.wallProbePoint.set(
+-      bodyPosition.x + this.desired.x * tuning.wallProbeForwardMeters,
+-      bodyPosition.y + tuning.wallProbeHeightOffsetMeters,
+-      bodyPosition.z + this.desired.z * tuning.wallProbeForwardMeters
++      bodyPosition.x + this.desired.x * tuning.wallProbeForwardMeters,
++      bodyPosition.y + (this.physics.hasF4WholeResearchTrimesh?
++        PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters:tuning.wallProbeHeightOffsetMeters),
++      bodyPosition.z + this.desired.z * tuning.wallProbeForwardMeters
+@@ -1377,9 +1424,23 @@
+       this.desired.x * this.wallOutward.x +
+       this.desired.z * this.wallOutward.z
+-    );
+-    if (towardAmount < tuning.wallAttachInputThreshold) return null;
+-
+-    return {
+-      sample,
++    );
++    if (towardAmount < tuning.wallAttachInputThreshold) return null;
++    if(this.physics.hasF4WholeResearchTrimesh&&sample.surface.id.startsWith('F4ProvisionalWall:')){
++      // A nearby painted projection is insufficient. The actual squid
++      // center must see the same painted physical wall at capsule reach.
++      const from=new Vec3(bodyPosition.x,bodyPosition.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,bodyPosition.z);
++      const target=sample.surface.localToWorld(sample.u,sample.v);
++      if(Math.abs(signedSide)>PlayerController.squidRadius+.20||from.distance(target)>.75)return null;
++      const end=target.clone().sub(this.wallOutward.clone().mulScalar(.025));
++      const physical=this.physics.castStageSegment(from,end,'ink-projectile');
++      const wallHit=this.physics.f4PaintAtStageHit(physical,[sample.surface]);
++      if(!wallHit||!physical?.normal||Math.abs(physical.normal.y)>.15)return null;
++      const actual=this.gameplayInk.sampleWorld(wallHit.worldPoint,.01,
++        SurfaceFlags.Swimmable|SurfaceFlags.Wall,0,s=>s===sample.surface);
++      if(!actual||actual.owner!==this.team)return null;
++    }
++
++    return {
++      sample,
+       outward: this.wallOutward.clone(),
+       towardAmount
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -1838,6 +1838,9 @@
+             bot.id,bot.position,bot.position,0);
+           if(foot){
+-            bot.position.set(foot.x,foot.y,foot.z);
+-            this.phase14qGroundCollision!.syncRealCpuFoot(bot.id,bot.position);
+-            if(this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position))
+-              this.reconcileBlockedT21F2CrowdProxy(bot);
++            bot.position.set(foot.x,foot.y,foot.z);
++            this.phase14qGroundCollision!.syncRealCpuFoot(bot.id,bot.position);
++            if(this.f4VoidCheck?.(bot.position.y,foot.kccGrounded)){
++              bot.hp=0;bot.lethalHumanDirect=false;this.splatBot(bot);continue;
++            }
++            if(this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position))
++              this.reconcileBlockedT21F2CrowdProxy(bot);
+@@ -2041,8 +2044,11 @@
+       const groundTravel=this.f4WholeNavigation&&
+         (bot.weaponId==='metro-roller'||bot.weaponId==='dash-brush')?
+-        {from:bot.position.clone(),to:new Vec3(accepted.x,accepted.y,accepted.z)}:undefined;
+-      bot.position.set(accepted.x,accepted.y,accepted.z);
+-      this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
+-      if(this.f4FirstSpawn&&!this.f4FirstCpuMoved&&
++        {from:bot.position.clone(),to:new Vec3(accepted.x,accepted.y,accepted.z)}:undefined;
++      bot.position.set(accepted.x,accepted.y,accepted.z);
++      this.phase14qGroundCollision?.syncRealCpuFoot(bot.id,bot.position);
++      if(this.f4WholeNavigation&&accepted.kccGrounded===false&&this.f4VoidCheck?.(bot.position.y,false)){
++        bot.hp=0;bot.lethalHumanDirect=false;this.splatBot(bot);continue;
++      }
++      if(this.f4FirstSpawn&&!this.f4FirstCpuMoved&&
+          Math.hypot(bot.position.x-this.f4FirstSpawn.x,
+            bot.position.z-this.f4FirstSpawn.z)>=.18)
