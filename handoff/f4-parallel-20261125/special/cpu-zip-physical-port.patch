@@ -1,0 +1,89 @@
+diff --git a/src/stage/undertow/UndertowPhase14QSharedActorCollision.ts b/src/stage/undertow/UndertowPhase14QSharedActorCollision.ts
+--- a/src/stage/undertow/UndertowPhase14QSharedActorCollision.ts
++++ b/src/stage/undertow/UndertowPhase14QSharedActorCollision.ts
+@@ -613,7 +613,84 @@
+   }
+ 
+   /** Uses the same registered capsule and collision filter as grounded play. */
+-  public moveF4WholeDrop(id:string,from:T21QFoot,delta:T21QFoot){
++  /** Provisional CPU Zipcaster: actual CPU capsule, not the HUMAN profile.
++   * Admission is read-only; the caller must own mobility and the real gauge. */
++  public probeF4CpuZip(id:string,foot:T21QFoot,direction:readonly [number,number,number],
++    target:Vec3){
++    const actor=this.actors.get(id);
++    if(!this.f4Research||!this.physics.hasF4WholeResearchTrimesh||!actor||
++       Math.hypot(actor.sourceFoot.x-foot.x,actor.sourceFoot.y-foot.y,actor.sourceFoot.z-foot.z)>1e-5||
++       ![foot.x,foot.y,foot.z,...direction,target.x,target.y,target.z].every(Number.isFinite))return null;
++    const support=this.f4WholeFloorRay(foot);
++    if(!support)return null;
++    const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
++    const start=new Vec3(foot.x,foot.y+this.cpuCenterOffset,foot.z);
++    const aim=new Vec3(...direction);
++    if(aim.lengthSq()<1e-8)return null;
++    aim.normalize();
++    const hit=this.physics.castStageSegment(start,start.clone().add(aim.clone().mulScalar(18)),'ink-projectile');
++    if(!hit?.normal||hit.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'||hit.distance<1||hit.distance>18)return null;
++    const normal=hit.normal.clone().normalize();
++    if(normal.dot(aim)>0)normal.mulScalar(-1);
++    if(Math.abs(normal.y)>.35)return null;
++    normal.y=0;normal.normalize();
++    const goal=hit.point.clone().add(normal.clone().mulScalar(this.cpuRadius+.08));
++    const sweep=(a:Vec3,b:Vec3)=>this.physics.auditF4HumanCapsuleSegment(a,b,this.cpuHalfHeight,this.cpuRadius,actor.collider);
++    if(!sweep(start,goal).clear||!sweep(goal,start).clear)return null;
++    const goalFoot=goal.clone();goalFoot.y-=this.cpuCenterOffset;
++    const muzzle=goalFoot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++    if(this.physics.castStageSegment(goal,muzzle,'ink-projectile'))return null;
++    const targetDistance=muzzle.distance(target);
++    return {start:v(new Vec3(foot.x,foot.y,foot.z)),goal:v(goalFoot),normal:v(normal),
++      supportId:support.solidId,colliderHandle:hit.collider.handle,distance:hit.distance,targetDistance,
++      targetClear:!this.physics.castStageSegment(muzzle,target,'ink-projectile')};
++  }
++
++  public canF4CpuZipReturn(id:string,from:T21QFoot,to:T21QFoot,supportId:string):boolean{
++    const actor=this.actors.get(id);
++    if(!this.f4Research||!this.physics.hasF4WholeResearchTrimesh||!actor||
++       Math.hypot(actor.sourceFoot.x-from.x,actor.sourceFoot.y-from.y,actor.sourceFoot.z-from.z)>1e-5||
++       ![from.x,from.y,from.z,to.x,to.y,to.z].every(Number.isFinite)||
++       this.f4WholeFloorRay(to)?.solidId!==supportId)return false;
++    const a=new Vec3(from.x,from.y+this.cpuCenterOffset,from.z);
++    const b=new Vec3(to.x,to.y+this.cpuCenterOffset,to.z);
++    return a.distance(b)<=.035||this.physics.auditF4HumanCapsuleSegment(
++      a,b,this.cpuHalfHeight,this.cpuRadius,actor.collider).clear;
++  }
++
++  /** Actual KCC result only. Caller synchronizes only the returned physical foot. */
++  public stepF4CpuZip(id:string,from:T21QFoot,delta:T21QFoot,wallHandle:number,
++    normal:readonly [number,number,number],landing:boolean){
++    const actor=this.actors.get(id);
++    if(!this.f4Research||!this.physics.hasF4WholeResearchTrimesh||!actor||
++       ![from.x,from.y,from.z,delta.x,delta.y,delta.z,...normal].every(Number.isFinite)||
++       Math.hypot(delta.x,delta.y,delta.z)>14/60+1e-6||
++       this.hasApproximateSameLayerOverlap(id,from)||
++       Math.hypot(actor.sourceFoot.x-from.x,actor.sourceFoot.y-from.y,actor.sourceFoot.z-from.z)>1e-5)return null;
++    this.kcc.disableSnapToGround();
++    this.kcc.disableAutostep();
++    try{
++      this.kcc.computeColliderMovement(actor.collider,delta,undefined,undefined,
++        collider=>collider.handle!==actor.collider.handle&&this.physics.shouldCharacterCollide(collider,'HUMAN'));
++      const move=this.kcc.computedMovement();
++      const foot={x:from.x+move.x,y:from.y+move.y,z:from.z+move.z};
++      if(![foot.x,foot.y,foot.z].every(Number.isFinite)||Math.hypot(move.x,move.y,move.z)>14/60+.03||
++         this.hasApproximateSameLayerOverlap(id,foot))return null;
++      let wallContact=false;
++      for(let i=0;i<this.kcc.numComputedCollisions();i++){
++        const hit=this.kcc.computedCollision(i);
++        if(hit?.collider?.handle===wallHandle&&hit.normal1.x*normal[0]+hit.normal1.z*normal[2]>.8)wallContact=true;
++      }
++      const floor=landing&&this.kcc.computedGrounded()?this.f4WholeFloorRay(foot):null;
++      return {foot:[foot.x,foot.y,foot.z] as [number,number,number],wallContact,grounded:!!floor,supportId:floor?.solidId??null};
++    }finally{
++      this.kcc.enableAutostep(PLAYER_CHARACTER_PHYSICS.autostepMaxHeightMeters,
++        PLAYER_CHARACTER_PHYSICS.autostepMinWidthMeters,PLAYER_CHARACTER_PHYSICS.autostepIncludeDynamicBodies);
++      this.kcc.enableSnapToGround(PLAYER_CHARACTER_PHYSICS.snapToGroundMeters);
++    }
++  }
++
++  public moveF4WholeDrop(id:string,from:T21QFoot,delta:T21QFoot){
+     const actor=this.actors.get(id);
+     if(!this.f4Research||!this.physics.hasF4WholeResearchTrimesh||!actor||
+        this.hasApproximateSameLayerOverlap(id,from)||

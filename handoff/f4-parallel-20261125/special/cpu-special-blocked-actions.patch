@@ -1,0 +1,64 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -2059,19 +2059,7 @@
+           if(probe.step({foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
+             hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial)}))continue;
+         }
+-        const natural=this.f4NaturalSpecial;
+-        if(natural?.wantsTick(bot.id)){
+-          const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
+-          const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+-          const aim=target?target.clone().sub(origin).normalize():bot.weaponFacing;
+-          const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0;
+-          const result=natural.step({actorId:bot.id,foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
+-            hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial),distance:target?origin.distance(target):null,
+-            hp:bot.hp,ink:bot.ink,recentHit:bot.b213ActualHitTick>=0&&this.b181NativeFrame-bot.b213ActualHitTick<=60,
+-            grounded:bot.mobilityState==='GROUND'});
+-          if(result.activated){bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;this.stats.cpuSpecialActivations++;}
+-          if(result.owns)continue;
+-        }
++        if(this.tickF4NaturalSpecial(bot,humanTeam,humanPosition,humanActive))continue;
+         this.updateCpuWeaponsAndKit(
+           bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
+       }
+@@ -2127,7 +2115,24 @@
+    * Never let a blocked route create movement, ground, free ink or combat.
+    * No effect on T20, unrejoined first-drop CPUs or the last 180s tick.
+    */
+-  private continueBlockedOriginalSourceCpuActions(
++  /** One natural-special update path for both moving and KCC-blocked grounded CPUs. */
++  private tickF4NaturalSpecial(bot:CpuBot,humanTeam:Team.A|Team.B,
++    humanPosition:Vec3,humanActive:boolean):boolean {
++    const natural=this.f4NaturalSpecial;
++    if(!natural?.wantsTick(bot.id))return false;
++    const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
++    const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++    const aim=target?target.clone().sub(origin).normalize():bot.weaponFacing;
++    const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0;
++    const result=natural.step({actorId:bot.id,foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
++      hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial),distance:target?origin.distance(target):null,
++      hp:bot.hp,ink:bot.ink,recentHit:bot.b213ActualHitTick>=0&&this.b181NativeFrame-bot.b213ActualHitTick<=60,
++      grounded:bot.mobilityState==='GROUND'});
++    if(result.activated){bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;this.stats.cpuSpecialActivations++;}
++    return result.owns;
++  }
++
++  private continueBlockedOriginalSourceCpuActions(
+     bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,
+     humanPosition:Vec3,humanActive:boolean,
+     canStartNewCombatActions:boolean
+@@ -2144,9 +2149,10 @@
+     if(!support||(!this.f4WholeNavigation&&
+        !this.stage.solids.some(s=>s.id===support.solidId))||
+        Math.abs(support.point.y-bot.position.y)>.25)return;
+-    const shotBefore=this.pendingShots.length;
+-    const kitBefore=this.pendingKitRequests.length;
+-    this.updateCpuWeaponsAndKit(
++    if(this.tickF4NaturalSpecial(bot,humanTeam,humanPosition,humanActive))return;
++    const shotBefore=this.pendingShots.length;
++    const kitBefore=this.pendingKitRequests.length;
++    this.updateCpuWeaponsAndKit(
+       bot,dt,humanTeam,humanPosition,humanActive);
+     const previous=this.blockedSourceActionRows.get(bot.id)??{
+       supportedWindows:0,mainRequests:0,kitRequests:0};
