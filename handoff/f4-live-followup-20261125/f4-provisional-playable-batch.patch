@@ -144,7 +144,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
   private f4SpecialLife=1;
   private f4HumanDeathTick:number|null=null;
   private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
-@@ -873,7 +879,17 @@
+@@ -873,7 +879,18 @@
    this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
     (event,changedCells,raster)=>{
      this.b23InkFeedback.accept(event,changedCells,raster);
@@ -158,12 +158,13 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +      actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
 +      weapon:this.projectiles.currentPlayerWeapon.id,alive:this.resources.currentHp>0
 +     }:event.source===PaintSource.Cpu&&event.actorId?this.cpu.f4NaturalActor(event.actorId):null;
-+     if(actor&&actor.team===event.team)this.f4Special.creditNaturalPaint(actor,actor.alive,raster.f4ProvisionalProjectedAreaM2Changed??0);
++     if(actor&&actor.team===event.team&&!(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
++      this.f4Special.creditNaturalPaint(actor,actor.alive,raster.f4ProvisionalProjectedAreaM2Changed??0);
 +    }
      // B154: real rasterized changes from ALL seven native original CPUs.
      // A projectile request, candidate or a fake actor is never paint.
      if(event.source===PaintSource.Cpu&&event.actorId&&
-@@ -1264,7 +1280,10 @@
+@@ -1264,7 +1281,10 @@
    this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
     ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
     sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
@@ -175,7 +176,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    const f4ProbeCpu=this.f4SpecialProbe?sessionStorage.getItem('t21F4SpecialProbeCpu'):null;
    if(f4ProbeCpu&&/^(A[123]|B[1234])$/.test(f4ProbeCpu)&&this.f4Special){
     const runtime=this.f4Special;
-@@ -1281,7 +1300,23 @@
+@@ -1281,7 +1301,23 @@
      cancel:()=>runtime.cancelActor(f4ProbeCpu,nextRoundTick())
     });
    }
@@ -200,7 +201,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // entrances now reuse the proven real physical-slot budget: a full
    // projectile pool must NOT spend the human's real ink for zero shots.
    // Explicit older B343 QA remains selectable; T20, deterministic
-@@ -2000,21 +2035,27 @@
+@@ -2000,21 +2036,37 @@
       const profile=subWeaponProfile(sub);
       return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
        subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
@@ -227,23 +228,35 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +        this.f4ZipResearchAimed?'接地して壁を照準 · G · 原作適格性 HOLD':'固定地点往復検証 · 原作適格性 HOLD'};
       }
 -     return this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
-+     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.f4Special)
-+      return this.f4Special.naturalPresentation({actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:this.projectiles.currentPlayerWeapon.id});
++     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.f4Special){
++      const actor={actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,weapon:this.projectiles.currentPlayerWeapon.id};
++      const view=this.f4Special.naturalPresentation(actor);
++      if(actor.weapon==='arc-blaster'){
++       const active=this.player.f4ZipNaturalActive;
++       return {...view,active,executorReady:this.ink.readF4ProvisionalTurf()?.status==='LIVE',
++        ready:!active&&this.f4Special.naturalZipReady(actor,Math.round((180-this.remainingSeconds)*60)),
++        probeControls:this.player.f4ZipNaturalCanFire?'左クリック 射撃 · F 再フック · G 帰還 · '+Math.ceil(this.player.f4ZipNaturalTicksLeft/60)+'秒':
++         active?'ショクワンダー移動中':'壁を照準して G 発動'};
++      }
++      return view;
++     }
 +     return this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
        weapon:this.projectiles.currentPlayerWeapon.id
       }):null;
-@@ -3050,7 +3091,8 @@
+@@ -3050,8 +3102,9 @@
    canvas.dataset.t21F3SourceStage=stage.metadata.id;
    canvas.dataset.t21F3Production='FORBIDDEN';
    const api={snapshot:()=>this.snapshot(),
 -   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
+-   f4ZipKccResearch:()=>this.f4ZipResearchEnabled?this.player.f4ZipResearchSnapshot():null,
 +   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
 +   f4ProvisionalTurf:()=>this.f4ProvisionalTurfEnabled?this.ink.readF4ProvisionalTurf():null,
-    f4ZipKccResearch:()=>this.f4ZipResearchEnabled?this.player.f4ZipResearchSnapshot():null,
++   f4ZipKccResearch:()=>this.f4ZipResearchEnabled||this.f4ProvisionalTurfEnabled?this.player.f4ZipResearchSnapshot():null,
     f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
      humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
-@@ -3268,8 +3310,9 @@
+     projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),
+@@ -3268,8 +3321,9 @@
      this.f4WholeTrimeshInstalled=true;
      // The F3L root draws all stage geometry. Existing backed ink cells
      // render over it without the old opaque neutral paint planes.
@@ -255,9 +268,12 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
       this.b45SourceSurfaces,wholeNavWorld);
      this.sourceCompletion.root.enabled=false;
-@@ -5938,15 +5981,21 @@
+@@ -5936,17 +5990,47 @@
+     const zipResearchKit=this.f4ZipResearchEnabled&&profile.id==='arc-blaster';
+     const zipOpen=zipResearchKit&&this.f4WholeTrimeshInstalled&&alive&&
       this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
-     if(!zipOpen)this.player.cancelF4ZipResearch('RESEARCH_INPUT_CLOSED');
+-    if(!zipOpen)this.player.cancelF4ZipResearch('RESEARCH_INPUT_CLOSED');
++    if(!zipOpen&&!this.player.f4ZipNaturalActive)this.player.cancelF4ZipResearch('RESEARCH_INPUT_CLOSED');
      if(zipOpen&&f4SpecialPressed&&this.player.canShoot&&this.remainingSeconds>210/60){
 -     const east=new Vec3(1,0,0);
 -     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(east));
@@ -267,7 +283,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(aim));
 +     this.player.beginF4ZipResearch(origin,aim,this.f4ZipResearchAimed?'aimed':'reviewed');
      }
-     const zipOwnsInput=this.player.f4ZipResearchActive;
+-    const zipOwnsInput=this.player.f4ZipResearchActive;
 -    const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
 -    const f4SpecialOwnsMobility=zipOwnsInput||Boolean(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled&&this.f4Special&&
 +    const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
@@ -276,14 +292,39 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +     this.f4Special.setNaturalOpen(this.ink.readF4ProvisionalTurf()?.status==='LIVE'&&this.matchState==='PLAYING'&&!this.stopReason);
 +     this.f4Special.syncNaturalActor({actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id},alive);
 +    }
-+    const f4SpecialOwnsMobility=zipOwnsInput||Boolean((this.f4SpecialProbe||naturalSpecial)&&this.f4WholeTrimeshInstalled&&this.f4Special&&
++    const subTap=this.input.consumeSubPressed();
++    const naturalZipKit=naturalSpecial&&profile.id==='arc-blaster';
++    const naturalZipOpen=naturalZipKit&&this.f4WholeTrimeshInstalled&&alive&&
++     this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
++    if(this.player.f4ZipNaturalActive&&!naturalZipOpen)this.player.cancelF4ZipResearch('NATURAL_ZIP_ACTIONS_CLOSED');
++    if(naturalZipOpen&&this.f4Special){
++     const actor={actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,weapon:profile.id};
++     if(this.player.f4ZipNaturalActive&&f4SpecialPressed)this.player.requestF4ZipNaturalReturn();
++     else if((this.player.f4ZipNaturalCanFire&&subTap)||
++       (!this.player.f4ZipNaturalActive&&f4SpecialPressed&&this.player.canShoot&&
++        this.remainingSeconds>750/60&&this.f4Special.naturalZipReady(actor,nextSpecialTick))){
++      const aim=new Vec3();this.camera.getAimDirection(aim);
++      const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(aim));
++      if(this.player.f4ZipNaturalActive)this.player.tryF4ZipNaturalRehook(origin,aim);
++      else{
++       this.player.beginF4ZipResearch(origin,aim,'natural');
++       if(this.player.f4ZipNaturalActive){
++        if(this.f4Special.consumeNaturalZip(actor,nextSpecialTick))this.resources.refillF4SpecialInk();
++        else this.player.cancelF4ZipResearch('GAUGE_ADMISSION_REJECTED');
++       }
++      }
++     }
++    }
++    const zipOwnsInput=this.player.f4ZipResearchActive;
++    const zipBlocksWeapon=zipOwnsInput&&!this.player.f4ZipNaturalCanFire;
++    const f4SpecialOwnsMobility=zipBlocksWeapon||Boolean((this.f4SpecialProbe||naturalSpecial)&&this.f4WholeTrimeshInstalled&&this.f4Special&&
       (this.f4Special.ownsWeaponInput('human',nextSpecialTick)||
 -      (f4SpecialPressed&&alive&&this.player.canShoot&&this.matchState==='PLAYING'&&
 +      (f4SpecialPressed&&(this.f4SpecialProbe||this.f4Special.naturalReady('human',nextSpecialTick))&&alive&&this.player.canShoot&&this.matchState==='PLAYING'&&
         !this.stopReason&&document.pointerLockElement===this.canvas)));
      const b379Mobility=applyB379NativePlayerWeaponMobility({
       input:this.input,player:this.player,weapons:this.projectiles,
-@@ -5978,7 +6027,7 @@
+@@ -5978,7 +6062,7 @@
      this.b20ProfileStop('rapierAndHumanKcc',playerStart);
      if(alive)this.resources.fixedUpdate(
       seconds,this.player.currentMode,this.player.currentInkRelation,mist);
@@ -292,21 +333,25 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
        alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
      }
-@@ -6114,7 +6163,7 @@
-     const realPointerFire=this.input.fireHeld||primaryTap;
-     const subTap=this.input.consumeSubPressed();
+@@ -6111,10 +6195,9 @@
+     });
+     this.camera.update(this.player.getPosition(this.p));
+     const primaryTap=this.input.consumePrimaryPressed();
+-    const realPointerFire=this.input.fireHeld||primaryTap;
+-    const subTap=this.input.consumeSubPressed();
++    const realPointerFire=this.input.fireHeld||primaryTap;
      const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
 -    if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
 +    if((this.f4SpecialProbe||naturalSpecial)&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
      let f4SpecialOwnsInput=f4SpecialOwnsMobility;
      const humanShotsBefore=this.stats.shotsFired;
      if(this.w10b14){
-@@ -6152,11 +6201,12 @@
+@@ -6152,11 +6235,12 @@
       this.camera.getAimDirection(this.aim);
       this.player.getMuzzlePosition(this.aim,this.muzzle);
       this.camera.getAimTarget(this.target);
 -     if(!zipResearchKit&&this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
-+     if(!zipResearchKit&&(this.f4SpecialProbe||naturalSpecial)&&this.f4Special&&this.f4WholeTrimeshInstalled){
++     if(!zipResearchKit&&!naturalZipKit&&(this.f4SpecialProbe||naturalSpecial)&&this.f4Special&&this.f4WholeTrimeshInstalled){
        const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
         this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
        const secondary=specialOpen&&this.input.secondaryHeld;
@@ -316,7 +361,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
         actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
        },{
         origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
-@@ -6166,8 +6216,10 @@
+@@ -6166,8 +6250,10 @@
         holdThrow:this.player.canShoot&&secondary,
         releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
         airborne:!this.stats.playerGrounded
@@ -329,7 +374,16 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.f4SpecialSecondaryHeld=secondary;
       }
       this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
-@@ -6242,8 +6294,11 @@
+@@ -6202,7 +6288,7 @@
+     // a projectile injected by QA. Original Rapier/paint physics resolve it.
+     // Consume even when disabled or splatted: never fire stale buffered F.
+     const humanSubId=this.sourceWeaponKit(profile.id).sub;
+-    const canUseSub=!f4SpecialOwnsInput&&this.humanSubAvailable&&actionWindow.humanCanStartNewActions&&
++    const canUseSub=!zipOwnsInput&&!f4SpecialOwnsInput&&this.humanSubAvailable&&actionWindow.humanCanStartNewActions&&
+      this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas;
+     this.f4HumanSubActionOpen=canUseSub;
+     let throwSub=canUseSub&&subTap;
+@@ -6242,8 +6328,12 @@
      this.cpuKit?.fixedUpdate(seconds);
      this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
      const paintStart=this.b20ProfileStart();
@@ -338,12 +392,13 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +    this.coordinator.processTick(frame);
 +    if(this.matchState==="TIME_UP"){
 +     if(this.f4ProvisionalTurfEnabled&&!this.stopReason)this.ink.finishF4ProvisionalTurf(f4RoundTick);
++     this.player.cancelF4ZipResearch('ROUND_ENDED');
 +     this.f4Special?.finish(f4RoundTick,true);
 +    }
      // Read life states after CPU and projectile updates on every native tick.
      // HUD and external QA sampling can skip a splat or respawn boundary.
      if(this.f4WholeCpuConnected){
-@@ -6279,7 +6334,8 @@
+@@ -6279,7 +6369,8 @@
        this.input.setCombatInputActive(false);
        this.f4CurlingHeldFrames=null;
        this.humanSplats++;
@@ -353,7 +408,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.player.cancelF4ZipResearch('HUMAN_SPLATTED');
        this.f4SpecialSecondaryHeld=false;
        this.player.setLifecycleActive(false);
-@@ -6940,8 +6996,12 @@
+@@ -6940,8 +7031,12 @@
    hud.dataset.t21B401NeutralCells=String(next.neutral);
    hud.dataset.t21B401OfficialWinner='NONE';
   }
@@ -368,7 +423,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // No player/CPU physics ticks with old colliders while F3L verifies.
    if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
     this.paused=true;
-@@ -9673,7 +9733,10 @@
+@@ -9673,7 +9768,10 @@
     const actualStop=state.stopReason?
      'NATIVE STOP · TICK '+state.tick+' · '+
      state.stopReason.slice(0,160)+'\n':'';
@@ -383,7 +438,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
 --- a/src/app/CompactF4Hud.mjs
 +++ b/src/app/CompactF4Hud.mjs
-@@ -7,7 +7,7 @@
+@@ -7,15 +7,15 @@
   const clock=number(frame.remainingSeconds,0,180)?Math.ceil(frame.remainingSeconds):null;
   const alive=hp!==null&&frame.hp>0;
   const respawn=!alive&&hp!==null&&number(frame.respawnTicks,0,150)&&Number.isInteger(frame.respawnTicks)?(Math.ceil(frame.respawnTicks/6)/10).toFixed(1):null;
@@ -392,8 +447,9 @@ diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
   const enabled=valid&&special.executorReady===true;
   const specialPercent=valid?Math.floor(100*special.points/special.required):null;
   const probe=kit?.probe===true?special?.probeState:null;
-@@ -15,7 +15,7 @@
-  const specialStatus=probe&&Object.hasOwn(probeLabels,probe)?probeLabels[probe]:!valid?'得点未認証':special.active===true?'発動中':!enabled?'実行未接続':alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
+  const probeLabels={AVAILABLE:'G 単独検証',ACTIVE:'単独実行中',LOCKED:'終了動作中',USED:'このライフで実行済み',UNSUPPORTED:'物理実行 HOLD'};
+- const specialStatus=probe&&Object.hasOwn(probeLabels,probe)?probeLabels[probe]:!valid?'得点未認証':special.active===true?'発動中':!enabled?'実行未接続':alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
++ const specialStatus=probe&&Object.hasOwn(probeLabels,probe)?probeLabels[probe]:!valid?'得点未認証':special.active===true?'発動中':!enabled?(special?.provisional?'準備中 / 実行未接続':'実行未接続'):alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
   const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
   const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
 - return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証',danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?probe==='ACTIVE'?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
@@ -417,19 +473,56 @@ diff --git a/src/app/CompactF4Hud.d.mts b/src/app/CompactF4Hud.d.mts
 diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 --- a/src/player/PlayerController.ts
 +++ b/src/player/PlayerController.ts
-@@ -141,8 +141,9 @@
+@@ -139,10 +139,14 @@
+   towardAmount: number;
+ }
  
- type F4ZipResearchLeg = 'OUTBOUND' | 'WALL_CONTACT' | 'RETURN' | 'LANDING';
+-type F4ZipResearchLeg = 'OUTBOUND' | 'WALL_CONTACT' | 'RETURN' | 'LANDING';
++type F4ZipResearchLeg = 'OUTBOUND' | 'WALL_CONTACT' | 'ATTACHED' | 'RETURN' | 'LANDING';
  
 -interface F4ZipResearchRun {
 -  leg: F4ZipResearchLeg;
 +interface F4ZipResearchRun {
 +  leg: F4ZipResearchLeg;
-+  variant:'reviewed'|'aimed';
++  variant:'reviewed'|'aimed'|'natural';
++  returnStartedTick:number|null;
++  hookCount:number;
++  wallLostTicks:number;
    start: Vec3;
    wallApproach: Vec3;
    wallNormal: Vec3;
-@@ -350,25 +351,34 @@
+@@ -299,16 +303,17 @@
+   }
+ 
+   /** Current physical hook candidate audit only; no traversal or body movement occurs here. */
+-  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number) {
++  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number,returnAnchor?:Vec3) {
+     const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
+-    if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||!this.grounded||
++    if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||(!this.grounded&&!returnAnchor)||
+        ![...v(origin),...v(aim),rangeM].every(Number.isFinite)||
+        rangeM<=0||rangeM>64||aim.lengthSq()<1e-8)
+       return {status:'HOLD',reason:'ACTUAL_GROUNDED_HUMAN_AND_EXPLICIT_RANGE_REQUIRED'};
+     const body=this.getPosition(new Vec3());
+     const off=PlayerController.humanFootOffset;
+-    const support=this.physics.castCharacterFootSupport(body,off,'HUMAN');
+-    const landingGap=support?body.y-off-support.point.y:null;
++    const anchor=returnAnchor??body;
++    const support=this.physics.castCharacterFootSupport(anchor,off,'HUMAN');
++    const landingGap=support?anchor.y-off-support.point.y:null;
+     const landingSupported=!!support&&!!support.normal&&support.normal.y>=.70&&
+       landingGap!==null&&Math.abs(landingGap)<=.10;
+     if(!landingSupported)
+@@ -332,7 +337,7 @@
+     const goal=hit.point.clone().add(horizontal.mulScalar(PlayerController.humanRadius+.08));
+     const sweep=(a:Vec3,b:Vec3)=>this.physics.auditF4HumanCapsuleSegment(
+       a,b,PlayerController.humanHalfHeight,PlayerController.humanRadius,this.humanCollider);
+-    const outbound=sweep(body,goal),reverse=sweep(goal,body);
++    const outbound=sweep(body,goal),reverse=sweep(goal,anchor);
+     const segments=Math.max(1,Math.ceil(body.distance(goal)/.125));
+     let firstUnsupported:number[]|null=null;
+     for(let i=0;i<=segments;i++){
+@@ -350,25 +355,34 @@
          firstUnsupportedFoot:firstUnsupported},originalHookAuthorized:false,liveKccExecuted:false};
    }
  
@@ -449,7 +542,7 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 -      return;
 -    }
 +  /** Isolated experiment only. Aimed variant uses current physical wall, never original hook authority. */
-+  public beginF4ZipResearch(origin: Vec3, aim: Vec3,variant:'reviewed'|'aimed'='reviewed'): void {
++  public beginF4ZipResearch(origin: Vec3, aim: Vec3,variant:'reviewed'|'aimed'|'natural'='reviewed'): void {
 +    if(this.f4ZipResearchActive)return;
 +    this.f4ZipResearch=null;
 +    this.f4ZipResearchResult={status:'HOLD',reason:'STAND_AT_REVIEWED_APPROACH'};
@@ -460,7 +553,7 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 +      return;
 +    }
 +    // 18m is the existing experiment's maximum, not a certified game range.
-+    const audit=this.auditF4ZipGeometry(origin,aim,variant==='aimed'?18:20);
++    const audit=this.auditF4ZipGeometry(origin,aim,variant==='reviewed'?20:18);
 +    if(!audit.witness||!audit.goal||!audit.returnLanding?.solidId||
 +       !audit.outbound?.clear||!audit.reverse?.clear||
 +       audit.witness.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'){
@@ -476,11 +569,61 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
      const [nx,,nz]=audit.witness.normal;
      this.f4ZipResearch={
 -      leg:'OUTBOUND',start,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
-+      leg:'OUTBOUND',variant,start,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
++      leg:'OUTBOUND',variant,start,returnStartedTick:null,hookCount:1,wallLostTicks:0,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
        wallColliderHandle:audit.witness.colliderHandle,returnSupportId:audit.returnLanding.solidId,
        hookDistanceM:audit.witness.distanceM,wallContact:null,ticks:0,stalledTicks:0,
        maxAcceptedStepM:0,travelledM:0
-@@ -391,8 +401,9 @@
+@@ -381,7 +395,48 @@
+ 
+   public get f4ZipResearchActive(): boolean {return this.f4ZipResearch!==null&&this.f4ZipResearchResult===null;}
+ 
+-  public get f4ZipResearchStatus() {
++  public get f4ZipNaturalActive():boolean {
++    return this.f4ZipResearchActive&&this.f4ZipResearch?.variant==='natural';
++  }
++  public get f4ZipNaturalCanFire():boolean {
++    return this.f4ZipNaturalActive&&this.f4ZipResearch?.leg==='ATTACHED';
++  }
++  public get f4ZipNaturalTicksLeft():number {
++    return this.f4ZipNaturalActive?Math.max(0,540-(this.f4ZipResearch?.ticks??0)):0;
++  }
++  public tryF4ZipNaturalRehook(origin:Vec3,aim:Vec3):boolean {
++    const run=this.f4ZipResearch;
++    if(!run||!this.f4ZipNaturalCanFire||run.ticks>=540||run.hookCount>=6)return false;
++    const audit=this.auditF4ZipGeometry(origin,aim,18,run.start);
++    if(!audit.witness||!audit.goal||!audit.outbound?.clear||!audit.reverse?.clear||
++       audit.returnLanding?.solidId!==run.returnSupportId||
++       audit.witness.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'||audit.witness.distanceM<1||
++       audit.witness.distanceM>18)return false;
++    const goal=new Vec3(...audit.goal);
++    if(goal.distance(this.position)<.5)return false;
++    const [nx,,nz]=audit.witness.normal;
++    run.wallApproach=goal;run.wallNormal=new Vec3(nx,0,nz).normalize();
++    run.wallColliderHandle=audit.witness.colliderHandle;run.hookDistanceM=audit.witness.distanceM;
++    run.leg='OUTBOUND';run.wallContact=null;run.stalledTicks=0;run.wallLostTicks=0;run.hookCount++;
++    return true;
++  }
++  public requestF4ZipNaturalReturn():void {
++    const run=this.f4ZipResearch;
++    if(!run||!this.f4ZipNaturalActive||run.returnStartedTick!==null)return;
++    const support=this.physics.castCharacterFootSupport(run.start,PlayerController.humanFootOffset,'HUMAN');
++    if(!support||support.solidId!==run.returnSupportId||(support.normal?.y??0)<.70||
++       Math.abs(run.start.y-PlayerController.humanFootOffset-support.point.y)>.10){
++      this.cancelF4ZipResearch('RETURN_ANCHOR_UNSUPPORTED');return;
++    }
++    if(this.position.distance(run.start)>.035&&!this.physics.auditF4HumanCapsuleSegment(
++       this.position,run.start,PlayerController.humanHalfHeight,PlayerController.humanRadius,this.humanCollider).clear){
++      this.cancelF4ZipResearch('RETURN_ROUTE_BLOCKED');return;
++    }
++    run.returnStartedTick=run.ticks;run.stalledTicks=0;
++    run.leg=this.position.distance(run.start)<=.035?'LANDING':'RETURN';
++  }
++
++  public get f4ZipResearchStatus() {
+     return this.f4ZipResearchResult?.status??this.f4ZipResearch?.leg??'READY';
+   }
+ 
+@@ -391,8 +446,10 @@
      return {
        status:this.f4ZipResearchStatus,
        reason:this.f4ZipResearchResult?.reason??null,
@@ -488,22 +631,46 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 -      hookDistanceM:run?.hookDistanceM??null,
 +      originalHookAuthorized:false,
 +      variant:run?.variant??null,wallApproach:run?v(run.wallApproach):null,
++      hookCount:run?.hookCount??0,ticksLeft:this.f4ZipNaturalTicksLeft,
 +      hookDistanceM:run?.hookDistanceM??null,
        start:run?v(run.start):null,wallContact:run?v(run.wallContact):null,
        position:v(this.position),grounded:this.grounded,ticks:run?.ticks??0,
        travelledM:run?.travelledM??0,maxAcceptedStepM:run?.maxAcceptedStepM??0
-@@ -434,8 +445,8 @@
+@@ -412,7 +469,7 @@
+     const landing=run.leg==='LANDING';
+     this.setSnapToGround(landing);
+     const target=run.leg==='OUTBOUND'?run.wallApproach:run.start;
+-    const movement=run.leg==='WALL_CONTACT'?run.wallNormal.clone().mulScalar(-.06):
++    const movement=run.leg==='WALL_CONTACT'||run.leg==='ATTACHED'?run.wallNormal.clone().mulScalar(-.06):
+       landing?new Vec3(0,-.06,0):target.clone().sub(new Vec3(bodyPosition.x,bodyPosition.y,bodyPosition.z));
+     const distance=movement.length();
+     if(distance>14*dt)movement.mulScalar(14*dt/distance);
+@@ -434,24 +491,36 @@
        const wall=this.f4LastKccMotion?.contacts.some(hit=>
          hit.colliderHandle===run.wallColliderHandle&&
          hit.normal[0]!*run.wallNormal.x+hit.normal[2]!*run.wallNormal.z>.8);
 -      if(wall){
 -        run.wallContact=this.position.clone();
+-        run.leg='RETURN';
+-        run.stalledTicks=0;
 +      if(wall&&(run.variant==='reviewed'||this.position.distance(run.wallApproach)<=.22)){
 +        run.wallContact=this.position.clone();
-         run.leg='RETURN';
-         run.stalledTicks=0;
++        run.leg=run.variant==='natural'?'ATTACHED':'RETURN';
++        run.stalledTicks=0;
        }else if(this.position.distance(run.wallApproach)>.22){
-@@ -447,8 +458,9 @@
+         this.cancelF4ZipResearch('REVIEWED_WALL_CONTACT_MISSING');
+       }
+-    }else if(run.leg==='RETURN'&&this.position.distance(run.start)<.035){
++    }else if(run.leg==='ATTACHED'){
++      const wall=this.f4LastKccMotion?.contacts.some(hit=>
++        hit.colliderHandle===run.wallColliderHandle&&
++        hit.normal[0]!*run.wallNormal.x+hit.normal[2]!*run.wallNormal.z>.8);
++      run.wallLostTicks=wall&&this.position.distance(run.wallApproach)<=.22?0:run.wallLostTicks+1;
++      run.stalledTicks=0;
++      if(run.wallLostTicks>=3)this.requestF4ZipNaturalReturn();
++    }else if(run.leg==='RETURN'&&this.position.distance(run.start)<.035){
+       run.leg='LANDING';
+     }else if(run.leg==='LANDING'&&this.grounded){
        const support=this.physics.castCharacterFootSupport(
          this.position,PlayerController.humanFootOffset,'HUMAN');
        this.f4ZipResearchResult=support?.solidId===run.returnSupportId&&
@@ -514,7 +681,15 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 +        {status:'RETURNED',reason:'KCC_WALL_CONTACT_AND_SUPPORTED_RETURN'}:
          {status:'HOLD',reason:'RETURN_SUPPORT_MISMATCH'};
      }
-     if(run.stalledTicks>=12||run.ticks>=210)this.cancelF4ZipResearch('KCC_ROUTE_BLOCKED_OR_TIMED_OUT');
+-    if(run.stalledTicks>=12||run.ticks>=210)this.cancelF4ZipResearch('KCC_ROUTE_BLOCKED_OR_TIMED_OUT');
++    if(run.variant==='natural'){
++      if(run.returnStartedTick===null&&(run.ticks>=540||run.stalledTicks>=12))this.requestF4ZipNaturalReturn();
++      else if(run.returnStartedTick!==null&&(run.stalledTicks>=12||run.ticks-run.returnStartedTick>=210))
++        this.cancelF4ZipResearch('KCC_RETURN_BLOCKED_OR_TIMED_OUT');
++    }else if(run.stalledTicks>=12||run.ticks>=210)this.cancelF4ZipResearch('KCC_ROUTE_BLOCKED_OR_TIMED_OUT');
+   }
+ 
+   public get canShoot(): boolean {
 diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 --- a/src/special/F4SpecialRuntime.ts
 +++ b/src/special/F4SpecialRuntime.ts
@@ -528,7 +703,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
  import { PhysicalSpecialPort720, type SpecialPlan, type LaserPair, type TornadoPulse, type WaveDevice, type BarrierDevice } from './f4/shared-special-score720-20261125/physical-special-port720.mjs';
  
  const HUMAN = 'human';
-@@ -39,7 +40,25 @@
+@@ -39,7 +40,33 @@
      candidateContacts:0,admissionAttempts:0,admissionRejected:0};
    private waves = 0;
    private readonly active = new Map<string,string>();
@@ -545,6 +720,14 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 +    const state=this.naturalGauge.state(actorId);
 +    return this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
 +  }
++  naturalZipReady(actor:Actor,tick:number):boolean {
++    const state=this.naturalGauge.state(actor.actorId);
++    return this.naturalOpen&&actor.actorId===HUMAN&&actor.weapon==='arc-blaster'&&
++      !!state?.ready&&state.lifeId===actor.lifeId&&state.weapon===actor.weapon&&!this.ownsWeaponInput(actor.actorId,tick);
++  }
++  consumeNaturalZip(actor:Actor,tick:number):boolean {
++    return this.naturalZipReady(actor,tick)&&this.naturalGauge.consume(actor.actorId,actor.lifeId);
++  }
 +  naturalActivations(actorId:string):number {return this.naturalGauge.state(actorId)?.activations??0;}
 +  naturalPresentation(actor:Actor) {
 +    const view=this.actorPresentation(actor),state=this.naturalGauge.state(actor.actorId);
@@ -555,7 +738,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
    private input: Input|null = null;
    private paintCells = 0;
    private launches = 0;
-@@ -92,7 +111,9 @@
+@@ -92,7 +119,9 @@
      this.round++;
      this.port=this.newPort();
      this.turf=new CertifiedTurf720({roundId:this.roundId});
@@ -566,7 +749,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      this.actorUnlock.clear();
      this.livePose.clear();
      this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
-@@ -116,7 +137,10 @@
+@@ -116,7 +145,10 @@
      this.effects.length=0;
      this.devices.clear();
      this.suctionQueries.clear();
@@ -578,7 +761,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
    }
  
    notePaint(changed: number): void {this.paintCells+=changed;}
-@@ -145,7 +169,7 @@
+@@ -145,7 +177,7 @@
        launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
        castEnd:this.terminal,placementAttempts:this.placementAttempts,
        lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected,
@@ -587,7 +770,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
    }
  
    update(tick: number): void {
-@@ -160,7 +184,7 @@
+@@ -160,7 +192,7 @@
      }
    }
  
@@ -596,7 +779,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      this.frame=Math.max(this.frame,tick);
      const {actorId,lifeId,team,weapon}=actor;
      const key={roundId:this.roundId,tick,actorId,lifeId};
-@@ -174,7 +198,12 @@
+@@ -174,7 +206,12 @@
      this.input=input;
      const probeKey=actorId+':'+lifeId;
      try {
