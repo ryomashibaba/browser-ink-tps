@@ -1,0 +1,100 @@
+{
+  "base": "31cb7d24067f759d68df267c38321ca32282b024",
+  "previous": "466d27f51d7a23f0eb7bfa69dd46f7b455556ead",
+  "passed": [
+    {
+      "id": "visual-wet-film",
+      "path": "visual/f4-wet-film-lighting.patch",
+      "sha": "a5e4155b5046d655b0a452f1c4e5253bfcc1e924"
+    },
+    {
+      "id": "visual-actor",
+      "path": "visual/f4-actor-art.patch",
+      "sha": "d0b8b0d22e8f90d7afbe2e9e962b74a1f664c949"
+    },
+    {
+      "id": "visual-clarity",
+      "path": "visual/f4-stage-clarity-own-tank.patch",
+      "sha": "a4770e1d6559b17134dfef55e4155e78ab0352fa"
+    },
+    {
+      "id": "performance-brush",
+      "path": "performance/ink-brush-pack.patch",
+      "sha": "715bc9d4f6df32909b6e382fb94a684b9af3f458"
+    },
+    {
+      "id": "performance-grid",
+      "path": "performance/cpu-grid-search.patch",
+      "sha": "0678af22869717a37e16e52637b18f602218ff97"
+    },
+    {
+      "id": "performance-radar",
+      "path": "performance/radar-scratch.patch",
+      "sha": "3bf23695bef2aead8c64ff0a09ddb01df104bd63"
+    }
+  ],
+  "held": [],
+  "relaxed": [
+    {
+      "path": "src/app/UndertowF3PlayablePreviewApp.ts",
+      "hunk": 3277,
+      "trim": [
+        0,
+        3
+      ]
+    },
+    {
+      "path": "src/app/UndertowF3PlayablePreviewApp.ts",
+      "hunk": 3325,
+      "trim": [
+        2,
+        0
+      ]
+    },
+    {
+      "path": "src/app/UndertowF3PlayablePreviewApp.ts",
+      "hunk": 3370,
+      "trim": [
+        2,
+        0
+      ]
+    }
+  ],
+  "blobs": {
+    "src/ink/InkSurfaceMaterial.ts": {
+      "sha": "7364357a20cd7781fc65f1774ee33a25cc539ace",
+      "source": "windows-share"
+    },
+    "src/stage/TestStage.ts": {
+      "sha": "f62c7df7a1e1f6c83445acc3d1aca6d38ea6c409",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3LTexturedSourcePreview.ts": {
+      "sha": "25ad13acab7c438c1c6822807595a8c63593f5f8",
+      "source": "windows-share"
+    },
+    "src/core/InkBrushRasterStream.ts": {
+      "sha": "d26cdd204bc33845d4d1f81cf6bf8fbea20edf98",
+      "source": "research-root"
+    },
+    "src/ai/B216OriginalSourceBackfillInk.ts": {
+      "sha": "d54fad0f66a01c458c3ba425d86162b2c7a2a725",
+      "source": "research-root"
+    },
+    "src/app/B402NativeSourceInkRadarSamples.ts": {
+      "sha": "e6bdf1195923f501249c19416b99c4050d0ce05b",
+      "source": "research-root"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/app/B248SourceActorVisuals.ts": {
+      "sha": "71f42a6a1e9e8f8a66ac67e4f9c2dee2ee6a8396",
+      "source": "research-root"
+    }
+  },
+  "replay": 75,
+  "files": 60,
+  "nativeBuild": "NOT_RUN"
+}
