@@ -1,0 +1,151 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -9,7 +9,8 @@
+  * result while the human is controlled by real PlayerInput.
+  */
+ import {Vec3} from 'playcanvas';
+-import {F4PatrolNavigation,type PatrolCandidate,type PatrolInk} from '../ai/F4PatrolNavigation.mjs';
++import {F4PatrolNavigation,localPatrolProgress,localPatrolCanContinue,type PatrolCandidate,type PatrolInk,type PatrolPoint} from '../ai/F4PatrolNavigation.mjs';
++import {recoveringInk} from '../ai/F4CpuRecoveryPolicy.mjs';
+ import {F4PatrolSurvey} from '../ai/F4PatrolSurvey.mjs';
+ import type {CrowdAgent} from 'recast-navigation';
+ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+@@ -618,7 +619,7 @@
+  private readonly f4WholeIngress=new Map<number,readonly StageVector3[]>();
+  private readonly f4WholeGoals=new Map<string,{
+   point:Vec3;issued:number;local:boolean;bestDistance:number;advanced:number;
+-  opponent?:string;recovering?:boolean
++  opponent?:string;recovering?:boolean;patrolTrail?:PatrolPoint[];patrolVeto?:boolean
+  }>();
+  private readonly f4LastSeenOpponent=new Map<string,{id:string;point:Vec3;tick:number}>();
+  private readonly f4WholeDirections=new Map<string,number>();
+@@ -1421,6 +1422,7 @@
+       bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))<=.01&&
+       this.f4WholeSupport(id,bot.position)&&
+       this.f4PatrolNavigation.noteKccReject(id,this.b137NativeTick,actualFoot,goal.point)){
++    goal.patrolVeto=true;
+     goal.advanced=Math.min(goal.advanced,this.b137NativeTick-48);
+     bot.thinkRemaining=Math.min(bot.thinkRemaining,0);
+    }
+@@ -1918,26 +1920,34 @@
+    out.copy(combat.point);
+    return true;
+   }
++  // Share the combat recovery hysteresis, including the first low-ink tick.
++  // Hold only on actual swimmable own ink in ordinary lanes, never in combat.
++  const quietRecovery=recoveringInk(bot.f4RecoveringInk===true,bot.ink??Infinity,GAME_CONFIG.inkEconomy.capacity);
++  const recoveryFloor=quietRecovery&&this.freeCombat&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42?
++   this.sourceNativeCharacterFootHit(foot):null;
++  const holdRecovery=!!recoveryFloor&&this.sourceInk?.sampleWorld(
++   recoveryFloor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team;
+   const reached=!!previous&&foot.distance(previous.point)<=.35;
+   if(reached&&!previous?.opponent)this.f4PatrolNavigation.noteReached(id,this.b137NativeTick,foot);
+-  if(previous&&!previous.opponent&&!reached&&this.b137NativeTick-previous.advanced<48&&
+-     (!previous.local||this.b137NativeTick-previous.issued<120)){
++  if(previous&&!previous.opponent&&!reached&&
++     (previous.local?!holdRecovery&&localPatrolCanContinue(this.b137NativeTick,previous.issued,previous.advanced,previous.patrolVeto):
++      this.b137NativeTick-previous.advanced<48)){
+    out.copy(previous.point);
+    return true;
+   }
+   // A short local target is still an ordinary Crowd route proposal. If its
+   // KCC steps make no measurable progress, let the next native thought pick
+-  // another supported direction on the same mesh instead of holding it for
+-  // the separate 120-tick local-target lifetime.
++  // another supported direction on the same mesh; expiry alone is not a veto.
+   const stalledOnRoute=!!previous&&!previous.opponent&&!reached&&
+-   this.b137NativeTick-previous.advanced>=48;
++   (previous.patrolVeto===true||this.b137NativeTick-previous.advanced>=48);
+   if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
+   this.f4WholeGoals.delete(id);
+   const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
+   const request=(point:Vec3,local:boolean)=>{
+    this.f4PatrolNavigation.newGoal(id);
+    this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
+-    advanced:this.b137NativeTick,bestDistance:foot.distance(point)});
++    advanced:this.b137NativeTick,bestDistance:foot.distance(point),
++    patrolTrail:local?[{x:foot.x,y:foot.y,z:foot.z}]:undefined});
+    out.copy(point);
+    this.realGoalRequests++;
+    return true;
+@@ -1988,7 +1998,7 @@
+   const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
+    a.mobilityState==='GROUND'&&(a.hp??0)>0);
+   const reservations=allies.flatMap(a=>{const g=this.f4WholeGoals.get(a.id);return g&&!g.opponent?[g.point]:[];});
+-  const recovering=(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
++  const recovering=quietRecovery||(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
+    (bot.hp??Infinity)<GAME_CONFIG.combat.playerMaxHp*.45;
+   const options={recovering,reservations};
+   const inkAt=(point:Vec3):PatrolInk=>{
+@@ -2010,6 +2020,10 @@
+    if(!point||avoids(point))continue;
+    return request(point,false);
+   }
++  // After mandatory ingress/center choices, recover on this real own floor.
++  // Returning false clears only the ordinary Crowd target; weapon recovery
++  // and all real resource rates remain owned by CpuAgentSystem.
++  if(holdRecovery)return false;
+   // Sparse real owner-grid survey, only on ordinary free patrol away from
+   // spawn/center transfers. Existing actual-floor/route/KCC gates remain.
+   if(this.freeCombat&&this.sourceInk&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42){
+@@ -3951,12 +3965,13 @@
+      if(previous.distance(bot.position)>.015)this.lastMoved.set(bot.id,frame);
+      previous.copy(bot.position);
+      const goal=this.f4WholeGoals.get(bot.id);
+-     if(goal){
++     if(goal&&!goal.patrolVeto){
+       const distance=bot.position.distance(goal.point);
++      const moved=goal.patrolTrail?localPatrolProgress(goal.patrolTrail,bot.position):false;
+       if(distance<goal.bestDistance-.06){
+        goal.bestDistance=distance;
+        goal.advanced=frame;
+-      }
++      }else if(moved)goal.advanced=frame;
+      }
+     }else{
+      this.physicallyRejoined.delete(bot.id);
+diff --git a/src/ai/F4PatrolNavigation.mjs b/src/ai/F4PatrolNavigation.mjs
+--- a/src/ai/F4PatrolNavigation.mjs
++++ b/src/ai/F4PatrolNavigation.mjs
+@@ -43,3 +43,17 @@
+  }
+ }
+ 
++// Local survey routes can be 8m long; keep genuine progress through a bend
++// or enemy-ink slowdown, with a hard six-second bound. No KCC override.
++export function localPatrolProgress(trail,foot){
++ if(!foot||![foot.x,foot.y,foot.z].every(Number.isFinite)||!Array.isArray(trail)||trail.length>=96)return false;
++ // Only a new horizontal location earns progress; repeated or vertical
++ // jitter does not. Trail is scoped to this goal, never a movement command.
++ if(trail.some(p=>Math.hypot(p.x-foot.x,p.z-foot.z)<.25))return false;
++ trail.push({x:foot.x,y:foot.y,z:foot.z});
++ return true;
++}
++export function localPatrolCanContinue(tick,issued,advanced,veto=false){
++ return [tick,issued,advanced].every(Number.isSafeInteger)&&!veto&&tick>=issued&&tick>=advanced&&tick-advanced<48&&tick-issued<360;
++}
++
+diff --git a/src/ai/F4PatrolNavigation.d.mts b/src/ai/F4PatrolNavigation.d.mts
+--- a/src/ai/F4PatrolNavigation.d.mts
++++ b/src/ai/F4PatrolNavigation.d.mts
+@@ -12,4 +12,6 @@
+  noteReached(id:string,tick:number,foot:PatrolPoint):void;
+  rank<P extends PatrolPoint>(id:string,tick:number,foot:PatrolPoint,candidates:readonly PatrolCandidate<P>[],allies:readonly PatrolPoint[],options?:PatrolOptions):PatrolCandidate<P>[];
+ }
++export function localPatrolProgress(trail:PatrolPoint[],foot:PatrolPoint):boolean;
++export function localPatrolCanContinue(tick:number,issued:number,advanced:number,veto?:boolean):boolean;
+ 
+diff --git a/src/ai/F4PatrolSurvey.mjs b/src/ai/F4PatrolSurvey.mjs
+--- a/src/ai/F4PatrolSurvey.mjs
++++ b/src/ai/F4PatrolSurvey.mjs
+@@ -25,7 +25,8 @@
+   const phase=(tick+Array.from(id).reduce((sum,ch)=>sum+ch.charCodeAt(0),0))%8;
+   for(const radius of [3,5.5]){
+    for(let i=0;i<8;i++){
+-    const angle=(phase+i)*Math.PI/4;
++    // Fractional phase rotates the sample set, not just its order.
++    const angle=(phase/8+i)*Math.PI/4;
+     const x=Math.floor((u+radius*Math.cos(angle))/cs),y=Math.floor((v+radius*Math.sin(angle))/cs),key=y*W+x;
+     const owner=cell(x,y);
+     if(!desired(owner)||seen.has(key))continue;seen.add(key);
