@@ -1,0 +1,6 @@
+# Visual batch 3 — stage material clarity + local actual ink tank
+Apply after chief/f4-partial-integrated-01.patch (40832b8e741b058c4a1b19827dc6c48b547ea96a), visual/f4-wet-film-lighting.patch (a5e4155b5046d655b0a452f1c4e5253bfcc1e924) and visual/f4-actor-art.patch (d0b8b0d22e8f90d7afbe2e9e962b74a1f664c949). Exact source replay based on ac34c863a07d279d758213bfeb061b0a16844530. Independent follow-up; does not supersede prior visuals. Existing provisional F4 visual gate only; off flag disables all.
+
+Stage: retain verified albedo/UV/geometry, mipmaps and transparency/depth. FLOOR/SLOPE texture anisotropy capped at 2 and device limit, no texture downloads or mesh creation. Concrete matte; differentiated bounded gloss/metalness for metal/glass/structure. Retained terrain same optical treatment. Local player rear panel uses actual stats.playerInk / GAME_CONFIG.inkEconomy.capacity; invalid input hides it; no CPU resource disclosure. Reuses existing tank/stripe, no added meshes, no writes when unchanged. Weapon/pose/visibility unchanged.
+
+Executed 85 focused mock/numeric/source replay checks; native TypeScript, GPU/Chrome and screenshot/FPS not run. Anisotropy API: https://api.playcanvas.com/engine/classes/Texture.html ; values provisional. Chief owns integration.
