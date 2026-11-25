@@ -69,5 +69,19 @@
   },
   "replay": 116,
   "files": 78,
-  "nativeBuild": "NOT_RUN"
+  "nativeBuild": "NOT_RUN",
+  "chiefCorrections": {
+    "previousPatch": "955ec38508fc935e51a1e7ac8510d6152e5ddf95",
+    "changes": [
+      "Narrow human gauge actor Team.A literal",
+      "Normalize tolerance-sized projected ownership rounding; HOLD for material inconsistency"
+    ],
+    "verification": {
+      "isolatedAssertions": 266,
+      "appHunks": 45,
+      "totalHunks": 360,
+      "fullNativeBuild": "NOT_RUN"
+    },
+    "notes": "Local TypeScript 5.8.3 isolated enum reproduction TS2345 fixed by const narrowing; native full build not run."
+  }
 }

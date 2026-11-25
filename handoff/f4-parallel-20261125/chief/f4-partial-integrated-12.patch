@@ -15,7 +15,7 @@ diff --git a/src/ink/F4ProvisionalTurf.mjs b/src/ink/F4ProvisionalTurf.mjs
 new file mode 100644
 --- /dev/null
 +++ b/src/ink/F4ProvisionalTurf.mjs
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,84 @@
 +// F4 provisional research scoring only. Neither source flags nor owner grids are written here.
 +const PAINT=1,WALL=8,FLOOR=16,RAMP=32;
 +export class F4ProvisionalTurf {
@@ -74,9 +74,15 @@ new file mode 100644
 +  const progress=this.#count?this.#scanned/this.#count:0;
 +  if(this.#scanned!==this.#count)return {status:'BUILDING',winner:'NONE',progress};
 +  if(this.#total<=0)return {status:'HOLD',winner:'NONE',progress,reason:'NO_BACKED_FLOOR'};
-+  const a=Math.max(0,this.#a),b=Math.max(0,this.#b),total=this.#total;
++  const total=this.#total,epsilon=Math.max(1e-8,total*1e-8);
++  if(![total,this.#a,this.#b].every(Number.isFinite)||this.#a < -epsilon||this.#b < -epsilon||
++     this.#a+this.#b>total+epsilon)return {status:'HOLD',winner:'NONE',progress:1,reason:'OWNERSHIP_AREA_INCONSISTENT'};
++  // Independent scan/paint summation can differ by a few ULPs. Correct only
++  // tolerance-sized drift; never turn a materially inconsistent tally into a winner.
++  let a=Math.min(total,Math.max(0,this.#a)),b=Math.min(total,Math.max(0,this.#b));
++  if(a+b>total){const scale=total/(a+b);a*=scale;b*=scale;}
 +  return {status:'LIVE',winner:'NONE',progress:1,areaA:a,areaB:b,neutralArea:Math.max(0,total-a-b),
-+   totalProjectedM2:total,percentA:100*a/total,percentB:100*b/total}
++   totalProjectedM2:total,percentA:Math.min(100,(a/total)*100),percentB:Math.min(100,(b/total)*100)}
 + }
 + finish(tick){
 +  if(this.#final)return this.read();
@@ -6349,7 +6355,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +       event.type!==PaintEventType.Special&&event.type!==PaintEventType.Debug&&
 +       (raster.f4ProvisionalProjectedAreaM2Changed??0)>0){
 +     const actor=event.source===PaintSource.Human?{
-+      actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
++      actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,
 +      weapon:this.projectiles.currentPlayerWeapon.id,alive:this.resources.currentHp>0
 +     }:event.source===PaintSource.Cpu&&event.actorId?this.cpu.f4NaturalActor(event.actorId):null;
 +     if(actor&&actor.team===event.team&&!(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
