@@ -1,0 +1,146 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -536,10 +536,11 @@
+   private f4NaturalSpecial?:{
+     tick():number;
+     zipReady(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):boolean;
+-    zipConsume(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):boolean;
++    zipConsume(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):boolean;
++    zipActivated?(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string},foot:Vec3):void;
+     zipEnd(actorId:string):void;
+     wantsTick(actorId:string):boolean;
+-    step(input:{actorId:string;foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;hasOpponent:boolean;canStart:boolean;lifeId:string;distance:number|null;hp:number;ink:number;recentHit:boolean;grounded:boolean}):{owns:boolean;activated:boolean};
++    step(input:{actorId:string;foot:Vec3;aim:Vec3;target:Vec3|null;team:Team.A|Team.B;weapon:WeaponId;hasOpponent:boolean;canStart:boolean;lifeId:string;distance:number|null;hp:number;ink:number;recentHit:boolean;grounded:boolean}):{owns:boolean;activated:boolean};
+     cancel(actorId:string):void;
+     splat(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):void;
+   };
+@@ -2183,7 +2184,7 @@
+     const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+     const aim=target?target.clone().sub(origin).normalize():bot.weaponFacing;
+     const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0;
+-    const result=natural.step({actorId:bot.id,foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
++    const result=natural.step({actorId:bot.id,foot:bot.position,aim,target,team:bot.team,weapon:bot.weaponId,
+       hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial),distance:target?origin.distance(target):null,
+       hp:bot.hp,ink:bot.ink,recentHit:bot.b213ActualHitTick>=0&&this.b181NativeFrame-bot.b213ActualHitTick<=60,
+       grounded:bot.mobilityState==='GROUND'});
+@@ -2208,7 +2209,10 @@
+     this.sourceCrowdProjectionHold.delete(bot.id);this.qaMotionGoals.delete(bot.id);this.b181CachedCombat.delete(bot.id);
+     bot.mobilityState='F4_ZIP';this.f4ZipRuns.set(bot.id,{motion,canFire:false});
+     bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;
+-    this.stats.cpuSpecialActivations++;return true;
++    this.stats.cpuSpecialActivations++;
++    // Match the already-connected human Zip cue, only after real admission.
++    try{n.zipActivated?.(actor,bot.position);}catch{/* cosmetic only */}
++    return true;
+   }
+ 
+   private tickF4CpuZip(bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,humanPosition:Vec3,humanActive:boolean):void{
+@@ -2234,11 +2238,13 @@
+       this.f4Drops.set(bot.id,{target:bot.position.clone(),verticalSpeed:0,elapsed:0,center:false});
+       bot.mobilityState='FIRST_DROP_FALL';return;
+     }
+-    if(result.canFire){
+-      row.canFire=true;
+-      const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0,true);
+-      const profile=weaponProfile(bot.weaponId,this.f4WholeNavigation);
+-      if(target&&bot.fireRemaining<=0&&this.cpuTargetInRange(bot,target,profile)&&this.queueCpuWeaponRequest(bot,target,0)){
++    if(result.canFire){
++      const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0,true);
++      const profile=weaponProfile(bot.weaponId,this.f4WholeNavigation);
++      const actionable=target!==null&&this.cpuTargetInRange(bot,target,profile);
++      row.motion.observeAttachedTarget(n.tick(),actionable);
++      row.canFire=actionable;
++      if(actionable&&target&&bot.fireRemaining<=0&&this.queueCpuWeaponRequest(bot,target,0)){
+         bot.fireRemaining=profile.fireIntervalSeconds;bot.weaponFacing.copy(target).sub(bot.position).normalize();
+       }
+     }
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1332,15 +1332,20 @@
+    this.cpu.useF4NaturalSpecial({
+     tick,
+     zipReady:actor=>runtime.cpuZipReady(actor,tick()),
+-    zipConsume:actor=>runtime.consumeCpuZip(actor,tick()),
++    zipConsume:actor=>runtime.consumeCpuZip(actor,tick()),
++    zipActivated:(actor,foot)=>this.feedback.f4SpecialEvent('zipcaster',actor.team,foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0))),
+     zipEnd:id=>runtime.endCpuZip(id),
+     wantsTick:id=>runtime.wantsNaturalCpuTick(id,tick()),
+-    step:({actorId,lifeId,team,weapon,foot,aim,canStart,distance,hp,ink,recentHit,grounded})=>{
+-     const actor={actorId,lifeId,team,weapon};
+-     const origin=this.projectiles.clipF4SpecialMuzzle(foot,foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)));
+-     return runtime.naturalCpuTick(tick(),actor,{origin,forward:aim.clone(),foot:foot.clone(),
+-      trigger:false,holdThrow:false,releaseThrow:false,cannon:false,airborne:!grounded},
+-      {canStart,distance,hp,ink,recentHit,grounded});
++    step:({actorId,lifeId,team,weapon,foot,aim,target,canStart,hp,ink,recentHit,grounded})=>{
++     const actor={actorId,lifeId,team,weapon};
++     const origin=this.projectiles.clipF4SpecialMuzzle(foot,foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)));
++     // Preserve the actual selected target through muzzle clipping.
++     const delta=target?.clone().sub(origin);
++     const distance=delta?.length()??null;
++     const forward=delta&&delta.lengthSq()>1e-8?delta.normalize():aim.clone();
++     return runtime.naturalCpuTick(tick(),actor,{origin,forward,foot:foot.clone(),cpuTarget:target?.clone(),
++      trigger:false,holdThrow:false,releaseThrow:false,cannon:false,airborne:!grounded},
++      {canStart,distance,hp,ink,recentHit,grounded});
+     },cancel:id=>runtime.cancelActor(id,tick()),
+     splat:actor=>{runtime.cancelActor(actor.actorId,tick());runtime.syncNaturalActor(actor,false);}
+    });
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -66,8 +66,8 @@
+       ready:this.naturalReady(actor.actorId,tick),...context,direction:[input.forward.x,input.forward.y,input.forward.z]});
+     this.cpuDecisions++;
+     const before=this.naturalActivations(actor.actorId);
+-    const cpuTarget=context.distance!==null&&Number.isFinite(context.distance)&&context.distance>=0?
+-      input.origin.clone().add(input.forward.clone().normalize().mulScalar(context.distance)):undefined;
++    // CPU host supplies its actual current selected body point, never a reconstructed approximation.
++    const cpuTarget=input.cpuTarget?.clone();
+     const owns=this.actorTick(tick,actor,{...input,trigger:command.trigger,cannon:command.cannon,
+       holdThrow:command.holdThrow,releaseThrow:command.releaseThrow,cpuTactical:true,
+       cpuLobValid:command.lob!==null,cpuTarget,
+diff --git a/src/special/F4CpuZipMotion.mjs b/src/special/F4CpuZipMotion.mjs
+--- a/src/special/F4CpuZipMotion.mjs
++++ b/src/special/F4CpuZipMotion.mjs
+@@ -15,9 +15,16 @@
+ }
+ export class CpuZipMotion {
+  constructor(candidate,tick,lifeId){
+-  this.candidate=candidate;this.started=tick;this.lifeId=lifeId;this.phase="OUTBOUND";this.stalls=0;this.lost=0;this.returnTick=null;this.lastTick=tick-1;
++  this.candidate=candidate;this.started=tick;this.lifeId=lifeId;this.phase="OUTBOUND";this.stalls=0;this.lost=0;this.returnTick=null;this.lastTick=tick-1;this.noTargetSince=null;
+  }
+- step({tick,lifeId,foot,visible,hp},port){
++ // Only the host's post-KCC, current visible in-range target can reset this timer.
++ observeAttachedTarget(tick,actionable){
++  if(this.phase!=="ATTACHED"||!Number.isSafeInteger(tick)||tick!==this.lastTick)return false;
++  if(actionable===true)this.noTargetSince=null;
++  else if(this.noTargetSince===null)this.noTargetSince=tick;
++  return true;
++ }
++ step({tick,lifeId,foot,visible,hp},port){
+   const out=(footResult=null,canFire=false)=>({phase:this.phase,foot:footResult,canFire});
+   const terminal=()=>["RETURNED","FALL_REQUIRED","CANCELLED"].includes(this.phase);
+   if(terminal())return out();
+@@ -30,7 +37,8 @@
+    if(!port.returnClear(foot,c.start,c.supportId)){this.phase="FALL_REQUIRED";return}
+    this.phase="RETURN";this.returnTick=tick;this.stalls=0;
+   };
+-  if((tick-this.started>=540||this.stalls>=12||this.lost>=3||hp<=25&&this.phase==="ATTACHED")&&this.returnTick===null)startReturn();
++  const idleAttached=this.phase==="ATTACHED"&&this.noTargetSince!==null&&tick-this.noTargetSince>=90;
++  if((tick-this.started>=540||this.stalls>=12||this.lost>=3||idleAttached||hp<=25&&this.phase==="ATTACHED")&&this.returnTick===null)startReturn();
+   if(terminal())return out();
+   if(this.returnTick!==null&&(tick-this.returnTick>=210||this.stalls>=12)){this.phase="FALL_REQUIRED";return out()}
+   if(this.phase==="OUTBOUND"&&dist(foot,c.goal)<=.035)this.phase="CONTACT";
+diff --git a/src/special/F4CpuZipMotion.d.mts b/src/special/F4CpuZipMotion.d.mts
+--- a/src/special/F4CpuZipMotion.d.mts
++++ b/src/special/F4CpuZipMotion.d.mts
+@@ -5,6 +5,7 @@
+ export function selectCpuZipHook(input:{tick:number;ready:boolean;canStart:boolean;grounded:boolean;hp:number;direction:ZipPoint;distance:number|null},probe:(ray:ZipPoint)=>CpuZipCandidate|null):CpuZipCandidate|null;
+ export class CpuZipMotion {
+  constructor(candidate:CpuZipCandidate,tick:number,lifeId:string);
+- readonly candidate:CpuZipCandidate;readonly lifeId:string;readonly phase:CpuZipPhase;
++ readonly candidate:CpuZipCandidate;readonly lifeId:string;readonly phase:CpuZipPhase;
++ observeAttachedTarget(tick:number,actionable:boolean):boolean;
+  step(input:{tick:number;lifeId:string;foot:ZipPoint;visible:boolean;hp:number},port:{returnClear:(a:ZipPoint,b:ZipPoint,id:string)=>boolean;move:(delta:ZipPoint,hook:CpuZipCandidate)=>CpuZipPhysicalStep|null}):{phase:CpuZipPhase;foot:ZipPoint|null;canFire:boolean};
+ }
