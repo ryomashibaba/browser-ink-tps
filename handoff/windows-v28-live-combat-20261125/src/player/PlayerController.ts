@@ -279,6 +279,58 @@ export class PlayerController {
     this.b248Visual?.setEnabled(shown);
   }
 
+  /** Current physical hook candidate audit only; no traversal or body movement occurs here. */
+  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number) {
+    const v=(p:Vec3)=>[p.x,p.y,p.z];
+    if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||!this.grounded||
+       ![...v(origin),...v(aim),rangeM].every(Number.isFinite)||
+       rangeM<=0||rangeM>64||aim.lengthSq()<1e-8)
+      return {status:'HOLD',reason:'ACTUAL_GROUNDED_HUMAN_AND_EXPLICIT_RANGE_REQUIRED'};
+    const body=this.getPosition(new Vec3());
+    const off=PlayerController.humanFootOffset;
+    const support=this.physics.castCharacterFootSupport(body,off,'HUMAN');
+    const landingGap=support?body.y-off-support.point.y:null;
+    const landingSupported=!!support&&!!support.normal&&support.normal.y>=.70&&
+      landingGap!==null&&Math.abs(landingGap)<=.10;
+    if(!landingSupported)
+      return {status:'HOLD',reason:'RETURN_ANCHOR_UNSUPPORTED',body:v(body),landingGap,
+        supportId:support?.solidId??null};
+    const start=new Vec3(body.x,origin.y,body.z);
+    if(start.distance(origin)>1||this.physics.castStageSegment(start,origin,'ink-projectile'))
+      return {status:'HOLD',reason:'MUZZLE_NOT_CLEAR',body:v(body)};
+    const direction=aim.clone().normalize();
+    const hit=this.physics.castStageSegment(origin,origin.clone().add(direction.clone().mulScalar(rangeM)),
+      'ink-projectile');
+    if(!hit?.normal||hit.distance<=.05||hit.normal.lengthSq()<1e-8)
+      return {status:'HOLD',reason:'NO_FIRST_PHYSICAL_HOOK_CONTACT',body:v(body)};
+    const normal=hit.normal.clone().normalize();
+    if(normal.dot(direction)>0)normal.mulScalar(-1);
+    const witness={solidId:hit.solidId,colliderHandle:hit.collider.handle,
+      point:v(hit.point),normal:v(normal),distanceM:hit.distance};
+    if(Math.abs(normal.y)>.35)
+      return {status:'HOLD',reason:'FIRST_CONTACT_NOT_WALL_CANDIDATE',witness};
+    const horizontal=new Vec3(normal.x,0,normal.z).normalize();
+    const goal=hit.point.clone().add(horizontal.mulScalar(PlayerController.humanRadius+.08));
+    const sweep=(a:Vec3,b:Vec3)=>this.physics.auditF4HumanCapsuleSegment(
+      a,b,PlayerController.humanHalfHeight,PlayerController.humanRadius,this.humanCollider);
+    const outbound=sweep(body,goal),reverse=sweep(goal,body);
+    const segments=Math.max(1,Math.ceil(body.distance(goal)/.125));
+    let firstUnsupported:number[]|null=null;
+    for(let i=0;i<=segments;i++){
+      const point=new Vec3().lerp(body,goal,i/segments);
+      const floor=this.physics.castCharacterFootSupport(point,off,'HUMAN');
+      if(!floor?.normal||floor.normal.y<.70||Math.abs(point.y-off-floor.point.y)>.10){
+        firstUnsupported=[point.x,point.y-off,point.z];break;
+      }
+    }
+    return {status:'HOLD',reason:!outbound.clear||!reverse.clear?'PHYSICAL_CAPSULE_ROUTE_BLOCKED':
+      'ORIGINAL_HOOK_AUTHORITY_AND_LIVE_KCC_UNVERIFIED',
+      witness,body:v(body),goal:v(goal),returnLanding:{supported:landingSupported,
+        solidId:support?.solidId??null,gapM:landingGap},
+      outbound,reverse,groundRoute:{sampleSpacingM:.125,continuousSamples:!firstUnsupported,
+        firstUnsupportedFoot:firstUnsupported},originalHookAuthorized:false,liveKccExecuted:false};
+  }
+
   public get canShoot(): boolean {
     return this.mode === 'HUMAN' &&
       this.weaponDodgeStartupSeconds <= 0 &&

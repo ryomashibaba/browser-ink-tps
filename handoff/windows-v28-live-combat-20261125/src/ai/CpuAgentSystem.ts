@@ -299,6 +299,8 @@ interface CpuBot {
   b213ActualAttackerId:string|null;
   b213ActualHitTick:number;
   lifeState: 'ACTIVE' | 'SPLATTED';
+  /** F4 device identity; advances only after a successful physical respawn. */
+  f4LifeSerial: number;
   respawnRemainingSeconds: number;
   mobilityState: CpuMobilityState;
   /** T21 QA-only post-offmesh Crowd settlement counters. */
@@ -515,7 +517,7 @@ export class CpuAgentSystem {
   private f4PhysicalSpecialProbe?: {
     actorId:string;
     step(input:{foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;
-      hasOpponent:boolean;canStart:boolean}):boolean;
+      hasOpponent:boolean;canStart:boolean;lifeId:string}):boolean;
     cancel():void;
   };
   private readonly f4PendingSpawns = new Set<string>();
@@ -2036,7 +2038,7 @@ export class CpuAgentSystem {
           const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&
             bot.weaponBurstShotsRemaining<=0;
           if(probe.step({foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
-            hasOpponent:target!==null,canStart}))continue;
+            hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial)}))continue;
         }
         this.updateCpuWeaponsAndKit(
           bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
@@ -2658,6 +2660,17 @@ export class CpuAgentSystem {
     return this.bots.some(bot=>bot.id===actorId && bot.lifeState==='ACTIVE' && bot.hp>0);
   }
 
+  public f4ActiveLifeKey(actorId:string):string|null {
+    const bot=this.bots.find(row=>row.id===actorId);
+    return bot&&bot.lifeState==='ACTIVE'&&bot.hp>0?
+      JSON.stringify([bot.id,bot.f4LifeSerial]):null;
+  }
+
+  public f4IsGroundedLife(actorId:string):boolean {
+    const bot=this.bots.find(row=>row.id===actorId);
+    return !!bot&&bot.lifeState==='ACTIVE'&&bot.hp>0&&bot.mobilityState==='GROUND';
+  }
+
   public isActorActive(actorId: string): boolean {
     const bot = this.bots.find((candidate) => candidate.id === actorId);
     return Boolean(bot && bot.lifeState === 'ACTIVE');
@@ -3202,6 +3215,7 @@ export class CpuAgentSystem {
         b213ActualAttackerId:null,
         b213ActualHitTick:-1,
         lifeState: 'ACTIVE',
+        f4LifeSerial: 1,
         respawnRemainingSeconds: 0,
         mobilityState: 'GROUND',
         rejoinElapsedFrames: 0,
@@ -5644,6 +5658,7 @@ export class CpuAgentSystem {
     bot.guardEntity.enabled = false;
     bot.respawnRemainingSeconds = 0;
     bot.lifeState = 'ACTIVE';
+    bot.f4LifeSerial += 1;
     bot.mobilityState = 'GROUND';
     bot.jumpMarker.enabled = false;
     bot.jumpTargetId = '-';

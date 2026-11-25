@@ -258,6 +258,16 @@ export class ProjectileSystem {
   // remain separate from the strict frozen 25-solid B351 authority.
   private f4PhysicalHitCueOn=false;
   private f4ConfirmedDamageCues=0;
+  private f4SpecialSplashHits=0;
+  private f4SpecialCueFrame=-1;
+  public f4SpecialSplashHitCount():number{return this.f4SpecialSplashHits;}
+  private noteF4SpecialDamageCue(point:Vec3,team:Team.A|Team.B):void {
+    if(!this.f4PhysicalHitCueOn||team!==this.currentHumanTeam||
+       this.f4SpecialCueFrame===this.b367NativeFrame)return;
+    this.f4SpecialCueFrame=this.b367NativeFrame;
+    this.f4ConfirmedDamageCues++;
+    this.feedback.confirmedHumanCpuDamage(team,point,this.currentPlayerWeapon);
+  }
   private b367Enabled=false;
   private b367SelectedRealLoadout=false;
   private b367NativeFrame=0;
@@ -334,15 +344,16 @@ export class ProjectileSystem {
       return true;
     };
     this.cpuAgents.forEachMapAgent((id,targetTeam,foot,active)=>{
-      if(active && team!==targetTeam && this.cpuAgents.isF4DeviceOwnerAlive(id) && contact(foot)){
+      if(active && team!==targetTeam && this.cpuAgents.f4IsGroundedLife(id) && contact(foot)){
         const damage=accept(id);
         if(damage<=0)return;
         const result=this.cpuAgents.applyProjectileHit({botId:id,guarded:false,point:foot,distance:0},
           damage,actor==='human'?'HUMAN':'CPU',actor);
         hpLoss+=result?.realHpLoss??0;
+        if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(foot,team);
       }
     });
-    if(this.currentHumanDamageable && team!==this.currentHumanTeam && this.resources.currentHp>0){
+    if(this.currentHumanDamageable && this.f4HumanGrounded && team!==this.currentHumanTeam && this.resources.currentHp>0){
       const foot=this.currentHumanPosition.clone().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0));
       if(contact(foot)){
         const damage=accept('human');
@@ -401,6 +412,10 @@ export class ProjectileSystem {
       if (damage <= 0) continue;
       const result = this.cpuAgents.applyProjectileHit(hit,damage,actor==='human'?'HUMAN':'CPU',actor);
       hpLoss += result?.realHpLoss ?? 0;
+      if(actor==='human'&&(result?.realHpLoss??0)>0){
+        this.f4SpecialSplashHits++;
+        this.noteF4SpecialDamageCue(hit.point,team);
+      }
     }
     const human = this.findNativeSourceHumanPhysicalHit(start,end,team,radius,terrainCover);
     if (human && human.distance <= limit &&
@@ -418,7 +433,14 @@ export class ProjectileSystem {
   public applyF4SpecialPulse(point: Vec3, team: Team.A|Team.B, actor: string, radius: number,
     damage: number, paint: number, near?: {radius: number; damage: number}): void {
     if (!this.physics.hasF4WholeResearchTrimesh) return;
-    if (damage > 0) this.applyAreaDamage(point,radius,damage,team,undefined,false,undefined,near);
+    if (damage > 0) {
+      const before=this.stats.cpuCombatHits;
+      this.applyAreaDamage(point,radius,damage,team,undefined,false,undefined,near);
+      if(actor==='human'&&team===this.currentHumanTeam&&this.stats.cpuCombatHits>before){
+        this.f4SpecialSplashHits+=this.stats.cpuCombatHits-before;
+        this.noteF4SpecialDamageCue(point,team);
+      }
+    }
     if (paint > 0 && radius > 0) this.enqueueF4BurstPaint(point,team,actor,radius,paint,true,PaintEventType.Special);
   }
 
@@ -432,6 +454,23 @@ export class ProjectileSystem {
 
   private currentHumanTeam: Team.A | Team.B = Team.A;
   private currentHumanDamageable = false;
+  private f4HumanLifeId:string|null=null;
+  private f4HumanGrounded=false;
+  /** Fresh real KCC pose before CPU/special callbacks; does not grant hit authority. */
+  public syncF4HumanTarget(body:Vec3,team:Team.A|Team.B,alive:boolean,grounded:boolean,lifeId:string):void {
+    if(!this.physics.hasF4WholeResearchTrimesh)return;
+    this.currentHumanPosition.copy(body);
+    this.currentHumanTeam=team;
+    this.currentHumanDamageable=alive&&this.resources.currentHp>0;
+    this.f4HumanGrounded=grounded&&this.currentHumanDamageable;
+    this.f4HumanLifeId=this.currentHumanDamageable?lifeId:null;
+  }
+
+  public f4TargetLifeKey(actor:string):string|null {
+    if(actor!=='human')return this.cpuAgents.f4ActiveLifeKey(actor);
+    return this.currentHumanDamageable&&this.resources.currentHp>0&&this.f4HumanLifeId!==null?
+      JSON.stringify(['human',this.f4HumanLifeId]):null;
+  }
   private currentHumanGuarding = false;
   // Exact real PlayerController mode; immutable SOURCE 180s only.
   // Default null preserves every T20 and historical opt-in QA hit rule.
@@ -789,6 +828,13 @@ export class ProjectileSystem {
   public clipF4PlayerShooterMuzzle(body:Vec3,muzzle:Vec3):void {
     if(this.physics.hasF4WholeResearchTrimesh && this.currentPlayerWeapon.weaponClass==='SHOOTER')
       muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
+  }
+
+  /** Clips an experimental special throw to the same physical muzzle path as live shots. */
+  public clipF4SpecialMuzzle(body:Vec3,muzzle:Vec3):Vec3 {
+    return this.physics.hasF4WholeResearchTrimesh
+      ?this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle).clone()
+      :muzzle.clone();
   }
 
   public solvePlayerLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {

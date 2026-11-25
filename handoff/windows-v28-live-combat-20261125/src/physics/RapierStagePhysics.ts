@@ -204,6 +204,28 @@ export class RapierStagePhysics {
     };
   }
 
+  /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */
+  public auditF4HumanCapsuleSegment(
+    from:Vec3,to:Vec3,halfHeight:number,radius:number,ownCollider:Collider
+  ) {
+    if(!this.f4WholeResearchTrimeshActive||
+       ![from.x,from.y,from.z,to.x,to.y,to.z,halfHeight,radius].every(Number.isFinite)||
+       halfHeight<=0||radius<=0)
+      return {clear:false,reason:'INVALID_OR_UNAVAILABLE',distance:null,solidId:null,colliderHandle:null};
+    const direction=to.clone().sub(from);
+    const length=direction.length();
+    if(length<=1e-6)
+      return {clear:false,reason:'DEGENERATE_SEGMENT',distance:null,solidId:null,colliderHandle:null};
+    direction.mulScalar(1/length);
+    const hit=this.world.castShape(from,this.cameraSweepRotation,direction,
+      new RAPIER.Capsule(halfHeight,radius),0,length,false,
+      undefined,undefined,ownCollider,undefined,
+      collider=>this.shouldCharacterCollide(collider,'HUMAN'));
+    return hit?{clear:false,reason:'CAPSULE_CONTACT',distance:hit.time_of_impact,
+      solidId:this.sourceSolidIdForCollider(hit.collider),colliderHandle:hit.collider.handle}:
+      {clear:true,reason:'NO_SWEEP_CONTACT',distance:null,solidId:null,colliderHandle:null};
+  }
+
   public castStageInkSphere(from: Vec3, to: Vec3, radius: number): StageRayHit | null {
     const direction = this.rayDirection.copy(to).sub(from);
     const length = direction.length();

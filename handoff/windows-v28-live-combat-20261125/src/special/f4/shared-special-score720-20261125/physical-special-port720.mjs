@@ -80,7 +80,7 @@ export class PhysicalSpecialPort720{
  }
  contact(q){
   const a=this.#get(q);if(!a||!f(q.tick)||q.tick>=10800||q.tick<a.lastEvent)return null;a.lastEvent=q.tick;const b={...q,lifeId:a.ctx.scoped,alive:true};
-  switch(a.ctx.special){case "chariot":return a.s.hit({...b,sourceTeam:team(q.sourceTeam)});case "blower":return a.s.absorb({...b,sourceTeam:team(q.sourceTeam)},a.plan.ops);case "ultraStamp":return a.s.contact({...b,targetTeam:team(q.targetTeam)});default:return null}
+  switch(a.ctx.special){case "chariot":{const r=a.s.hit({...b,sourceTeam:team(q.sourceTeam)});if(r?.ended)this.#finish(a,r.ended.reason,q.tick,r.ended);return r;}case "blower":return a.s.absorb({...b,sourceTeam:team(q.sourceTeam)},a.plan.ops);case "ultraStamp":return a.s.contact({...b,targetTeam:team(q.targetTeam)});default:return null}
  }
  closeSwing(q){const a=this.#get(q);if(a?.ctx.special!=="ultraStamp")return false;a.s.closeSwing(q.swingId);return true}
  spendZipMain(q,commit){const a=this.#get(q);return a?.ctx.special==="superHook"?a.s.spendMain(q.cost,commit):false}

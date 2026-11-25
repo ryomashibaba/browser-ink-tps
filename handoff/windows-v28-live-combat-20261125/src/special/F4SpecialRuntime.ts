@@ -1,4 +1,4 @@
-import { Color, Entity, Mesh, MeshInstance, StandardMaterial, TorusGeometry, Vec3, type AppBase } from 'playcanvas';
+import { BLEND_NORMAL, CULLFACE_NONE, Color, Entity, Mesh, MeshInstance, StandardMaterial, TorusGeometry, Vec3, type AppBase } from 'playcanvas';
 import { Team } from '../ink/types';
 import { crabProjectileDamage } from './f4/crab-barrier720-20261125/crab-barrier720.mjs';
 import type { F4SpecialFlight, ProjectileSystem } from '../projectile/ProjectileSystem';
@@ -48,7 +48,10 @@ export class F4SpecialRuntime {
   private score: ReturnType<CertifiedTurf720['result']>|null = null;
   private readonly visualMaterials = new Map<Team.A|Team.B,StandardMaterial>();
   private ringMesh?: Mesh;
+  private barrierShellMesh?: Mesh;
+  private readonly barrierMaterials = new Map<Team.A|Team.B,StandardMaterial>();
   private frame = 0;
+  private lastEffectTick=-1;
 
   constructor(private readonly app: AppBase, private readonly physics: RapierStagePhysics,
     private readonly projectiles: ProjectileSystem) {
@@ -92,10 +95,14 @@ export class F4SpecialRuntime {
     this.terminal=null;
     this.score=null;
     this.frame=0;
+    this.lastEffectTick=-1;
   }
 
   finish(tick: number, legalRoundEnd = false): void {
     this.port.close(tick);
+    this.active.clear();
+    this.actorUnlock.clear();
+    this.livePose.clear();
     for(const effect of this.effects) effect.dispose();
     this.effects.length=0;
     this.devices.clear();
@@ -105,6 +112,25 @@ export class F4SpecialRuntime {
 
   notePaint(changed: number): void {this.paintCells+=changed;}
 
+  /** Per-life HUD state. Display only; it does not grant gauge or gameplay authority. */
+  actorPresentation(actor:Actor) {
+    const {actorId,lifeId,weapon}=actor;
+    const id=KIT720[weapon].special;
+    const controls:Record<F4SpecialId,string>={
+      ultraShot:'左クリック 射撃',chariot:'左クリック 連射 · F 砲撃 · 右クリック 球形態',
+      blower:'左クリック 吸引／吐き出し',superHook:'物理実行 HOLD',
+      greatBarrier:'左クリック 設置',waveBreaker:'左クリック 設置',
+      microLaser:'自動発射 · 移動可能',tripleTornado:'左クリック ガイド投擲',
+      ultraStamp:'左クリック 振る · 右クリック 長押し→離す 投擲'
+    };
+    const active=this.active.get(actorId)===lifeId;
+    const locked=this.frame<(this.actorUnlock.get(actorId)??0);
+    const probeState=active?'ACTIVE' as const:locked?'LOCKED' as const:
+      id==='superHook'?'UNSUPPORTED' as const:
+      this.completedProbeLives.has(actorId+':'+lifeId)?'USED' as const:'AVAILABLE' as const;
+    return {authorityComplete:this.turf.complete,executorReady:false,active,probeState,probeControls:controls[id]};
+  }
+
   snapshot() {
     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
@@ -112,7 +138,9 @@ export class F4SpecialRuntime {
   }
 
   update(tick: number): void {
+    if(!Number.isSafeInteger(tick)||tick<0||tick>=10800||tick<this.frame||tick<=this.lastEffectTick)return;
     this.frame=tick;
+    this.lastEffectTick=tick;
     for(let i=this.effects.length-1;i>=0;i--){
       const effect=this.effects[i]!;
       if(effect.step(tick))continue;
@@ -140,13 +168,18 @@ export class F4SpecialRuntime {
         if(this.port.begin({...key,team,special,input:{weapon}}))
           this.completedProbeLives.add(probeKey);
       }
-      if(!this.active.has(actorId))return tick<(this.actorUnlock.get(actorId)??0);
+      if(!this.active.has(actorId))return this.ownsWeaponInput(actorId,tick);
       this.livePose.get(actorId)?.();
       this.port.step({...key,input:{trigger:input.trigger,holdStamp:input.trigger,
         holdThrow:input.holdThrow,releaseThrow:input.releaseThrow,airborne:input.airborne,
         roll:input.holdThrow,rapid:input.trigger,cannon:input.cannon,hold:input.trigger,fire:input.trigger}});
       return true;
     } finally {this.input=null;}
+  }
+
+  /** Read-only ownership gate consumed before normal weapon movement and attacks. */
+  ownsWeaponInput(actorId:string,tick:number):boolean {
+    return this.active.has(actorId)||tick<(this.actorUnlock.get(actorId)??0);
   }
 
   cancelActor(actorId:string,tick:number):void {
@@ -224,7 +257,7 @@ export class F4SpecialRuntime {
           const input=this.input??initial;
           const start=input.origin.clone();
           const forward=input.forward.clone().normalize();
-          const right=new Vec3().cross(Vec3.UP,forward).normalize();
+          const right=new Vec3().cross(Math.abs(forward.y)>.98?Vec3.RIGHT:Vec3.UP,forward).normalize();
           const beams=[-1,1].map(side=>{
             const position=start.clone().add(right.clone().mulScalar(side*.42));
             return {position,visual:this.visual('F4 beam','box',team),
@@ -249,9 +282,11 @@ export class F4SpecialRuntime {
             const tick=this.frame;
             this.effects.push({step:nextTick=>{
               if(nextTick===tick+1 && this.active.get(actorId)===lifeId){
-                this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(start,end,.25,team,actorId,(id,targetTeam)=>
-                  Number(this.port.contact({roundId:this.roundId,lifeId,actorId,tick:nextTick,
-                    swingId,targetLifeId:id,targetTeam,liveTarget:true,physicalContact:true,hitClass:'direct'}))||0,true);
+                this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(start,end,.25,team,actorId,(id,targetTeam)=>{
+                  const targetLifeId=this.projectiles.f4TargetLifeKey(id);
+                  return targetLifeId?Number(this.port.contact({roundId:this.roundId,lifeId,actorId,tick:nextTick,
+                    swingId,targetLifeId,targetTeam,liveTarget:true,physicalContact:true,hitClass:'direct'}))||0:0;
+                },true);
                 this.port.closeSwing({roundId:this.roundId,lifeId,actorId,swingId});
               }
               return nextTick<tick+8;
@@ -286,8 +321,9 @@ export class F4SpecialRuntime {
       if(mode==='ball'&&!input.airborne&&!at.airborne&&input.foot.distance(at.foot)>.025){
         this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(center(at.foot),center(input.foot),radius(),
           team,actor,id=>{
-            if(hitThisRoll.has(id))return 0;
-            hitThisRoll.add(id);
+          const targetLifeId=this.projectiles.f4TargetLifeKey(id);
+          if(!targetLifeId||hitThisRoll.has(targetLifeId))return 0;
+          hitThisRoll.add(targetLifeId);
             return 40;
           },true);
       }
@@ -437,8 +473,11 @@ export class F4SpecialRuntime {
         ring.enabled=size>.02;
         ring.setLocalScale(size,.7,size);
         this.sweptHpLoss+=this.projectiles.applyF4GroundWave(foot,wave.previousRadiusMeters,wave.radiusMeters,
-          team,actor,(id)=>device.hit({tick,roundId:this.roundId,waveIndex:wave.index,targetLifeId:id,
-            liveEnemy:true,physicalWaveContact:true}));
+          team,actor,(id)=>{
+            const targetLifeId=this.projectiles.f4TargetLifeKey(id);
+            return targetLifeId?device.hit({tick,roundId:this.roundId,waveIndex:wave.index,targetLifeId,
+              liveEnemy:true,physicalWaveContact:true}):0;
+          });
       }
       return true;
     },dispose:()=>{
@@ -454,6 +493,9 @@ export class F4SpecialRuntime {
     const anchor=this.visual('F4 barrier anchor','cylinder',team);
     anchor.setPosition(body);
     anchor.setLocalScale(.54,.62,.54);
+    const shell=this.barrierShell(team);
+    shell.setPosition(foot);
+    shell.enabled=false;
     const field=this.visual('F4 barrier perimeter','torus',team);
     field.setPosition(foot.clone().add(new Vec3(0,.055,0)));
     field.enabled=false;
@@ -478,10 +520,13 @@ export class F4SpecialRuntime {
       radius=device.radius(tick,this.roundId);
       field.enabled=radius>0;
       field.setLocalScale(radius*2,.85,radius*2);
+      shell.enabled=radius>0;
+      shell.setLocalScale(radius*2,radius*2,radius*2);
       return !device.ended;
     },dispose:()=>{
       this.devices.delete(contact);
       anchor.destroy();
+      shell.destroy();
       field.destroy();
     }});
   }
@@ -522,13 +567,57 @@ export class F4SpecialRuntime {
         const end=beam.position.clone().add(beam.direction.clone().mulScalar(21));
         this.drawSegment(beam.visual,beam.position,end,age<36?.035:.12);
         if(age>=36&&(age-36)%5===0){
-          this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(beam.position,end,.07,team,actor,(id)=>
-            pair.damage({roundId:this.roundId,beamId:pair.beamIds[index]!,targetLifeId:id,
-              tick,liveEnemy:true,beamOverlap:true}),false);
+          this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(beam.position,end,.07,team,actor,(id)=>{
+            const targetLifeId=this.projectiles.f4TargetLifeKey(id);
+            return targetLifeId?pair.damage({roundId:this.roundId,beamId:pair.beamIds[index]!,targetLifeId,
+              tick,liveEnemy:true,beamOverlap:true}):0;
+          },false);
         }
       }
       return true;
     },dispose:()=>{for(const beam of beams)beam.visual.destroy();}});
+  }
+
+  /** Translucent rendering only; no collider, damage, or score authority. */
+  private barrierShell(team:Team.A|Team.B):Entity {
+    if(!this.barrierShellMesh){
+      const positions:number[]=[],indices:number[]=[];
+      const bands=12,segments=32;
+      for(let y=0;y<=bands;y++){
+        const angle=Math.PI*.5*y/bands;
+        const h=Math.sin(angle),r=Math.cos(angle);
+        for(let x=0;x<=segments;x++){
+          const a=2*Math.PI*x/segments;
+          positions.push(r*Math.cos(a),h,r*Math.sin(a));
+        }
+      }
+      for(let y=0;y<bands;y++)for(let x=0;x<segments;x++){
+        const a=y*(segments+1)+x,b=a+segments+1;
+        indices.push(a,b,a+1,a+1,b,b+1);
+      }
+      const mesh=new Mesh(this.app.graphicsDevice);
+      mesh.setPositions(new Float32Array(positions));
+      mesh.setNormals(new Float32Array(positions));
+      mesh.setIndices(new Uint16Array(indices));
+      mesh.update();
+      this.barrierShellMesh=mesh;
+    }
+    let material=this.barrierMaterials.get(team);
+    if(!material){
+      material=new StandardMaterial();
+      material.diffuse=team===Team.A?new Color(.08,.74,.86):new Color(.91,.28,.66);
+      material.emissive=team===Team.A?new Color(.035,.18,.22):new Color(.30,.055,.18);
+      material.opacity=.18;
+      material.blendType=BLEND_NORMAL;
+      material.depthWrite=false;
+      material.cull=CULLFACE_NONE;
+      material.update();
+      this.barrierMaterials.set(team,material);
+    }
+    const entity=new Entity('F4 barrier shell');
+    entity.addComponent('render',{meshInstances:[new MeshInstance(this.barrierShellMesh,material,entity)],castShadows:false});
+    this.app.root.addChild(entity);
+    return entity;
   }
 
   private visual(name:string,type:'box'|'cylinder'|'torus'|'sphere',team:Team.A|Team.B): Entity {

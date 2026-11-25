@@ -1267,10 +1267,11 @@ export class UndertowF3PlayablePreviewApp{
    const runtime=this.f4Special;
    const nextRoundTick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
    this.cpu.useF4PhysicalSpecialProbe({actorId:f4ProbeCpu,
-    step:({foot,aim,team,weapon,hasOpponent,canStart})=>runtime.actorTick(nextRoundTick(),{
-     actorId:f4ProbeCpu,lifeId:'isolated-first-cast',team,weapon
+    step:({foot,aim,team,weapon,hasOpponent,canStart,lifeId})=>runtime.actorTick(nextRoundTick(),{
+     actorId:f4ProbeCpu,lifeId,team,weapon
     },{
-     origin:foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)),
+     origin:this.projectiles.clipF4SpecialMuzzle(foot,
+      foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0))),
      foot:foot.clone(),forward:aim.clone(),trigger:hasOpponent,holdThrow:false,
      releaseThrow:false,cannon:false,airborne:false
     },true,hasOpponent&&canStart),
@@ -2000,7 +2001,10 @@ export class UndertowF3PlayablePreviewApp{
       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
        (this.f4SpecialProbe?' · G 単独検証':'')};
     },
-    readSpecial:()=>null
+    readSpecial:()=>this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
+     actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
+     weapon:this.projectiles.currentPlayerWeapon.id
+    }):null
    }):null;
   this.practiceHud=this.compactF4Hud??practiceHud;
   // A compact real-paint balance inside the normal full-round HUD.
@@ -3033,6 +3037,14 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
    f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
+   auditF4ZipGeometry:(rangeM:number)=>{
+    if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||this.resources.currentHp<=0)
+     return {status:'HOLD',reason:'F4_LIVE_PROBE_UNAVAILABLE'};
+    this.camera.getAimDirection(this.aim);
+    this.player.getMuzzlePosition(this.aim,this.muzzle);
+    const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(new Vec3()),this.muzzle);
+    return this.player.auditF4ZipGeometry(origin,this.aim,rangeM);
+   },
    auditF4HumanResearchPath:(index:number,route?:'return'|'negative-candidate')=>
     this.auditF4HumanResearchPath(index,route),
    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
@@ -5888,6 +5900,12 @@ export class UndertowF3PlayablePreviewApp{
     this.b20ProfileStop('rapierAndHumanKcc',playerStart);
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+    if(this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
+     if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
+     this.f4SpecialWasAlive=alive;
+     this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
+      alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
+    }
     const cpuWorldReady=!this.f4WholeTrimeshRequested||this.f4WholeCpuConnected;
     if(!this.w10b14&&cpuWorldReady){
      const foot=this.player.getPosition(this.p);
@@ -6063,12 +6081,10 @@ export class UndertowF3PlayablePreviewApp{
       const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
        this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
       const secondary=specialOpen&&this.input.secondaryHeld;
-      if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
-      this.f4SpecialWasAlive=alive;
       f4SpecialOwnsInput=this.f4Special.actorTick(f4RoundTick,{
        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
       },{
-       origin:this.muzzle.clone(),forward:this.aim.clone(),
+       origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
        foot:this.player.getPosition(new Vec3()).sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)),
        cannon:this.player.canShoot&&subTap,
        trigger:this.player.canShoot&&realPointerFire,
@@ -7887,7 +7903,8 @@ export class UndertowF3PlayablePreviewApp{
  }
  private refreshF4CombatReticle():void{
   if(!this.f4ResearchMode||!this.b203FullRound)return;
-  const {humanCpuDirectHits:hits,humanCpuDirectSplats:splats}=this.stats;
+  const hits=this.stats.humanCpuDirectHits+this.projectiles.f4SpecialSplashHitCount();
+  const splats=this.stats.humanCpuDirectSplats;
   const tick=this.clock.tick;
   const active=this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
    this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
