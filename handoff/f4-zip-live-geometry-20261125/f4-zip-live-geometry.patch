@@ -1,0 +1,119 @@
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -204,7 +204,29 @@
+     };
+   }
+ 
+-  public castStageInkSphere(from: Vec3, to: Vec3, radius: number): StageRayHit | null {
++  /** F4 read-only capsule clearance; never authorizes a grapple or KCC movement. */
++  public auditF4HumanCapsuleSegment(
++    from:Vec3,to:Vec3,halfHeight:number,radius:number,ownCollider:Collider
++  ) {
++    if(!this.f4WholeResearchTrimeshActive||
++       ![from.x,from.y,from.z,to.x,to.y,to.z,halfHeight,radius].every(Number.isFinite)||
++       halfHeight<=0||radius<=0)
++      return {clear:false,reason:'INVALID_OR_UNAVAILABLE',distance:null,solidId:null,colliderHandle:null};
++    const direction=to.clone().sub(from);
++    const length=direction.length();
++    if(length<=1e-6)
++      return {clear:false,reason:'DEGENERATE_SEGMENT',distance:null,solidId:null,colliderHandle:null};
++    direction.mulScalar(1/length);
++    const hit=this.world.castShape(from,this.cameraSweepRotation,direction,
++      new RAPIER.Capsule(halfHeight,radius),0,length,false,
++      undefined,undefined,ownCollider,undefined,
++      collider=>this.shouldCharacterCollide(collider,'HUMAN'));
++    return hit?{clear:false,reason:'CAPSULE_CONTACT',distance:hit.time_of_impact,
++      solidId:this.sourceSolidIdForCollider(hit.collider),colliderHandle:hit.collider.handle}:
++      {clear:true,reason:'NO_SWEEP_CONTACT',distance:null,solidId:null,colliderHandle:null};
++  }
++
++  public castStageInkSphere(from: Vec3, to: Vec3, radius: number): StageRayHit | null {
+     const direction = this.rayDirection.copy(to).sub(from);
+     const length = direction.length();
+     if (length <= 1e-8) return null;
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -279,7 +279,61 @@
+     this.b248Visual?.setEnabled(shown);
+   }
+ 
+-  public get canShoot(): boolean {
++  /** Actual aim and geometric candidate evidence, never moves the body. */
++  public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number) {
++    const v=(p:Vec3)=>[p.x,p.y,p.z];
++    if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||!this.grounded||
++       ![...v(origin),...v(aim),rangeM].every(Number.isFinite)||
++       rangeM<=0||rangeM>64||aim.lengthSq()<1e-8)
++      return {status:'HOLD',reason:'ACTUAL_GROUNDED_HUMAN_AND_EXPLICIT_RANGE_REQUIRED'};
++    const body=this.getPosition(new Vec3());
++    const off=PlayerController.humanFootOffset;
++    const support=this.physics.castCharacterFootSupport(body,off,'HUMAN');
++    const landingGap=support?body.y-off-support.point.y:null;
++    const landingSupported=!!support&&!!support.normal&&support.normal.y>=.70&&
++      landingGap!==null&&Math.abs(landingGap)<=.10;
++    if(!landingSupported)
++      return {status:'HOLD',reason:'RETURN_ANCHOR_UNSUPPORTED',body:v(body),landingGap,
++        supportId:support?.solidId??null};
++    const start=new Vec3(body.x,origin.y,body.z);
++    if(start.distance(origin)>1||this.physics.castStageSegment(start,origin,'ink-projectile'))
++      return {status:'HOLD',reason:'MUZZLE_NOT_CLEAR',body:v(body)};
++    const direction=aim.clone().normalize();
++    const hit=this.physics.castStageSegment(origin,origin.clone().add(direction.clone().mulScalar(rangeM)),
++      'ink-projectile');
++    if(!hit?.normal||hit.distance<=.05||hit.normal.lengthSq()<1e-8)
++      return {status:'HOLD',reason:'NO_FIRST_PHYSICAL_HOOK_CONTACT',body:v(body)};
++    const normal=hit.normal.clone().normalize();
++    if(normal.dot(direction)>0)normal.mulScalar(-1);
++    const witness={solidId:hit.solidId,colliderHandle:hit.collider.handle,
++      point:v(hit.point),normal:v(normal),distanceM:hit.distance};
++    if(Math.abs(normal.y)>.35)
++      return {status:'HOLD',reason:'FIRST_CONTACT_NOT_WALL_CANDIDATE',witness};
++    const horizontal=new Vec3(normal.x,0,normal.z).normalize();
++    // Conservative candidate body offset, not original 7.2.0 tuning.
++    const goal=hit.point.clone().add(horizontal.mulScalar(PlayerController.humanRadius+.08));
++    const sweep=(a:Vec3,b:Vec3)=>this.physics.auditF4HumanCapsuleSegment(
++      a,b,PlayerController.humanHalfHeight,PlayerController.humanRadius,this.humanCollider);
++    const outbound=sweep(body,goal),reverse=sweep(goal,body);
++    // A supported straight walking alternative is distinct from aerial clearance.
++    const segments=Math.max(1,Math.ceil(body.distance(goal)/.125));
++    let firstUnsupported:number[]|null=null;
++    for(let i=0;i<=segments;i++){
++      const point=new Vec3().lerp(body,goal,i/segments);
++      const floor=this.physics.castCharacterFootSupport(point,off,'HUMAN');
++      if(!floor?.normal||floor.normal.y<.70||Math.abs(point.y-off-floor.point.y)>.10){
++        firstUnsupported=[point.x,point.y-off,point.z];break;
++      }
++    }
++    return {status:'HOLD',reason:!outbound.clear||!reverse.clear?'PHYSICAL_CAPSULE_ROUTE_BLOCKED':
++      'ORIGINAL_HOOK_AUTHORITY_AND_LIVE_KCC_UNVERIFIED',
++      witness,body:v(body),goal:v(goal),returnLanding:{supported:landingSupported,
++        solidId:support?.solidId??null,gapM:landingGap},
++      outbound,reverse,groundRoute:{sampleSpacingM:.125,continuousSamples:!firstUnsupported,
++        firstUnsupportedFoot:firstUnsupported},originalHookAuthorized:false,liveKccExecuted:false};
++  }
++
++  public get canShoot(): boolean {
+     return this.mode === 'HUMAN' &&
+       this.weaponDodgeStartupSeconds <= 0 &&
+       this.weaponDodgeRemainingSeconds <= 0 &&
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3032,7 +3032,14 @@
+   canvas.dataset.t21F3SourceStage=stage.metadata.id;
+   canvas.dataset.t21F3Production='FORBIDDEN';
+   const api={snapshot:()=>this.snapshot(),
+-   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   auditF4ZipGeometry:(rangeM:number)=>{
++    if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||this.resources.currentHp<=0)
++     return {status:'HOLD',reason:'F4_LIVE_PROBE_UNAVAILABLE'};
++    const direction=this.camera.getAimDirection(new Vec3());
++    const origin=this.player.getMuzzlePosition(direction,new Vec3());
++    return this.player.auditF4ZipGeometry(origin,direction,rangeM);
++   },
+    auditF4HumanResearchPath:(index:number,route?:'return'|'negative-candidate')=>
+     this.auditF4HumanResearchPath(index,route),
+    // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
