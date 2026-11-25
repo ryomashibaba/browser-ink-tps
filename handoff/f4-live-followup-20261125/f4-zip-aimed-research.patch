@@ -1,0 +1,160 @@
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -141,8 +141,9 @@
+ 
+ type F4ZipResearchLeg = 'OUTBOUND' | 'WALL_CONTACT' | 'RETURN' | 'LANDING';
+ 
+-interface F4ZipResearchRun {
+-  leg: F4ZipResearchLeg;
++interface F4ZipResearchRun {
++  leg: F4ZipResearchLeg;
++  variant:'reviewed'|'aimed';
+   start: Vec3;
+   wallApproach: Vec3;
+   wallNormal: Vec3;
+@@ -350,25 +351,34 @@
+         firstUnsupportedFoot:firstUnsupported},originalHookAuthorized:false,liveKccExecuted:false};
+   }
+ 
+-  /** Local fixed wall experiment. The current ray and capsule decide admission. */
+-  public beginF4ZipResearch(origin: Vec3, aim: Vec3): void {
+-    if(this.f4ZipResearchActive)return;
+-    this.f4ZipResearch=null;
+-    this.f4ZipResearchResult={status:'HOLD',reason:'STAND_AT_REVIEWED_APPROACH'};
+-    const start=this.getPosition();
+-    if(Math.hypot(start.x-.075,start.z-57.52)>.55||Math.abs(start.y-8.445)>.16)return;
+-    const audit=this.auditF4ZipGeometry(origin,aim,20);
+-    if(!audit.witness||!audit.goal||!audit.returnLanding?.solidId||
+-       !audit.outbound?.clear||!audit.reverse?.clear||
+-       audit.witness.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'||
+-       audit.witness.distanceM<15||audit.witness.distanceM>18){
+-      this.f4ZipResearchResult={status:'HOLD',reason:audit.reason};
+-      return;
+-    }
++  /** Isolated experiment only. Aimed variant uses current physical wall, never original hook authority. */
++  public beginF4ZipResearch(origin: Vec3, aim: Vec3,variant:'reviewed'|'aimed'='reviewed'): void {
++    if(this.f4ZipResearchActive)return;
++    this.f4ZipResearch=null;
++    this.f4ZipResearchResult={status:'HOLD',reason:'STAND_AT_REVIEWED_APPROACH'};
++    const start=this.getPosition();
++    if(variant==='reviewed'&&(Math.hypot(start.x-.075,start.z-57.52)>.55||Math.abs(start.y-8.445)>.16))return;
++    if(!this.f4KccAuditEnabled){
++      this.f4ZipResearchResult={status:'HOLD',reason:'ACTUAL_KCC_CONTACT_AUDIT_REQUIRED'};
++      return;
++    }
++    // 18m is the existing experiment's maximum, not a certified game range.
++    const audit=this.auditF4ZipGeometry(origin,aim,variant==='aimed'?18:20);
++    if(!audit.witness||!audit.goal||!audit.returnLanding?.solidId||
++       !audit.outbound?.clear||!audit.reverse?.clear||
++       audit.witness.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'){
++      this.f4ZipResearchResult={status:'HOLD',reason:audit.reason};
++      return;
++    }
++    const minimum=variant==='reviewed'?15:1;
++    if(audit.witness.distanceM<minimum||audit.witness.distanceM>18){
++      this.f4ZipResearchResult={status:'HOLD',reason:'RESEARCH_RANGE_OUTSIDE_LIMIT'};
++      return;
++    }
+     const [x,y,z]=audit.goal;
+     const [nx,,nz]=audit.witness.normal;
+     this.f4ZipResearch={
+-      leg:'OUTBOUND',start,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
++      leg:'OUTBOUND',variant,start,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
+       wallColliderHandle:audit.witness.colliderHandle,returnSupportId:audit.returnLanding.solidId,
+       hookDistanceM:audit.witness.distanceM,wallContact:null,ticks:0,stalledTicks:0,
+       maxAcceptedStepM:0,travelledM:0
+@@ -391,8 +401,9 @@
+     return {
+       status:this.f4ZipResearchStatus,
+       reason:this.f4ZipResearchResult?.reason??null,
+-      originalHookAuthorized:false,
+-      hookDistanceM:run?.hookDistanceM??null,
++      originalHookAuthorized:false,
++      variant:run?.variant??null,wallApproach:run?v(run.wallApproach):null,
++      hookDistanceM:run?.hookDistanceM??null,
+       start:run?v(run.start):null,wallContact:run?v(run.wallContact):null,
+       position:v(this.position),grounded:this.grounded,ticks:run?.ticks??0,
+       travelledM:run?.travelledM??0,maxAcceptedStepM:run?.maxAcceptedStepM??0
+@@ -434,8 +445,8 @@
+       const wall=this.f4LastKccMotion?.contacts.some(hit=>
+         hit.colliderHandle===run.wallColliderHandle&&
+         hit.normal[0]!*run.wallNormal.x+hit.normal[2]!*run.wallNormal.z>.8);
+-      if(wall){
+-        run.wallContact=this.position.clone();
++      if(wall&&(run.variant==='reviewed'||this.position.distance(run.wallApproach)<=.22)){
++        run.wallContact=this.position.clone();
+         run.leg='RETURN';
+         run.stalledTicks=0;
+       }else if(this.position.distance(run.wallApproach)>.22){
+@@ -447,8 +458,9 @@
+       const support=this.physics.castCharacterFootSupport(
+         this.position,PlayerController.humanFootOffset,'HUMAN');
+       this.f4ZipResearchResult=support?.solidId===run.returnSupportId&&
+-        (support.normal?.y??0)>=.70&&this.position.distance(run.start)<=.12?
+-        {status:'RETURNED',reason:'KCC_WALL_CONTACT_AND_SUPPORTED_RETURN'}:
++        (support.normal?.y??0)>=.70&&this.position.distance(run.start)<=.12&&
++        (run.variant==='reviewed'||Math.abs(this.position.y-PlayerController.humanFootOffset-support.point.y)<=.10)?
++        {status:'RETURNED',reason:'KCC_WALL_CONTACT_AND_SUPPORTED_RETURN'}:
+         {status:'HOLD',reason:'RETURN_SUPPORT_MISMATCH'};
+     }
+     if(run.stalledTicks>=12||run.ticks>=210)this.cancelF4ZipResearch('KCC_ROUTE_BLOCKED_OR_TIMED_OUT');
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -480,7 +480,8 @@
+  private f4HumanSubActionOpen=false;
+  private readonly f4Special: F4SpecialRuntime|null;
+  private readonly f4SpecialProbe: boolean;
+- private readonly f4ZipResearchEnabled:boolean;
++ private readonly f4ZipResearchEnabled:boolean;
++ private readonly f4ZipResearchAimed:boolean;
+  private f4SpecialLife=1;
+  private f4HumanDeathTick:number|null=null;
+  private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
+@@ -1264,7 +1265,10 @@
+   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
+    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
+    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
+-  this.f4ZipResearchEnabled=this.f4SpecialProbe&&sessionStorage.getItem('t21F4ZipKccResearch')==='wall-return';
++  const zipResearchMode=sessionStorage.getItem('t21F4ZipKccResearch');
++  this.f4ZipResearchAimed=this.f4SpecialProbe&&zipResearchMode==='wall-return-aimed';
++  this.f4ZipResearchEnabled=this.f4SpecialProbe&&
++   (zipResearchMode==='wall-return'||this.f4ZipResearchAimed);
+   const f4ProbeCpu=this.f4SpecialProbe?sessionStorage.getItem('t21F4SpecialProbeCpu'):null;
+   if(f4ProbeCpu&&/^(A[123]|B[1234])$/.test(f4ProbeCpu)&&this.f4Special){
+    const runtime=this.f4Special;
+@@ -2005,14 +2009,17 @@
+        (this.f4ZipResearchEnabled&&weapon.id==='arc-blaster'?
+         (this.player.f4ZipResearchStatus==='RETURNED'?' · 接地帰還完了':
+          this.player.f4ZipResearchStatus==='HOLD'?' · 往復停止 · G で再試行':
+-         ' · G 壁往復検証（開始地点から正面約10 m）'):
++         this.f4ZipResearchAimed?' · 壁を照準して G（研究往復）':
++         ' · G 壁往復検証（開始地点から正面約10 m）'):
+         this.f4SpecialProbe?' · G 単独検証':'')};
+     },
+     readSpecial:()=>{
+      if(this.f4ZipResearchEnabled&&this.projectiles.currentPlayerWeapon.id==='arc-blaster'){
+       const active=this.player.f4ZipResearchActive;
+       return {authorityComplete:false,executorReady:false,active,
+-       probeState:active?'ACTIVE':'AVAILABLE',probeControls:'物理往復実行中 · 原作フック適格性 HOLD'};
++       probeState:active?'ACTIVE':'AVAILABLE',probeControls:active?
++        '物理往復実行中 · 原作フック適格性 HOLD':
++        this.f4ZipResearchAimed?'接地して壁を照準 · G · 原作適格性 HOLD':'固定地点往復検証 · 原作適格性 HOLD'};
+      }
+      return this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
+       actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
+@@ -5938,9 +5945,10 @@
+      this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
+     if(!zipOpen)this.player.cancelF4ZipResearch('RESEARCH_INPUT_CLOSED');
+     if(zipOpen&&f4SpecialPressed&&this.player.canShoot&&this.remainingSeconds>210/60){
+-     const east=new Vec3(1,0,0);
+-     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(east));
+-     this.player.beginF4ZipResearch(origin,east);
++     const aim=new Vec3(1,0,0);
++     if(this.f4ZipResearchAimed)this.camera.getAimDirection(aim);
++     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(aim));
++     this.player.beginF4ZipResearch(origin,aim,this.f4ZipResearchAimed?'aimed':'reviewed');
+     }
+     const zipOwnsInput=this.player.f4ZipResearchActive;
+     const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
