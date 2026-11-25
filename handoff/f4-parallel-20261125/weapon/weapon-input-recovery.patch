@@ -1,0 +1,170 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -312,7 +312,8 @@
+   private brushSwings?: Map<string, number>;
+   private contactHitFrames?: Map<string, number>;
+   private chargeSeconds = 0;
+-  private f4StringerTapPending = false;
++  private f4StringerTapPending = false;
++  private f4RailTapPending = false;
+   private wasFireHeld = false;
+   private dualiesFocusSeconds = 0;
+   private guardHp = 100;
+@@ -775,9 +776,10 @@
+     this.clearHumanContactInput();
+     this.brushSwings?.delete('human');
+     this.contactHitFrames?.delete('human');
+-    this.chargeSeconds = 0;
+-    this.f4StringerTapPending = false;
+-    this.wasFireHeld = false;
++    this.chargeSeconds = 0;
++    this.f4StringerTapPending = false;
++    this.f4RailTapPending = false;
++    this.wasFireHeld = false;
+     this.dualiesFocusSeconds = 0;
+     this.guardEntity.enabled = false;
+     this.stats.playerWeaponSwitches += 1;
+@@ -810,9 +812,11 @@
+     this.cancelSaberSwing('human');
+     this.cancelCanopyVolley('human');
+     this.canopies?.releaseAttached('human');
+-    this.clearHumanContactInput();
+-    this.chargeSeconds = 0;
+-    this.stats.playerWeaponChargePercent = 0;
++    this.clearHumanContactInput();
++    this.chargeSeconds = 0;
++    this.f4StringerTapPending = false;
++    this.f4RailTapPending = false;
++    this.stats.playerWeaponChargePercent = 0;
+     if (this.burstShotsRemaining <= 0) {
+       this.splatlingStoredChargeSeconds = 0;
+       this.stats.playerWeaponChargeRing = 0;
+@@ -889,8 +893,9 @@
+     this.clearHumanContactInput();
+     this.brushSwings?.clear();
+     this.contactHitFrames?.clear();
+-    this.f4StringerTapPending = false;
+-    this.b152OriginalAllyAimProjectilesSpawned=0;
++    this.f4StringerTapPending = false;
++    this.f4RailTapPending = false;
++    this.b152OriginalAllyAimProjectilesSpawned=0;
+     this.b152OriginalAllyAimSurfaceCollisions=0;
+     this.b343RejectedVolleys=0;
+     this.sourceCpuPhysicalGrantSerial=0;
+@@ -1185,9 +1190,10 @@
+       } else {
+         this.clearHumanContactInput();
+       }
+-    } else if (playerWeaponEnabled && (!this.physics.hasF4WholeResearchTrimesh ||
+-        (profile.weaponClass !== 'SPLATANA' && profile.weaponClass !== 'SPLATLING') ||
+-        (playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'))) {
++    // A forced trigger drop from real squid form is NOT a weapon release.
++    // All F4 charge classes must cancel here, not only Saber and Rotor.
++    } else if (playerWeaponEnabled && (!this.physics.hasF4WholeResearchTrimesh ||
++        (playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'))) {
+       this.updatePlayerWeapon(
+         dt,
+         profile,
+@@ -1202,8 +1208,9 @@
+       );
+     } else {
+       this.chargeSeconds = 0;
+-      this.f4StringerTapPending = false;
+-      this.burstShotsRemaining = 0;
++      this.f4StringerTapPending = false;
++      this.f4RailTapPending = false;
++      this.burstShotsRemaining = 0;
+       this.splatlingStoredChargeSeconds = 0;
+       this.stats.playerWeaponChargePercent = 0;
+       this.stats.playerWeaponChargeRing = 0;
+@@ -1218,9 +1225,10 @@
+       chargeFraction(profile, this.chargeSeconds),
+       playerDamageable && fireHeld && isChargeWeaponClass(profile.weaponClass)
+     );
+-    this.wasFireHeld = fireHeld;
+-
+-    this.processDelayedBursts(dt);
++    this.wasFireHeld = fireHeld && (!this.physics.hasF4WholeResearchTrimesh ||
++      (playerWeaponEnabled && playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'));
++
++    this.processDelayedBursts(dt);
+     this.spawnQueuedCpuShots(
+       team,
+       playerPosition,
+@@ -1893,14 +1901,32 @@
+     team: Team.A | Team.B,
+     body: Vec3
+   ): void {
+-    if (fireHeld) {
+-      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+-      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+-      this.stats.playerWeaponAction = 'CHARGING_BEAM';
+-      return;
+-    }
+-
+-    if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds && this.fireCooldown <= 0) {
++    const f4Rail = profile.charger === true && this.physics.hasF4WholeResearchTrimesh;
++    if (fireHeld) {
++      this.f4RailTapPending = false;
++      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
++      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++      this.stats.playerWeaponAction = 'CHARGING_BEAM';
++      return;
++    }
++
++    // Real sub-frame taps should resolve a partial beam after the existing
++    // minimum windup, rather than disappearing. No extra charge or ink
++    // is granted; ordinary full/partial release still uses the real ray.
++    if (f4Rail && (fallingFire || this.f4RailTapPending) && this.chargeSeconds > 0 &&
++        this.chargeSeconds + 1e-8 < profile.minChargeSeconds) {
++      this.chargeSeconds = Math.min(profile.minChargeSeconds, this.chargeSeconds + dt);
++      this.f4RailTapPending = this.chargeSeconds + 1e-8 < profile.minChargeSeconds;
++      if (this.f4RailTapPending) {
++        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++        this.stats.playerWeaponAction = 'CHARGING_BEAM';
++        return;
++      }
++      fallingFire = true;
++    }
++
++    if (fallingFire && this.chargeSeconds + (f4Rail ? 1e-8 : 0) >= profile.minChargeSeconds &&
++        this.fireCooldown <= (f4Rail ? 1e-8 : 0)) {
+       const charge = chargeFraction(profile, this.chargeSeconds);
+       const physicalOrigin = profile.charger
+         ? this.clipF4Muzzle(new Vec3(body.x, origin.y, body.z), origin) : origin;
+@@ -1910,11 +1936,12 @@
+       }
+     }
+ 
+-    this.chargeSeconds = 0;
+-    this.stats.playerWeaponChargePercent = 0;
+-  }
+-
+-  private updateBlaster(
++    this.chargeSeconds = 0;
++    this.f4RailTapPending = false;
++    this.stats.playerWeaponChargePercent = 0;
++  }
++
++  private updateBlaster(
+     profile: WeaponProfile,
+     fireHeld: boolean,
+     origin: Vec3,
+diff --git a/src/combat/PlayerResources.ts b/src/combat/PlayerResources.ts
+--- a/src/combat/PlayerResources.ts
++++ b/src/combat/PlayerResources.ts
+@@ -99,8 +99,11 @@
+   }
+ 
+   public tryConsumeF4SubInk(cost: number, lockSeconds: number): boolean {
+-    if (!this.tryConsumeContactInk(cost,lockSeconds)) return false;
+-    this.f4SubRecoverySeconds = lockSeconds;
++    const previousMainLock = this.inkRecoveryLockSeconds;
++    if (!this.tryConsumeContactInk(cost,lockSeconds)) return false;
++    // An overlapping sub must not shorten an already-paid recovery lock.
++    this.inkRecoveryLockSeconds = Math.max(previousMainLock,this.inkRecoveryLockSeconds);
++    this.f4SubRecoverySeconds = Math.max(this.f4SubRecoverySeconds,lockSeconds);
+     return true;
+   }
+ 
