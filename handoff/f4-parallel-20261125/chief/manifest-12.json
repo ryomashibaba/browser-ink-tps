@@ -132,5 +132,24 @@
       "nativeBuild": "NOT_RUN"
     },
     "limitations": "F4-only conservative 3D aim candidate eligibility and nearest-first current Rapier sight. No actual hit or Windows runtime claim; old B181 behavior retained."
+  },
+  "flightAndHudFollowup": {
+    "base": "f39d05188ea74846c323b501f3fe7bfd6b1fd176",
+    "previousPatch": "a830f5113b2656dec788d96601ee78b6976dc320",
+    "incrementalBase": "80aceaed5e1175cae0769e5db470a39d1b29a906",
+    "incrementalPath": "handoff/f4-parallel-20261125/chief/f4-live-combat-followup.patch",
+    "changed": [
+      "src/ai/CpuAgentSystem.ts",
+      "src/ai/F4FlightLead.ts",
+      "src/app/UndertowF3PlayablePreviewApp.ts"
+    ],
+    "verification": {
+      "isolatedAssertions": 10,
+      "cumulativeFiles": 79,
+      "incrementalFiles": 6,
+      "incrementalHunks": 12,
+      "nativeBuild": "NOT_RUN"
+    },
+    "limitations": "Lead estimate only; physical hit path unchanged. Hide optional legacy route coach only in provisional non-inspect PLAYER view; original QA remains. UI hang cause unconfirmed."
   }
 }

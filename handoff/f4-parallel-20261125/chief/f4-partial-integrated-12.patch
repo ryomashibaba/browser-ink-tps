@@ -3646,7 +3646,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      const clear = (from: Vec3, to: Vec3) => !ray(from,to);
 -    if(Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
 +    if(!Number.isFinite(range)||range<=0||![actual.x,actual.y,actual.z,origin.x,origin.y,origin.z].every(Number.isFinite)||
-+       Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
++       Math.hypot(actual.x-origin.x,actual.y-origin.y,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
      if(!clear(origin,actual)){this.f4AimEvidence.covered++;return null;}
      const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
        1,range,solveFlightTicks,clear);
@@ -7210,7 +7210,23 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    const confirmation=this.f4CombatConfirmation;
    const text=!active?'':tick-this.f4ReticleSplatTick<54?'SPLAT':
     tick-this.f4ReticleHitTick<27?'HIT':'';
-@@ -9459,9 +9750,9 @@
+@@ -9183,7 +9474,14 @@
+   // card immediately instead of leaving stale RUNNING text on screen.
+   this.refreshB25PaintRun();
+   const state=this.snapshot();
+-  if(this.f4ReturnCoach){
++  // The legacy research guide runs real path/ray audits; keep it available
++  // in Inspect, not over the provisional player's regular battle HUD.
++  const f4PlayerView=this.f4ProvisionalTurfEnabled&&
++   this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
++   this.panel.parentElement?.dataset.t21B245Inspect!=='true'&&
++   this.canvas.dataset.t21B262QaFocus!=='ON';
++  if(this.f4ReturnCoach&&f4PlayerView)this.f4ReturnCoach.hidden=true;
++  else if(this.f4ReturnCoach){
+    // A read-only route hint is never allowed to SAFE STOP a real game.
+    try{this.refreshF4ReturnCoach();}
+    catch{
+@@ -9459,9 +9757,9 @@
     let paintHit:ReturnType<PaintSurface['intersectSegment']>=null;
     const registeredSolid=this.physics.castStageSegment(
      muzzle,cameraTarget,'ink-projectile');
@@ -7223,7 +7239,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      for(const surface of this.b45SourceSurfaces){
       const hit=surface.intersectSegment(muzzle,cameraTarget);
       if(hit&&sourceRegisteredPaintHitActive(surface,hit)&&
-@@ -9627,6 +9918,32 @@
+@@ -9627,6 +9925,32 @@
    this.b129EdgeCoach.render(state.b129OriginalRaisedEdgeGuidance,
     this.survey.snapshot().active||this.galleryIndex>=0);
    this.b58SessionBoard.render(state);
@@ -7256,7 +7272,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    if(this.b205RoundClock){
     // Read at most every 180 REAL native ticks, no synthetic match clock.
     const b401=this.b401LiveSourceInk.observe(
-@@ -9673,7 +9990,10 @@
+@@ -9673,7 +9997,10 @@
     const actualStop=state.stopReason?
      'NATIVE STOP · TICK '+state.tick+' · '+
      state.stopReason.slice(0,160)+'\n':'';
@@ -7805,3 +7821,36 @@ new file mode 100644
 +  return out.sort((a,b)=>b.score-a.score).slice(0,4);
 + }
 +}
+diff --git a/src/ai/F4FlightLead.ts b/src/ai/F4FlightLead.ts
+--- a/src/ai/F4FlightLead.ts
++++ b/src/ai/F4FlightLead.ts
+@@ -11,7 +11,7 @@
+   const speed = Math.hypot(velocity.x,velocity.z) * 60;
+   if (speed < .2 || speed > 12 || Math.abs(velocity.y) > .12) return null;
+   velocity.y = 0;
+-  const inRange = (p: Vec3) => Math.hypot(p.x-muzzle.x,p.z-muzzle.z) <= maxRangeMeters;
++  const inRange = (p: Vec3) => Math.hypot(p.x-muzzle.x,p.y-muzzle.y,p.z-muzzle.z) <= maxRangeMeters;
+   if (!inRange(body) || !isClear(muzzle,body)) return null;
+   let aim = body;
+   for (let i=0;i<4;i++) {
+@@ -38,13 +38,18 @@
+   for (let frame=0;frame<Math.min(45,Math.ceil(life*60));frame++) {
+     const move = step(frame);
+     const forward = (move.x*dx+move.z*dz)/length;
+-    if (forward <= 0) return null;
++    if (![move.x,move.y,move.z,forward].every(Number.isFinite)||forward <= 0) return null;
+     if (distance+forward >= length) {
+       const fraction = (length-distance)/forward;
+       const segmentTime = frame + fraction;
+       if (segmentTime > life*60) return null;
+       const height = pos.y + move.y*fraction;
+-      return Math.abs(target.y-height) <= .45 ? segmentTime : null;
++      // A forward-plane crossing is not necessarily near the target:
++      // offset twin barrels and spread can miss sideways. This is only
++      // a conservative lead estimate; actual projectile collision owns HP.
++      const lateral = Math.hypot(target.x-(pos.x+move.x*fraction),
++        target.z-(pos.z+move.z*fraction));
++      return lateral <= .45 && Math.abs(target.y-height) <= .45 ? segmentTime : null;
+     }
+     distance += forward;
+     pos.add(move);
