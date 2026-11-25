@@ -67,3 +67,6 @@ function runExtensionTests(){
  return cases.length;
 }
 console.log('PASS extension',runExtensionTests());
+
+if(f4TurfPresentation({status:'BUILDING',progress:.99},'TIME_UP').kind!=='HOLD')throw Error('unfinished final mask');
+console.log('PASS final mask guard',1);

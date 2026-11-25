@@ -3,6 +3,7 @@ export function f4TurfPresentation(score, phase, stopped=false) {
  const unavailable=(title,detail)=>({kind:'HOLD',title,detail,a:null,b:null,neutral:null});
  if(stopped)return unavailable('試合停止','停止した試合の勝敗は表示しません');
  if(!score)return unavailable('暫定得点準備','実塗装面の集計待ち');
+ if(score.status==='BUILDING'&&phase==='TIME_UP')return unavailable('結果集計保留','得点面の準備が完了していません');
  if(score.status==='BUILDING')return {kind:'BUILDING',title:'得点面を準備中',detail:Number.isFinite(score.progress)&&score.progress>=0&&score.progress<=1?`${Math.floor(score.progress*100)}% 完了`:'集計待ち',a:null,b:null,neutral:null};
  if(score.status==='HOLD')return unavailable('得点集計保留','有効な得点面を確認できていません');
  if(!['LIVE','FINAL'].includes(score.status))return unavailable('得点不明','有効な得点情報がありません');
@@ -77,7 +78,7 @@ export function installF4PlayerPresentation(root,finish,ui) {
  for(const team of ['ALLY','ENEMY']){
   const row=make('div','f4-ui-team'+(team==='ENEMY'?' enemy':''));
   const heading=make('span','f4-ui-team-label');heading.textContent=team==='ALLY'?'味方':'敵';row.append(heading);
-  for(let i=0;i<4;i++){const pip=make('span','f4-ui-pip');pips.push(pip);row.append(pip)}
+  for(let i=0;i<4;i++){const pip=make('span','f4-ui-pip');pip.setAttribute('role','img');pips.push(pip);row.append(pip)}
   rosterBox.append(row);
  }
  if(compact)compact.insertBefore(rosterBox,live.box);
@@ -122,8 +123,8 @@ export function installF4PlayerPresentation(root,finish,ui) {
    data(root,'f4UiUrgency',f4Urgency(remainingSeconds));
    const playing=active&&matchState==='PLAYING'&&!paused&&!stopped&&root.dataset.f4CompactActive==='true';
    const finished=active&&matchState==='TIME_UP'&&!stopped&&!finish.hidden&&finish.dataset.t21B59State==='FINISHED'&&!!stats;
-   hidden(live.box,!playing||!compact);hidden(result.box,!finished);hidden(replay,!finished);
-   data(root,'f4UiLive',String(playing&&!!compact));data(finish,'f4UiResult',String(finished));
+   hidden(live.box,!playing||!compact);hidden(result.box,!finished);hidden(replay,!finished||!replayButton||replayButton.disabled||replayButton.hidden);
+   data(root,'f4UiLive',String(playing&&!!compact));
    data(ui,'f4UiBattle',String(playing&&!!compact));
    const teamRows=playing&&compact?f4RosterView(roster):null;
    hidden(rosterBox,!teamRows);data(ui,'f4UiRoster',String(!!teamRows));
@@ -148,10 +149,9 @@ export function installF4PlayerPresentation(root,finish,ui) {
    if(finished&&replayButton&&!replayButton.disabled&&!replayButton.hidden){str(replayButton,'もう一度遊ぶ  ·  R');localizedReplay=true}
    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));
-   if(finished){
-    const v=f4TurfPresentation(score,matchState,stopped);paint(result,v);
-    data(finish,'f4UiResult',String(v.kind==='FINAL'));
-   }
+   const resultView=finished?f4TurfPresentation(score,matchState,stopped):null;
+   if(resultView)paint(result,resultView);
+   data(finish,'f4UiResult',String(resultView?.kind==='FINAL'));
   },
   dispose(){if(disposed)return;disposed=true;style.remove();live.box.remove();result.box.remove();hint.remove();replay.remove();rosterBox.remove();kitPreview.remove();
   if(localizedReplay&&replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);
