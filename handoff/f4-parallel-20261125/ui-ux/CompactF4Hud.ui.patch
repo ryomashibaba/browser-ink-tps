@@ -1,0 +1,26 @@
+diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
+--- a/src/app/CompactF4Hud.mjs
++++ b/src/app/CompactF4Hud.mjs
+@@ -1,4 +1,5 @@
+ // F4 only: read-only compact HUD, no input listener, simulation or score writer.
++import {f4CombatCue} from './F4PlayerPresentation.mjs';
+ const number=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
+ const pct=v=>number(v,0,100)?Math.round(v):null;
+ const label=v=>typeof v==='string'&&v.trim()?v.trim():'—';
+@@ -27,6 +28,15 @@
+   const on=frame.matchState==='PLAYING'&&!frame.paused&&!frame.stopReason&&visible()===true;
+   if(root.dataset.f4CompactActive!==String(on))root.dataset.f4CompactActive=String(on);show(box,on);if(!on)return;
+-  const v=compactF4View(frame,readKit(),readSpecial());
++  const kit=readKit(),special=readSpecial(),v=compactF4View(frame,kit,special);
++  const cue=f4CombatCue({hp:frame.hp,ink:frame.ink,subCost:kit?.subCost,special});
++  const setData=(n,k,value)=>{if(n.dataset[k]!==String(value))n.dataset[k]=String(value)};
++  setData(box,'f4UiSpecialReady',cue.ready&&kit?.probe!==true);
++  setData(box,'f4UiLowHp',cue.lowHp);
++  setData(box,'f4UiLowInk',cue.lowInk);
++  const inkTrack=bars.ink.parentElement;
++  if(inkTrack){inkTrack.classList.add('f4-ink-track');setData(inkTrack,'f4UiThreshold',cue.threshold!==null);
++   const mark=cue.threshold===null?'':cue.threshold+'%';
++   if(inkTrack.style.getPropertyValue('--f4-ui-sub-threshold')!==mark)inkTrack.style.setProperty('--f4-ui-sub-threshold',mark);}
+   for(const key of ['clock','scoreLabel','weapon','special','specialStatus','controls'])set(nodes[key],v[key]);
+   set(nodes.hp,v.hp===null?'—':String(v.hp));set(nodes.ink,v.ink===null?'—':String(v.ink));bar(bars.hp,v.hp);bar(bars.ink,v.ink);bar(bars.specialPercent,v.specialPercent);show(track,v.specialPercent!==null);
+   set(nodes.sub,v.sub+(v.subCost===null?'':` · ${v.subCost}%`));if(nodes.sub.dataset.ready!==String(v.subReady))nodes.sub.dataset.ready=String(v.subReady);

@@ -1,4 +1,4 @@
-import { f4TurfPresentation,f4Urgency } from './F4PlayerPresentation.mjs';
+import { f4TurfPresentation,f4Urgency,f4RosterView,f4TeamColor,f4KitPreview,f4CombatCue } from './F4PlayerPresentation.mjs';
 function runTests() {
  const assert=(b,msg)=>{if(!b)throw Error(msg);};
  const live={status:'LIVE',winner:'NONE',percentA:42,percentB:35,neutralArea:23,totalProjectedM2:100};
@@ -29,3 +29,41 @@ function runTests() {
  return checks.length;
 }
 console.log('PASS',runTests());
+
+function runExtensionTests(){
+ const rows=['A1','A2','A3','B1','B2','B3','B4'].map((id,i)=>({id,team:i<3?'ALLY':'ENEMY',status:'ACTIVE',hp:100}));
+ const roster={sourceScoreable:0,officialWinner:'NONE',naturalEnemyEncounterCertified:false,humanHp:100,rows};
+ const gauge={provisional:true,required:200,points:200,executorReady:true,ready:true,active:false};
+ const base={hp:100,ink:70,subCost:70,special:gauge};
+ const cases=[
+ [f4RosterView(roster)?.length===8,'eight actual actors'],
+ [f4RosterView({...roster,humanHp:0})[0].status==='SPLAT','human death'],
+ [f4RosterView({...roster,rows:rows.map((r,i)=>i===2?{...r,status:'SPLAT',hp:null}:r)})[3].status==='SPLAT','cpu death'],
+ [f4RosterView({...roster,rows:rows.map((r,i)=>i===6?{...r,status:'REJOINING'}:r)})[7].status==='REJOINING','rejoining'],
+ [f4RosterView({...roster,rows:rows.map((r,i)=>i===5?{...r,status:'UNKNOWN',hp:null}:r)})[6].status==='UNKNOWN','unknown'],
+ [f4RosterView({...roster,rows:rows.slice(1)})===null,'missing cpu'],
+ [f4RosterView({...roster,rows:[rows[1],...rows.slice(1)]})===null,'duplicate actor'],
+ [f4RosterView({...roster,rows:rows.map((r,i)=>i===1?{...r,hp:0}:r)})===null,'invalid live hp'],
+ [f4RosterView({...roster,officialWinner:'A'})===null,'official boundary'],
+ [f4RosterView({...roster,humanHp:NaN})===null,'invalid human hp'],
+ [f4TeamColor([.02,.84,.96])==='#05d6f5','configured cyan'],
+ [f4TeamColor(new Float32Array([1,.1,.58]))==='#ff1a94','typed array'],
+ [f4TeamColor([1,2,0])===null&&f4TeamColor(null)===null,'invalid color'],
+ [f4KitPreview({weapon:'Pulse',classLabel:'シューター',sub:'Anchor',special:'Ultra',subCost:70})?.sub.includes('70%'),'real kit'],
+ [f4KitPreview({weapon:'Pulse',classLabel:'シューター',sub:'Anchor',special:'Ultra'})?.sub==='サブ · Anchor','unknown cost'],
+ [f4KitPreview({weapon:'Pulse'})===null,'incomplete kit'],
+ [f4CombatCue(base).ready&&!f4CombatCue(base).lowInk,'exact cost full ready'],
+ [f4CombatCue({...base,ink:69.999}).lowInk,'below cost'],
+ [!f4CombatCue({...base,hp:0}).ready,'dead full gauge'],
+ [!f4CombatCue({...base,special:{...gauge,ready:false}}).ready,'full not actionable'],
+ [!f4CombatCue({...base,special:{...gauge,active:true}}).ready,'already active'],
+ [!f4CombatCue({...base,special:{...gauge,executorReady:false}}).ready,'executor hold'],
+ [!f4CombatCue({...base,special:{...gauge,provisional:false}}).ready,'untrusted gauge'],
+ [f4CombatCue({...base,hp:35}).lowHp&&!f4CombatCue({...base,hp:36}).lowHp,'HP threshold'],
+ [f4CombatCue({...base,subCost:NaN}).threshold===null,'bad sub cost'],
+ [!f4CombatCue({...base,special:{...gauge,points:201}}).ready,'invalid gauge'],
+ ];
+ for(const [ok,name] of cases)if(!ok)throw Error(name);
+ return cases.length;
+}
+console.log('PASS extension',runExtensionTests());
