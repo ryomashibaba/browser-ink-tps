@@ -1,0 +1,143 @@
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -1,2 +1,3 @@
+-import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
++import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
++import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
+ import { Quat, Vec3 } from 'playcanvas';
+@@ -34,3 +35,8 @@
+   private readonly initialStageSolids: readonly StageSolidDefinition[];
+-  private f4WholeResearchTrimeshActive = false;
++  private f4WholeResearchTrimeshActive = false;
++  private f4InstalledBottomY: number|null = null;
++
++  public get f4ResearchBottomY():number|null {
++    return this.f4WholeResearchTrimeshActive?this.f4InstalledBottomY:null;
++  }
+   private readonly cameraSweepBall = new RAPIER.Ball(0);
+@@ -106,5 +112,3 @@
+     vertices.set(retainedSeed, originalStatic.length);
+-    for (const n of vertices)
+-      if (!Number.isFinite(n))
+-        throw Error('T21_F4_RESEARCH_NONFINITE_F3L_VERTEX');
++    const bottomY=f4MeshBottom(originalStatic,retainedSeed);
+     const indices = new Uint32Array(vertices.length / 3);
+@@ -123,3 +127,4 @@
+     });
+-    this.f4WholeResearchTrimeshActive = true;
++    this.f4InstalledBottomY=bottomY;
++    this.f4WholeResearchTrimeshActive = true;
+     try {
+@@ -149,4 +154,5 @@
+     this.buildStaticStage(this.initialStageSolids);
+-    this.f4WholeResearchTrimeshActive = false;
+-    this.world.step();
++    this.f4WholeResearchTrimeshActive = false;
++    this.f4InstalledBottomY=null;
++    this.world.step();
+   }
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -15,3 +15,4 @@
+ import type { PlayerInput } from '../input/PlayerInput';
+-import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
++import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
++import { f4WalkableSupportNormal } from '../stage/F4PhysicalStageSafety.mjs';
+ import type {StagePaintSurfaceDefinition} from '../stage/StageDefinition';
+@@ -1144,5 +1145,9 @@
+       // real floor contact. Never write KCC, stage, nav or ink here.
+-      const hit=this.grounded?this.physics.castCharacterFootSupport(
+-        this.sourceFootCastPosition.set(p.x,p.y,p.z),
+-        PlayerController.humanFootOffset,this.mode):null;
++      const candidate=this.grounded?this.physics.castCharacterFootSupport(
++        this.sourceFootCastPosition.set(p.x,p.y,p.z),
++        PlayerController.humanFootOffset,this.mode):null;
++      // Never treat a side or ceiling as floor ink; preserve real KCC motion.
++      const hit=this.physics.hasF4WholeResearchTrimesh&&
++        !f4WalkableSupportNormal(candidate?.normal?.y,
++          PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)?null:candidate;
+       this.sourceSupportedSolidId=hit?.solidId??null;
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -14,3 +14,4 @@
+ } from 'playcanvas';
+-import {CpuAgentSystem} from '../ai/CpuAgentSystem';
++import {CpuAgentSystem} from '../ai/CpuAgentSystem';
++import {f4BelowInstalledGeometry} from '../stage/F4PhysicalStageSafety.mjs';
+ import {CpuKitSystem,nativeSourceSubBallisticAim} from '../ai/CpuKitSystem';
+@@ -3361,3 +3362,7 @@
+     // The live actors use the same full geometry installed in Rapier.
+-    this.cpu.useF4WholeNavigation(this.f4WholeStudyNav);
++    this.cpu.useF4WholeNavigation(this.f4WholeStudyNav);
++    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++     this.cpu.useF4VoidCheck((footY,grounded)=>this.matchState==='PLAYING'&&
++      f4BelowInstalledGeometry(this.physics.f4ResearchBottomY,footY+2,grounded));
++    }
+     this.cpu.setF4ContactPracticeLoadout(Boolean(this.projectiles.currentPlayerWeapon.contactWeapon),
+@@ -5973,4 +5978,4 @@
+     // CPU collision -> actual Recast/CpuAgentSystem -> projectiles and ink.
+-    const alive=this.resources.currentHp>0;
+-    const playerStart=this.b20ProfileStart();
++    let alive=this.resources.currentHp>0;
++    const playerStart=this.b20ProfileStart();
+     // A genuine 180s SOURCE round starts only AFTER real 7/7 physical
+@@ -6061,4 +6066,14 @@
+      this.projectiles.notifyDualieDodge();
+-    this.b20ProfileStop('rapierAndHumanKcc',playerStart);
+-    if(alive)this.resources.fixedUpdate(
++    this.b20ProfileStop('rapierAndHumanKcc',playerStart);
++    // Only actual post-step body wholly below installed geometry.
++    if(alive&&this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++       this.matchState==='PLAYING'&&f4BelowInstalledGeometry(
++        this.physics.f4ResearchBottomY,
++        this.player.getPosition(this.p).y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
++        this.stats.playerGrounded)){
++     this.resources.applyDamage(this.resources.currentHp);
++     alive=false;
++     this.canvas.dataset.t21F4LastVoidSplatTick=String(frame);
++    }
++    if(alive)this.resources.fixedUpdate(
+      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+@@ -6931,5 +6946,8 @@
+     // visible fail-closed hold until the user intentionally restarts.
+-    if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
+-        physical.y< -35)
+-     throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
++    const provisionalVoidLifecycle=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++      this.physics.f4ResearchBottomY!==null&&
++      (this.matchState==='PLAYING'||this.matchState==='TIME_UP');
++    if(![physical.x,physical.y,physical.z].every(Number.isFinite)||
++        (!provisionalVoidLifecycle&&physical.y< -35))
++     throw Error('T21_F3_OUTSIDE_AUTHORIZED_PHYSICAL_SOURCE_RESET_REQUIRED');
+     // Live 60Hz accepted source events only; never writes to match or physics.
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -640,3 +640,8 @@
+ 
+-  private updateF4Drop(bot:CpuBot,dt:number):boolean{
++  private f4VoidCheck?: (footY:number,grounded:boolean)=>boolean;
++  public useF4VoidCheck(check:(footY:number,grounded:boolean)=>boolean):void {
++    this.f4VoidCheck=check;
++  }
++
++  private updateF4Drop(bot:CpuBot,dt:number):boolean{
+     let drop=this.f4Drops.get(bot.id);
+@@ -673,4 +678,12 @@
+       this.phase14qGroundCollision!.syncRealCpuFoot(bot.id,bot.position);
+-      if(!result.grounded)return true;
+-      drop.verticalSpeed=0;
++      if(!result.grounded){
++        if(this.f4VoidCheck?.(bot.position.y,false)){
++          // Genuine environmental death, never a human/direct-hit credit.
++          bot.hp=0;
++          bot.lethalHumanDirect=false;
++          this.splatBot(bot);
++        }
++        return true;
++      }
++      drop.verticalSpeed=0;
+     }
