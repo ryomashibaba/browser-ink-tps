@@ -43,6 +43,9 @@ export class F4SpecialRuntime {
   private launches = 0;
   private anchors = 0;
   private sweptHpLoss = 0;
+  private lastPlacementReject:string|null=null;
+  private placementAttempts=0;
+  private guideTerrainRejected=0;
   private special: F4SpecialId|null = null;
   private terminal: string|null = null;
   private score: ReturnType<CertifiedTurf720['result']>|null = null;
@@ -91,6 +94,8 @@ export class F4SpecialRuntime {
     this.actorUnlock.clear();
     this.livePose.clear();
     this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
+    this.lastPlacementReject=null;
+    this.placementAttempts=this.guideTerrainRejected=0;
     this.special=null;
     this.terminal=null;
     this.score=null;
@@ -134,7 +139,8 @@ export class F4SpecialRuntime {
   snapshot() {
     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
-      castEnd:this.terminal};
+      castEnd:this.terminal,placementAttempts:this.placementAttempts,
+      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected};
   }
 
   update(tick: number): void {
@@ -226,7 +232,7 @@ export class F4SpecialRuntime {
         return reserve({readyDelayF:20,repeatF:33},{launchGuide:guide=>launch({
           speed:12,gravity:12,lifeSeconds:2.1,diameter:.22,directDamage:0,collisions:'stage',
           onTerrain:hit=>{
-            if((hit.normal?.y??0)<.55)return;
+            if((hit.normal?.y??0)<.55){this.guideTerrainRejected++;return;}
             this.anchors++;
             this.tornado(hit.point,team,actorId,guide.tornadoPulse);
           }
@@ -419,21 +425,25 @@ export class F4SpecialRuntime {
   }
 
   private placement(input:Input):Vec3|null {
-    if (input.airborne) return null;
+    this.placementAttempts++;
+    const reject=(reason:string)=>{this.lastPlacementReject=reason;return null;};
+    if (input.airborne) return reject('AIRBORNE');
     const ahead=input.forward.clone();
     ahead.y=0;
-    if(ahead.lengthSq()<.05)return null;
+    if(ahead.lengthSq()<.05)return reject('VERTICAL_AIM');
     const near=input.origin.clone().add(ahead.normalize().mulScalar(1.05));
-    if(this.physics.castStageSegment(input.origin,near,'thrown-sub'))return null;
+    if(this.physics.castStageSegment(input.origin,near,'thrown-sub'))return reject('OBSTRUCTED_FORWARD');
     const ground=this.physics.castStageSegment(near,near.clone().add(new Vec3(0,-1.5,0)),'thrown-sub');
-    if(!ground||(ground.normal?.y??0)<.96)return null;
+    if(!ground)return reject('NO_GROUND');
+    if((ground.normal?.y??0)<.96)return reject('STEEP_GROUND');
     // A device cannot straddle an edge or hang on the side of a wall.
     for (const [x,z] of [[-.22,0],[.22,0],[0,-.22],[0,.22]] as const) {
       const above=ground.point.clone().add(new Vec3(x,.18,z));
       const edge=this.physics.castStageSegment(above,above.clone().add(new Vec3(0,-.38,0)),'thrown-sub');
       if(!edge||edge.solidId!==ground.solidId||(edge.normal?.y??0)<.96||
-         Math.abs(edge.point.y-ground.point.y)>.09)return null;
+         Math.abs(edge.point.y-ground.point.y)>.09)return reject('EDGE_OR_UNSUPPORTED');
     }
+    this.lastPlacementReject=null;
     return ground.point;
   }
 
@@ -469,8 +479,8 @@ export class F4SpecialRuntime {
           this.waves++;
         }
         const ring=rings[wave.index]!;
-        const size=wave.radiusMeters*2;
-        ring.enabled=size>.02;
+        const size=wave.radiusMeters/.48;
+        ring.enabled=wave.radiusMeters>.01;
         ring.setLocalScale(size,.7,size);
         this.sweptHpLoss+=this.projectiles.applyF4GroundWave(foot,wave.previousRadiusMeters,wave.radiusMeters,
           team,actor,(id)=>{

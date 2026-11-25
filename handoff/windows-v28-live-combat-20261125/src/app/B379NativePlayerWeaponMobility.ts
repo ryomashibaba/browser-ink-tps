@@ -15,12 +15,13 @@ export function applyB379NativePlayerWeaponMobility(input:{
  readonly stopped:boolean;
  /** Only the user-selected genuine 180-second original SOURCE round. */
  readonly canonicalSourceRound?:boolean;
+ readonly weaponInputBlocked?:boolean;
  readonly payTwinCometsDodgeInk?:()=>boolean;
 }):{readonly movementMultiplier:number;readonly realDodgeAccepted:boolean;
  readonly realBrellaGuardTap:boolean}{
  // Consume a queued right-click even during death/timeout; no stale dodge.
  const secondaryPress=input.input.consumeSecondaryPressed();
- const eligible=input.humanAlive&&input.realPointerLocked&&!input.stopped&&
+ const eligible=!input.weaponInputBlocked&&input.humanAlive&&input.realPointerLocked&&!input.stopped&&
   (input.sourceRoundPhase==='STAGING'||input.sourceRoundPhase==='PLAYING');
  // A physical right-click can start AND finish between two 60Hz
  // ticks. B379 already consumes that edge for DUALIES, so the actual

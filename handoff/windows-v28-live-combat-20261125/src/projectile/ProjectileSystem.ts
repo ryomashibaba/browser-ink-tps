@@ -412,10 +412,8 @@ export class ProjectileSystem {
       if (damage <= 0) continue;
       const result = this.cpuAgents.applyProjectileHit(hit,damage,actor==='human'?'HUMAN':'CPU',actor);
       hpLoss += result?.realHpLoss ?? 0;
-      if(actor==='human'&&(result?.realHpLoss??0)>0){
-        this.f4SpecialSplashHits++;
-        this.noteF4SpecialDamageCue(hit.point,team);
-      }
+      // applyProjectileHit already increments humanCpuDirectHits for this sweep.
+      if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(hit.point,team);
     }
     const human = this.findNativeSourceHumanPhysicalHit(start,end,team,radius,terrainCover);
     if (human && human.distance <= limit &&
@@ -888,6 +886,10 @@ export class ProjectileSystem {
     this.b367NativeFrame=0;
     this.nativeHumanDamageCueFrame=-1;
     this.nativeSourceHumanSplashCueFrame=-1;
+    this.f4SpecialSplashHits=0;
+    this.f4SpecialCueFrame=-1;
+    this.f4HumanLifeId=null;
+    this.f4HumanGrounded=false;
     this.b367RealHumanCpuHits=0;
     this.b367PhysicalEvents.length=0;
     this.pendingSloshes?.clear();

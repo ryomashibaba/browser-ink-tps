@@ -5872,23 +5872,31 @@ export class UndertowF3PlayablePreviewApp{
     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
     const profile=this.projectiles.currentPlayerWeapon;
     const twin=profile.twinComets===true;
+    // Consume the genuine G edge once before normal weapon-specific mobility.
+    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
+    const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
+    const f4SpecialOwnsMobility=Boolean(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled&&this.f4Special&&
+     (this.f4Special.ownsWeaponInput('human',nextSpecialTick)||
+      (f4SpecialPressed&&alive&&this.player.canShoot&&this.matchState==='PLAYING'&&
+       !this.stopReason&&document.pointerLockElement===this.canvas)));
     const b379Mobility=applyB379NativePlayerWeaponMobility({
      input:this.input,player:this.player,weapons:this.projectiles,
      realPointerLocked:document.pointerLockElement===this.canvas,
      humanAlive:alive,sourceRoundPhase:this.matchState,
      stopped:Boolean(this.stopReason),
      canonicalSourceRound:this.nativeLiveSourcePrestart,
+     weaponInputBlocked:f4SpecialOwnsMobility,
      payTwinCometsDodgeInk:twin?()=>this.resources.tryConsumeContactInk(
       7,profile.shooter!.recoveryLockSeconds):undefined
     });
-    const contactStart=alive&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
+    const contactStart=alive&&!f4SpecialOwnsMobility&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
      (twin||this.input.fireHeld&&profile.contactWeapon)?
      this.player.getPosition().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)):
      undefined;
     const mist=this.f4SharedBombsEnabled?this.humanSub.sampleF4Mist('human',Team.A,
      alive?this.player.getPosition(this.p):null,this.stats.playerInk):undefined;
-    if(alive)this.player.computeFixed(seconds,twin?this.input.fireHeld:undefined,
-     this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
+    if(alive)this.player.computeFixed(seconds,twin&&!f4SpecialOwnsMobility?this.input.fireHeld:undefined,
+     f4SpecialOwnsMobility?undefined:this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
     this.physics.step();
     this.player.syncAfterPhysics(seconds);
     const contactTravel=contactStart&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'?
@@ -6037,10 +6045,9 @@ export class UndertowF3PlayablePreviewApp{
     const primaryTap=this.input.consumePrimaryPressed();
     const realPointerFire=this.input.fireHeld||primaryTap;
     const subTap=this.input.consumeSubPressed();
-    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
     const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
     if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
-    let f4SpecialOwnsInput=false;
+    let f4SpecialOwnsInput=f4SpecialOwnsMobility;
     const humanShotsBefore=this.stats.shotsFired;
     if(this.w10b14){
      const w=this.w10b14;
@@ -6081,7 +6088,7 @@ export class UndertowF3PlayablePreviewApp{
       const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
        this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
       const secondary=specialOpen&&this.input.secondaryHeld;
-      f4SpecialOwnsInput=this.f4Special.actorTick(f4RoundTick,{
+      const specialAcceptedOrActive=this.f4Special.actorTick(f4RoundTick,{
        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
       },{
        origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
@@ -6092,6 +6099,7 @@ export class UndertowF3PlayablePreviewApp{
        releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
        airborne:!this.stats.playerGrounded
       },specialOpen,f4SpecialPressed&&this.player.canShoot);
+      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
       this.f4SpecialSecondaryHeld=secondary;
      }
      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
@@ -6104,11 +6112,12 @@ export class UndertowF3PlayablePreviewApp{
        (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
        this.player.canShoot,
       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
-      actionWindow.humanCanStartNewActions,alive,contactTravel,primaryTap,
-      twin?{aimTarget:this.target,phase:this.player.twinCometsPhase,
+      actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput,alive,
+      f4SpecialOwnsInput?undefined:contactTravel,!f4SpecialOwnsInput&&primaryTap,
+      twin&&!f4SpecialOwnsInput?{aimTarget:this.target,phase:this.player.twinCometsPhase,
        rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
       actionWindow.cpuCanStartNewActions,
-      this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
+      !f4SpecialOwnsInput&&this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
     }
     if(this.stats.shotsFired>humanShotsBefore&&
        this.input.primaryPressSequence>this.lastRealFirePressMeasured){
@@ -6203,6 +6212,7 @@ export class UndertowF3PlayablePreviewApp{
       this.f4CurlingHeldFrames=null;
       this.humanSplats++;
       this.f4Special?.cancelActor("human",f4RoundTick);
+      this.f4SpecialSecondaryHeld=false;
       this.player.setLifecycleActive(false);
       this.projectiles.cancelHumanSlosh();
       this.projectiles.discardF4Canopy('human');
