@@ -1,0 +1,78 @@
+{
+  "base": "3e9f682d41fb488f3f56eb212bb156fbfe1c3f37",
+  "previous": "b224dedc9c14e301da4a04efb0478e9b35f4a567",
+  "passed": [
+    {
+      "id": "cpu-zip",
+      "patches": [
+        {
+          "p": "special/cpu-zip-physical-port.patch",
+          "sha": "86eefbe9cb7767daf99f1002eaac7e741675d5bd"
+        },
+        {
+          "p": "special/cpu-zip-live.patch",
+          "sha": "30f548a9ff6f84e22c660db5636b8d9ee7369233"
+        }
+      ],
+      "modules": [
+        {
+          "p": "special/F4CpuZipMotion.mjs",
+          "sha": "1983c2c6272e010af9a48f2d19604cf2e10404dd"
+        },
+        {
+          "p": "special/F4CpuZipMotion.d.mts",
+          "sha": "538c608cbf3af74b46f8ed497dfd1add7a841dbb"
+        }
+      ]
+    },
+    {
+      "id": "special-tactical-aim",
+      "patches": [
+        {
+          "p": "special/cpu-special-tactical-aim.patch",
+          "sha": "3007e4d43f5f29dfd777c43b27699a3c3bd71de2"
+        }
+      ],
+      "modules": [
+        {
+          "p": "special/F4CpuSpecialAim.mjs",
+          "sha": "d9ef0855fea502c01ff5c2e5ac510abb22d73181"
+        },
+        {
+          "p": "special/F4CpuSpecialAim.d.mts",
+          "sha": "5720a0e8ba9e3f21db8e07a93fd7da2e79b49375"
+        }
+      ]
+    },
+    {
+      "id": "special-lifecycle",
+      "patches": [
+        {
+          "p": "special/cpu-special-lifecycle-aim.patch",
+          "sha": "45b1310f2930c5fc83b6127d110e41ee3b4f8b7a"
+        }
+      ],
+      "modules": [
+        {
+          "p": "special/F4NaturalCastLease.mjs",
+          "sha": "5f41587b2af9a3bd3210e7ffcc44286faff47036"
+        },
+        {
+          "p": "special/F4NaturalCastLease.d.mts",
+          "sha": "ba4dd106ddc747757e66e764c67f681fb2756864"
+        }
+      ]
+    }
+  ],
+  "held": [],
+  "relaxed": [],
+  "blobs": {
+    "src/ai/CpuAgentSystem.ts": "7927e774962904418abc693ea53d05d934e75d25",
+    "src/special/F4SpecialRuntime.ts": "32dc3b34f2196f4711f0c6bc5030b9836dab66da",
+    "src/app/UndertowF3PlayablePreviewApp.ts": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+    "src/stage/undertow/UndertowPhase14QSharedActorCollision.ts": "8ae9f79fcde20691f2340a0de7f560189d607a98"
+  },
+  "replay": 99,
+  "files": 50,
+  "nativeBuild": "NOT_RUN"
+}
