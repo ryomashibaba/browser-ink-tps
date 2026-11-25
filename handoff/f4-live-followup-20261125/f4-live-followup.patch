@@ -1,0 +1,253 @@
+diff --git a/src/app/B379NativePlayerWeaponMobility.ts b/src/app/B379NativePlayerWeaponMobility.ts
+--- a/src/app/B379NativePlayerWeaponMobility.ts
++++ b/src/app/B379NativePlayerWeaponMobility.ts
+@@ -14,13 +14,14 @@
+  readonly realPointerLocked:boolean;readonly sourceRoundPhase:string;
+  readonly stopped:boolean;
+  /** Only the user-selected genuine 180-second original SOURCE round. */
+- readonly canonicalSourceRound?:boolean;
++ readonly canonicalSourceRound?:boolean;
++ readonly weaponInputBlocked?:boolean;
+  readonly payTwinCometsDodgeInk?:()=>boolean;
+ }):{readonly movementMultiplier:number;readonly realDodgeAccepted:boolean;
+  readonly realBrellaGuardTap:boolean}{
+  // Consume a queued right-click even during death/timeout; no stale dodge.
+  const secondaryPress=input.input.consumeSecondaryPressed();
+- const eligible=input.humanAlive&&input.realPointerLocked&&!input.stopped&&
++ const eligible=!input.weaponInputBlocked&&input.humanAlive&&input.realPointerLocked&&!input.stopped&&
+   (input.sourceRoundPhase==='STAGING'||input.sourceRoundPhase==='PLAYING');
+  // A physical right-click can start AND finish between two 60Hz
+  // ticks. B379 already consumes that edge for DUALIES, so the actual
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -5871,24 +5871,32 @@
+     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
+     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
+     const profile=this.projectiles.currentPlayerWeapon;
+-    const twin=profile.twinComets===true;
+-    const b379Mobility=applyB379NativePlayerWeaponMobility({
++    const twin=profile.twinComets===true;
++    // Consume the genuine G edge once before normal weapon-specific mobility.
++    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
++    const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
++    const f4SpecialOwnsMobility=Boolean(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled&&this.f4Special&&
++     (this.f4Special.ownsWeaponInput('human',nextSpecialTick)||
++      (f4SpecialPressed&&alive&&this.player.canShoot&&this.matchState==='PLAYING'&&
++       !this.stopReason&&document.pointerLockElement===this.canvas)));
++    const b379Mobility=applyB379NativePlayerWeaponMobility({
+      input:this.input,player:this.player,weapons:this.projectiles,
+      realPointerLocked:document.pointerLockElement===this.canvas,
+      humanAlive:alive,sourceRoundPhase:this.matchState,
+      stopped:Boolean(this.stopReason),
+-     canonicalSourceRound:this.nativeLiveSourcePrestart,
+-     payTwinCometsDodgeInk:twin?()=>this.resources.tryConsumeContactInk(
++     canonicalSourceRound:this.nativeLiveSourcePrestart,
++     weaponInputBlocked:f4SpecialOwnsMobility,
++     payTwinCometsDodgeInk:twin?()=>this.resources.tryConsumeContactInk(
+       7,profile.shooter!.recoveryLockSeconds):undefined
+     });
+-    const contactStart=alive&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
++    const contactStart=alive&&!f4SpecialOwnsMobility&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
+      (twin||this.input.fireHeld&&profile.contactWeapon)?
+      this.player.getPosition().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)):
+      undefined;
+     const mist=this.f4SharedBombsEnabled?this.humanSub.sampleF4Mist('human',Team.A,
+      alive?this.player.getPosition(this.p):null,this.stats.playerInk):undefined;
+-    if(alive)this.player.computeFixed(seconds,twin?this.input.fireHeld:undefined,
+-     this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
++    if(alive)this.player.computeFixed(seconds,twin&&!f4SpecialOwnsMobility?this.input.fireHeld:undefined,
++     f4SpecialOwnsMobility?undefined:this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
+     this.physics.step();
+     this.player.syncAfterPhysics(seconds);
+     const contactTravel=contactStart&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'?
+@@ -6037,10 +6045,9 @@
+     const primaryTap=this.input.consumePrimaryPressed();
+     const realPointerFire=this.input.fireHeld||primaryTap;
+     const subTap=this.input.consumeSubPressed();
+-    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
+-    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
++    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
+     if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
+-    let f4SpecialOwnsInput=false;
++    let f4SpecialOwnsInput=f4SpecialOwnsMobility;
+     const humanShotsBefore=this.stats.shotsFired;
+     if(this.w10b14){
+      const w=this.w10b14;
+@@ -6081,7 +6088,7 @@
+       const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
+        this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
+       const secondary=specialOpen&&this.input.secondaryHeld;
+-      f4SpecialOwnsInput=this.f4Special.actorTick(f4RoundTick,{
++      const specialAcceptedOrActive=this.f4Special.actorTick(f4RoundTick,{
+        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
+       },{
+        origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
+@@ -6092,9 +6099,10 @@
+        releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
+        airborne:!this.stats.playerGrounded
+       },specialOpen,f4SpecialPressed&&this.player.canShoot);
+-      this.f4SpecialSecondaryHeld=secondary;
+-     }
+-     this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
++      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
++      this.f4SpecialSecondaryHeld=secondary;
++     }
++     this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
+       this.muzzle,this.target,this.aim);
+      this.projectiles.fixedUpdate(seconds,
+@@ -6104,11 +6112,12 @@
+        (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
+        this.player.canShoot,
+       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
+-      actionWindow.humanCanStartNewActions,alive,contactTravel,primaryTap,
+-      twin?{aimTarget:this.target,phase:this.player.twinCometsPhase,
+-       rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
+-      actionWindow.cpuCanStartNewActions,
+-      this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
++      actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput,alive,
++      f4SpecialOwnsInput?undefined:contactTravel,!f4SpecialOwnsInput&&primaryTap,
++      twin&&!f4SpecialOwnsInput?{aimTarget:this.target,phase:this.player.twinCometsPhase,
++       rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
++      actionWindow.cpuCanStartNewActions,
++      !f4SpecialOwnsInput&&this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
+     }
+     if(this.stats.shotsFired>humanShotsBefore&&
+        this.input.primaryPressSequence>this.lastRealFirePressMeasured){
+@@ -6202,8 +6211,9 @@
+       this.input.setCombatInputActive(false);
+       this.f4CurlingHeldFrames=null;
+       this.humanSplats++;
+-      this.f4Special?.cancelActor("human",f4RoundTick);
+-      this.player.setLifecycleActive(false);
++      this.f4Special?.cancelActor("human",f4RoundTick);
++      this.f4SpecialSecondaryHeld=false;
++      this.player.setLifecycleActive(false);
+       this.projectiles.cancelHumanSlosh();
+       this.projectiles.discardF4Canopy('human');
+       if(twin){
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -412,10 +412,8 @@
+       if (damage <= 0) continue;
+       const result = this.cpuAgents.applyProjectileHit(hit,damage,actor==='human'?'HUMAN':'CPU',actor);
+       hpLoss += result?.realHpLoss ?? 0;
+-      if(actor==='human'&&(result?.realHpLoss??0)>0){
+-        this.f4SpecialSplashHits++;
+-        this.noteF4SpecialDamageCue(hit.point,team);
+-      }
++      // applyProjectileHit already increments humanCpuDirectHits for this sweep.
++      if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(hit.point,team);
+     }
+     const human = this.findNativeSourceHumanPhysicalHit(start,end,team,radius,terrainCover);
+     if (human && human.distance <= limit &&
+@@ -887,8 +885,12 @@
+     this.b351TrueDamageCues=0;
+     this.b367NativeFrame=0;
+     this.nativeHumanDamageCueFrame=-1;
+-    this.nativeSourceHumanSplashCueFrame=-1;
+-    this.b367RealHumanCpuHits=0;
++    this.nativeSourceHumanSplashCueFrame=-1;
++    this.f4SpecialSplashHits=0;
++    this.f4SpecialCueFrame=-1;
++    this.f4HumanLifeId=null;
++    this.f4HumanGrounded=false;
++    this.b367RealHumanCpuHits=0;
+     this.b367PhysicalEvents.length=0;
+     this.pendingSloshes?.clear();
+     this.pendingSaberSwings?.clear();
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -42,7 +42,10 @@
+   private paintCells = 0;
+   private launches = 0;
+   private anchors = 0;
+-  private sweptHpLoss = 0;
++  private sweptHpLoss = 0;
++  private lastPlacementReject:string|null=null;
++  private placementAttempts=0;
++  private guideTerrainRejected=0;
+   private special: F4SpecialId|null = null;
+   private terminal: string|null = null;
+   private score: ReturnType<CertifiedTurf720['result']>|null = null;
+@@ -90,7 +93,9 @@
+     this.completedProbeLives.clear();
+     this.actorUnlock.clear();
+     this.livePose.clear();
+-    this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
++    this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
++    this.lastPlacementReject=null;
++    this.placementAttempts=this.guideTerrainRejected=0;
+     this.special=null;
+     this.terminal=null;
+     this.score=null;
+@@ -134,7 +139,8 @@
+   snapshot() {
+     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
+       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
+-      castEnd:this.terminal};
++      castEnd:this.terminal,placementAttempts:this.placementAttempts,
++      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected};
+   }
+ 
+   update(tick: number): void {
+@@ -226,7 +232,7 @@
+         return reserve({readyDelayF:20,repeatF:33},{launchGuide:guide=>launch({
+           speed:12,gravity:12,lifeSeconds:2.1,diameter:.22,directDamage:0,collisions:'stage',
+           onTerrain:hit=>{
+-            if((hit.normal?.y??0)<.55)return;
++            if((hit.normal?.y??0)<.55){this.guideTerrainRejected++;return;}
+             this.anchors++;
+             this.tornado(hit.point,team,actorId,guide.tornadoPulse);
+           }
+@@ -419,22 +425,26 @@
+   }
+ 
+   private placement(input:Input):Vec3|null {
+-    if (input.airborne) return null;
+-    const ahead=input.forward.clone();
++    this.placementAttempts++;
++    const reject=(reason:string)=>{this.lastPlacementReject=reason;return null;};
++    if (input.airborne) return reject('AIRBORNE');
++    const ahead=input.forward.clone();
+     ahead.y=0;
+-    if(ahead.lengthSq()<.05)return null;
++    if(ahead.lengthSq()<.05)return reject('VERTICAL_AIM');
+     const near=input.origin.clone().add(ahead.normalize().mulScalar(1.05));
+-    if(this.physics.castStageSegment(input.origin,near,'thrown-sub'))return null;
++    if(this.physics.castStageSegment(input.origin,near,'thrown-sub'))return reject('OBSTRUCTED_FORWARD');
+     const ground=this.physics.castStageSegment(near,near.clone().add(new Vec3(0,-1.5,0)),'thrown-sub');
+-    if(!ground||(ground.normal?.y??0)<.96)return null;
++    if(!ground)return reject('NO_GROUND');
++    if((ground.normal?.y??0)<.96)return reject('STEEP_GROUND');
+     // A device cannot straddle an edge or hang on the side of a wall.
+     for (const [x,z] of [[-.22,0],[.22,0],[0,-.22],[0,.22]] as const) {
+       const above=ground.point.clone().add(new Vec3(x,.18,z));
+       const edge=this.physics.castStageSegment(above,above.clone().add(new Vec3(0,-.38,0)),'thrown-sub');
+       if(!edge||edge.solidId!==ground.solidId||(edge.normal?.y??0)<.96||
+-         Math.abs(edge.point.y-ground.point.y)>.09)return null;
+-    }
+-    return ground.point;
++         Math.abs(edge.point.y-ground.point.y)>.09)return reject('EDGE_OR_UNSUPPORTED');
++    }
++    this.lastPlacementReject=null;
++    return ground.point;
+   }
+ 
+   private waveDevice(device:WaveDevice,foot:Vec3,team:Team.A|Team.B,actor:string):void {
+@@ -469,9 +479,9 @@
+           this.waves++;
+         }
+         const ring=rings[wave.index]!;
+-        const size=wave.radiusMeters*2;
+-        ring.enabled=size>.02;
+-        ring.setLocalScale(size,.7,size);
++        const size=wave.radiusMeters/.48;
++        ring.enabled=wave.radiusMeters>.01;
++        ring.setLocalScale(size,.7,size);
+         this.sweptHpLoss+=this.projectiles.applyF4GroundWave(foot,wave.previousRadiusMeters,wave.radiusMeters,
+           team,actor,(id)=>{
+             const targetLifeId=this.projectiles.f4TargetLifeKey(id);
