@@ -1,0 +1,94 @@
+diff --git a/src/core/InkBrushRasterStream.ts b/src/core/InkBrushRasterStream.ts
+--- a/src/core/InkBrushRasterStream.ts
++++ b/src/core/InkBrushRasterStream.ts
+@@ -85,6 +85,18 @@
+       colors: new Uint8Array(next * 16),
+       indices: new Uint16Array(next * 6)
+     };
++    // Quad topology is independent of brush/team/geometry. Precompute once
++    // per growth; the atlas only reads the returned view until mesh.update().
++    const indices = this.storage.indices;
++    for (let q = 0, i = 0; q < next; q++) {
++      const v = q * 4;
++      indices[i++] = v;
++      indices[i++] = v + 1;
++      indices[i++] = v + 2;
++      indices[i++] = v;
++      indices[i++] = v + 2;
++      indices[i++] = v + 3;
++    }
+     this.reserved = next;
+     return this.storage;
+   }
+@@ -123,7 +135,6 @@
+   let rectCursor = 0;
+   let colorCursor = 0;
+   let indexCursor = 0;
+-  let vertexBase = 0;
+ 
+   for (const { surface, event, paintableRuns } of groups) {
+     const atlas = surface.atlasRect;
+@@ -138,6 +149,8 @@
+     const centerY = (atlas.y + atlas.height - event.centerV * atlas.pixelsPerMeter) / atlas.atlasSize;
+     const radiusX = event.radiusU * atlas.pixelsPerMeter / atlas.atlasSize;
+     const radiusY = event.radiusV * atlas.pixelsPerMeter / atlas.atlasSize;
++    const diameterX = 2 * radiusX;
++    const diameterY = 2 * radiusY;
+     const scale = atlas.pixelsPerMeter / atlas.atlasSize;
+     if (!(radiusX > 0 && radiusY > 0) ||
+         !Number.isFinite(boundU) || !Number.isFinite(boundV) ||
+@@ -167,16 +180,24 @@
+ 
+       // Same exact [BL, BR, TR, TL] order as canonical INK quads, but no
+       // transient InkBrushVertex/InkBrushQuad instances or geometry list.
++      // Each corner reuses one of two X and two Y products. Keep the
++      // original arithmetic order (including the unary minus) for exact UVs.
++      const dx0 = x0 - centerX, dx1 = x1 - centerX;
++      const dy0 = y0 - centerY, dy1 = y1 - centerY;
++      const xc0 = dx0 * c, xc1 = dx1 * c;
++      const xs0 = -dx0 * s, xs1 = -dx1 * s;
++      const ys0 = dy0 * s, ys1 = dy1 * s;
++      const yc0 = dy0 * c, yc1 = dy1 * c;
+       for (let i = 0; i < 4; i++) {
+-        const x = (i === 1 || i === 2) ? x1 : x0;
+-        const y = (i >= 2) ? y0 : y1;
+-        const dx = x - centerX;
+-        const dy = y - centerY;
++        const right = i === 1 || i === 2;
++        const top = i >= 2;
++        const x = right ? x1 : x0;
++        const y = top ? y0 : y1;
+         positions[p++] = x;
+         positions[p++] = y;
+         positions[p++] = 0;
+-        uvs[uv++] = 0.5 + (dx * c - dy * s) / (2 * radiusX);
+-        uvs[uv++] = 0.5 + (-dx * s - dy * c) / (2 * radiusY);
++        uvs[uv++] = 0.5 + ((right ? xc1 : xc0) - (top ? ys0 : ys1)) / diameterX;
++        uvs[uv++] = 0.5 + ((right ? xs1 : xs0) - (top ? yc0 : yc1)) / diameterY;
+         rectMins[rectCursor] = x0;
+         rectMaxs[rectCursor++] = x1;
+         rectMins[rectCursor] = y0;
+@@ -186,13 +207,16 @@
+         colors[colorCursor++] = wetnessByte;
+         colors[colorCursor++] = 255;
+       }
+-      indices[indexCursor++] = vertexBase;
+-      indices[indexCursor++] = vertexBase + 1;
+-      indices[indexCursor++] = vertexBase + 2;
+-      indices[indexCursor++] = vertexBase;
+-      indices[indexCursor++] = vertexBase + 2;
+-      indices[indexCursor++] = vertexBase + 3;
+-      vertexBase += 4;
++      if (!saved) {
++        const vertexBase = quadCount * 4;
++        indices[indexCursor] = vertexBase;
++        indices[indexCursor + 1] = vertexBase + 1;
++        indices[indexCursor + 2] = vertexBase + 2;
++        indices[indexCursor + 3] = vertexBase;
++        indices[indexCursor + 4] = vertexBase + 2;
++        indices[indexCursor + 5] = vertexBase + 3;
++      }
++      indexCursor += 6;
+       quadCount++;
+     }
+   }
