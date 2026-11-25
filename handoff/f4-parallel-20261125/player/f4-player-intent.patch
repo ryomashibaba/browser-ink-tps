@@ -1,0 +1,175 @@
+diff --git a/src/player/F4PlayerIntent.mjs b/src/player/F4PlayerIntent.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4PlayerIntent.mjs
+@@ -0,0 +1,14 @@
++// Provisional human input and steering policy. No physics or ink authority.
++export function f4MouseHeldAfterMask(held,buttons,bit){
++  return held && (!Number.isSafeInteger(buttons) || buttons<0 || (buttons&bit)!==0);
++}
++
++export function f4KeepRollIntent(desired,armedDirection){
++  const a=Math.hypot(desired.x,desired.z),b=Math.hypot(armedDirection.x,armedDirection.z);
++  return a>=0.5 && b>1e-6 &&
++    (desired.x*armedDirection.x+desired.z*armedDirection.z)>=0.5*a*b;
++}
++
++export function f4AirborneSquidSpeed(humanSpeed,ownSpeed,vx,vz){
++  return Math.max(humanSpeed,Math.min(ownSpeed,Math.hypot(vx,vz)));
++}
+diff --git a/src/player/F4PlayerIntent.d.mts b/src/player/F4PlayerIntent.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4PlayerIntent.d.mts
+@@ -0,0 +1,4 @@
++interface XZ { readonly x:number; readonly z:number }
++export function f4MouseHeldAfterMask(held:boolean,buttons:number,bit:1|2):boolean;
++export function f4KeepRollIntent(desired:XZ,armedDirection:XZ):boolean;
++export function f4AirborneSquidSpeed(humanSpeed:number,ownSpeed:number,vx:number,vz:number):number;
+diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
+--- a/src/input/PlayerInput.ts
++++ b/src/input/PlayerInput.ts
+@@ -7,7 +7,22 @@
+ const SOURCE_OPPOSITE_MOVEMENT:Readonly<Record<string,string>>={
+  KeyW:'KeyS',KeyS:'KeyW',KeyA:'KeyD',KeyD:'KeyA'
+ };
+-export class PlayerInput {
++import {f4MouseHeldAfterMask} from '../player/F4PlayerIntent.mjs';
++
++export class PlayerInput {
++  private f4ProvisionalControls=false;
++  public enableF4ProvisionalControls():void{
++    if(!this.deterministicQaEnabled)this.f4ProvisionalControls=true;
++  }
++
++  // Mouse move may be the first event after a missed pointerup. Reconcile
++  // releases only; never synthesize a press or discard a real queued tap.
++  private reconcileF4MouseReleases(event:PointerEvent):void{
++    if(!this.f4ProvisionalControls||event.pointerType!=='mouse'||
++       document.pointerLockElement!==this.canvas)return;
++    this.fire=f4MouseHeldAfterMask(this.fire,event.buttons,1);
++    this.secondary=f4MouseHeldAfterMask(this.secondary,event.buttons,2);
++  }
+   private readonly keys = new Set<string>();
+   private sourcePrestartBlocked=false;
+   // Native SOURCE guards apply to live input independently of staging movement.
+@@ -174,7 +189,8 @@
+     });
+ 
+     const pressFire = (event: PointerEvent): void => {
+-      if(this.sourcePrestartBlocked)return;
++      this.reconcileF4MouseReleases(event);
++      if(this.sourcePrestartBlocked)return;
+       // Genuine SOURCE mouse shortcuts are not weapon inputs. Keyboard
+       // shortcut-modified WASD/F/G is already ignored above, but modified
+       // left/right clicks must likewise never fire, dodge or raise a shield.
+@@ -209,7 +225,8 @@
+     canvas.addEventListener('pointerdown', pressFire);
+     canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+ 
+-    const releaseFire = (event: PointerEvent): void => {
++    const releaseFire = (event: PointerEvent): void => {
++      this.reconcileF4MouseReleases(event);
+       if (event.button === 0) this.fire = false;
+       if (event.button === 2) this.secondary = false;
+     };
+@@ -216,7 +233,8 @@
+     canvas.addEventListener('pointerup', releaseFire);
+     document.addEventListener('pointerup', releaseFire);
+     // Mouse chords report intermediate button edges on pointermove.
+-    canvas.addEventListener('pointermove', (event) => {
++    canvas.addEventListener('pointermove', (event) => {
++      this.reconcileF4MouseReleases(event);
+       if (!this.sourceLiveInputGuardsEnabled || event.pointerType !== 'mouse' ||
+           (event.button !== 0 && event.button !== 2)) return;
+       const buttonMask = event.button === 0 ? 1 : 2;
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -4,7 +4,8 @@
+   type RigidBody
+ } from '@dimforge/rapier3d-compat';
+ import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+-import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
++import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
++import {f4KeepRollIntent,f4AirborneSquidSpeed} from './F4PlayerIntent.mjs';
+ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+  type B248Visual} from '../app/B248SourceActorVisuals';
+ import { GAME_CONFIG } from '../config/game/gameConfig';
+@@ -207,7 +208,9 @@
+   private weaponMoveMultiplier = 1;
+   private mistSpeedScale = 1;
+   private snapToGroundEnabled = true;
+-  private nativeSourceGroundInkGuard = false;
++  private nativeSourceGroundInkGuard = false;
++  private f4ProvisionalControls=false;
++  public enableF4ProvisionalControls():void{this.f4ProvisionalControls=true;}
+   // F4 research-only KCC observation. Never changes the collision solver.
+   private f4KccAuditEnabled=false;
+   private f4ZipResearch: F4ZipResearchRun | null = null;
+@@ -664,8 +667,16 @@
+     this.mistSpeedScale = mistSpeedScale;
+     const bodyPosition = this.body.translation();
+     if(this.f4ZipResearchActive&&this.f4ZipResearch){
+-      this.input.consumeJump();
+-      this.computeF4ZipResearch(dt,bodyPosition,this.f4ZipResearch);
++      this.input.consumeJump();
++      if(this.f4ProvisionalControls){
++        // Drain only transient locomotion intent. Physically held movement
++        // still applies when the actual exclusive KCC traversal ends.
++        this.input.consumeMoveAxesForPlayerTick();
++        this.input.consumeSquidHeldForPlayerTick();
++        this.sourceJumpBufferSeconds=0;
++        this.squidRollTurnWindowSeconds=0;
++      }
++      this.computeF4ZipResearch(dt,bodyPosition,this.f4ZipResearch);
+       return;
+     }
+ 
+@@ -902,7 +913,10 @@
+             ? 'NONE' : this.inkRelation;
+         if (groundInkRelation === 'OWN') {
+           this.locomotionState = 'SWIM_GROUND';
+-          this.captureSquidRollTurnIntent();
++          if(this.f4ProvisionalControls&&this.squidRollTurnWindowSeconds>0&&
++             !f4KeepRollIntent(this.desired,this.squidRollDirection))
++            this.squidRollTurnWindowSeconds=0;
++          this.captureSquidRollTurnIntent();
+ 
+           if (nativeSourceSquidRollJumpRequested(
+             jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
+@@ -921,7 +935,17 @@
+           this.squidRollTurnWindowSeconds = 0;
+           this.locomotionState = 'SQUID_DRY';
+ 
+-          if (groundInkRelation === 'ENEMY') {
++          if(this.f4ProvisionalControls&&!this.grounded){
++            // Do not grant OWN while airborne. Preserve bounded takeoff
++            // momentum, with reduced directional acceleration, through the
++            // same actual KCC and mist multiplier. Normal release braking
++            // and grounded/dry/enemy speed tuning remain unchanged.
++            this.applyHorizontalTarget(
++              f4AirborneSquidSpeed(tuning.humanSpeedMetersPerSecond,
++                tuning.squidOwnInkSpeedMetersPerSecond,this.velocity.x,this.velocity.z),
++              tuning.groundAccelerationMetersPerSecond2*.5,dt
++            );
++          } else if (groundInkRelation === 'ENEMY') {
+             this.applyHorizontalTarget(
+               tuning.squidEnemyInkSpeedMetersPerSecond,
+               tuning.squidDryAccelerationMetersPerSecond2,
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -968,7 +968,11 @@
+   this.player.setNativeSourceGroundInkGuard(
+    this.nativeLiveSourcePrestart,
+    this.nativeLiveSourcePrestart?this.rawStage.paintSurfaces:undefined);
+-  this.player.setTeam(Team.A);
++  this.player.setTeam(Team.A);
++  if(this.f4ProvisionalTurfEnabled){
++   this.input.enableF4ProvisionalControls();
++   this.player.enableF4ProvisionalControls();
++  }
+   this.humanSpawn=new Vec3(
+    slots.teamASlots[3]![0],
+    slots.teamASlots[3]![1]+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters+.15,
