@@ -121,20 +121,21 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
  import {GpuInkAtlas} from '../ink/GpuInkAtlas';
  import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
  import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
-@@ -333,7 +334,11 @@
+@@ -333,7 +334,12 @@
   // Opt-in single-world render/collision research; standard SOURCE unaffected.
   private readonly f4WholeTrimeshRequested=
    originalF4LocalResearchVisualRegistration(location.href)!==null;
 - private f4WholeTrimeshInstalled=false;
 + private f4WholeTrimeshInstalled=false;
-+ private readonly f4ProvisionalTurfEnabled=this.f4ResearchMode&&this.f4WholeTrimeshRequested&&
++ private readonly f4ProvisionalTurfRequested=this.f4ResearchMode&&this.f4WholeTrimeshRequested&&
 +  import.meta.env.DEV&&['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
-+  sessionStorage.getItem('t21F4ProvisionalTurf')==='on'&&
++  sessionStorage.getItem('t21F4ProvisionalTurf')==='on'&&sessionStorage.getItem('t21F4SpecialProbe')!=='physical'&&
 +  new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
++ private get f4ProvisionalTurfEnabled():boolean{return this.f4ProvisionalTurfRequested&&this.b203FullRound;}
   private f4WholeStudyNav:RecastStageNavigation|null=null;
   private f4WholeCpuConnected=false;
   /** F4-only read-only triangle centroids for genuine human WASD review.
-@@ -480,7 +485,8 @@
+@@ -480,7 +486,8 @@
   private f4HumanSubActionOpen=false;
   private readonly f4Special: F4SpecialRuntime|null;
   private readonly f4SpecialProbe: boolean;
@@ -144,7 +145,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
   private f4SpecialLife=1;
   private f4HumanDeathTick:number|null=null;
   private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
-@@ -873,7 +879,18 @@
+@@ -873,7 +880,18 @@
    this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
     (event,changedCells,raster)=>{
      this.b23InkFeedback.accept(event,changedCells,raster);
@@ -164,7 +165,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      // B154: real rasterized changes from ALL seven native original CPUs.
      // A projectile request, candidate or a fake actor is never paint.
      if(event.source===PaintSource.Cpu&&event.actorId&&
-@@ -1264,7 +1281,10 @@
+@@ -1264,7 +1282,10 @@
    this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
     ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
     sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
@@ -176,7 +177,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    const f4ProbeCpu=this.f4SpecialProbe?sessionStorage.getItem('t21F4SpecialProbeCpu'):null;
    if(f4ProbeCpu&&/^(A[123]|B[1234])$/.test(f4ProbeCpu)&&this.f4Special){
     const runtime=this.f4Special;
-@@ -1281,7 +1301,22 @@
+@@ -1281,7 +1302,22 @@
      cancel:()=>runtime.cancelActor(f4ProbeCpu,nextRoundTick())
     });
    }
@@ -200,7 +201,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // entrances now reuse the proven real physical-slot budget: a full
    // projectile pool must NOT spend the human's real ink for zero shots.
    // Explicit older B343 QA remains selectable; T20, deterministic
-@@ -2000,21 +2035,37 @@
+@@ -2000,21 +2036,37 @@
       const profile=subWeaponProfile(sub);
       return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
        subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
@@ -243,7 +244,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
        weapon:this.projectiles.currentPlayerWeapon.id
       }):null;
-@@ -3050,8 +3101,9 @@
+@@ -3050,8 +3102,9 @@
    canvas.dataset.t21F3SourceStage=stage.metadata.id;
    canvas.dataset.t21F3Production='FORBIDDEN';
    const api={snapshot:()=>this.snapshot(),
@@ -255,7 +256,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
      humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
      projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),
-@@ -3268,8 +3320,9 @@
+@@ -3268,8 +3321,9 @@
      this.f4WholeTrimeshInstalled=true;
      // The F3L root draws all stage geometry. Existing backed ink cells
      // render over it without the old opaque neutral paint planes.
@@ -267,7 +268,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
       this.b45SourceSurfaces,wholeNavWorld);
      this.sourceCompletion.root.enabled=false;
-@@ -5936,17 +5989,47 @@
+@@ -5936,17 +5990,47 @@
      const zipResearchKit=this.f4ZipResearchEnabled&&profile.id==='arc-blaster';
      const zipOpen=zipResearchKit&&this.f4WholeTrimeshInstalled&&alive&&
       this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
@@ -323,7 +324,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
         !this.stopReason&&document.pointerLockElement===this.canvas)));
      const b379Mobility=applyB379NativePlayerWeaponMobility({
       input:this.input,player:this.player,weapons:this.projectiles,
-@@ -5978,7 +6061,7 @@
+@@ -5978,7 +6062,7 @@
      this.b20ProfileStop('rapierAndHumanKcc',playerStart);
      if(alive)this.resources.fixedUpdate(
       seconds,this.player.currentMode,this.player.currentInkRelation,mist);
@@ -332,7 +333,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
        alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
      }
-@@ -6111,10 +6194,9 @@
+@@ -6111,10 +6195,9 @@
      });
      this.camera.update(this.player.getPosition(this.p));
      const primaryTap=this.input.consumePrimaryPressed();
@@ -345,7 +346,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      let f4SpecialOwnsInput=f4SpecialOwnsMobility;
      const humanShotsBefore=this.stats.shotsFired;
      if(this.w10b14){
-@@ -6152,11 +6234,12 @@
+@@ -6152,11 +6235,12 @@
       this.camera.getAimDirection(this.aim);
       this.player.getMuzzlePosition(this.aim,this.muzzle);
       this.camera.getAimTarget(this.target);
@@ -360,7 +361,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
         actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
        },{
         origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
-@@ -6166,8 +6249,10 @@
+@@ -6166,8 +6250,10 @@
         holdThrow:this.player.canShoot&&secondary,
         releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
         airborne:!this.stats.playerGrounded
@@ -373,7 +374,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.f4SpecialSecondaryHeld=secondary;
       }
       this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
-@@ -6202,7 +6287,7 @@
+@@ -6202,7 +6288,7 @@
      // a projectile injected by QA. Original Rapier/paint physics resolve it.
      // Consume even when disabled or splatted: never fire stale buffered F.
      const humanSubId=this.sourceWeaponKit(profile.id).sub;
@@ -382,7 +383,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas;
      this.f4HumanSubActionOpen=canUseSub;
      let throwSub=canUseSub&&subTap;
-@@ -6242,8 +6327,12 @@
+@@ -6242,8 +6328,12 @@
      this.cpuKit?.fixedUpdate(seconds);
      this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
      const paintStart=this.b20ProfileStart();
@@ -397,7 +398,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      // Read life states after CPU and projectile updates on every native tick.
      // HUD and external QA sampling can skip a splat or respawn boundary.
      if(this.f4WholeCpuConnected){
-@@ -6279,7 +6368,8 @@
+@@ -6279,7 +6369,8 @@
        this.input.setCombatInputActive(false);
        this.f4CurlingHeldFrames=null;
        this.humanSplats++;
@@ -407,7 +408,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.player.cancelF4ZipResearch('HUMAN_SPLATTED');
        this.f4SpecialSecondaryHeld=false;
        this.player.setLifecycleActive(false);
-@@ -6940,8 +7030,12 @@
+@@ -6940,8 +7031,12 @@
    hud.dataset.t21B401NeutralCells=String(next.neutral);
    hud.dataset.t21B401OfficialWinner='NONE';
   }
@@ -422,7 +423,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // No player/CPU physics ticks with old colliders while F3L verifies.
    if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
     this.paused=true;
-@@ -9673,7 +9767,10 @@
+@@ -9673,7 +9768,10 @@
     const actualStop=state.stopReason?
      'NATIVE STOP · TICK '+state.tick+' · '+
      state.stopReason.slice(0,160)+'\n':'';
