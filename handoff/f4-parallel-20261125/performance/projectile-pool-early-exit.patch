@@ -1,0 +1,124 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -404,7 +404,7 @@
+     if (!this.physics.hasF4WholeResearchTrimesh || !Number.isInteger(count) || count < 1 || count > 3 ||
+         ![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite) ||
+         direction.lengthSq() < 1e-8) return false;
+-    const slots = this.slots.filter(isFreeProjectileSlot).slice(0,count);
++    const slots = firstFreeProjectileSlots(this.slots, count);
+     if (slots.length !== count) return false;
+     const forward = direction.clone().normalize();
+     const right = new Vec3().cross(Math.abs(forward.y) > .98 ? Vec3.RIGHT : Vec3.UP,forward).normalize();
+@@ -611,7 +611,7 @@
+     return {enabled:this.b343SourceVolleyAtomic,
+       rejectedVolleys:this.b343RejectedVolleys,
+       physicalPoolSize:this.slots.length,
+-      actualFreeSlots:this.slots.filter(isFreeProjectileSlot).length,
++      actualFreeSlots:countFreeProjectileSlots(this.slots),
+       syntheticShots:0 as const,syntheticInk:0 as const,
+       scoreable:0 as const,productionAuthorized:false as const};
+   }
+@@ -2106,7 +2106,7 @@
+     const contact = profile.contactWeapon!;
+     const groups = vertical ? contact.vertical! : contact.horizontal;
+     const count = groups.reduce((sum, group) => sum + group.count, 0);
+-    const slots = this.slots.filter(isFreeProjectileSlot).slice(0, count);
++    const slots = firstFreeProjectileSlots(this.slots, count);
+     if (slots.length !== count || !pay()) return false;
+     const brush = !contact.vertical;
+     const ordinal = (this.brushSwings?.get(actor) ?? 0) + 1;
+@@ -2310,7 +2310,7 @@
+   ): boolean {
+     const pending = this.pendingSloshes ??= new Map();
+     if (pending.has(actor)) return false;
+-    const reserved = this.slots.filter(isFreeProjectileSlot).slice(0, SLOSHER_DROPLETS.length);
++    const reserved = firstFreeProjectileSlots(this.slots, SLOSHER_DROPLETS.length);
+     if (reserved.length !== SLOSHER_DROPLETS.length) {
+       this.stats.projectilePoolDrops++;
+       return false;
+@@ -2516,7 +2516,7 @@
+   ): boolean {
+     const queued = this.pendingCanopyVolleys ??= new Map();
+     if (queued.has(actor) || this.canopies?.lookup(actor)?.phase === 'OPEN') return false;
+-    const slots = this.slots.filter(isFreeProjectileSlot).slice(0, CANOPY_PELLETS.length);
++    const slots = firstFreeProjectileSlots(this.slots, CANOPY_PELLETS.length);
+     if (slots.length !== CANOPY_PELLETS.length) {
+       this.stats.projectilePoolDrops++;
+       return false;
+@@ -2887,7 +2887,7 @@
+     const pending = this.pendingSaberSwings ??= new Map();
+     if (pending.has(actor) || aim.lengthSq() < 1e-8) return false;
+ 
+-    const [slash, wave] = this.slots.filter(isFreeProjectileSlot).slice(0, 2);
++    const [slash, wave] = firstFreeProjectileSlots(this.slots, 2);
+     if (!slash || !wave) {
+       this.stats.projectilePoolDrops++;
+       return false;
+@@ -3183,7 +3183,7 @@
+     // B343 SOURCE QA: reject a real all-or-nothing volley before ink spend
+     // when insufficient physical slots exist. No fabricated paint/shots.
+     if(this.b343SourceVolleyAtomic || profile.shooter || profile.blaster || options?.arrowLayout){
+-      const available=this.slots.filter(isFreeProjectileSlot).length;
++      const available=countFreeProjectileSlots(this.slots);
+       if(!b343CanLaunchSourceVolley(available,count)){
+         this.b343RejectedVolleys++;
+         return false;
+@@ -3402,7 +3402,7 @@
+       // remain: never charge a paid dualies/brella attack for 0 or
+       // partially spawned projectiles. Real HUMAN gets first access.
+       if(request.sourceInkTransaction&&
+-         this.slots.filter(isFreeProjectileSlot).length<count){
++         !hasFreeProjectileSlots(this.slots, count)){
+         this.stats.projectilePoolDrops+=1;
+         this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+         continue;
+@@ -3652,7 +3652,7 @@
+     // projectile slots. Do not emit a truncated charged three-arrow
+     // pattern while charging full CPU ink for a partial volley.
+     if((request.sourceInkTransaction || f4)&&
+-       this.slots.filter(isFreeProjectileSlot).length<3){
++       !hasFreeProjectileSlots(this.slots, 3)){
+       this.stats.projectilePoolDrops+=1;
+       if (request.sourceInkTransaction) this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
+       return;
+@@ -4826,9 +4826,36 @@
+   return best;
+ }
+ 
+-function isFreeProjectileSlot(slot: ProjectileSlot): boolean {
+-  return !slot.active && !slot.reservedForVolley;
+-}
++function isFreeProjectileSlot(slot: ProjectileSlot): boolean {
++  return !slot.active && !slot.reservedForVolley;
++}
++
++// Preserve slot order and atomic volley reservation without collecting the
++// entire free pool. Unusual counts retain Array.slice's original semantics.
++function firstFreeProjectileSlots(slots: readonly ProjectileSlot[], count: number): ProjectileSlot[] {
++  if (!Number.isSafeInteger(count) || count < 0) return slots.filter(isFreeProjectileSlot).slice(0, count);
++  const result: ProjectileSlot[] = [];
++  if (count === 0) return result;
++  for (const slot of slots) {
++    if (!isFreeProjectileSlot(slot)) continue;
++    result.push(slot);
++    if (result.length === count) break;
++  }
++  return result;
++}
++
++function countFreeProjectileSlots(slots: readonly ProjectileSlot[]): number {
++  let count = 0;
++  for (const slot of slots) if (isFreeProjectileSlot(slot)) count++;
++  return count;
++}
++
++function hasFreeProjectileSlots(slots: readonly ProjectileSlot[], count: number): boolean {
++  if (!Number.isSafeInteger(count) || count <= 0) return !(countFreeProjectileSlots(slots) < count);
++  let remaining = count;
++  for (const slot of slots) if (isFreeProjectileSlot(slot) && --remaining === 0) return true;
++  return false;
++}
+ 
+ function makeProjectileMaterial(rgb: readonly [number, number, number]): StandardMaterial {
+   const material = new StandardMaterial();

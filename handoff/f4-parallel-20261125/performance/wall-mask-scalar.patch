@@ -1,0 +1,35 @@
+diff --git a/src/stage/F4ConcreteWallTiles.mjs b/src/stage/F4ConcreteWallTiles.mjs
+--- a/src/stage/F4ConcreteWallTiles.mjs
++++ b/src/stage/F4ConcreteWallTiles.mjs
+@@ -3,11 +3,15 @@
+   // Exact axis-aligned source triangles only. No invented plane or geometry.
+   const tile=6,cell=.125,n=48,eps=.002,bins=new Map();
+   if(vertices.length%9||!Number.isInteger(limit)||limit<1||limit>64)throw Error("invalid wall input");
+-  const inside=(x,y,a,b,c)=>{
+-    const cross=(u,v)=>(v[0]-u[0])*(y-u[1])-(v[1]-u[1])*(x-u[0]);
+-    const d=[cross(a,b),cross(b,c),cross(c,a)];
+-    return d.every(q=>q>=-1e-8)||d.every(q=>q<=1e-8);
+-  };
++  const inside=(x,y,a,b,c)=>{
++    const ab=(b[0]-a[0])*(y-a[1])-(b[1]-a[1])*(x-a[0]);
++    const bc=(c[0]-b[0])*(y-b[1])-(c[1]-b[1])*(x-b[0]);
++    const ca=(a[0]-c[0])*(y-c[1])-(a[1]-c[1])*(x-c[0]);
++    return (ab>=-1e-8&&bc>=-1e-8&&ca>=-1e-8)||
++      (ab<=1e-8&&bc<=1e-8&&ca<=1e-8);
++  };
++  // Fixed five real probes per cell; no per-cell arrays or closures.
++  const probes=[[.0001,.0001],[cell-.0001,.0001],[.0001,cell-.0001],[cell-.0001,cell-.0001],[cell/2,cell/2]];
+   for(let i=0;i<vertices.length;i+=9){
+     const a=Array.from(vertices.slice(i,i+3)),b=Array.from(vertices.slice(i+3,i+6)),c=Array.from(vertices.slice(i+6,i+9));
+     if(![...a,...b,...c].every(Number.isFinite))throw Error("nonfinite wall geometry");
+@@ -32,8 +36,8 @@
+         if(row.mask[k]===31)continue;
+         const U=row.minU+x*cell,V=row.minV+y*cell;
+         let bit=1;
+-        for(const [du,dv] of [[.0001,.0001],[cell-.0001,.0001],[.0001,cell-.0001],[cell-.0001,cell-.0001],[cell/2,cell/2]]){
+-          if(inside(U+du,V+dv,...tri))row.mask[k]|=bit;
++        for(const [du,dv] of probes){
++          if(inside(U+du,V+dv,tri[0],tri[1],tri[2]))row.mask[k]|=bit;
+           bit<<=1;
+         }
+       }
