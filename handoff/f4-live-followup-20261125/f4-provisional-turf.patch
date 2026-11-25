@@ -1,0 +1,327 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -1,7 +1,8 @@
+ import { Vec3 } from 'playcanvas';
+ import type { PaintEvent, TurfSnapshot } from './types';
+ import { SurfaceFlags, Team } from './types';
+-import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import {F4ProvisionalTurf} from './F4ProvisionalTurf.mjs';
+ 
+ /** Contiguous authority-approved raster cells, including same-team repaint. */
+ export interface PaintRasterRun {
+@@ -18,7 +19,9 @@
+   rasterAlreadyTeamOwnedCells: number;
+   testedCells: number;
+   dirtyTilesTouched: number;
+-  scoreableAreaMeters2Changed: number;
++  scoreableAreaMeters2Changed: number;
++  /** F4 research only, actual projected ownership transitions. */
++  f4ProvisionalProjectedAreaM2Changed?:number;
+ }
+ 
+ export interface GameplayInkSample {
+@@ -33,13 +36,27 @@
+ export class GameplayInkSystem {
+   private readonly surfaces = new Map<string, PaintSurface>();
+   private backedCell:((surface:PaintSurface,u:number,v:number)=>boolean)|null=null;
+-  private readonly backingCache=new Map<string,Uint8Array>();
++  private readonly backingCache=new Map<string,Uint8Array>();
++  private f4ProvisionalTurf:F4ProvisionalTurf|null=null;
++
++  public enableF4ProvisionalTurf():boolean{
++    if(!this.backedCell||this.f4ProvisionalTurf)return false;
++    this.f4ProvisionalTurf=new F4ProvisionalTurf([...this.surfaces.values()],
++      (s,x,y,index)=>this.isPhysicallyBacked(s,x,y,index));
++    return true;
++  }
++  public scanF4ProvisionalTurf(limit:number,keepGoing:()=>boolean):void{
++    this.f4ProvisionalTurf?.scan(limit,keepGoing);
++  }
++  public readF4ProvisionalTurf(){return this.f4ProvisionalTurf?.read()??null;}
++  public finishF4ProvisionalTurf(tick:number){return this.f4ProvisionalTurf?.finish(tick)??null;}
+ 
+   public setPhysicalPaintBacking(
+     backing:((surface:PaintSurface,u:number,v:number)=>boolean)|null
+   ):void{
+-    this.backedCell=backing;
+-    this.backingCache.clear();
++    this.f4ProvisionalTurf=null;
++    this.backedCell=backing;
++    this.backingCache.clear();
+   }
+ 
+   private isPhysicallyBacked(surface:PaintSurface,x:number,y:number,index:number):boolean{
+@@ -81,7 +98,8 @@
+ 
+   public registerSurface(surface: PaintSurface): void {
+     if (this.surfaces.has(surface.id)) throw new Error(`Duplicate PaintSurface id: ${surface.id}`);
+-    this.surfaces.set(surface.id, surface);
++    this.f4ProvisionalTurf=null;
++    this.surfaces.set(surface.id, surface);
+     // Orthogonal normalized original basis gives rectangle half-diagonal.
+     // Add 0.2% + 2cm to cover footprint edge epsilon and float roundoff.
+     // A real candidate with plane distance <= requested maxDistance
+@@ -220,7 +238,9 @@
+     let rasterEligibleCells = 0;
+     let rasterAlreadyTeamOwnedCells = 0;
+     let testedCells = 0;
+-    let scoreableAreaMeters2Changed = 0;
++    let scoreableAreaMeters2Changed = 0;
++    const provisional=this.f4ProvisionalTurf;
++    let provisionalDelta=0;
+     const touchedTiles = this.touchedTilesScratch;
+     touchedTiles.clear();
+     const paintableRuns: PaintRasterRun[] = [];
+@@ -259,7 +279,8 @@
+           continue;
+         }
+ 
+-        surface.ownerGrid[index] = event.team;
++        if(provisional)provisionalDelta+=provisional.beforeChange(surface,index,oldOwner,event.team);
++        surface.ownerGrid[index] = event.team;
+         changedCells += 1;
+         touchedTiles.add(surface.tileIndexForCell(x, y));
+ 
+@@ -285,8 +306,9 @@
+       rasterAlreadyTeamOwnedCells,
+       testedCells,
+       dirtyTilesTouched: touchedTiles.size,
+-      scoreableAreaMeters2Changed,
+-      paintableRuns
++      scoreableAreaMeters2Changed,
++      ...(provisional?{f4ProvisionalProjectedAreaM2Changed:provisionalDelta}:{}),
++      paintableRuns
+     };
+   }
+ 
+@@ -308,8 +330,9 @@
+     return result;
+   }
+ 
+-  public reset(): void {
+-    this.areaA = 0;
++  public reset(): void {
++    this.f4ProvisionalTurf=null;
++    this.areaA = 0;
+     this.areaB = 0;
+     for (const surface of this.surfaces.values()) surface.resetOwnership();
+   }
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -22,7 +22,8 @@
+ import {PerformanceStats} from '../core/PerformanceStats';
+ import {GameFeedback} from '../feedback/GameFeedback';
+ import {SourcePracticeAudio} from '../audio/SourcePracticeAudio';
+-import {GameplayInkSystem} from '../ink/GameplayInkSystem';
++import {GameplayInkSystem} from '../ink/GameplayInkSystem';
++import {f4ProvisionalTurfLabel} from '../ink/F4ProvisionalTurf.mjs';
+ import {GpuInkAtlas} from '../ink/GpuInkAtlas';
+ import {UndertowF3OwnerGpuTrial} from './UndertowF3OwnerGpuTrial';
+ import {UndertowF3SourceInkFeedback} from './UndertowF3SourceInkFeedback';
+@@ -333,7 +334,11 @@
+  // Opt-in single-world render/collision research; standard SOURCE unaffected.
+  private readonly f4WholeTrimeshRequested=
+   originalF4LocalResearchVisualRegistration(location.href)!==null;
+- private f4WholeTrimeshInstalled=false;
++ private f4WholeTrimeshInstalled=false;
++ private readonly f4ProvisionalTurfEnabled=this.f4ResearchMode&&this.f4WholeTrimeshRequested&&
++  import.meta.env.DEV&&['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
++  sessionStorage.getItem('t21F4ProvisionalTurf')==='on'&&
++  new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
+  private f4WholeStudyNav:RecastStageNavigation|null=null;
+  private f4WholeCpuConnected=false;
+  /** F4-only read-only triangle centroids for genuine human WASD review.
+@@ -2000,7 +2005,8 @@
+      const profile=subWeaponProfile(sub);
+      return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
+       subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
+-      special:f4SpecialName(weapon.id),probe:this.f4SpecialProbe,
++      special:f4SpecialName(weapon.id),probe:this.f4SpecialProbe,
++      turfLabel:this.f4ProvisionalTurfEnabled?f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'',
+       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
+        (this.f4ZipResearchEnabled&&weapon.id==='arc-blaster'?
+         (this.player.f4ZipResearchStatus==='RETURNED'?' · 接地帰還完了':
+@@ -3050,7 +3056,8 @@
+   canvas.dataset.t21F3SourceStage=stage.metadata.id;
+   canvas.dataset.t21F3Production='FORBIDDEN';
+   const api={snapshot:()=>this.snapshot(),
+-   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4ProvisionalTurf:()=>this.f4ProvisionalTurfEnabled?this.ink.readF4ProvisionalTurf():null,
+    f4ZipKccResearch:()=>this.f4ZipResearchEnabled?this.player.f4ZipResearchSnapshot():null,
+    f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
+     humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
+@@ -3268,8 +3275,9 @@
+     this.f4WholeTrimeshInstalled=true;
+     // The F3L root draws all stage geometry. Existing backed ink cells
+     // render over it without the old opaque neutral paint planes.
+-    this.ink.setPhysicalPaintBacking((surface,u,v)=>
+-     this.physics.hasF4PaintBacking(surface,u,v));
++    this.ink.setPhysicalPaintBacking((surface,u,v)=>
++     this.physics.hasF4PaintBacking(surface,u,v));
++    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
+     restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
+      this.b45SourceSurfaces,wholeNavWorld);
+     this.sourceCompletion.root.enabled=false;
+@@ -6242,8 +6250,11 @@
+     this.cpuKit?.fixedUpdate(seconds);
+     this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
+     const paintStart=this.b20ProfileStart();
+-    this.coordinator.processTick(frame);
+-    if(this.matchState==="TIME_UP")this.f4Special?.finish(f4RoundTick,true);
++    this.coordinator.processTick(frame);
++    if(this.matchState==="TIME_UP"){
++     if(this.f4ProvisionalTurfEnabled&&!this.stopReason)this.ink.finishF4ProvisionalTurf(f4RoundTick);
++     this.f4Special?.finish(f4RoundTick,true);
++    }
+     // Read life states after CPU and projectile updates on every native tick.
+     // HUD and external QA sampling can skip a splat or respawn boundary.
+     if(this.f4WholeCpuConnected){
+@@ -6940,8 +6951,12 @@
+   hud.dataset.t21B401NeutralCells=String(next.neutral);
+   hud.dataset.t21B401OfficialWinner='NONE';
+  }
+- private update(dt:number){
+-  this.updateW10B22OwnerTrial();
++ private update(dt:number){
++  this.updateW10B22OwnerTrial();
++  if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
++   const deadline=performance.now()+3;
++   this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
++  }
+   // No player/CPU physics ticks with old colliders while F3L verifies.
+   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
+    this.paused=true;
+@@ -9673,7 +9688,10 @@
+    const actualStop=state.stopReason?
+     'NATIVE STOP · TICK '+state.tick+' · '+
+     state.stopReason.slice(0,160)+'\n':'';
+-   this.b205RoundClock.textContent='FULL SOURCE ROUND · UNSCORED\n'+
++   const provisionalLabel=this.f4ProvisionalTurfEnabled?
++    f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'';
++   this.b205RoundClock.textContent=(provisionalLabel?'F4 RESEARCH · '+provisionalLabel+'\n':
++    'FULL SOURCE ROUND · UNSCORED\n')+
+     clock+' · '+phase+'\n'+actualStop+
+     (cleared&&phase==='PLAYING'?'A1 CLEAR · KEEP PLAYING\n':'')+
+     'HP '+Math.round(state.player.hp)+' · INK '+Math.round(state.player.ink)+
+diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
+--- a/src/app/CompactF4Hud.mjs
++++ b/src/app/CompactF4Hud.mjs
+@@ -15,7 +15,7 @@
+  const specialStatus=probe&&Object.hasOwn(probeLabels,probe)?probeLabels[probe]:!valid?'得点未認証':special.active===true?'発動中':!enabled?'実行未接続':alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
+  const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
+  const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
+- return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証',danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?probe==='ACTIVE'?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
++ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?probe==='ACTIVE'?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
+ }
+ const CSS=`[data-f4-compact-active="true"]{box-sizing:border-box!important;width:min(420px,calc(100vw - 24px))!important;padding:9px 12px!important;background:rgba(8,16,29,.89)!important;border:1px solid #ffffff35!important;border-radius:14px!important;box-shadow:0 4px 18px #0005!important;top:10px!important;pointer-events:none!important}[data-f4-compact-active="true"] > [data-f4-legacy-display],[data-f4-compact-active="true"] > #t21-f3-source-practice-ink-balance{display:none!important}.f4-compact-hud{color:#f5f7fc;font:600 12px/1.3 system-ui,sans-serif;font-variant-numeric:tabular-nums}.f4-compact-hud[hidden]{display:none!important}.f4-compact-hud .f4-top,.f4-compact-hud .f4-line{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.f4-compact-hud .f4-clock{font-size:28px;line-height:1;font-weight:850;letter-spacing:.5px}.f4-compact-hud .f4-meta{color:#d1d8e6;font-size:11px;text-align:right}.f4-compact-hud .f4-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.f4-compact-hud .f4-track{height:7px;background:#ffffff26;border-radius:5px;overflow:hidden;margin-top:3px}.f4-compact-hud .f4-fill{height:100%;width:0%;background:#70e2c3;border-radius:5px}.f4-compact-hud .f4-ink{background:#ff88c7}.f4-compact-hud .f4-sp{background:#ffcf6f}.f4-compact-hud .f4-weapon{font-size:14px;overflow-wrap:anywhere}.f4-compact-hud .f4-muted{color:#c0cad9;font-size:11px;overflow-wrap:anywhere}.f4-compact-hud .f4-notice{color:#ffd9ae;font-size:12px;font-weight:750;margin-top:4px}.f4-compact-hud .f4-sub[data-ready="true"]{color:#a5f5d5}.f4-compact-hud .f4-sub[data-ready="false"]{color:#c0cad9}.f4-compact-hud .f4-special{margin-top:5px}.f4-compact-hud .f4-help{font-size:10px;color:#d1d8e6;margin-top:5px;overflow-wrap:anywhere}@media(max-width:480px){.f4-compact-hud .f4-clock{font-size:23px}.f4-compact-hud .f4-meta{font-size:10px}.f4-compact-hud .f4-help{font-size:10px}}`;
+ export function installCompactF4Hud(legacy,{visible,readKit,readSpecial}){
+diff --git a/src/app/CompactF4Hud.d.mts b/src/app/CompactF4Hud.d.mts
+--- a/src/app/CompactF4Hud.d.mts
++++ b/src/app/CompactF4Hud.d.mts
+@@ -3,7 +3,7 @@
+ 
+ export function installCompactF4Hud(legacy: LegacyHud, options: {
+   visible(): boolean;
+-  readKit(): { weapon: string; sub: string; subCost: number; subUsable: boolean; special: string; controls: string; probe?: boolean };
++  readKit(): { weapon: string; sub: string; subCost: number; subUsable: boolean; special: string; controls: string; probe?: boolean; turfLabel?:string };
+   readSpecial(): { authorityComplete: boolean; executorReady: boolean; required?: number; points?: number; ready?: boolean; active: boolean;
+     probeState?: 'AVAILABLE'|'ACTIVE'|'LOCKED'|'USED'|'UNSUPPORTED'; probeControls?: string } | null;
+ }): LegacyHud & { refreshCompactVisibility(): void; disposeCompact(): void };
+diff --git a/src/ink/F4ProvisionalTurf.mjs b/src/ink/F4ProvisionalTurf.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/ink/F4ProvisionalTurf.mjs
+@@ -0,0 +1,71 @@
++// F4 provisional research scoring only. Neither source flags nor owner grids are written here.
++const PAINT=1,WALL=8,FLOOR=16,RAMP=32;
++export class F4ProvisionalTurf {
++ #rows=new Map();#queue=[];#row=0;#cursor=0;#backed;#total=0;#a=0;#b=0;#scanned=0;#count=0;#final=null;
++ constructor(surfaces,backed){
++  this.#backed=backed;
++  for(const s of surfaces){
++   if(!(s.baseFlags&PAINT)||(s.baseFlags&WALL)||!(s.baseFlags&(FLOOR|RAMP))||
++      !Number.isFinite(s.normal.y)||Math.abs(s.normal.y)<.1)continue;
++   const n=s.widthCells*s.heightCells;
++   if(!Number.isSafeInteger(n)||n<=0||s.ownerGrid.length!==n||s.flagsGrid.length!==n)throw Error('invalid provisional raster');
++   const weights=new Float64Array(n);weights.fill(-1);
++   const row={s,weights};this.#rows.set(s,row);this.#queue.push(row);this.#count+=n;
++  }
++ }
++ #visit(row,index){
++  const {s,weights}=row;if(weights[index]>=0)return weights[index];
++  const x=index%s.widthCells,y=Math.floor(index/s.widthCells);
++  let w=0;
++  if((s.flagsGrid[index]&PAINT)&&!(s.flagsGrid[index]&WALL)&&s.isCellActive(x,y)&&this.#backed(s,x,y,index)){
++   const du=Math.max(0,Math.min(s.cellSize,s.widthMeters-x*s.cellSize));
++   const dv=Math.max(0,Math.min(s.cellSize,s.heightMeters-y*s.cellSize));
++   w=du*dv*Math.abs(s.normal.y);
++   if(!Number.isFinite(w)||w<0)throw Error('invalid projected weight');
++  }
++  weights[index]=w;this.#scanned++;this.#total+=w;
++  if(s.ownerGrid[index]===1)this.#a+=w;else if(s.ownerGrid[index]===-1)this.#b+=w;
++  return w
++ }
++ scan(limit,keepGoing=()=>true){
++  if(this.#final||!Number.isSafeInteger(limit)||limit<=0)return;
++  for(let i=0;i<limit&&this.#row<this.#queue.length&&keepGoing();i++){
++   const row=this.#queue[this.#row];this.#visit(row,this.#cursor++);
++   if(this.#cursor===row.weights.length){this.#row++;this.#cursor=0}
++  }
++ }
++ // Called immediately before the actual raster writes ownerGrid[index].
++ beforeChange(surface,index,oldOwner,newOwner){
++  if(this.#final||oldOwner===newOwner||surface.ownerGrid[index]!==oldOwner||
++     ![0,1,-1].includes(oldOwner)||![1,-1].includes(newOwner))return 0;
++  const row=this.#rows.get(surface);if(!row||!Number.isSafeInteger(index)||index<0||index>=row.weights.length)return 0;
++  const w=this.#visit(row,index);
++  if(oldOwner===1)this.#a-=w;else if(oldOwner===-1)this.#b-=w;
++  if(newOwner===1)this.#a+=w;else this.#b+=w;
++  return w
++ }
++ read(){
++  if(this.#final)return {...this.#final};
++  const progress=this.#count?this.#scanned/this.#count:0;
++  if(this.#scanned!==this.#count)return {status:'BUILDING',winner:'NONE',progress};
++  if(this.#total<=0)return {status:'HOLD',winner:'NONE',progress,reason:'NO_BACKED_FLOOR'};
++  const a=Math.max(0,this.#a),b=Math.max(0,this.#b),total=this.#total;
++  return {status:'LIVE',winner:'NONE',progress:1,areaA:a,areaB:b,neutralArea:Math.max(0,total-a-b),
++   totalProjectedM2:total,percentA:100*a/total,percentB:100*b/total}
++ }
++ finish(tick){
++  if(this.#final)return this.read();
++  if(tick!==10800)return {status:'HOLD',winner:'NONE',reason:'ROUND_NOT_FINAL',progress:this.read().progress};
++  const r=this.read();
++  this.#final=r.status!=='LIVE'?{...r,status:'HOLD',winner:'NONE',reason:r.reason??'MASK_INCOMPLETE'}:
++   {...r,status:'FINAL',winner:Math.abs(r.areaA-r.areaB)<=Math.max(1e-8,r.totalProjectedM2*1e-8)?'DRAW':r.areaA>r.areaB?'A':'B'};
++  return this.read()
++ }
++}
++export function f4ProvisionalTurfLabel(s){
++ if(!s)return '';
++ if(s.status==='BUILDING')return '暫定得点準備 '+Math.floor(100*s.progress)+'%';
++ if(s.status==='HOLD')return '暫定得点 HOLD';
++ const result=s.status==='FINAL'?' · '+(s.winner==='A'?'WIN':s.winner==='B'?'LOSE':'DRAW'):'';
++ return '暫定 A '+s.percentA.toFixed(1)+'% / B '+s.percentB.toFixed(1)+'%'+result
++}
+diff --git a/src/ink/F4ProvisionalTurf.d.mts b/src/ink/F4ProvisionalTurf.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/ink/F4ProvisionalTurf.d.mts
+@@ -0,0 +1,13 @@
++import type {PaintSurface} from './PaintSurface';
++export interface F4ProvisionalScore {
++ status:'BUILDING'|'LIVE'|'FINAL'|'HOLD';winner:'NONE'|'A'|'B'|'DRAW';progress:number;reason?:string;
++ areaA?:number;areaB?:number;neutralArea?:number;totalProjectedM2?:number;percentA?:number;percentB?:number;
++}
++export class F4ProvisionalTurf {
++ constructor(surfaces:readonly PaintSurface[],backed:(s:PaintSurface,x:number,y:number,index:number)=>boolean);
++ scan(limit:number,keepGoing?:()=>boolean):void;
++ beforeChange(surface:PaintSurface,index:number,oldOwner:number,newOwner:number):number;
++ read():F4ProvisionalScore;
++ finish(tick:number):F4ProvisionalScore;
++}
++export function f4ProvisionalTurfLabel(s:F4ProvisionalScore|null):string;
