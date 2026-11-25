@@ -1,0 +1,34 @@
+import { preferredBand, combatSpacing, rankCombatCandidate, chooseLocalCombatGoal } from './F4LocalCombat.mjs';
+const ratios={"SHOOTER":[0.4,0.78],"DUALIES":[0.32,0.76],"CHARGER":[0.65,0.94],"SPLATLING":[0.55,0.88],"SLOSHER":[0.45,0.82],"BLASTER":[0.56,0.87],"ROLLER":[0.18,0.78],"BRUSH":[0.12,0.8],"BRELLA":[0.32,0.75],"STRINGER":[0.6,0.92],"SPLATANA":[0.3,0.8]};
+function runTests(){
+ let n=0;const eq=(a,b,msg)=>{if(a!==b)throw Error(msg+": "+a+" != "+b);n++};
+ const p=(x,z,y=0)=>({x,y,z});
+ const s={f4:true,alive:true,grounded:true,rejoined:true,localWalkingAllowed:true,centerTransferPending:false,respawnPending:false,currentSupport:true,foot:p(0,0),hp:100,ink:100,weaponClass:"SHOOTER",rangeM:10,enemy:{alive:true,visibleNow:true,foot:p(6,0)},inkRelation:"NEUTRAL"};
+ const c=(x,z,covered=false,ink="NEUTRAL")=>({foot:p(x,z),existingNativePoint:true,localTrafficAllowed:true,inkRelation:ink,coveredFromEnemy:covered});
+ const admit=(foot)=>({step:foot,reached:true,staticSupport:true,trafficAllowed:true,coveredFromEnemy:false,inkRelation:"NEUTRAL"});
+ for(const cls of Object.keys(ratios))eq(!!preferredBand(cls,10),true,cls);
+ eq(preferredBand("constructor",10),null,"invalid class");
+ eq(combatSpacing("CHARGER",24,10,true,false).advance,-1,"charger backs out");
+ eq(combatSpacing("BRUSH",2.45,.6,true,false).advance,0,"brush stays close");
+ eq(combatSpacing("SHOOTER",10,9,true,false).advance,1,"approach");
+ eq(combatSpacing("SHOOTER",10,6,false,false).advance,1,"last seen approach");
+ eq(combatSpacing("SHOOTER",10,6,true,true).advance,-1,"recovery");
+ eq(chooseLocalCombatGoal(s,[c(0,1)],admit)?.mode,"HOLD_RANGE","neutral strafe");
+ eq(chooseLocalCombatGoal(s,[c(0,1,true)],admit),null,"covered strafe blocked");
+ eq(chooseLocalCombatGoal(s,[c(0,1,false,"ENEMY")],admit),null,"enemy ink strafe blocked");
+ eq(chooseLocalCombatGoal(s,[c(0,1)],f=>({...admit(f),coveredFromEnemy:true})),null,"actual step LOS veto");
+ eq(chooseLocalCombatGoal(s,[c(0,1)],f=>({...admit(f),inkRelation:"ENEMY"})),null,"actual step ink veto");
+ eq(chooseLocalCombatGoal({...s,hp:20},[c(0,1,true)],f=>({...admit(f),coveredFromEnemy:true}))?.mode,"RETREAT","wounded lateral cover");
+ eq(chooseLocalCombatGoal({...s,hp:20},[c(1,1,true)],admit),null,"no retreat deeper");
+ eq(chooseLocalCombatGoal({...s,enemy:{...s.enemy,foot:p(9,0)}},[c(1,0)],admit)?.mode,"APPROACH","real approach");
+ for(const k of ["alive","grounded","rejoined","localWalkingAllowed","currentSupport"])eq(chooseLocalCombatGoal({...s,[k]:false},[c(0,1)],admit),null,k);
+ for(const k of ["centerTransferPending","respawnPending","committedAction","specialActive"])eq(chooseLocalCombatGoal({...s,[k]:true},[c(0,1)],admit),null,k);
+ eq(chooseLocalCombatGoal({...s,enemy:{...s.enemy,visibleNow:false}},[c(0,1)],admit),null,"hidden target");
+ eq(chooseLocalCombatGoal({...s,hp:undefined},[c(0,1)],admit),null,"unknown hp");
+ let checks=0;eq(chooseLocalCombatGoal(s,[c(0,1),c(0,-1),c(0,2),c(0,-2)],()=>{checks++;return null}),null,"no admission");eq(checks,3,"bounded admissions");
+ eq(chooseLocalCombatGoal(s,[c(0,1)],f=>({...admit(f),staticSupport:false})),null,"floor veto");
+ eq(chooseLocalCombatGoal(s,[c(0,1)],f=>({...admit(f),trafficAllowed:false})),null,"traffic veto");
+ eq(rankCombatCandidate({distance:6,band:preferredBand("SHOOTER",10),covered:true,ownInk:false,recovering:true,lateral:1,recentlyHit:true})>rankCombatCandidate({distance:7,band:preferredBand("SHOOTER",10),covered:false,ownInk:false,recovering:true,lateral:1,recentlyHit:true}),true,"recovery cover ranking");
+ return n;
+}
+console.log('CPU combat assertions PASS:',runTests());

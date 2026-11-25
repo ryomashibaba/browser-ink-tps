@@ -1,0 +1,74 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -67,3 +67,4 @@
+  originalNativeRightLowFootReprojection}
+- from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
++ from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
++import {combatSpacing,rankCombatCandidate} from './F4LocalCombat.mjs';
+ 
+@@ -1657,6 +1658,9 @@
+ 
+   const forwardX=dx/distance,forwardZ=dz/distance;
+-  const advance=recovering||distance<range*.42?-1:
+-   !visible||distance>range*.78?1:0;
++  const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
++  if(!spacingPlan)return null;
++  const advance=spacingPlan.advance;
++  const recentlyHit=(bot.b213ActualHitTick??-1)>=0&&
++   Math.abs(this.b137NativeTick-(bot.b213ActualHitTick??-1))<=72;
+   const side=bot.id.endsWith('2')||bot.id.endsWith('4')?-1:1;
+   const step=Math.min(1.8,Math.max(.65,range*.19));
+@@ -1676,6 +1680,6 @@
+    // existing cover and owned ink, even if that puts their own gun offline.
+    const spacing=Math.hypot(p.x-target.x,p.z-target.z);
+-   const score=recovering?(covered?6:0)+(ownsInk(floor.point)?2:0)+spacing*.2:
+-    (covered?-5:0)-Math.abs(spacing-range*.64)*.25+(lateral===0?-.2:0);
++   const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
++    covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit});
+    candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
+     localVerified:projection.success&&projection.distanceMeters!==null&&
+@@ -1689,5 +1693,6 @@
+    const nativeCandidates=candidates.filter(c=>c.localVerified&&
+     (recovering||!c.covered)).map(c=>c.point);
+-   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range,nativeCandidates);
++   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range,nativeCandidates,
++    target,recovering,recentlyHit);
+    if(tactical)return result(tactical);
+   }
+@@ -1700,5 +1705,5 @@
+  }
+  private f4AdmitLocalCombat(bot:F3TrafficCpu,foot:Vec3,opponent:string,range:number,
+-  nativeCandidates:readonly Vec3[]):Vec3|null{
++  nativeCandidates:readonly Vec3[],visibleHitPoint:Vec3,recovering:boolean,recentlyHit:boolean):Vec3|null{
+   if(!this.physics||!bot.weaponId)return null;
+   // Stay on the same local lane, clear of all center transfer and spawn bands.
+@@ -1727,6 +1732,10 @@
+    if(points.length>=16)break;
+   }
+-  const candidates=points.map(point=>({foot:point,existingNativePoint:true as const,
+-   localTrafficAllowed:true as const,inkRelation:inkRelation(point)}));
++  const coveredFromEnemy=(point:Vec3)=>!!this.physics!.castStageSegment(
++   point.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)),
++   visibleHitPoint,'ink-projectile');
++  const candidates=points.map(point=>({foot:point,existingNativePoint:true as const,
++   localTrafficAllowed:true as const,inkRelation:inkRelation(point),
++   coveredFromEnemy:coveredFromEnemy(point)}));
+   this.f4LocalCombatProposals.attempts++;
+   this.f4LocalCombatProposals.candidateCount+=candidates.length;
+@@ -1735,5 +1744,6 @@
+    centerTransferPending:false,respawnPending:false,currentSupport:true,
+    foot,hp:bot.hp,ink:bot.ink,weaponClass:weaponProfile(bot.weaponId,true).weaponClass,
+-   rangeM:range,enemy:{alive:true,visibleNow:true,foot:enemy},inkRelation:inkRelation(foot)
++   rangeM:range,enemy:{alive:true,visibleNow:true,foot:enemy},inkRelation:inkRelation(foot),
++   recovering,recentlyHit
+   },candidates,point=>{
+    const step=this.f4WholeWalkTarget(foot,new Vec3(point.x,point.y,point.z),true);
+@@ -1748,5 +1758,6 @@
+        Math.abs(floor.point.y-probe.y)>.12)return null;
+    }
+-   return {reached:true,staticSupport:true,trafficAllowed:true,step};
++   return {reached:true,staticSupport:true,trafficAllowed:true,step,
++    inkRelation:inkRelation(step),coveredFromEnemy:coveredFromEnemy(step)};
+   });
+   if(admitted)this.f4LocalCombatProposals.admitted++;
