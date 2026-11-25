@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {F4NaturalCastLease,cpuSpecialLaunchAim} from './F4NaturalCastLease.mjs';
+import {cpuSpecialLob} from './F4CpuSpecialTactics.mjs';
+const l=new F4NaturalCastLease();
+const check=(name,fn)=>{fn();console.log('PASS '+name)};
+check('admission',()=>{assert.equal(l.admit('A1','2',10),true);assert.equal(l.admit('','2',10),false)});
+check('stall boundary',()=>{assert.deepEqual(l.due(69),[]);assert.equal(l.due(70)[0].reason,'natural-input-stalled')});
+check('fresh step',()=>{assert.equal(l.touch('A1','2',70),true);assert.deepEqual(l.due(129),[])});
+check('stale life',()=>{assert.equal(l.touch('A1','1',100),false);assert.equal(l.end('A1','1'),false)});
+check('backward clock',()=>{assert.equal(l.touch('A1','2',69),false);assert.deepEqual(l.due(69),[])});
+check('deadline',()=>{assert.equal(l.touch('A1','2',609),true);assert.deepEqual(l.due(609),[]);assert.equal(l.due(610)[0].reason,'natural-cast-timeout')});
+check('finish/reset',()=>{assert.equal(l.end('A1','2'),true);assert.deepEqual(l.due(999),[]);l.admit('B2','3',100);l.clear();assert.deepEqual(l.due(999),[])});
+check('new life timer',()=>{l.admit('A1','2',100);l.admit('A1','3',200);assert.equal(l.end('A1','2'),false);assert.deepEqual(l.due(259),[]);assert.equal(l.due(260)[0].lifeId,'3')});
+const aim=(speed,g,ttl,target)=>{
+ const from=[0,1,0],v=cpuSpecialLaunchAim(from,target,speed,g,ttl,cpuSpecialLob);
+ assert.ok(v);const t=Math.hypot(target[0],target[2])/(speed*Math.hypot(v[0],v[2]));assert.ok(t<=ttl);
+ assert.ok(Math.abs(1+speed*v[1]*t-.5*g*t*t-target[1])<1e-6);assert.ok(Math.abs(Math.hypot(...v)-1)<1e-6);
+};
+check('crab rapid gravity',()=>aim(31,6,.73,[17,1,0]));
+check('crab cannon gravity',()=>aim(21,4,1.15,[16,3,0]));
+check('vac exhale gravity',()=>aim(20,6,1.6,[12,1,0]));
+check('missing/unreachable target',()=>{assert.equal(cpuSpecialLaunchAim([0,1,0],undefined,20,6,1.6,cpuSpecialLob),null);assert.equal(cpuSpecialLaunchAim([0,1,0],[90,1,0],20,6,1.6,cpuSpecialLob),null)});
+check('zero gravity bounded',()=>{assert.deepEqual(cpuSpecialLaunchAim([0,1,0],[5,1,0],20,0,1,cpuSpecialLob),[1,0,0]);assert.equal(cpuSpecialLaunchAim([0,1,0],[30,1,0],20,0,1,cpuSpecialLob),null)});

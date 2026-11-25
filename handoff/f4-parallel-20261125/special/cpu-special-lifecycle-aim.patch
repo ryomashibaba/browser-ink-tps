@@ -1,0 +1,115 @@
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -6,7 +6,8 @@
+ import type { WeaponId } from '../weapons/WeaponCatalog';
+ import {F4ProvisionalGauge} from './F4ProvisionalGauge.mjs';
+ import {F4CpuSpecialTactics,cpuSpecialDecisionDue,cpuSpecialLob} from './F4CpuSpecialTactics.mjs';
+-import {cpuTornadoAim} from './F4CpuSpecialAim.mjs';
++import {cpuTornadoAim} from './F4CpuSpecialAim.mjs';
++import {F4NaturalCastLease,cpuSpecialLaunchAim} from './F4NaturalCastLease.mjs';
+ import { CertifiedTurf720, KIT720, type F4SpecialId } from './f4/shared-special-score720-20261125/shared-special-score720.mjs';
+ import { PhysicalSpecialPort720, type SpecialPlan, type LaserPair, type TornadoPulse, type WaveDevice, type BarrierDevice } from './f4/shared-special-score720-20261125/physical-special-port720.mjs';
+ 
+@@ -46,7 +47,8 @@
+   private readonly completedProbeLives = new Set<string>();
+   private readonly naturalGauge=new F4ProvisionalGauge(KIT720,10,.5);
+   private naturalOpen=false;
+-  private readonly cpuZipLives=new Map<string,string>();
++  private readonly cpuZipLives=new Map<string,string>();
++  private readonly naturalCastLease=new F4NaturalCastLease();
+   private readonly cpuTactics=new F4CpuSpecialTactics();
+   private cpuDecisions=0;
+   private cpuAdmissions=0;
+@@ -185,8 +187,9 @@
+ 
+   finish(tick: number, legalRoundEnd = false): void {
+     this.port.close(tick);
+-    this.active.clear();
+-    this.actorUnlock.clear();
++    this.active.clear();
++    this.naturalCastLease.clear();
++    this.actorUnlock.clear();
+     this.livePose.clear();
+     for(const effect of this.effects) effect.dispose();
+     this.effects.length=0;
+@@ -232,8 +235,14 @@
+   update(tick: number): void {
+     if(!Number.isSafeInteger(tick)||tick<0||tick>=10800||tick<this.frame||tick<=this.lastEffectTick)return;
+     this.frame=tick;
+-    this.lastEffectTick=tick;
+-    for(let i=this.effects.length-1;i>=0;i--){
++    this.lastEffectTick=tick;
++    // Natural casts only; independent deployed devices keep their lifetime.
++    for(const expired of this.naturalCastLease.due(tick)){
++      if(this.active.get(expired.id)===expired.lifeId)
++        this.port.cancel({roundId:this.roundId,tick,actorId:expired.id,lifeId:expired.lifeId,reason:expired.reason});
++      this.naturalCastLease.end(expired.id,expired.lifeId);
++    }
++    for(let i=this.effects.length-1;i>=0;i--){
+       const effect=this.effects[i]!;
+       if(effect.step(tick))continue;
+       effect.dispose();
+@@ -255,20 +264,25 @@
+     this.input=input;
+     const probeKey=actorId+':'+lifeId;
+     try {
+-      if(naturalRequest&&this.naturalReady(actorId,tick)&&this.naturalGauge.state(actorId)?.lifeId===lifeId){
++      const gauge=this.naturalGauge.state(actorId);
++      if(naturalRequest&&this.naturalReady(actorId,tick)&&gauge?.lifeId===lifeId&&
++         gauge.weapon===weapon&&gauge.team===team){
+         const special=KIT720[weapon].special;
+         const place=special==='greatBarrier'||special==='waveBreaker';
+         if((!place||this.placementForCast(input))&&
+            (!(input.cpuTactical&&special==='tripleTornado')||this.cpuGuideAim(input))&&
+-           this.port.begin({...key,team,special,input:{weapon}}))
+-          this.naturalGauge.consume(actorId,lifeId);
++           this.port.begin({...key,team,special,input:{weapon}})){
++          if(this.naturalGauge.consume(actorId,lifeId))this.naturalCastLease.admit(actorId,lifeId,tick);
++          else this.port.cancel({...key,reason:'natural-gauge-admission-rejected'});
++        }
+       }else if(isolatedRequest && !this.active.has(actorId) && !this.completedProbeLives.has(probeKey)){
+         const special=KIT720[weapon].special;
+         if(this.port.begin({...key,team,special,input:{weapon}}))
+           this.completedProbeLives.add(probeKey);
+       }
+-      if(!this.active.has(actorId))return this.ownsWeaponInput(actorId,tick);
+-      this.livePose.get(actorId)?.();
++      if(!this.active.has(actorId))return this.ownsWeaponInput(actorId,tick);
++      this.naturalCastLease.touch(actorId,lifeId,tick);
++      this.livePose.get(actorId)?.();
+       this.port.step({...key,input:{trigger:input.trigger,holdStamp:input.trigger,
+         holdThrow:input.holdThrow,releaseThrow:input.releaseThrow,airborne:input.airborne,
+         roll:input.holdThrow,rapid:input.trigger,cannon:input.cannon,hold:input.trigger,fire:input.trigger}});
+@@ -296,7 +310,16 @@
+     const launch=(flight:F4SpecialFlight,count=1,aim?:Vec3)=>{
+       const input=this.input;
+       if(!input)return false;
+-      if(!this.projectiles.launchF4Special(input.origin,aim??input.forward,team,actorId,weapon,flight,count))return false;
++      let direction=aim??input.forward;
++      if(input.cpuTactical&&(special==='chariot'||special==='blower')){
++        // Preserve direct suction pose; compensate only the real projectile.
++        const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
++        const corrected=cpuSpecialLaunchAim(v(input.origin),input.cpuTarget?v(input.cpuTarget):undefined,
++          flight.speed,flight.gravity,flight.lifeSeconds,cpuSpecialLob);
++        if(!corrected)return false;
++        direction=new Vec3(...corrected);
++      }
++      if(!this.projectiles.launchF4Special(input.origin,direction,team,actorId,weapon,flight,count))return false;
+       this.launches+=count;
+       return true;
+     };
+@@ -307,9 +330,10 @@
+         this.terminal=null;
+         return true;
+       },
+-      abort:()=>{this.active.delete(actorId);},
+-      finish:(reason,tick,details)=>{
+-        this.active.delete(actorId);
++      abort:()=>{this.active.delete(actorId);this.naturalCastLease.end(actorId,lifeId);},
++      finish:(reason,tick,details)=>{
++        this.active.delete(actorId);
++        this.naturalCastLease.end(actorId,lifeId);
+         this.terminal=reason;
+         if(details?.actionUnlockTick && details.actionUnlockTick>tick)
+           this.actorUnlock.set(actorId,details.actionUnlockTick);
