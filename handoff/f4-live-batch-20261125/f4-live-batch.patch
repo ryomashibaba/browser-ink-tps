@@ -1,3 +1,80 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -298,8 +298,10 @@
+   lethalHumanDirect: boolean;
+   b213ActualAttackerId:string|null;
+   b213ActualHitTick:number;
+-  lifeState: 'ACTIVE' | 'SPLATTED';
+-  respawnRemainingSeconds: number;
++  lifeState: 'ACTIVE' | 'SPLATTED';
++  /** Actual F4 life identity; advanced only at successful native respawn. */
++  f4LifeSerial: number;
++  respawnRemainingSeconds: number;
+   mobilityState: CpuMobilityState;
+   /** T21 QA-only post-offmesh Crowd settlement counters. */
+   rejoinElapsedFrames: number;
+@@ -515,7 +517,7 @@
+   private f4PhysicalSpecialProbe?: {
+     actorId:string;
+     step(input:{foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;
+-      hasOpponent:boolean;canStart:boolean}):boolean;
++      hasOpponent:boolean;canStart:boolean;lifeId:string}):boolean;
+     cancel():void;
+   };
+   private readonly f4PendingSpawns = new Set<string>();
+@@ -2036,7 +2038,7 @@
+           const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&
+             bot.weaponBurstShotsRemaining<=0;
+           if(probe.step({foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
+-            hasOpponent:target!==null,canStart}))continue;
++            hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial)}))continue;
+         }
+         this.updateCpuWeaponsAndKit(
+           bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
+@@ -2654,7 +2656,17 @@
+     this.pendingKitRequests.length = 0;
+   }
+ 
+-  public isF4DeviceOwnerAlive(actorId: string): boolean {
++  public f4ActiveLifeKey(actorId:string):string|null {
++    const bot=this.bots.find(b=>b.id===actorId);
++    return bot&&bot.lifeState==='ACTIVE'&&bot.hp>0?JSON.stringify([bot.id,bot.f4LifeSerial]):null;
++  }
++
++  public f4IsGroundedLife(actorId:string):boolean {
++    const bot=this.bots.find(b=>b.id===actorId);
++    return !!bot&&bot.lifeState==='ACTIVE'&&bot.hp>0&&bot.mobilityState==='GROUND';
++  }
++
++  public isF4DeviceOwnerAlive(actorId: string): boolean {
+     return this.bots.some(bot=>bot.id===actorId && bot.lifeState==='ACTIVE' && bot.hp>0);
+   }
+ 
+@@ -3201,8 +3213,9 @@
+         lethalHumanDirect: false,
+         b213ActualAttackerId:null,
+         b213ActualHitTick:-1,
+-        lifeState: 'ACTIVE',
+-        respawnRemainingSeconds: 0,
++        lifeState: 'ACTIVE',
++        f4LifeSerial: 1,
++        respawnRemainingSeconds: 0,
+         mobilityState: 'GROUND',
+         rejoinElapsedFrames: 0,
+         rejoinStableFrames: 0,
+@@ -5643,8 +5656,9 @@
+     bot.weaponGuarding = false;
+     bot.guardEntity.enabled = false;
+     bot.respawnRemainingSeconds = 0;
+-    bot.lifeState = 'ACTIVE';
+-    bot.mobilityState = 'GROUND';
++    bot.lifeState = 'ACTIVE';
++    bot.f4LifeSerial++;
++    bot.mobilityState = 'GROUND';
+     bot.jumpMarker.enabled = false;
+     bot.jumpTargetId = '-';
+     bot.jumpPrepRemaining = 0;
 diff --git a/src/app/B379NativePlayerWeaponMobility.ts b/src/app/B379NativePlayerWeaponMobility.ts
 --- a/src/app/B379NativePlayerWeaponMobility.ts
 +++ b/src/app/B379NativePlayerWeaponMobility.ts
@@ -52,7 +129,28 @@ diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -2000,7 +2000,9 @@
+@@ -481,8 +481,7 @@
+  private readonly f4Special: F4SpecialRuntime|null;
+  private readonly f4SpecialProbe: boolean;
+  private f4SpecialLife=1;
+- private f4SpecialWasAlive=true;
+- private f4SpecialSecondaryHeld=false;
++ private f4SpecialSecondaryHeld=false;
+  private readonly b202PauseOverlay:HTMLElement;
+  private readonly b167CombatNotice:HTMLElement;
+  private readonly b368EnemyFrontierHud:HTMLElement|null;
+@@ -1267,8 +1266,8 @@
+    const runtime=this.f4Special;
+    const nextRoundTick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
+    this.cpu.useF4PhysicalSpecialProbe({actorId:f4ProbeCpu,
+-    step:({foot,aim,team,weapon,hasOpponent,canStart})=>runtime.actorTick(nextRoundTick(),{
+-     actorId:f4ProbeCpu,lifeId:'isolated-first-cast',team,weapon
++    step:({foot,aim,team,weapon,hasOpponent,canStart,lifeId})=>runtime.actorTick(nextRoundTick(),{
++     actorId:f4ProbeCpu,lifeId,team,weapon
+     },{
+      origin:foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)),
+      foot:foot.clone(),forward:aim.clone(),trigger:hasOpponent,holdThrow:false,
+@@ -2000,7 +1999,9 @@
        controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
         (this.f4SpecialProbe?' · G 単独検証':'')};
      },
@@ -63,7 +161,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     }):null;
    this.practiceHud=this.compactF4Hud??practiceHud;
    // A compact real-paint balance inside the normal full-round HUD.
-@@ -3032,7 +3034,14 @@
+@@ -3032,7 +3033,14 @@
    canvas.dataset.t21F3SourceStage=stage.metadata.id;
    canvas.dataset.t21F3Production='FORBIDDEN';
    const api={snapshot:()=>this.snapshot(),
@@ -79,7 +177,17 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     auditF4HumanResearchPath:(index:number,route?:'return'|'negative-candidate')=>
      this.auditF4HumanResearchPath(index,route),
     // B454 reads true post-CPU-KCC 60Hz trace only under B441 research URL.
-@@ -5859,24 +5868,34 @@
+@@ -5720,8 +5728,7 @@
+   this.humanSub.reset();
+   this.f4Special?.reset();
+   this.f4SpecialLife=1;
+-  this.f4SpecialWasAlive=true;
+-  this.f4SpecialSecondaryHeld=false;
++  this.f4SpecialSecondaryHeld=false;
+   this.cpuKit?.reset();
+   this.cpuKitArtificialGaugeArms=0;
+   this.cpuKitManualSubQa=0;
+@@ -5859,24 +5866,34 @@
      // B379: genuine 60Hz player inputs and B378-selected weapon runtime
      // act on the real Rapier KCC BEFORE the physical step, not a fake move.
      const profile=this.projectiles.currentPlayerWeapon;
@@ -121,23 +229,37 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      this.physics.step();
      this.player.syncAfterPhysics(seconds);
      const contactTravel=contactStart&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'?
-@@ -6019,10 +6038,9 @@
+@@ -5888,7 +5905,10 @@
+     this.b20ProfileStop('rapierAndHumanKcc',playerStart);
+     if(alive)this.resources.fixedUpdate(
+      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+-    const cpuWorldReady=!this.f4WholeTrimeshRequested||this.f4WholeCpuConnected;
++    if(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled)
++     this.projectiles.syncF4HumanTarget(this.player.getPosition(this.p),Team.A,
++      this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
++    const cpuWorldReady=!this.f4WholeTrimeshRequested||this.f4WholeCpuConnected;
+     if(!this.w10b14&&cpuWorldReady){
+      const foot=this.player.getPosition(this.p);
+      const actualPractice=this.b25Run.snapshot();
+@@ -6019,10 +6039,8 @@
      const primaryTap=this.input.consumePrimaryPressed();
      const realPointerFire=this.input.fireHeld||primaryTap;
      const subTap=this.input.consumeSubPressed();
 -    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
 -    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
-+    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
-     if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
+-    if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
 -    let f4SpecialOwnsInput=false;
++    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
 +    let f4SpecialOwnsInput=f4SpecialOwnsMobility;
      const humanShotsBefore=this.stats.shotsFired;
      if(this.w10b14){
       const w=this.w10b14;
-@@ -6065,18 +6083,20 @@
+@@ -6063,20 +6081,20 @@
+       const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
+        this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
        const secondary=specialOpen&&this.input.secondaryHeld;
-       if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
-       this.f4SpecialWasAlive=alive;
+-      if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
+-      this.f4SpecialWasAlive=alive;
 -      f4SpecialOwnsInput=this.f4Special.actorTick(f4RoundTick,{
 +      const specialAcceptedOrActive=this.f4Special.actorTick(f4RoundTick,{
         actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
@@ -159,7 +281,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       }
       this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
       if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
-@@ -6088,11 +6108,13 @@
+@@ -6088,13 +6106,17 @@
         (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
         this.player.canShoot,
        this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
@@ -176,9 +298,38 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +      actionWindow.cpuCanStartNewActions,
 +      !f4SpecialOwnsInput&&this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
      }
-     if(this.stats.shotsFired>humanShotsBefore&&
+-    if(this.stats.shotsFired>humanShotsBefore&&
++    // Persistent effects use current physical target frame once per tick.
++    if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
++    if(this.stats.shotsFired>humanShotsBefore&&
         this.input.primaryPressSequence>this.lastRealFirePressMeasured){
-@@ -7887,7 +7909,8 @@
+       this.lastRealFirePressMeasured=this.input.primaryPressSequence;
+       // Paused deterministic Chrome QA includes arbitrary CDP wait time,
+@@ -6186,8 +6208,9 @@
+       this.input.setCombatInputActive(false);
+       this.f4CurlingHeldFrames=null;
+       this.humanSplats++;
+-      this.f4Special?.cancelActor("human",f4RoundTick);
+-      this.player.setLifecycleActive(false);
++      this.f4Special?.cancelActor("human",f4RoundTick);
++      this.f4SpecialSecondaryHeld=false;
++      this.player.setLifecycleActive(false);
+       this.projectiles.cancelHumanSlosh();
+       this.projectiles.discardF4Canopy('human');
+       if(twin){
+@@ -6219,8 +6242,9 @@
+       this.player.setLifecycleActive(true);
+       // Genuine restored life needs a fresh shot/sub press.
+       this.input.setCombatInputActive(true);
+-      this.humanRespawns++;
+-      this.respawnFrames=0;
++      this.humanRespawns++;
++      if(this.f4Special)this.f4SpecialLife++;
++      this.respawnFrames=0;
+       this.nativeHumanSplatTick=null;
+      }
+     }else{
+@@ -7887,7 +7911,8 @@
   }
   private refreshF4CombatReticle():void{
    if(!this.f4ResearchMode||!this.b203FullRound)return;
@@ -543,7 +694,13 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
    private b367Enabled=false;
    private b367SelectedRealLoadout=false;
    private b367NativeFrame=0;
-@@ -339,10 +349,11 @@
+@@ -334,16 +344,17 @@
+       return true;
+     };
+     this.cpuAgents.forEachMapAgent((id,targetTeam,foot,active)=>{
+-      if(active && team!==targetTeam && this.cpuAgents.isF4DeviceOwnerAlive(id) && contact(foot)){
++      if(active && team!==targetTeam && this.cpuAgents.f4IsGroundedLife(id) && contact(foot)){
+         const damage=accept(id);
          if(damage<=0)return;
          const result=this.cpuAgents.applyProjectileHit({botId:id,guarded:false,point:foot,distance:0},
            damage,actor==='human'?'HUMAN':'CPU',actor);
@@ -551,14 +708,16 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
 -      }
 -    });
 -    if(this.currentHumanDamageable && team!==this.currentHumanTeam && this.resources.currentHp>0){
+-      const foot=this.currentHumanPosition.clone().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0));
 +        hpLoss+=result?.realHpLoss??0;
 +        if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(foot,team);
 +      }
 +    });
-+    if(this.currentHumanDamageable && team!==this.currentHumanTeam && this.resources.currentHp>0){
-       const foot=this.currentHumanPosition.clone().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0));
++    if(this.currentHumanDamageable && this.f4HumanGrounded && team!==this.currentHumanTeam && this.resources.currentHp>0){
++      const foot=this.currentHumanPosition.clone().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0));
        if(contact(foot)){
          const damage=accept('human');
+         if(damage>0){
 @@ -400,9 +411,10 @@
        const damage = resolveDamage(hit.botId,team===Team.A?Team.B:Team.A);
        if (damage <= 0) continue;
@@ -590,7 +749,34 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
      if (paint > 0 && radius > 0) this.enqueueF4BurstPaint(point,team,actor,radius,paint,true,PaintEventType.Special);
    }
  
-@@ -791,7 +811,14 @@
+@@ -431,7 +451,25 @@
+   }
+ 
+   private currentHumanTeam: Team.A | Team.B = Team.A;
+-  private currentHumanDamageable = false;
++  private currentHumanDamageable = false;
++  private f4HumanLifeId:string|null=null;
++  private f4HumanGrounded=false;
++
++  /** Fresh actual KCC pose before CPU callbacks; no new collision authority. */
++  public syncF4HumanTarget(body:Vec3,team:Team.A|Team.B,alive:boolean,grounded:boolean,lifeId:string):void {
++    if(!this.physics.hasF4WholeResearchTrimesh)return;
++    this.currentHumanPosition.copy(body);
++    this.currentHumanTeam=team;
++    this.currentHumanDamageable=alive&&this.resources.currentHp>0;
++    this.f4HumanGrounded=grounded&&this.currentHumanDamageable;
++    this.f4HumanLifeId=this.currentHumanDamageable?lifeId:null;
++  }
++
++  public f4TargetLifeKey(actor:string):string|null {
++    if(actor!=='human')return this.cpuAgents.f4ActiveLifeKey(actor);
++    return this.currentHumanDamageable&&this.resources.currentHp>0&&this.f4HumanLifeId!==null?
++      JSON.stringify(['human',this.f4HumanLifeId]):null;
++  }
+   private currentHumanGuarding = false;
+   // Exact real PlayerController mode; immutable SOURCE 180s only.
+   // Default null preserves every T20 and historical opt-in QA hit rule.
+@@ -791,7 +829,14 @@
        muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
    }
  
@@ -606,7 +792,7 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
      const profile = this.currentPlayerWeapon;
      if (profile.contactWeapon && origin.distance(target) > 1e-4)
        return out.sub2(target, origin).normalize();
-@@ -841,8 +868,10 @@
+@@ -841,8 +886,12 @@
      this.b351TrueDamageCues=0;
      this.b367NativeFrame=0;
      this.nativeHumanDamageCueFrame=-1;
@@ -615,10 +801,40 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
 +    this.nativeSourceHumanSplashCueFrame=-1;
 +    this.f4SpecialSplashHits=0;
 +    this.f4SpecialCueFrame=-1;
++    this.f4HumanLifeId=null;
++    this.f4HumanGrounded=false;
 +    this.b367RealHumanCpuHits=0;
      this.b367PhysicalEvents.length=0;
      this.pendingSloshes?.clear();
      this.pendingSaberSwings?.clear();
+diff --git a/src/special/f4/shared-special-score720-20261125/physical-special-port720.mjs b/src/special/f4/shared-special-score720-20261125/physical-special-port720.mjs
+--- a/src/special/f4/shared-special-score720-20261125/physical-special-port720.mjs
++++ b/src/special/f4/shared-special-score720-20261125/physical-special-port720.mjs
+@@ -80,7 +80,7 @@
+  }
+  contact(q){
+   const a=this.#get(q);if(!a||!f(q.tick)||q.tick>=10800||q.tick<a.lastEvent)return null;a.lastEvent=q.tick;const b={...q,lifeId:a.ctx.scoped,alive:true};
+-  switch(a.ctx.special){case "chariot":return a.s.hit({...b,sourceTeam:team(q.sourceTeam)});case "blower":return a.s.absorb({...b,sourceTeam:team(q.sourceTeam)},a.plan.ops);case "ultraStamp":return a.s.contact({...b,targetTeam:team(q.targetTeam)});default:return null}
++  switch(a.ctx.special){case "chariot":{const r=a.s.hit({...b,sourceTeam:team(q.sourceTeam)});if(r?.ended)this.#finish(a,r.ended.reason,q.tick,r.ended);return r;}case "blower":return a.s.absorb({...b,sourceTeam:team(q.sourceTeam)},a.plan.ops);case "ultraStamp":return a.s.contact({...b,targetTeam:team(q.targetTeam)});default:return null}
+  }
+  closeSwing(q){const a=this.#get(q);if(a?.ctx.special!=="ultraStamp")return false;a.s.closeSwing(q.swingId);return true}
+  spendZipMain(q,commit){const a=this.#get(q);return a?.ctx.special==="superHook"?a.s.spendMain(q.cost,commit):false}
+diff --git a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+--- a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
++++ b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+@@ -4,7 +4,11 @@
+   { special: F4SpecialId; required: number }>>;
+ export class CertifiedTurf720 {
+   constructor(options: { roundId: string });
+-  readonly complete: boolean;
++  readonly complete: boolean;
++  readonly roundId: string;
++  readonly totalProjectedM2: number;
++  changedArea(surface:import('../../../ink/PaintSurface').PaintSurface,index:number,
++    oldOwner:import('../../../ink/types').Team,newOwner:import('../../../ink/types').Team.A|import('../../../ink/types').Team.B):number;
+   result(frame: { roundId: string; tick: number; roundEnded: boolean }):
+     { status: 'HOLD' | 'READY'; reason: string | null; winner: 'NONE' | 'A' | 'B' };
+ }
 diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 --- a/src/special/F4SpecialRuntime.ts
 +++ b/src/special/F4SpecialRuntime.ts
@@ -628,18 +844,41 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
  import { Team } from '../ink/types';
  import { crabProjectileDamage } from './f4/crab-barrier720-20261125/crab-barrier720.mjs';
  import type { F4SpecialFlight, ProjectileSystem } from '../projectile/ProjectileSystem';
-@@ -47,7 +47,9 @@
+@@ -47,8 +47,11 @@
    private terminal: string|null = null;
    private score: ReturnType<CertifiedTurf720['result']>|null = null;
    private readonly visualMaterials = new Map<Team.A|Team.B,StandardMaterial>();
 -  private ringMesh?: Mesh;
+-  private frame = 0;
 +  private ringMesh?: Mesh;
 +  private barrierShellMesh?: Mesh;
 +  private readonly barrierMaterials = new Map<Team.A|Team.B,StandardMaterial>();
-   private frame = 0;
++  private frame = 0;
++  private lastEffectTick=-1;
  
    constructor(private readonly app: AppBase, private readonly physics: RapierStagePhysics,
-@@ -103,7 +105,26 @@
+     private readonly projectiles: ProjectileSystem) {
+@@ -91,19 +94,42 @@
+     this.special=null;
+     this.terminal=null;
+     this.score=null;
+-    this.frame=0;
+-  }
++    this.frame=0;
++    this.lastEffectTick=-1;
++  }
+ 
+   finish(tick: number, legalRoundEnd = false): void {
+-    this.port.close(tick);
+-    for(const effect of this.effects) effect.dispose();
++    this.port.close(tick);
++    this.active.clear();
++    this.actorUnlock.clear();
++    this.livePose.clear();
++    for(const effect of this.effects) effect.dispose();
+     this.effects.length=0;
+     this.devices.clear();
+     this.suctionQueries.clear();
      if (legalRoundEnd) this.score=this.turf.result({roundId:this.roundId,tick,roundEnded:true});
    }
  
@@ -667,7 +906,20 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
  
    snapshot() {
      return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
-@@ -121,7 +142,12 @@
+@@ -111,8 +137,10 @@
+       castEnd:this.terminal};
+   }
+ 
+-  update(tick: number): void {
+-    this.frame=tick;
++  update(tick: number): void {
++    if(!Number.isSafeInteger(tick)||tick<0||tick>=10800||tick<this.frame||tick<=this.lastEffectTick)return;
++    this.frame=tick;
++    this.lastEffectTick=tick;
+     for(let i=this.effects.length-1;i>=0;i--){
+       const effect=this.effects[i]!;
+       if(effect.step(tick))continue;
+@@ -121,7 +149,12 @@
      }
    }
  
@@ -681,7 +933,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      this.frame=Math.max(this.frame,tick);
      const {actorId,lifeId,team,weapon}=actor;
      const key={roundId:this.roundId,tick,actorId,lifeId};
-@@ -140,7 +166,7 @@
+@@ -140,7 +173,7 @@
          if(this.port.begin({...key,team,special,input:{weapon}}))
            this.completedProbeLives.add(probeKey);
        }
@@ -690,7 +942,42 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
        this.livePose.get(actorId)?.();
        this.port.step({...key,input:{trigger:input.trigger,holdStamp:input.trigger,
          holdThrow:input.holdThrow,releaseThrow:input.releaseThrow,airborne:input.airborne,
-@@ -433,7 +459,7 @@
+@@ -224,7 +257,7 @@
+           const input=this.input??initial;
+           const start=input.origin.clone();
+           const forward=input.forward.clone().normalize();
+-          const right=new Vec3().cross(Vec3.UP,forward).normalize();
++          const right=new Vec3().cross(Math.abs(forward.y)>.98?Vec3.RIGHT:Vec3.UP,forward).normalize();
+           const beams=[-1,1].map(side=>{
+             const position=start.clone().add(right.clone().mulScalar(side*.42));
+             return {position,visual:this.visual('F4 beam','box',team),
+@@ -250,8 +283,11 @@
+             this.effects.push({step:nextTick=>{
+               if(nextTick===tick+1 && this.active.get(actorId)===lifeId){
+                 this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(start,end,.25,team,actorId,(id,targetTeam)=>
+-                  Number(this.port.contact({roundId:this.roundId,lifeId,actorId,tick:nextTick,
+-                    swingId,targetLifeId:id,targetTeam,liveTarget:true,physicalContact:true,hitClass:'direct'}))||0,true);
++                  {
++                    const key=this.projectiles.f4TargetLifeKey(id);
++                    return key?Number(this.port.contact({roundId:this.roundId,lifeId,actorId,tick:nextTick,
++                      swingId,targetLifeId:key,targetTeam,liveTarget:true,physicalContact:true,hitClass:'direct'}))||0:0;
++                  },true);
+                 this.port.closeSwing({roundId:this.roundId,lifeId,actorId,swingId});
+               }
+               return nextTick<tick+8;
+@@ -286,8 +322,9 @@
+       if(mode==='ball'&&!input.airborne&&!at.airborne&&input.foot.distance(at.foot)>.025){
+         this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(center(at.foot),center(input.foot),radius(),
+           team,actor,id=>{
+-            if(hitThisRoll.has(id))return 0;
+-            hitThisRoll.add(id);
++            const key=this.projectiles.f4TargetLifeKey(id);
++            if(!key||hitThisRoll.has(key))return 0;
++            hitThisRoll.add(key);
+             return 40;
+           },true);
+       }
+@@ -433,12 +470,15 @@
            this.waves++;
          }
          const ring=rings[wave.index]!;
@@ -699,7 +986,17 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
          ring.enabled=size>.02;
          ring.setLocalScale(size,.7,size);
          this.sweptHpLoss+=this.projectiles.applyF4GroundWave(foot,wave.previousRadiusMeters,wave.radiusMeters,
-@@ -454,9 +480,12 @@
+-          team,actor,(id)=>device.hit({tick,roundId:this.roundId,waveIndex:wave.index,targetLifeId:id,
+-            liveEnemy:true,physicalWaveContact:true}));
++          team,actor,(id)=>{
++            const key=this.projectiles.f4TargetLifeKey(id);
++            return key?device.hit({tick,roundId:this.roundId,waveIndex:wave.index,targetLifeId:key,
++              liveEnemy:true,physicalWaveContact:true}):0;
++          });
+       }
+       return true;
+     },dispose:()=>{
+@@ -454,9 +494,12 @@
      const anchor=this.visual('F4 barrier anchor','cylinder',team);
      anchor.setPosition(body);
      anchor.setLocalScale(.54,.62,.54);
@@ -715,7 +1012,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      const contact:DeviceQuery=(from,to,enemy)=>{
        if(enemy===team||device.ended)return null;
        const drone=this.physics.castInkSegmentAtBall(from,to,body,.28);
-@@ -477,12 +506,15 @@
+@@ -477,12 +520,15 @@
      this.effects.push({step:tick=>{
        radius=device.radius(tick,this.roundId);
        field.enabled=radius>0;
@@ -735,7 +1032,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      }});
    }
  
-@@ -491,11 +523,15 @@
+@@ -491,11 +537,15 @@
      const visual=this.visual('F4 tornado','cylinder',team);
      visual.enabled=false;
      const bottom=foot.clone().add(new Vec3(0,.08,0));
@@ -755,7 +1052,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
        if(!value)return false;
        visual.enabled=true;
        const width=value.damageRadiusMeters*2;
-@@ -505,10 +541,10 @@
+@@ -505,10 +555,10 @@
        if(value.paintDue)
          this.projectiles.applyF4SpecialPulse(bottom,team,actor,value.paintRadiusMeters,0,.26);
        return true;
@@ -770,7 +1067,20 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      pair:LaserPair, start:number, team:Team.A|Team.B, actor:string): void {
      this.effects.push({step:tick=>{
        if(pair.finished(tick))return false;
-@@ -531,7 +567,50 @@
+@@ -523,15 +573,61 @@
+         this.drawSegment(beam.visual,beam.position,end,age<36?.035:.12);
+         if(age>=36&&(age-36)%5===0){
+           this.sweptHpLoss+=this.projectiles.applyF4SpecialSweep(beam.position,end,.07,team,actor,(id)=>
+-            pair.damage({roundId:this.roundId,beamId:pair.beamIds[index]!,targetLifeId:id,
+-              tick,liveEnemy:true,beamOverlap:true}),false);
++            {
++              const key=this.projectiles.f4TargetLifeKey(id);
++              return key?pair.damage({roundId:this.roundId,beamId:pair.beamIds[index]!,targetLifeId:key,
++                tick,liveEnemy:true,beamOverlap:true}):0;
++            },false);
+         }
+       }
+       return true;
      },dispose:()=>{for(const beam of beams)beam.visual.destroy();}});
    }
  
@@ -822,19 +1132,3 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      let material=this.visualMaterials.get(team);
      if(!material){
        material=new StandardMaterial();
-diff --git a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
---- a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
-+++ b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
-@@ -4,7 +4,11 @@
-   { special: F4SpecialId; required: number }>>;
- export class CertifiedTurf720 {
-   constructor(options: { roundId: string });
--  readonly complete: boolean;
-+  readonly complete: boolean;
-+  readonly roundId: string;
-+  readonly totalProjectedM2: number;
-+  changedArea(surface:import('../../../ink/PaintSurface').PaintSurface,index:number,
-+    oldOwner:import('../../../ink/types').Team,newOwner:import('../../../ink/types').Team.A|import('../../../ink/types').Team.B):number;
-   result(frame: { roundId: string; tick: number; roundEnded: boolean }):
-     { status: 'HOLD' | 'READY'; reason: string | null; winner: 'NONE' | 'A' | 'B' };
- }
