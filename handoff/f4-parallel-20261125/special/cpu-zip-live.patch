@@ -1,0 +1,290 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -1,3 +1,4 @@
+-import type { CrowdAgent } from 'recast-navigation';
++import type { CrowdAgent } from 'recast-navigation';
++import {CpuZipMotion,selectCpuZipHook,type CpuZipCandidate,type CpuZipPhysicalStep} from '../special/F4CpuZipMotion.mjs';
+ import {B234OriginalCpuGapReadinessAudit}
+  from './B234OriginalCpuGapReadinessAudit';
+@@ -173,5 +174,8 @@
+   moveF4WholeDrop?(id:string,from:Vec3,delta:Readonly<{x:number;y:number;z:number}>):
+     {foot:Readonly<{x:number;y:number;z:number}>;grounded:boolean}|null;
+-  canRejoinF4WholeProjection?(foot:Vec3,point:Readonly<{x:number;y:number;z:number}>):boolean;
++  canRejoinF4WholeProjection?(foot:Vec3,point:Readonly<{x:number;y:number;z:number}>):boolean;
++  probeF4CpuZip?(id:string,foot:Vec3,direction:readonly [number,number,number],target:Vec3):CpuZipCandidate|null;
++  canF4CpuZipReturn?(id:string,from:Vec3,to:Vec3,supportId:string):boolean;
++  stepF4CpuZip?(id:string,from:Vec3,delta:Vec3,wallHandle:number,normal:readonly [number,number,number],landing:boolean):CpuZipPhysicalStep|null;
+ }
+ 
+@@ -257,5 +261,6 @@
+   | 'JUMP_LANDING'
+   | 'FIRST_DROP_FALL'
+-  | 'FIRST_DROP_REJOIN';
++  | 'FIRST_DROP_REJOIN'
++  | 'F4_ZIP';
+ 
+ interface CpuJumpCandidate {
+@@ -524,5 +529,11 @@
+     cancel():void;
+   };
+-  private f4NaturalSpecial?:{
++  private readonly f4ZipRuns=new Map<string,{motion:CpuZipMotion;canFire:boolean}>();
++  private readonly f4ZipRecovery=new Set<string>();
++  private f4NaturalSpecial?:{
++    tick():number;
++    zipReady(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):boolean;
++    zipConsume(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):boolean;
++    zipEnd(actorId:string):void;
+     wantsTick(actorId:string):boolean;
+     step(input:{actorId:string;foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;hasOpponent:boolean;canStart:boolean;lifeId:string;distance:number|null;hp:number;ink:number;recentHit:boolean;grounded:boolean}):{owns:boolean;activated:boolean};
+@@ -689,6 +700,7 @@
+     bot.thinkRemaining=0;
+     bot.jumpCooldownSeconds=drop.center&&landedAtTargetLevel?0:1.5;
+-    this.f4Drops.delete(bot.id);
+-    return true;
++    this.f4Drops.delete(bot.id);
++    this.f4ZipRecovery.delete(bot.id);
++    return true;
+   }
+ 
+@@ -1166,5 +1178,7 @@
+   }
+ 
+-  public reset(humanTeam: Team.A | Team.B): void {
++  public reset(humanTeam: Team.A | Team.B): void {
++    for(const id of this.f4ZipRuns.keys())this.f4NaturalSpecial?.zipEnd(id);
++    this.f4ZipRuns.clear();this.f4ZipRecovery.clear();this.f4Drops.clear();
+     this.clearF4LeadHistory();
+     this.f4LeadAccepted=0;
+@@ -1308,5 +1322,6 @@
+       if (this.phase14eFirstDrop) {
+         for (const bot of this.bots) {
+-          if (bot.mobilityState === 'FIRST_DROP_FALL') {
++          if(this.f4ZipRuns.has(bot.id)||this.f4ZipRecovery.has(bot.id))continue;
++          if (bot.mobilityState === 'FIRST_DROP_FALL') {
+             this.phase14eFirstDrop.cancel(bot.id);
+             bot.agent = this.navigation.addAgent(bot.position);
+@@ -1323,6 +1338,6 @@
+           // match. Canceling it as a tactical jump would reactivate the unsafe
+           // recycled offmesh height before the lower-layer gate passes.
+-          if (bot.mobilityState !== 'GROUND' &&
+-              bot.mobilityState !== 'FIRST_DROP_REJOIN')
++          if (bot.mobilityState !== 'GROUND' &&
++              bot.mobilityState !== 'FIRST_DROP_REJOIN'&&!this.f4ZipRuns.has(bot.id)&&!this.f4ZipRecovery.has(bot.id))
+             this.cancelCpuJump(bot, true);
+         }
+@@ -1413,6 +1428,11 @@
+         bot.specialDecisionCooldownSeconds - dt
+       );
+-      bot.previousPosition.copy(bot.position);
+-      if(this.f4WholeNavigation&&this.updateF4Drop(bot,dt)){
++      bot.previousPosition.copy(bot.position);
++      if(this.f4ZipRuns.has(bot.id)){
++        if(canStartNewCombatActions)this.tickF4CpuZip(bot,dt,humanTeam,humanPosition,humanActive);
++        continue;
++      }
++      if(this.f4ZipRecovery.has(bot.id)&&!canStartNewCombatActions)continue;
++      if(this.f4WholeNavigation&&this.updateF4Drop(bot,dt)){
+         if(this.f4PhysicalSpecialProbe?.actorId===bot.id)this.f4PhysicalSpecialProbe.cancel();
+         this.f4NaturalSpecial?.cancel(bot.id);
+@@ -2096,5 +2116,5 @@
+       for (const bot of this.bots) this.sampleF4LeadBody(bot.id,
+         bot.lifeState === 'ACTIVE' && bot.hp > 0 && this.liveSourceCombatOpponent(bot) &&
+-        bot.mobilityState === 'GROUND' ? bot.position : null,'CPU');
++        (bot.mobilityState === 'GROUND'||this.f4ZipRuns.has(bot.id)||this.f4ZipRecovery.has(bot.id)) ? bot.position : null,'CPU',bot.mobilityState==='GROUND');
+     }
+     this.b234ObserveRealCpu();
+@@ -2119,6 +2139,14 @@
+   private tickF4NaturalSpecial(bot:CpuBot,humanTeam:Team.A|Team.B,
+     humanPosition:Vec3,humanActive:boolean):boolean {
+-    const natural=this.f4NaturalSpecial;
+-    if(!natural?.wantsTick(bot.id))return false;
++    const natural=this.f4NaturalSpecial;
++    if(!natural)return false;
++    if(bot.weaponId==='arc-blaster'){
++      const actor={actorId:bot.id,team:bot.team,weapon:bot.weaponId,lifeId:String(bot.f4LifeSerial)};
++      const tick=natural.tick();
++      if(tick%12===[...bot.id].reduce((n,c)=>n+c.charCodeAt(0),0)%12&&natural.zipReady(actor)&&
++         this.tryBeginF4CpuZip(bot,actor,tick,humanTeam,humanPosition,humanActive))return true;
++      return false;
++    }
++    if(!natural.wantsTick(bot.id))return false;
+     const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
+     const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+@@ -2133,5 +2161,58 @@
+   }
+ 
+-  private continueBlockedOriginalSourceCpuActions(
++  private tryBeginF4CpuZip(bot:CpuBot,actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string},tick:number,humanTeam:Team.A|Team.B,humanPosition:Vec3,humanActive:boolean):boolean{
++    const c=this.phase14qGroundCollision,n=this.f4NaturalSpecial;
++    if(!this.f4WholeNavigation||!bot.agent||!n||!c?.probeF4CpuZip||!c.stepF4CpuZip||!c.canF4CpuZipReturn||!c.moveF4WholeDrop||
++      !this.sourceCpuMayStartActions(bot)||bot.weaponGuarding||bot.f4CanopyOpen||bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0)return false;
++    const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
++    if(!target)return false;
++    const aim=target.clone().sub(bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)));
++    const candidate=selectCpuZipHook({tick,ready:true,canStart:true,grounded:true,hp:bot.hp,direction:[aim.x,aim.y,aim.z],distance:aim.length()},
++      ray=>c.probeF4CpuZip!(bot.id,bot.position,ray,target));
++    if(!candidate)return false;
++    const motion=new CpuZipMotion(candidate,tick,actor.lifeId);
++    if(!n.zipConsume(actor))return false;
++    this.navigation.removeAgent(bot.agent);bot.agent=null;
++    this.sourceLiveNativeMotionGoal.delete(bot.id);this.sourceLastAdmittedRouteGoal.delete(bot.id);
++    this.sourceCrowdProjectionHold.delete(bot.id);this.qaMotionGoals.delete(bot.id);this.b181CachedCombat.delete(bot.id);
++    bot.mobilityState='F4_ZIP';this.f4ZipRuns.set(bot.id,{motion,canFire:false});
++    bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;
++    this.stats.cpuSpecialActivations++;return true;
++  }
++
++  private tickF4CpuZip(bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,humanPosition:Vec3,humanActive:boolean):void{
++    const row=this.f4ZipRuns.get(bot.id),n=this.f4NaturalSpecial,c=this.phase14qGroundCollision;
++    if(!row||!n||!c?.stepF4CpuZip||!c.canF4CpuZipReturn)return;
++    this.advanceCpuWeaponTimers(bot,dt,true);row.canFire=false;
++    const result=row.motion.step({tick:n.tick(),lifeId:String(bot.f4LifeSerial),foot:[bot.position.x,bot.position.y,bot.position.z],visible:true,hp:bot.hp},{
++      returnClear:(a,b,id)=>c.canF4CpuZipReturn!(bot.id,new Vec3(...a),new Vec3(...b),id),
++      move:(delta,hook)=>c.stepF4CpuZip!(bot.id,bot.position,new Vec3(...delta),hook.colliderHandle,hook.normal,row.motion.phase==='LANDING')
++    });
++    if(result.foot){bot.position.set(...result.foot);c.syncRealCpuFoot(bot.id,bot.position);this.b181CachedCombat.delete(bot.id);}
++    if(result.phase==='RETURNED'){
++      const p=this.navigation.auditNavMeshProjection(bot.position);
++      if(p.success&&p.nearestPoint&&c.canRejoinF4WholeProjection?.(bot.position,p.nearestPoint)){
++        bot.agent=this.navigation.addAgent(bot.position);bot.mobilityState='GROUND';bot.thinkRemaining=0;bot.jumpCooldownSeconds=1.5;
++        this.f4ZipRuns.delete(bot.id);n.zipEnd(bot.id);return;
++      }
++    }
++    if(result.phase==='RETURNED'||result.phase==='FALL_REQUIRED'||result.phase==='CANCELLED'){
++      this.f4ZipRuns.delete(bot.id);n.zipEnd(bot.id);
++      if(bot.lifeState!=='ACTIVE'||bot.hp<=0)return;
++      this.f4ZipRecovery.add(bot.id);
++      this.f4Drops.set(bot.id,{target:bot.position.clone(),verticalSpeed:0,elapsed:0,center:false});
++      bot.mobilityState='FIRST_DROP_FALL';return;
++    }
++    if(result.canFire){
++      row.canFire=true;
++      const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0,true);
++      const profile=weaponProfile(bot.weaponId,this.f4WholeNavigation);
++      if(target&&bot.fireRemaining<=0&&this.cpuTargetInRange(bot,target,profile)&&this.queueCpuWeaponRequest(bot,target,0)){
++        bot.fireRemaining=profile.fireIntervalSeconds;bot.weaponFacing.copy(target).sub(bot.position).normalize();
++      }
++    }
++  }
++
++  private continueBlockedOriginalSourceCpuActions(
+     bot:CpuBot,dt:number,humanTeam:Team.A|Team.B,
+     humanPosition:Vec3,humanActive:boolean,
+@@ -2466,7 +2547,7 @@
+     return !!bot&&bot.lifeState==='ACTIVE'&&
+       Number.isFinite(bot.hp)&&bot.hp>0&&
+-      bot.mobilityState==='GROUND'&&
+-      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
+-       this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
++      (bot.mobilityState==='GROUND'||(bot.mobilityState==='F4_ZIP'&&this.f4ZipRuns.get(bot.id)?.canFire===true))&&
++      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
++       this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
+   }
+ 
+@@ -2917,5 +2998,5 @@
+         bot.position,
+         bot.lifeState === 'ACTIVE' &&
+-          (bot.mobilityState === 'GROUND' || bot.mobilityState === 'JUMP_PREP'),
++          (bot.mobilityState === 'GROUND' || bot.mobilityState === 'JUMP_PREP'||this.f4ZipRuns.has(bot.id)||this.f4ZipRecovery.has(bot.id)),
+         bot.weaponId
+       );
+@@ -4954,6 +5035,6 @@
+     if(!this.f3dSourceGoals)return true; // frozen T20 behavior
+     return Number.isFinite(enemy.hp)&&enemy.hp>0&&
+-      enemy.mobilityState==='GROUND'&&
+-      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
++      (enemy.mobilityState==='GROUND'||this.f4ZipRuns.has(enemy.id)||this.f4ZipRecovery.has(enemy.id))&&
++      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
+        this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id));
+   }
+@@ -4996,6 +5077,5 @@
+           enemy.id!==bot.id&&enemy.team!==bot.team&&
+           enemy.lifeState==='ACTIVE'&&
+-          enemy.mobilityState==='GROUND'&&
+-          this.liveSourceCombatOpponent(enemy))
++          this.liveSourceCombatOpponent(enemy))
+           .map(enemy=>({id:enemy.id,body:{x:enemy.position.x,
+             y:enemy.position.y+.68,z:enemy.position.z},
+@@ -5570,5 +5650,6 @@
+   }
+ 
+-  private splatBot(bot: CpuBot): void {
++  private splatBot(bot: CpuBot): void {
++    this.f4ZipRuns.delete(bot.id);this.f4ZipRecovery.delete(bot.id);this.f4NaturalSpecial?.zipEnd(bot.id);
+     this.f4LeadHistory?.delete(bot.id);
+     if(this.f4WholeNavigation)this.f4Drops.delete(bot.id);
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -44,5 +44,6 @@
+   private readonly completedProbeLives = new Set<string>();
+   private readonly naturalGauge=new F4ProvisionalGauge(KIT720,10,.5);
+-  private naturalOpen=false;
++  private naturalOpen=false;
++  private readonly cpuZipLives=new Map<string,string>();
+   private readonly cpuTactics=new F4CpuSpecialTactics();
+   private cpuDecisions=0;
+@@ -75,5 +76,5 @@
+   syncNaturalActor(actor:Actor,alive:boolean):void {this.naturalGauge.sync(actor,alive);}
+   creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
+-    return this.naturalGauge.credit(actor,alive,area,this.ownsWeaponInput(actor.actorId,this.frame));
++    return this.naturalGauge.credit(actor,alive,area,this.ownsWeaponInput(actor.actorId,this.frame)||this.cpuZipLives.get(actor.actorId)===actor.lifeId);
+   }
+   naturalReady(actorId:string,tick:number):boolean {
+@@ -81,5 +82,16 @@
+     return tick>=0&&tick<10800&&this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
+   }
+-  naturalZipReady(actor:Actor,tick:number):boolean {
++  cpuZipReady(actor:Actor,tick:number):boolean {
++    const s=this.naturalGauge.state(actor.actorId);
++    return tick>=0&&tick<=10050&&this.naturalOpen&&actor.actorId!==HUMAN&&actor.weapon==='arc-blaster'&&
++      s?.ready===true&&s.lifeId===actor.lifeId&&s.weapon===actor.weapon&&s.team===actor.team&&
++      !this.cpuZipLives.has(actor.actorId)&&!this.ownsWeaponInput(actor.actorId,tick);
++  }
++  consumeCpuZip(actor:Actor,tick:number):boolean {
++    if(!this.cpuZipReady(actor,tick)||!this.naturalGauge.consume(actor.actorId,actor.lifeId))return false;
++    this.cpuZipLives.set(actor.actorId,actor.lifeId);return true;
++  }
++  endCpuZip(actorId:string):void {this.cpuZipLives.delete(actorId);}
++  naturalZipReady(actor:Actor,tick:number):boolean {
+     const state=this.naturalGauge.state(actor.actorId);
+     return tick>=0&&tick<10800&&this.naturalOpen&&actor.actorId===HUMAN&&actor.weapon==='arc-blaster'&&
+@@ -149,5 +161,5 @@
+     this.turf=new CertifiedTurf720({roundId:this.roundId});
+     this.completedProbeLives.clear();
+-    this.naturalGauge.reset();
++    this.naturalGauge.reset();this.cpuZipLives.clear();
+     this.cpuTactics.reset();
+     this.cpuDecisions=this.cpuAdmissions=this.cpuCannonCommands=this.cpuRollCommands=this.cpuThrowReleaseCommands=0;
+@@ -177,5 +189,5 @@
+     this.suctionQueries.clear();
+     if (legalRoundEnd) {
+-      this.naturalOpen=false;this.naturalGauge.close();this.cpuTactics.reset();
++      this.naturalOpen=false;this.naturalGauge.close();this.cpuTactics.reset();this.cpuZipLives.clear();
+       this.score=this.turf.result({roundId:this.roundId,tick,roundEnded:true});
+     }
+@@ -264,5 +276,5 @@
+ 
+   cancelActor(actorId:string,tick:number):void {
+-    this.cpuTactics.cancel(actorId);
++    this.cpuTactics.cancel(actorId);this.cpuZipLives.delete(actorId);
+     const lifeId=this.active.get(actorId);
+     if(lifeId)this.port.cancel({roundId:this.roundId,tick,actorId,lifeId,reason:'life-ended'});
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1306,6 +1306,10 @@
+    const runtime=this.f4Special;
+    const tick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
+-   this.cpu.useF4NaturalSpecial({
+-    wantsTick:id=>runtime.wantsNaturalCpuTick(id,tick()),
++   this.cpu.useF4NaturalSpecial({
++    tick,
++    zipReady:actor=>runtime.cpuZipReady(actor,tick()),
++    zipConsume:actor=>runtime.consumeCpuZip(actor,tick()),
++    zipEnd:id=>runtime.endCpuZip(id),
++    wantsTick:id=>runtime.wantsNaturalCpuTick(id,tick()),
+     step:({actorId,lifeId,team,weapon,foot,aim,canStart,distance,hp,ink,recentHit,grounded})=>{
+      const actor={actorId,lifeId,team,weapon};
