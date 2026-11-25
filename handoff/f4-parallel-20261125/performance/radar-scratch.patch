@@ -1,0 +1,82 @@
+diff --git a/src/app/B402NativeSourceInkRadarSamples.ts b/src/app/B402NativeSourceInkRadarSamples.ts
+--- a/src/app/B402NativeSourceInkRadarSamples.ts
++++ b/src/app/B402NativeSourceInkRadarSamples.ts
+@@ -3,13 +3,14 @@
+  * Each point comes from an actually owned ACTIVE original PaintSurface cell.
+  * Samples deliberately underrepresent coverage; use B400/B401 counters
+  * for exact ownership counts. No gameplay writes. */
++import {Vec3} from 'playcanvas';
+ export type B402Surface=Readonly<{
+  id:string;isScoreable:boolean;
+  widthCells:number;heightCells:number;cellSize:number;
+  widthMeters:number;heightMeters:number;
+  ownerGrid:Readonly<Int8Array>;
+  isCellActive:(x:number,y:number)=>boolean;
+- localToWorld:(u:number,v:number)=>Readonly<{x:number;y:number;z:number}>;
++ localToWorld:(u:number,v:number,out?:Vec3)=>Readonly<{x:number;y:number;z:number}>;
+ }>;
+ export type B402SamplePoint=Readonly<{
+  x:number;y:number;z:number;owner:1|-1;
+@@ -25,10 +26,9 @@
+  actorTeleports:0;paintWrites:0;productionAuthorized:false;
+ }>;
+ const output=(status:B402RadarProof['status'],reason:string,tick:number,
+- surfaces:number,dots:readonly B402SamplePoint[]=[]):B402RadarProof=>({
++ surfaces:number,dots:readonly B402SamplePoint[]=[],realTeamADots=0,realTeamBDots=0):B402RadarProof=>({
+  status,reason,nativeTick:tick,sampledOriginalSurfaces:surfaces,dots,
+- realTeamADots:dots.filter(p=>p.owner===1).length,
+- realTeamBDots:dots.filter(p=>p.owner===-1).length,
++ realTeamADots,realTeamBDots,
+  fullCoverageInferred:false,original4v4Certified:false,
+  sourceScoreable:0,officialWinner:'NONE',actorTeleports:0,
+  paintWrites:0,productionAuthorized:false
+@@ -59,6 +59,8 @@
+   used.add(s.id);
+  }
+  const dots:B402SamplePoint[]=[];
++ const worldScratch=new Vec3();
++ let realTeamADots=0,realTeamBDots=0;
+  // Bounded 72 source-cell tiles/surface and 1224 visible samples.
+  // A dot is one proven cell, NOT the ownership of its surrounding tile.
+  for(const s of surfaces){
+@@ -66,17 +68,20 @@
+    s.widthCells*s.heightCells/72)));
+   let perSurface=0;
+   for(let y=0;y<s.heightCells&&perSurface<72;y+=tile){
++   const endY=Math.min(s.heightCells,y+tile);
+    for(let x=0;x<s.widthCells&&perSurface<72;x+=tile){
++    const endX=Math.min(s.widthCells,x+tile);
+     let found:B402SamplePoint|null=null;
+-    for(let py=y;py<Math.min(s.heightCells,y+tile)&&!found;py++){
+-     for(let px=x;px<Math.min(s.widthCells,x+tile);px++){
+-      const owner=s.ownerGrid[py*s.widthCells+px];
++    for(let py=y;py<endY&&!found;py++){
++     const row=py*s.widthCells;
++     for(let px=x;px<endX;px++){
++      const owner=s.ownerGrid[row+px];
+       if(owner!==1&&owner!==-1)continue;
+       if(!s.isCellActive(px,py))continue;
+       const w=s.localToWorld(
+        Math.min((px+.5)*s.cellSize,s.widthMeters-1e-5),
+-       Math.min((py+.5)*s.cellSize,s.heightMeters-1e-5));
+-      if(![w.x,w.y,w.z].every(Number.isFinite))continue;
++       Math.min((py+.5)*s.cellSize,s.heightMeters-1e-5),worldScratch);
++      if(!Number.isFinite(w.x)||!Number.isFinite(w.y)||!Number.isFinite(w.z))continue;
+       if(Math.abs(w.x-human[0])>halfWidthMeters||
+          Math.abs(w.z-human[2])>halfWidthMeters||
+          Math.abs(w.y-human[1])>4)continue;
+@@ -84,12 +89,12 @@
+       break;
+      }
+     }
+-    if(found){dots.push(found);perSurface++;}
++    if(found){dots.push(found);perSurface++;if(found.owner===1)realTeamADots++;else realTeamBDots++;}
+    }
+   }
+  }
+  return output('SOURCE_PAINT_SAMPLES',
+-  'ACTUAL_PAINT_OWNER_CELLS_ONLY_NOT_COVERAGE',nativeTick,17,dots);
++  'ACTUAL_PAINT_OWNER_CELLS_ONLY_NOT_COVERAGE',nativeTick,17,dots,realTeamADots,realTeamBDots);
+ }
+ 
+ /** Read-only live ownerGrid proof is usable only in the current native round.

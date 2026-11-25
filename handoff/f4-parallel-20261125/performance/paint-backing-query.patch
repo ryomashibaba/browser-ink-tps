@@ -1,0 +1,59 @@
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -44,6 +44,12 @@
+   private readonly inkBoxSweep = new RAPIER.Cuboid(0, 0, 0);
+   private readonly inkBoxRotation = new Quat();
+   private readonly cameraSweepRotation = new Quat();
++  // F4 backing is a synchronous, read-only query. The ray owns fresh
++  // origin/direction objects; only the temporary world point is reused.
++  private readonly paintBackingPoint = new Vec3();
++  private readonly paintBackingCollider = (collider: Collider): boolean =>
++    this.solidByColliderHandle.has(collider.handle);
++  private readonly paintHitProjection = {u:0,v:0,signedPlaneDistance:0,planeDistance:0,inside:false};
+ 
+   public constructor(stepSeconds: number, stage: StageDefinition) {
+     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
+@@ -65,19 +71,22 @@
+   public hasF4PaintBacking(surface:PaintSurface,u:number,v:number):boolean{
+     if(!this.f4WholeResearchTrimeshActive)return true;
+     if(!sourceRegisteredPaintCellActive(surface,u,v))return false;
+-    const point=surface.localToWorld(u,v);
+-    // Some registered horizontal grids wind down. Check cover from above
+-    // regardless of their raster winding, keeping wall orientation intact.
+-    const normal=surface.normal.clone();
+-    if(normal.y<-.5)normal.mulScalar(-1);
++    const point=surface.localToWorld(u,v,this.paintBackingPoint);
++    // Same original ray, including downward-winding correction. Avoid
++    // three temporary normal Vec3 clones and a per-query filter closure.
++    const normal=surface.normal;
++    const flip=normal.y<-.5;
++    const nx=flip?normal.x*-1:normal.x;
++    const ny=flip?normal.y*-1:normal.y;
++    const nz=flip?normal.z*-1:normal.z;
+     const length=F4_PAINT_PLANE_TOLERANCE;
+-    const ray=new RAPIER.Ray(point.add(normal.clone().mulScalar(length)),
+-      normal.clone().mulScalar(-1));
++    const ray=new RAPIER.Ray(
++      {x:point.x+nx*length,y:point.y+ny*length,z:point.z+nz*length},
++      {x:nx*-1,y:ny*-1,z:nz*-1});
+     const hit=this.world.castRayAndGetNormal(ray,2*length,false,
+-      undefined,undefined,undefined,undefined,
+-      collider=>this.solidByColliderHandle.has(collider.handle));
+-    return !!hit&&Math.abs(hit.normal.x*normal.x+hit.normal.y*normal.y+
+-      hit.normal.z*normal.z)>=F4_PAINT_NORMAL_ALIGNMENT;
++      undefined,undefined,undefined,undefined,this.paintBackingCollider);
++    return !!hit&&Math.abs(hit.normal.x*nx+hit.normal.y*ny+
++      hit.normal.z*nz)>=F4_PAINT_NORMAL_ALIGNMENT;
+   }
+ 
+   public f4PaintAtStageHit(
+@@ -87,7 +96,7 @@
+     let best:SurfaceRayHit|null=null;
+     let distance=F4_PAINT_PLANE_TOLERANCE;
+     for(const surface of surfaces){
+-      const p=surface.projectWorldPoint(hit.point);
++      const p=surface.projectWorldPoint(hit.point,this.paintHitProjection);
+       if(!p.inside||p.planeDistance>distance||
+          (hit.normal&&Math.abs(hit.normal.dot(surface.normal))<F4_PAINT_NORMAL_ALIGNMENT)||
+          !this.hasF4PaintBacking(surface,p.u,p.v))continue;
