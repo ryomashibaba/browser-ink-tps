@@ -2,1434 +2,104 @@ diff --git a/src/app/F4ActorArt.mjs b/src/app/F4ActorArt.mjs
 new file mode 100644
 --- /dev/null
 +++ b/src/app/F4ActorArt.mjs
-@@ -0,0 +1,1465 @@
+@@ -0,0 +1,138 @@
 +// F4 provisional render-only artwork. No actor transform, collider, gameplay or asset authority.
 +const BODY = [
-+ {
-+  "name": "jacket",
-+  "type": "capsule",
-+  "tint": "SUIT",
-+  "pos": [
-+   0,
-+   -0.06,
-+   0
-+  ],
-+  "size": [
-+   0.68,
-+   0.72,
-+   0.5
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "chest",
-+  "type": "sphere",
-+  "tint": "TEAM",
-+  "pos": [
-+   0,
-+   0.05,
-+   -0.245
-+  ],
-+  "size": [
-+   0.46,
-+   0.39,
-+   0.15
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "head",
-+  "type": "sphere",
-+  "tint": "TEAM",
-+  "pos": [
-+   0,
-+   0.55,
-+   0
-+  ],
-+  "size": [
-+   0.66,
-+   0.56,
-+   0.62
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "cap",
-+  "type": "sphere",
-+  "tint": "GEAR",
-+  "pos": [
-+   0,
-+   0.77,
-+   0.035
-+  ],
-+  "size": [
-+   0.57,
-+   0.17,
-+   0.53
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "visor",
-+  "type": "sphere",
-+  "tint": "DARK",
-+  "pos": [
-+   0,
-+   0.55,
-+   -0.28
-+  ],
-+  "size": [
-+   0.48,
-+   0.21,
-+   0.17
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "visor-glint",
-+  "type": "sphere",
-+  "tint": "VISOR",
-+  "pos": [
-+   0,
-+   0.59,
-+   -0.355
-+  ],
-+  "size": [
-+   0.35,
-+   0.055,
-+   0.045
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "left-arm",
-+  "type": "capsule",
-+  "tint": "SUIT",
-+  "pos": [
-+   -0.43,
-+   -0.13,
-+   -0.03
-+  ],
-+  "size": [
-+   0.22,
-+   0.58,
-+   0.24
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   -10
-+  ]
-+ },
-+ {
-+  "name": "right-arm",
-+  "type": "capsule",
-+  "tint": "SUIT",
-+  "pos": [
-+   0.44,
-+   -0.12,
-+   -0.1
-+  ],
-+  "size": [
-+   0.22,
-+   0.52,
-+   0.25
-+  ],
-+  "angle": [
-+   -25,
-+   0,
-+   12
-+  ]
-+ },
-+ {
-+  "name": "left-leg",
-+  "type": "capsule",
-+  "tint": "DARK",
-+  "pos": [
-+   -0.19,
-+   -0.57,
-+   0
-+  ],
-+  "size": [
-+   0.27,
-+   0.55,
-+   0.29
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "right-leg",
-+  "type": "capsule",
-+  "tint": "DARK",
-+  "pos": [
-+   0.19,
-+   -0.57,
-+   0
-+  ],
-+  "size": [
-+   0.27,
-+   0.55,
-+   0.29
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "left-boot",
-+  "type": "sphere",
-+  "tint": "GEAR",
-+  "pos": [
-+   -0.19,
-+   -0.85,
-+   -0.1
-+  ],
-+  "size": [
-+   0.32,
-+   0.23,
-+   0.46
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "right-boot",
-+  "type": "sphere",
-+  "tint": "GEAR",
-+  "pos": [
-+   0.19,
-+   -0.85,
-+   -0.1
-+  ],
-+  "size": [
-+   0.32,
-+   0.23,
-+   0.46
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "tank",
-+  "type": "cylinder",
-+  "tint": "TEAM",
-+  "pos": [
-+   0,
-+   -0.04,
-+   0.32
-+  ],
-+  "size": [
-+   0.46,
-+   0.64,
-+   0.34
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "tank-cap",
-+  "type": "cylinder",
-+  "tint": "GEAR",
-+  "pos": [
-+   0,
-+   0.28,
-+   0.32
-+  ],
-+  "size": [
-+   0.48,
-+   0.1,
-+   0.36
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "tank-frame",
-+  "type": "box",
-+  "tint": "GEAR",
-+  "pos": [
-+   0,
-+   -0.29,
-+   0.33
-+  ],
-+  "size": [
-+   0.48,
-+   0.11,
-+   0.36
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ },
-+ {
-+  "name": "rear-stripe",
-+  "type": "box",
-+  "tint": "VISOR",
-+  "pos": [
-+   0,
-+   0.015,
-+   0.5
-+  ],
-+  "size": [
-+   0.24,
-+   0.055,
-+   0.035
-+  ],
-+  "angle": [
-+   0,
-+   0,
-+   0
-+  ]
-+ }
++ {"name":"jacket","type":"capsule","tint":"SUIT","pos":[0,-0.06,0],"size":[0.68,0.72,0.5],"angle":[0,0,0]},
++ {"name":"chest","type":"sphere","tint":"TEAM","pos":[0,0.05,-0.245],"size":[0.46,0.39,0.15],"angle":[0,0,0]},
++ {"name":"head","type":"sphere","tint":"TEAM","pos":[0,0.55,0],"size":[0.66,0.56,0.62],"angle":[0,0,0]},
++ {"name":"cap","type":"sphere","tint":"GEAR","pos":[0,0.77,0.035],"size":[0.57,0.17,0.53],"angle":[0,0,0]},
++ {"name":"visor","type":"sphere","tint":"DARK","pos":[0,0.55,-0.28],"size":[0.48,0.21,0.17],"angle":[0,0,0]},
++ {"name":"visor-glint","type":"sphere","tint":"VISOR","pos":[0,0.59,-0.355],"size":[0.35,0.055,0.045],"angle":[0,0,0]},
++ {"name":"left-arm","type":"capsule","tint":"SUIT","pos":[-0.43,-0.13,-0.03],"size":[0.22,0.58,0.24],"angle":[0,0,-10]},
++ {"name":"right-arm","type":"capsule","tint":"SUIT","pos":[0.44,-0.12,-0.1],"size":[0.22,0.52,0.25],"angle":[-25,0,12]},
++ {"name":"left-leg","type":"capsule","tint":"DARK","pos":[-0.19,-0.57,0],"size":[0.27,0.55,0.29],"angle":[0,0,0]},
++ {"name":"right-leg","type":"capsule","tint":"DARK","pos":[0.19,-0.57,0],"size":[0.27,0.55,0.29],"angle":[0,0,0]},
++ {"name":"left-boot","type":"sphere","tint":"GEAR","pos":[-0.19,-0.85,-0.1],"size":[0.32,0.23,0.46],"angle":[0,0,0]},
++ {"name":"right-boot","type":"sphere","tint":"GEAR","pos":[0.19,-0.85,-0.1],"size":[0.32,0.23,0.46],"angle":[0,0,0]},
++ {"name":"tank","type":"cylinder","tint":"TEAM","pos":[0,-0.04,0.32],"size":[0.46,0.64,0.34],"angle":[0,0,0]},
++ {"name":"tank-cap","type":"cylinder","tint":"GEAR","pos":[0,0.28,0.32],"size":[0.48,0.1,0.36],"angle":[0,0,0]},
++ {"name":"tank-frame","type":"box","tint":"GEAR","pos":[0,-0.29,0.33],"size":[0.48,0.11,0.36],"angle":[0,0,0]},
++ {"name":"rear-stripe","type":"box","tint":"VISOR","pos":[0,0.015,0.5],"size":[0.24,0.055,0.035],"angle":[0,0,0]}
 +];
 +const WEAPONS = {
 + "pulse-sprayer": [
-+  {
-+   "name": "receiver",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.52,
-+    -0.3,
-+    -0.36
-+   ],
-+   "size": [
-+    0.23,
-+    0.22,
-+    0.46
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "barrel",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.52,
-+    -0.28,
-+    -0.65
-+   ],
-+   "size": [
-+    0.13,
-+    0.28,
-+    0.13
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "pigment",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.52,
-+    -0.17,
-+    -0.33
-+   ],
-+   "size": [
-+    0.18,
-+    0.08,
-+    0.28
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "grip",
-+   "type": "box",
-+   "tint": "DARK",
-+   "pos": [
-+    0.52,
-+    -0.43,
-+    -0.23
-+   ],
-+   "size": [
-+    0.12,
-+    0.2,
-+    0.14
-+   ],
-+   "angle": [
-+    17,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"receiver","type":"box","tint":"GEAR","pos":[0.52,-0.3,-0.36],"size":[0.23,0.22,0.46],"angle":[0,0,0]},
++  {"name":"barrel","type":"cylinder","tint":"DARK","pos":[0.52,-0.28,-0.65],"size":[0.13,0.28,0.13],"angle":[90,0,0]},
++  {"name":"pigment","type":"box","tint":"TEAM","pos":[0.52,-0.17,-0.33],"size":[0.18,0.08,0.28],"angle":[0,0,0]},
++  {"name":"grip","type":"box","tint":"DARK","pos":[0.52,-0.43,-0.23],"size":[0.12,0.2,0.14],"angle":[17,0,0]}
 + ],
 + "needle-smg": [
-+  {
-+   "name": "receiver",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.52,
-+    -0.28,
-+    -0.36
-+   ],
-+   "size": [
-+    0.15,
-+    0.17,
-+    0.47
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "needle",
-+   "type": "cylinder",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.52,
-+    -0.28,
-+    -0.68
-+   ],
-+   "size": [
-+    0.085,
-+    0.27,
-+    0.085
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "magazine",
-+   "type": "box",
-+   "tint": "DARK",
-+   "pos": [
-+    0.52,
-+    -0.44,
-+    -0.34
-+   ],
-+   "size": [
-+    0.11,
-+    0.27,
-+    0.18
-+   ],
-+   "angle": [
-+    12,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rail",
-+   "type": "box",
-+   "tint": "VISOR",
-+   "pos": [
-+    0.52,
-+    -0.18,
-+    -0.39
-+   ],
-+   "size": [
-+    0.09,
-+    0.04,
-+    0.3
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"receiver","type":"box","tint":"GEAR","pos":[0.52,-0.28,-0.36],"size":[0.15,0.17,0.47],"angle":[0,0,0]},
++  {"name":"needle","type":"cylinder","tint":"TEAM","pos":[0.52,-0.28,-0.68],"size":[0.085,0.27,0.085],"angle":[90,0,0]},
++  {"name":"magazine","type":"box","tint":"DARK","pos":[0.52,-0.44,-0.34],"size":[0.11,0.27,0.18],"angle":[12,0,0]},
++  {"name":"rail","type":"box","tint":"VISOR","pos":[0.52,-0.18,-0.39],"size":[0.09,0.04,0.3],"angle":[0,0,0]}
 + ],
 + "twin-comets": [
-+  {
-+   "name": "r-receiver",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.5,
-+    -0.3,
-+    -0.36
-+   ],
-+   "size": [
-+    0.23,
-+    0.22,
-+    0.38
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "r-barrel",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.5,
-+    -0.28,
-+    -0.59
-+   ],
-+   "size": [
-+    0.13,
-+    0.19,
-+    0.13
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "r-pigment",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.5,
-+    -0.17,
-+    -0.33
-+   ],
-+   "size": [
-+    0.18,
-+    0.08,
-+    0.28
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "l-receiver",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    -0.5,
-+    -0.3,
-+    -0.36
-+   ],
-+   "size": [
-+    0.23,
-+    0.22,
-+    0.38
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "l-barrel",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    -0.5,
-+    -0.28,
-+    -0.59
-+   ],
-+   "size": [
-+    0.13,
-+    0.19,
-+    0.13
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "l-pigment",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    -0.5,
-+    -0.17,
-+    -0.33
-+   ],
-+   "size": [
-+    0.18,
-+    0.08,
-+    0.28
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"r-receiver","type":"box","tint":"GEAR","pos":[0.5,-0.3,-0.36],"size":[0.23,0.22,0.38],"angle":[0,0,0]},
++  {"name":"r-barrel","type":"cylinder","tint":"DARK","pos":[0.5,-0.28,-0.59],"size":[0.13,0.19,0.13],"angle":[90,0,0]},
++  {"name":"r-pigment","type":"box","tint":"TEAM","pos":[0.5,-0.17,-0.33],"size":[0.18,0.08,0.28],"angle":[0,0,0]},
++  {"name":"l-receiver","type":"box","tint":"GEAR","pos":[-0.5,-0.3,-0.36],"size":[0.23,0.22,0.38],"angle":[0,0,0]},
++  {"name":"l-barrel","type":"cylinder","tint":"DARK","pos":[-0.5,-0.28,-0.59],"size":[0.13,0.19,0.13],"angle":[90,0,0]},
++  {"name":"l-pigment","type":"box","tint":"TEAM","pos":[-0.5,-0.17,-0.33],"size":[0.18,0.08,0.28],"angle":[0,0,0]}
 + ],
 + "rail-charger": [
-+  {
-+   "name": "stock",
-+   "type": "box",
-+   "tint": "DARK",
-+   "pos": [
-+    0.49,
-+    -0.28,
-+    -0.17
-+   ],
-+   "size": [
-+    0.16,
-+    0.18,
-+    0.42
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "long-rail",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.49,
-+    -0.28,
-+    -0.68
-+   ],
-+   "size": [
-+    0.1,
-+    0.92,
-+    0.1
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "reservoir",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.49,
-+    -0.16,
-+    -0.43
-+   ],
-+   "size": [
-+    0.14,
-+    0.13,
-+    0.33
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "scope",
-+   "type": "box",
-+   "tint": "VISOR",
-+   "pos": [
-+    0.49,
-+    -0.07,
-+    -0.37
-+   ],
-+   "size": [
-+    0.09,
-+    0.1,
-+    0.17
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"stock","type":"box","tint":"DARK","pos":[0.49,-0.28,-0.17],"size":[0.16,0.18,0.42],"angle":[0,0,0]},
++  {"name":"long-rail","type":"cylinder","tint":"GEAR","pos":[0.49,-0.28,-0.68],"size":[0.1,0.92,0.1],"angle":[90,0,0]},
++  {"name":"reservoir","type":"box","tint":"TEAM","pos":[0.49,-0.16,-0.43],"size":[0.14,0.13,0.33],"angle":[0,0,0]},
++  {"name":"scope","type":"box","tint":"VISOR","pos":[0.49,-0.07,-0.37],"size":[0.09,0.1,0.17],"angle":[0,0,0]}
 + ],
 + "arc-blaster": [
-+  {
-+   "name": "body",
-+   "type": "capsule",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.52,
-+    -0.29,
-+    -0.34
-+   ],
-+   "size": [
-+    0.32,
-+    0.46,
-+    0.32
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "wide-muzzle",
-+   "type": "cylinder",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.52,
-+    -0.29,
-+    -0.64
-+   ],
-+   "size": [
-+    0.3,
-+    0.26,
-+    0.3
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "muzzle-inset",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.52,
-+    -0.29,
-+    -0.79
-+   ],
-+   "size": [
-+    0.19,
-+    0.07,
-+    0.19
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "grip",
-+   "type": "box",
-+   "tint": "DARK",
-+   "pos": [
-+    0.52,
-+    -0.45,
-+    -0.24
-+   ],
-+   "size": [
-+    0.13,
-+    0.2,
-+    0.14
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"body","type":"capsule","tint":"GEAR","pos":[0.52,-0.29,-0.34],"size":[0.32,0.46,0.32],"angle":[90,0,0]},
++  {"name":"wide-muzzle","type":"cylinder","tint":"TEAM","pos":[0.52,-0.29,-0.64],"size":[0.3,0.26,0.3],"angle":[90,0,0]},
++  {"name":"muzzle-inset","type":"cylinder","tint":"DARK","pos":[0.52,-0.29,-0.79],"size":[0.19,0.07,0.19],"angle":[90,0,0]},
++  {"name":"grip","type":"box","tint":"DARK","pos":[0.52,-0.45,-0.24],"size":[0.13,0.2,0.14],"angle":[0,0,0]}
 + ],
 + "metro-roller": [
-+  {
-+   "name": "shaft",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.47,
-+    -0.33,
-+    -0.47
-+   ],
-+   "size": [
-+    0.085,
-+    0.72,
-+    0.085
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "axle",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0,
-+    -0.33,
-+    -0.83
-+   ],
-+   "size": [
-+    0.1,
-+    1.1,
-+    0.1
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    90
-+   ]
-+  },
-+  {
-+   "name": "roller",
-+   "type": "cylinder",
-+   "tint": "TEAM",
-+   "pos": [
-+    0,
-+    -0.33,
-+    -0.83
-+   ],
-+   "size": [
-+    0.3,
-+    0.98,
-+    0.3
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    90
-+   ]
-+  },
-+  {
-+   "name": "end-left",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    -0.51,
-+    -0.33,
-+    -0.83
-+   ],
-+   "size": [
-+    0.25,
-+    0.07,
-+    0.25
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    90
-+   ]
-+  },
-+  {
-+   "name": "end-right",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.51,
-+    -0.33,
-+    -0.83
-+   ],
-+   "size": [
-+    0.25,
-+    0.07,
-+    0.25
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    90
-+   ]
-+  }
++  {"name":"shaft","type":"cylinder","tint":"GEAR","pos":[0.47,-0.33,-0.47],"size":[0.085,0.72,0.085],"angle":[90,0,0]},
++  {"name":"axle","type":"cylinder","tint":"DARK","pos":[0,-0.33,-0.83],"size":[0.1,1.1,0.1],"angle":[0,0,90]},
++  {"name":"roller","type":"cylinder","tint":"TEAM","pos":[0,-0.33,-0.83],"size":[0.3,0.98,0.3],"angle":[0,0,90]},
++  {"name":"end-left","type":"cylinder","tint":"GEAR","pos":[-0.51,-0.33,-0.83],"size":[0.25,0.07,0.25],"angle":[0,0,90]},
++  {"name":"end-right","type":"cylinder","tint":"GEAR","pos":[0.51,-0.33,-0.83],"size":[0.25,0.07,0.25],"angle":[0,0,90]}
 + ],
 + "dash-brush": [
-+  {
-+   "name": "handle",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.5,
-+    -0.34,
-+    -0.44
-+   ],
-+   "size": [
-+    0.09,
-+    0.71,
-+    0.09
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "ferrule",
-+   "type": "box",
-+   "tint": "DARK",
-+   "pos": [
-+    0.5,
-+    -0.34,
-+    -0.82
-+   ],
-+   "size": [
-+    0.27,
-+    0.2,
-+    0.14
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "bristles",
-+   "type": "capsule",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.5,
-+    -0.34,
-+    -1
-+   ],
-+   "size": [
-+    0.31,
-+    0.31,
-+    0.19
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "brush-tip",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.5,
-+    -0.34,
-+    -1.13
-+   ],
-+   "size": [
-+    0.26,
-+    0.1,
-+    0.1
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"handle","type":"cylinder","tint":"GEAR","pos":[0.5,-0.34,-0.44],"size":[0.09,0.71,0.09],"angle":[90,0,0]},
++  {"name":"ferrule","type":"box","tint":"DARK","pos":[0.5,-0.34,-0.82],"size":[0.27,0.2,0.14],"angle":[0,0,0]},
++  {"name":"bristles","type":"capsule","tint":"TEAM","pos":[0.5,-0.34,-1],"size":[0.31,0.31,0.19],"angle":[90,0,0]},
++  {"name":"brush-tip","type":"box","tint":"TEAM","pos":[0.5,-0.34,-1.13],"size":[0.26,0.1,0.1],"angle":[0,0,0]}
 + ],
 + "wave-slosher": [
-+  {
-+   "name": "bucket",
-+   "type": "cylinder",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.48,
-+    -0.3,
-+    -0.45
-+   ],
-+   "size": [
-+    0.42,
-+    0.43,
-+    0.4
-+   ],
-+   "angle": [
-+    25,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rim",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.1,
-+    -0.36
-+   ],
-+   "size": [
-+    0.46,
-+    0.07,
-+    0.44
-+   ],
-+   "angle": [
-+    25,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "inside",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.48,
-+    -0.055,
-+    -0.34
-+   ],
-+   "size": [
-+    0.34,
-+    0.045,
-+    0.32
-+   ],
-+   "angle": [
-+    25,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "handle",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.25,
-+    -0.12
-+   ],
-+   "size": [
-+    0.1,
-+    0.12,
-+    0.26
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"bucket","type":"cylinder","tint":"TEAM","pos":[0.48,-0.3,-0.45],"size":[0.42,0.43,0.4],"angle":[25,0,0]},
++  {"name":"rim","type":"cylinder","tint":"GEAR","pos":[0.48,-0.1,-0.36],"size":[0.46,0.07,0.44],"angle":[25,0,0]},
++  {"name":"inside","type":"cylinder","tint":"DARK","pos":[0.48,-0.055,-0.34],"size":[0.34,0.045,0.32],"angle":[25,0,0]},
++  {"name":"handle","type":"box","tint":"GEAR","pos":[0.48,-0.25,-0.12],"size":[0.1,0.12,0.26],"angle":[0,0,0]}
 + ],
 + "rotor-splatling": [
-+  {
-+   "name": "motor",
-+   "type": "capsule",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.25,
-+    -0.33
-+   ],
-+   "size": [
-+    0.33,
-+    0.51,
-+    0.33
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rotor-housing",
-+   "type": "cylinder",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.48,
-+    -0.26,
-+    -0.68
-+   ],
-+   "size": [
-+    0.3,
-+    0.22,
-+    0.3
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rotor-0",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.39999999999999997,
-+    -0.26,
-+    -0.91
-+   ],
-+   "size": [
-+    0.095,
-+    0.42,
-+    0.095
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rotor-1",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.5599999999999999,
-+    -0.26,
-+    -0.91
-+   ],
-+   "size": [
-+    0.095,
-+    0.42,
-+    0.095
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rotor-top",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.48,
-+    -0.16,
-+    -0.91
-+   ],
-+   "size": [
-+    0.095,
-+    0.42,
-+    0.095
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "grip",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.43,
-+    -0.2
-+   ],
-+   "size": [
-+    0.13,
-+    0.2,
-+    0.14
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"motor","type":"capsule","tint":"GEAR","pos":[0.48,-0.25,-0.33],"size":[0.33,0.51,0.33],"angle":[90,0,0]},
++  {"name":"rotor-housing","type":"cylinder","tint":"TEAM","pos":[0.48,-0.26,-0.68],"size":[0.3,0.22,0.3],"angle":[90,0,0]},
++  {"name":"rotor-0","type":"cylinder","tint":"DARK","pos":[0.39999999999999997,-0.26,-0.91],"size":[0.095,0.42,0.095],"angle":[90,0,0]},
++  {"name":"rotor-1","type":"cylinder","tint":"DARK","pos":[0.5599999999999999,-0.26,-0.91],"size":[0.095,0.42,0.095],"angle":[90,0,0]},
++  {"name":"rotor-top","type":"cylinder","tint":"DARK","pos":[0.48,-0.16,-0.91],"size":[0.095,0.42,0.095],"angle":[90,0,0]},
++  {"name":"grip","type":"box","tint":"GEAR","pos":[0.48,-0.43,-0.2],"size":[0.13,0.2,0.14],"angle":[0,0,0]}
 + ],
 + "canopy-guard": [
-+  {
-+   "name": "closed-canopy",
-+   "type": "capsule",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.48,
-+    -0.27,
-+    -0.6
-+   ],
-+   "size": [
-+    0.31,
-+    0.69,
-+    0.3
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "tip",
-+   "type": "cylinder",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.27,
-+    -0.98
-+   ],
-+   "size": [
-+    0.1,
-+    0.22,
-+    0.1
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "handle",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.48,
-+    -0.27,
-+    -0.2
-+   ],
-+   "size": [
-+    0.1,
-+    0.37,
-+    0.1
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "rib",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.11,
-+    -0.6
-+   ],
-+   "size": [
-+    0.085,
-+    0.065,
-+    0.53
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"closed-canopy","type":"capsule","tint":"TEAM","pos":[0.48,-0.27,-0.6],"size":[0.31,0.69,0.3],"angle":[90,0,0]},
++  {"name":"tip","type":"cylinder","tint":"GEAR","pos":[0.48,-0.27,-0.98],"size":[0.1,0.22,0.1],"angle":[90,0,0]},
++  {"name":"handle","type":"cylinder","tint":"DARK","pos":[0.48,-0.27,-0.2],"size":[0.1,0.37,0.1],"angle":[90,0,0]},
++  {"name":"rib","type":"box","tint":"GEAR","pos":[0.48,-0.11,-0.6],"size":[0.085,0.065,0.53],"angle":[0,0,0]}
 + ],
 + "chord-stringer": [
-+  {
-+   "name": "bow-core",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.48,
-+    -0.25,
-+    -0.48
-+   ],
-+   "size": [
-+    0.16,
-+    0.16,
-+    0.41
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "bow-top",
-+   "type": "capsule",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.48,
-+    0.01,
-+    -0.63
-+   ],
-+   "size": [
-+    0.12,
-+    0.52,
-+    0.12
-+   ],
-+   "angle": [
-+    -25,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "bow-bottom",
-+   "type": "capsule",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.48,
-+    -0.51,
-+    -0.63
-+   ],
-+   "size": [
-+    0.12,
-+    0.52,
-+    0.12
-+   ],
-+   "angle": [
-+    25,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "string",
-+   "type": "box",
-+   "tint": "VISOR",
-+   "pos": [
-+    0.48,
-+    -0.25,
-+    -0.38
-+   ],
-+   "size": [
-+    0.025,
-+    0.94,
-+    0.025
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "central-rail",
-+   "type": "cylinder",
-+   "tint": "DARK",
-+   "pos": [
-+    0.48,
-+    -0.25,
-+    -0.69
-+   ],
-+   "size": [
-+    0.09,
-+    0.34,
-+    0.09
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"bow-core","type":"box","tint":"GEAR","pos":[0.48,-0.25,-0.48],"size":[0.16,0.16,0.41],"angle":[0,0,0]},
++  {"name":"bow-top","type":"capsule","tint":"TEAM","pos":[0.48,0.01,-0.63],"size":[0.12,0.52,0.12],"angle":[-25,0,0]},
++  {"name":"bow-bottom","type":"capsule","tint":"TEAM","pos":[0.48,-0.51,-0.63],"size":[0.12,0.52,0.12],"angle":[25,0,0]},
++  {"name":"string","type":"box","tint":"VISOR","pos":[0.48,-0.25,-0.38],"size":[0.025,0.94,0.025],"angle":[0,0,0]},
++  {"name":"central-rail","type":"cylinder","tint":"DARK","pos":[0.48,-0.25,-0.69],"size":[0.09,0.34,0.09],"angle":[90,0,0]}
 + ],
 + "ink-saber": [
-+  {
-+   "name": "grip",
-+   "type": "capsule",
-+   "tint": "DARK",
-+   "pos": [
-+    0.49,
-+    -0.28,
-+    -0.25
-+   ],
-+   "size": [
-+    0.14,
-+    0.32,
-+    0.14
-+   ],
-+   "angle": [
-+    90,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "guard",
-+   "type": "box",
-+   "tint": "GEAR",
-+   "pos": [
-+    0.49,
-+    -0.28,
-+    -0.43
-+   ],
-+   "size": [
-+    0.31,
-+    0.16,
-+    0.085
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "blade",
-+   "type": "box",
-+   "tint": "TEAM",
-+   "pos": [
-+    0.49,
-+    -0.28,
-+    -0.81
-+   ],
-+   "size": [
-+    0.19,
-+    0.105,
-+    0.73
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  },
-+  {
-+   "name": "blade-edge",
-+   "type": "box",
-+   "tint": "VISOR",
-+   "pos": [
-+    0.49,
-+    -0.22,
-+    -0.81
-+   ],
-+   "size": [
-+    0.09,
-+    0.035,
-+    0.68
-+   ],
-+   "angle": [
-+    0,
-+    0,
-+    0
-+   ]
-+  }
++  {"name":"grip","type":"capsule","tint":"DARK","pos":[0.49,-0.28,-0.25],"size":[0.14,0.32,0.14],"angle":[90,0,0]},
++  {"name":"guard","type":"box","tint":"GEAR","pos":[0.49,-0.28,-0.43],"size":[0.31,0.16,0.085],"angle":[0,0,0]},
++  {"name":"blade","type":"box","tint":"TEAM","pos":[0.49,-0.28,-0.81],"size":[0.19,0.105,0.73],"angle":[0,0,0]},
++  {"name":"blade-edge","type":"box","tint":"VISOR","pos":[0.49,-0.22,-0.81],"size":[0.09,0.035,0.68],"angle":[0,0,0]}
 + ]
 +};
 +export function createF4ActorArt(parent,colors,makeEntity){
@@ -1438,9 +108,12 @@ new file mode 100644
 + const nodes=new Map();
 + const add=(parent,p)=>{
 +  const e=makeEntity("F4:Art:"+p.name);
-+  e.addComponent("render",{type:p.type,material:colors[p.tint],castShadows:false,receiveShadows:false});
-+  e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);e.setLocalEulerAngles(...p.angle);
-+  parent.addChild(e);return e;
++  try{
++   parent.addChild(e);
++   e.addComponent("render",{type:p.type,material:colors[p.tint],castShadows:false,receiveShadows:false});
++   e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);e.setLocalEulerAngles(...p.angle);
++   return e;
++  }catch(error){e.destroy();throw error;}
 + };
 + let weaponRoot=null,weaponId=null,disposed=false;
 + try{
@@ -1479,20 +152,19 @@ new file mode 100644
 diff --git a/src/app/B248SourceActorVisuals.ts b/src/app/B248SourceActorVisuals.ts
 --- a/src/app/B248SourceActorVisuals.ts
 +++ b/src/app/B248SourceActorVisuals.ts
-@@ -1,5 +1,7 @@
+@@ -1,6 +1,8 @@
  /** B248 render-only source actor silhouettes. Never add physics actors,
   * attack targets, stage solids, paint surfaces, Recast links or score. */
--import {Color,Entity,StandardMaterial} from 'playcanvas';
-+import {Color,Entity,StandardMaterial} from 'playcanvas';
+ import {Color,Entity,StandardMaterial} from 'playcanvas';
 +import {createF4ActorArt} from './F4ActorArt.mjs';
 +import type {WeaponId} from '../weapons/WeaponCatalog';
  import {GAME_CONFIG} from '../config/game/gameConfig';
  import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
-@@ -95,5 +97,10 @@
+ import {B268_COMPACT_HUMAN_PARTS,b268VariantAccepted,
+@@ -95,6 +97,11 @@
   setPose:(dx:number,dz:number,activity:number,phase:number)=>void;
  };
--const b268ActorVisuals=new WeakMap<Entity,B248Visual>();
-+const b268ActorVisuals=new WeakMap<Entity,B248Visual>();
+ const b268ActorVisuals=new WeakMap<Entity,B248Visual>();
 +const f4ActorArtSetters=new WeakMap<Entity,(id:WeaponId)=>boolean>();
 +/** Only decorated native actors; no inferred actor or weapon IDs. */
 +export function b248SetF4ActorArt(parent:Entity,id:WeaponId):boolean{
@@ -1500,46 +172,58 @@ diff --git a/src/app/B248SourceActorVisuals.ts b/src/app/B248SourceActorVisuals.
 +}
  /** Exact existing native source entities only, not inferred placements. */
  export function b248ExistingSourceActorVisual(parent:Entity):B248Visual|null{
-@@ -113,5 +120,15 @@
+  return b268ActorVisuals.get(parent)??null;
+@@ -112,6 +119,25 @@
+   e.setLocalPosition(...p.pos);e.setLocalScale(...p.size);
    humanRoot.addChild(e);limbs.set(p.name,e);
   }
-- const squidRoot=new Entity('B248:SQUID_VISUAL');
 + let f4Art:ReturnType<typeof createF4ActorArt>|null=null;
++ let f4ArtFailed=false;
 + f4ActorArtSetters.set(parent,(id)=>{
-+  if(f4Art)return f4Art.setWeapon(id);
-+  const candidate=createF4ActorArt(humanRoot,colors,name=>new Entity(name));
++  if(f4ArtFailed)return false;
 +  try{
-+   if(!candidate.setWeapon(id)){candidate.destroy();return false;}
-+   for(const limb of limbs.values())limb.enabled=false;
-+   candidate.root.enabled=true;f4Art=candidate;return true;
-+  }catch(error){candidate.destroy();throw error;}
++   if(!f4Art)f4Art=createF4ActorArt(humanRoot,colors,name=>new Entity(name));
++   if(!f4Art.setWeapon(id))throw Error('F4_VISUAL_UNKNOWN_WEAPON');
++   if(!f4Art.root.enabled){
++    for(const limb of limbs.values())limb.enabled=false;
++    f4Art.root.enabled=true;
++   }
++   return true;
++  }catch(error){
++   f4Art?.destroy();f4Art=null;f4ArtFailed=true;
++   for(const limb of limbs.values())limb.enabled=true;
++   console.warn('F4_ACTOR_ART_FALLBACK',error);
++   return false;
++  }
 + });
-+ const squidRoot=new Entity('B248:SQUID_VISUAL');
+  const squidRoot=new Entity('B248:SQUID_VISUAL');
   parent.addChild(squidRoot);
   if(role==='PLAYER')for(const p of [
-@@ -248,5 +265,6 @@
+@@ -248,6 +274,7 @@
    if(flowRoot)flowRoot.setLocalEulerAngles(0,facing,0);
    squidRoot.setLocalEulerAngles(0,facing,0);
--  const swing=b249StrideDegrees(activity,phase);
-+  const swing=b249StrideDegrees(activity,phase);
+   const swing=b249StrideDegrees(activity,phase);
 +  f4Art?.setStride(swing);
    for(const [part,sign] of [
     ['left-arm',-1],['right-arm',1],
+    ['left-leg',1],['right-leg',-1]
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -201,5 +201,5 @@
+@@ -201,7 +201,7 @@
+  type B254NativeVisualMode} from './B254NativeActorVisualIsolation';
  import {b255ActorReviewEligible,B255_ACTOR_REVIEW_AUTHORITY,
   type B255ActorPresentation} from './B255SourceActorReview';
 -import {b248ExistingSourceActorVisual} from './B248SourceActorVisuals';
 +import {b248ExistingSourceActorVisual,b248SetF4ActorArt} from './B248SourceActorVisuals';
  import {b399ActorIntersectsCameraAim,B399_CLEAR_SIGHT_AUTHORITY,
   b399NativeRealVAllowed}
-@@ -6941,6 +6941,26 @@
+  from './B399NativeCameraAimClearance';
+@@ -7051,7 +7051,28 @@
+   hud.dataset.t21B401NeutralCells=String(next.neutral);
    hud.dataset.t21B401OfficialWinner='NONE';
   }
 - private update(dt:number){
--  this.updateW10B22OwnerTrial();
 + // Existing native actor entities and real equipped IDs; visual-only.
 + // WeakMap model cache is per actor, including any recreated CPU entity.
 + private syncF4ActorArt():void{
@@ -1547,20 +231,21 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +     this.canvas.dataset.t21F4ActorArt==='ERROR'||this.stopReason)return;
 +  try{
 +   const human=this.app.root.findByName('Player');
-+   if(human instanceof Entity)b248SetF4ActorArt(human,this.projectiles.currentPlayerWeapon.id);
++   let applied=human instanceof Entity&&b248SetF4ActorArt(human,this.projectiles.currentPlayerWeapon.id)?1:0;
 +   const native=(this.cpu as unknown as {bots:readonly {
 +    entity:Entity;weaponId:import('../weapons/WeaponCatalog').WeaponId
 +   }[]}).bots;
-+   for(const bot of native)b248SetF4ActorArt(bot.entity,bot.weaponId);
-+   this.canvas.dataset.t21F4ActorArt='ON';
++   for(const bot of native)if(b248SetF4ActorArt(bot.entity,bot.weaponId))applied++;
++   const artState=applied===native.length+1?'ON':'PARTIAL';
++   if(this.canvas.dataset.t21F4ActorArt!==artState)this.canvas.dataset.t21F4ActorArt=artState;
 +  }catch(error){
-+   // Art must never stop native gameplay; existing actor visual survives a failed swap.
++   // Art must never stop native gameplay; failed actor restores generic B248.
 +   this.canvas.dataset.t21F4ActorArt='ERROR';
 +   console.warn('F4_ACTOR_ART_FALLBACK',error);
 +  }
 + }
 + private update(dt:number){
 +  this.syncF4ActorArt();
-+  this.updateW10B22OwnerTrial();
-   // No player/CPU physics ticks with old colliders while F3L verifies.
-   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
+   this.updateW10B22OwnerTrial();
+   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+    const deadline=performance.now()+3;

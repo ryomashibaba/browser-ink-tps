@@ -1,19 +1,29 @@
 diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
 --- a/src/ink/InkSurfaceMaterial.ts
 +++ b/src/ink/InkSurfaceMaterial.ts
-@@ -36,5 +36,7 @@
+@@ -36,6 +36,9 @@
  uniform float uSourceWetInkStyle;
  uniform float uInkOnly;
--uniform vec4 uF4PaintPlane;
-+uniform vec4 uF4PaintPlane;
+ uniform vec4 uF4PaintPlane;
 +uniform float uF4VisualPolish;
++uniform vec3 uF4LightDir;
 +uniform vec3 view_position;
  varying vec2 vUv0;
  varying vec3 vWorldPos;
-@@ -73,5 +75,28 @@
+ void main(void) {
+@@ -61,7 +64,7 @@
+   float worldPattern = 0.965 + 0.035 * sin(vWorldPos.x * 1.6 + vWorldPos.z * 1.2);
+   color *= worldPattern;
+   color += vec3(0.10, 0.12, 0.14) * wetness;
+-  if (uSourceWetInkStyle > 0.5) {
++  if (uSourceWetInkStyle > 0.5 && !(uF4VisualPolish > 0.5 && uInkOnly > 0.5)) {
+     // A deliberately SOURCE-only, authored visual treatment. The existing
+     // atlas coverage and original footprint STILL determine every ink pixel.
+     // Pigment and wet highlights disappear exactly when coverage is zero.
+@@ -72,6 +75,29 @@
+     color = mix(uNeutralColor, teamColor * pigment, coverage) * worldPattern;
      color += vec3(0.19, 0.22, 0.25) * wetGlint;
    }
--  gl_FragColor = vec4(color, 1.0);
 +  // F4 visual-only wet film: one existing atlas sample, unchanged mask.
 +  if (uF4VisualPolish > 0.5 && uInkOnly > 0.5) {
 +    vec3 n = normalize(uF4PaintPlane.xyz);
@@ -21,7 +31,7 @@ diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
 +    float distanceToEye = max(length(vRaw), 0.001);
 +    vec3 v = vRaw / distanceToEye;
 +    n *= dot(n, v) < 0.0 ? -1.0 : 1.0;
-+    vec3 lightDir = normalize(vec3(-0.45, 0.82, 0.36));
++    vec3 lightDir = normalize(uF4LightDir);
 +    vec3 hRaw = lightDir + v;
 +    vec3 h = hRaw / max(length(hRaw), 0.001);
 +    vec2 p = local;
@@ -37,22 +47,32 @@ diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
 +    color += vec3(0.93, 0.97, 1.0) * glint;
 +    color = clamp(color, 0.0, 1.0);
 +  }
-+  gl_FragColor = vec4(color, 1.0);
+   gl_FragColor = vec4(color, 1.0);
  }`;
  
-@@ -103,5 +128,7 @@
+@@ -103,6 +129,9 @@
  uniform uSourceWetInkStyle: f32;
  uniform uInkOnly: f32;
--uniform uF4PaintPlane: vec4f;
-+uniform uF4PaintPlane: vec4f;
+ uniform uF4PaintPlane: vec4f;
 +uniform uF4VisualPolish: f32;
++uniform uF4LightDir: vec3f;
 +uniform view_position: vec3f;
  var uInkAtlas: texture_2d<f32>;
  var uInkAtlasSampler: sampler;
-@@ -142,5 +169,27 @@
+ varying vUv0: vec2f;
+@@ -132,7 +161,7 @@
+   var color = mix(uniform.uNeutralColor, teamColor, coverage);
+   let worldPattern = 0.965 + 0.035 * sin(input.vWorldPos.x * 1.6 + input.vWorldPos.z * 1.2);
+   color = color * worldPattern + vec3f(0.10, 0.12, 0.14) * wetness;
+-  if (uniform.uSourceWetInkStyle > 0.5) {
++  if (uniform.uSourceWetInkStyle > 0.5 && !(uniform.uF4VisualPolish > 0.5 && uniform.uInkOnly > 0.5)) {
+     let stipple = sin(input.vWorldPos.x * 12.5 +
+       sin(input.vWorldPos.z * 7.4) * 0.8);
+     let flow = sin(input.vWorldPos.z * 8.1 - input.vWorldPos.x * 3.7);
+@@ -141,6 +170,28 @@
+     color = mix(uniform.uNeutralColor, teamColor * pigment, coverage) *
        worldPattern + vec3f(0.19, 0.22, 0.25) * wetGlint;
    }
--  var output: FragmentOutput;
 +  // Same F4 wet-film expression as GLSL; ownership and coverage untouched.
 +  if (uniform.uF4VisualPolish > 0.5 && uniform.uInkOnly > 0.5) {
 +    var n = normalize(uniform.uF4PaintPlane.xyz);
@@ -60,7 +80,7 @@ diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
 +    let distanceToEye = max(length(vRaw), 0.001);
 +    let v = vRaw / distanceToEye;
 +    n = n * select(1.0, -1.0, dot(n, v) < 0.0);
-+    let lightDir = normalize(vec3f(-0.45, 0.82, 0.36));
++    let lightDir = normalize(uniform.uF4LightDir);
 +    let hRaw = lightDir + v;
 +    let h = hRaw / max(length(hRaw), 0.001);
 +    let p = local;
@@ -75,55 +95,59 @@ diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
 +    color = mix(uniform.uNeutralColor, teamColor * pigment, coverage);
 +    color = clamp(color + vec3f(0.93, 0.97, 1.0) * glint, vec3f(0.0), vec3f(1.0));
 +  }
-+  var output: FragmentOutput;
+   var output: FragmentOutput;
    output.color = vec4f(color, 1.0);
    return output;
-@@ -164,5 +213,6 @@
+@@ -164,6 +215,8 @@
  
    material.cull = CULLFACE_NONE;
--  material.setParameter('uInkOnly', 0);
-+  material.setParameter('uInkOnly', 0);
+   material.setParameter('uInkOnly', 0);
 +  material.setParameter('uF4VisualPolish', 0);
++  material.setParameter('uF4LightDir', new Float32Array([0, 1, 0]));
    material.setParameter('uF4PaintPlane', new Float32Array([
      surface.normal.x, surface.normal.y, surface.normal.z, surface.normal.dot(surface.center)
+   ]));
 diff --git a/src/stage/TestStage.ts b/src/stage/TestStage.ts
 --- a/src/stage/TestStage.ts
 +++ b/src/stage/TestStage.ts
-@@ -103,6 +103,7 @@
+@@ -102,7 +102,8 @@
+  * coordinates sent to Rapier and Recast. The ink shader clips the candidates
   * to the registered plane envelope and samples only the existing atlas. */
  export function installF4InkGeometry(
 -  app: AppBase, root: Entity, surfaces: readonly PaintSurface[], worldTriangles: Float32Array
--): () => void {
 +  app: AppBase, root: Entity, surfaces: readonly PaintSurface[], worldTriangles: Float32Array,
-+  visualPolish = false
-+): () => void {
++  visualPolish = false, visualLightDirection?: Vec3
+ ): () => void {
    const a = new Vec3();
    const b = new Vec3();
-@@ -125,5 +126,6 @@
+@@ -125,6 +126,7 @@
      for (const { entity, instance, previous, ink } of entries) {
        instance.mesh = previous;
--      instance.material.setParameter('uInkOnly', 0);
-+      instance.material.setParameter('uInkOnly', 0);
+       instance.material.setParameter('uInkOnly', 0);
 +      instance.material.setParameter('uF4VisualPolish', 0);
        instance.material.depthBias = 0;
        entity.enabled = true;
-@@ -165,5 +167,6 @@
+       ink?.destroy();
+@@ -165,6 +167,9 @@
        ink.update();
        instance.mesh = ink;
--      instance.material.setParameter('uInkOnly', 1);
-+      instance.material.setParameter('uInkOnly', 1);
+       instance.material.setParameter('uInkOnly', 1);
 +      instance.material.setParameter('uF4VisualPolish', visualPolish ? 1 : 0);
++      if (visualPolish && visualLightDirection) instance.material.setParameter('uF4LightDir',
++        new Float32Array([visualLightDirection.x, visualLightDirection.y, visualLightDirection.z]));
        instance.material.depthBias = -2;
      }
+     for (const { child } of solids) child.enabled = false;
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -3224,5 +3224,12 @@
+@@ -3277,6 +3277,15 @@
    // has passed its own exact source/UV/texture SHA verification.
    let installed:Awaited<ReturnType<typeof loadF3lTexturedSource>>=null;
--  let restoreF4InkGeometry:(()=>void)|undefined;
-+  let restoreF4InkGeometry:(()=>void)|undefined;
-+  const f4VisualPolish=this.f4ResearchMode&&this.f4WholeTrimeshRequested&&
+   let restoreF4InkGeometry:(()=>void)|undefined;
++  const visualKey=this.app.root.findByName('T21F3:Sun');
++  const f4VisualPolish=visualKey instanceof Entity&&!!visualKey.light&&
++   this.f4ResearchMode&&this.f4WholeTrimeshRequested&&
 +   this.b203FullRound&&import.meta.env.DEV&&
 +   ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
 +   sessionStorage.getItem('t21F4ProvisionalTurf')==='on'&&
@@ -132,32 +156,31 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +   new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
    try{
     const uv=new URL('t21-f3g-source/f3l-original-textured.json',
-@@ -3271,6 +3278,6 @@
-     this.ink.setPhysicalPaintBacking((surface,u,v)=>
+     document.baseURI);
+@@ -3325,7 +3334,8 @@
       this.physics.hasF4PaintBacking(surface,u,v));
--    restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
+     if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
+     restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
 -     this.b45SourceSurfaces,wholeNavWorld);
-+    restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
-+     this.b45SourceSurfaces,wholeNavWorld,f4VisualPolish);
++     this.b45SourceSurfaces,wholeNavWorld,f4VisualPolish,
++     visualKey instanceof Entity?visualKey.up:undefined);
      this.sourceCompletion.root.enabled=false;
      this.structures.root.enabled=false;
-@@ -3315,6 +3322,17 @@
-     this.nav=this.f4WholeStudyNav;
+     this.canvas.dataset.t21F4ResearchTrimesh='READY';
+@@ -3370,6 +3380,16 @@
      this.f4WholeCpuConnected=true;
--    this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
--   }
-+    this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
-+   }
+     this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
+    }
 +   // Optical only: retain the existing single directional light and draw budget.
 +   // Apply only after the actual F4 geometry and CPU world are connected.
 +   if(f4VisualPolish&&this.f4WholeTrimeshInstalled&&this.f4WholeCpuConnected){
-+    const key=this.app.root.findByName('T21F3:Sun');
-+    if(key instanceof Entity&&key.light){
++    if(visualKey instanceof Entity&&visualKey.light){
 +     this.app.scene.ambientLight=new Color(.62,.68,.74);
-+     key.light.intensity=1.65;
-+     key.light.color=new Color(1,.97,.91);
++     visualKey.light.intensity=1.65;
++     visualKey.light.color=new Color(1,.97,.91);
 +     this.canvas.dataset.t21F4VisualPolish='ON';
 +    }
 +   }
     // Preserve the same separately verified source background as the
     // prior native loader. It remains unregistered and strictly optical.
+    if(!this.stopReason&&!this.f4WholeTrimeshInstalled){
