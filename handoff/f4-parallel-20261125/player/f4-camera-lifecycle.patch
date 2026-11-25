@@ -1,0 +1,87 @@
+diff --git a/src/camera/ThirdPersonCamera.ts b/src/camera/ThirdPersonCamera.ts
+--- a/src/camera/ThirdPersonCamera.ts
++++ b/src/camera/ThirdPersonCamera.ts
+@@ -47,7 +47,17 @@
+   private currentCameraDistance = Number.NaN;
+   /** Gameplay options are opt-in for the T21 source practice preview only. */
+   private sourcePracticeControls = false;
+-  private f4StableAimEnabled = false;
++  private f4StableAimEnabled = false;
++  private readonly f4AimCueTarget=new Vec3();
++  /** Clear presentation history at the existing authoritative player spawn. */
++  public resetF4AimTracking():void{
++   if(!this.f4StableAimEnabled)return;
++   this.currentCameraDistance=Number.NaN;
++   this.previousF4ViewTarget.set(NaN,NaN,NaN);
++   this.currentShoulderOffset=this.shoulder;
++   this.sourceSmartOcclusion.resetCandidate();
++   this.sourceCombatAimContact=null;
++  }
+ 
+   /** Only the provisional native F4 full-round app may opt in. */
+   public enableF4StableAim():void {
+@@ -106,9 +116,15 @@
+   private sourceCombatAimContact:{
+    id:string;guarded:boolean;distanceMeters:number
+   }|null=null;
+-  public sourceCombatAimSnapshot(){
+-   return this.sourceCombatAimContact?{...this.sourceCombatAimContact}:null;
+-  }
++  /** Optional refresh for the rendered F4 reticle; legacy QA snapshots stay read-only. */
++  public sourceCombatAimSnapshot(refreshCurrentView=false){
++   if(refreshCurrentView&&this.f4StableAimEnabled&&
++      this.physics.hasF4WholeResearchTrimesh&&!this.b258ResearchEnabled&&
++      this.sourceCombatAimQuery){
++    this.getAimTarget(this.f4AimCueTarget);
++   }
++   return this.sourceCombatAimContact?{...this.sourceCombatAimContact}:null;
++  }
+ 
+   public enableSourceCombatAim(query: CombatAimQuery): void {
+     if (!this.sourcePracticeControls) throw Error('SOURCE_PRACTICE_REQUIRED');
+@@ -662,8 +678,12 @@
+     });
+ 
+     document.addEventListener('mousemove', (event) => {
+-      if (document.pointerLockElement !== this.canvas) return;
+-      const sensitivity=this.sourcePracticeControls?
++      if (document.pointerLockElement !== this.canvas) return;
++      // Zero-motion mouse events must not consume recapture protection.
++      // During focus-loss event ordering, ignore untrusted view intent.
++      if(this.f4StableAimEnabled&&(document.hidden||!document.hasFocus()||
++         (event.movementX===0&&event.movementY===0)))return;
++      const sensitivity=this.sourcePracticeControls?
+        this.sourceAimSensitivityMultiplier:1;
+       // Invalid or pathological mouse deltas can follow Pointer Lock
+       // recapture. Keep genuine SOURCE aim usable without altering T20.
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -719,8 +719,10 @@
+     this.body.setNextKinematicTranslation({ x: position.x, y: position.y, z: position.z });
+     this.position.copy(position);
+     this.previousPosition.copy(position);
+-    this.renderPosition.copy(position);
+-    this.sourceSupportedSolidId=null;
++    this.renderPosition.copy(position);
++    // Presentation reset only; the actual spawn and colliders above remain authoritative.
++    this.camera.resetF4AimTracking?.();
++    this.sourceSupportedSolidId=null;
+     this.sourceFootGapMeters=null;
+     this.footPoint.set(
+       position.x,
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -8124,7 +8124,10 @@
+   const twin=this.projectiles.currentPlayerWeapon.twinComets===true;
+   cross.hidden=!active||twin;
+   this.refreshTwinCometsReticles(active&&twin);
+-  const target=active?this.camera.sourceCombatAimSnapshot():null;
++  // The rendered eye can differ from the last fixed-tick eye. Twin Comets
++  // already refresh the actual ray in refreshTwinCometsReticles unless locked.
++  const target=active?this.camera.sourceCombatAimSnapshot(
++   !twin||this.player.twinCometsPhase==='ROLL_LOCK'):null;
+   const confirmation=this.f4CombatConfirmation;
+   const text=!active?'':tick-this.f4ReticleSplatTick<54?'SPLAT':
+    tick-this.f4ReticleHitTick<27?'HIT':'';
