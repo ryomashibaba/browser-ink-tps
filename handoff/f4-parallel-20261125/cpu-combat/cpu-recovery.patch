@@ -1,0 +1,209 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -49,1 +49,2 @@
+-import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
++import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
++import { recoveringInk, recoveryAction, shouldThrowCombatSub, mergedRecovery } from './F4CpuRecoveryPolicy.mjs';
+@@ -294,5 +295,6 @@
+   ink: number;
+   inkRecoveryLockSeconds: number;
+-  f4SubRecoverySeconds?: number;
++  f4SubRecoverySeconds?: number;
++  f4RecoveringInk?: boolean;
+   hpRecoveryDelaySeconds: number;
+   lethalHumanDirect: boolean;
+@@ -2575,8 +2577,11 @@
+   public tryConsumeF4CanopyInk(id: string, cost: number, lock: number): boolean {
+     const bot = this.bots.find(candidate => candidate.id === id);
+-    if (!bot || bot.weaponId !== 'canopy-guard' || !this.sourceCpuMayStartActions(bot) ||
+-        bot.ink + 1e-6 < cost) return false;
+-    bot.ink = Math.max(0, bot.ink - cost);
+-    bot.inkRecoveryLockSeconds = Math.max(lock, bot.inkRecoveryLockSeconds);
++    if (!bot || bot.weaponId !== 'canopy-guard' || !this.sourceCpuMayStartActions(bot) ||
++        !Number.isFinite(bot.ink)||!Number.isFinite(cost)||cost<0||
++        bot.ink + 1e-6 < cost) return false;
++    const nextLock=mergedRecovery(bot.inkRecoveryLockSeconds,lock);
++    if(nextLock===null)return false;
++    bot.ink = Math.max(0, bot.ink - cost);
++    bot.inkRecoveryLockSeconds = nextLock;
+     return true;
+   }
+@@ -3501,6 +3506,40 @@
+     humanPosition:Vec3,humanActive:boolean,groundTravel?:GroundTravel
+   ):void{
+-    if(this.trySourceTurfSubBeforeMain(
+-      bot,humanTeam,humanPosition,humanActive)){
++    // F4 only: an actual low tank earns a quiet recovery window. Preserve
++    // committed charge/burst and allow paid close-defense shots; no forced
++    // refill, invented movement or change to the actual recovery rates.
++    if(this.f4WholeNavigation&&this.f4ResearchCombatStageRay){
++      bot.f4RecoveringInk=recoveringInk(bot.f4RecoveringInk===true,bot.ink,GAME_CONFIG.inkEconomy.capacity);
++      if(bot.f4RecoveringInk){
++        const profile=weaponProfile(bot.weaponId,true);
++        const committed=bot.weaponChargeSeconds>0||bot.weaponBurstShotsRemaining>0;
++        const target=committed?null:this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,dt,true);
++        const action:CpuWeaponAction=profile.weaponClass==='STRINGER'?'STRINGER_RELEASE':
++          profile.weaponClass==='SPLATANA'?'SPLATANA_RELEASE':
++          profile.weaponClass==='ROLLER'?'ROLLER_FLICK':
++          profile.weaponClass==='BRUSH'?'BRUSH_SWIPE':'PROJECTILE';
++        const minCharge=profile.charger?profile.minChargeSeconds/Math.max(1e-6,profile.chargeSeconds):0;
++        const mode=recoveryAction({recovering:true,committed,ink:bot.ink,
++          minCost:cpuWeaponInkCost(profile,action,minCharge),range:cpuWeaponRangeMeters(profile),
++          visible:target!==null,distance:target?Math.sqrt(horizontalDistanceSq(bot.position,target)):Infinity});
++        if(mode==='RECOVER'){
++          this.advanceCpuWeaponTimers(bot,dt,Boolean(profile.shooter||profile.blaster||
++            profile.contactWeapon||profile.slosher||profile.canopy));
++          bot.f4CanopyHold=false;
++          bot.weaponGuarding=false;
++          bot.contactMovingFrames=0;
++          return;
++        }
++        this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
++        return; // No optional bomb while reserving actual ink for recovery.
++      }
++      if(this.tryF4CombatSubBeforeMain(bot,humanTeam,humanPosition,humanActive)){
++        this.advanceCpuWeaponTimers(bot,dt);
++        bot.contactMovingFrames=0;
++        return;
++      }
++    }
++    if(this.trySourceTurfSubBeforeMain(
++      bot,humanTeam,humanPosition,humanActive)){
+       // A genuine bomb replaces this tick's main shot. Update all the
+       // ordinary weapon timers exactly once, not a free extra main shot.
+@@ -3509,6 +3548,9 @@
+       return;
+     }
+-    this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
+-    this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
++    const shotsBefore=this.pendingShots.length;
++    this.updateCpuWeapon(bot,dt,humanTeam,humanPosition,humanActive,groundTravel);
++    // Even contact travel can queue a main action without a shot timer.
++    if(this.f4WholeNavigation&&this.pendingShots.length>shotsBefore)return;
++    this.updateCpuKit(bot,humanTeam,humanPosition,humanActive);
+   }
+ 
+@@ -3515,1 +3557,29 @@
+-  /** Shared SUB charge transaction: physical bomb pool, ink, cooldown,
++  /** A real visible enemy beyond MAIN reach may earn one already supported
++   * paid bomb instead of another floor shot. No direct damage or throw physics. */
++  private tryF4CombatSubBeforeMain(bot:CpuBot,humanTeam:Team.A|Team.B,
++    humanPosition:Vec3,humanActive:boolean):boolean{
++    if(!this.f4WholeNavigation||!this.f4SharedBombsEnabled||!this.f4ResearchCombatStageRay||
++       !this.sourceCpuMayStartActions(bot)||bot.subCooldownSeconds>0||
++       bot.weaponGuarding||bot.f4CanopyOpen||bot.weaponChargeSeconds>0||
++       bot.weaponBurstShotsRemaining>0||bot.fireRemaining>1e-8)return false;
++    const subId=weaponKit(bot.weaponId,true).sub;
++    const cost=subWeaponProfile(subId).inkCost;
++    const capacity=GAME_CONFIG.inkEconomy.capacity;
++    if(bot.ink-cost<capacity*.25-1e-6||
++       !['pulse-bomb','snap-bomb','anchor-bomb','torpedo'].includes(subId))return false;
++    const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
++    if(!target)return false;
++    const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId,true));
++    const distance=Math.sqrt(horizontalDistanceSq(bot.position,target));
++    if(distance<=range)return false;
++    const main=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0,true);
++    if(!shouldThrowCombatSub({subId,visible:true,mainTargetVisible:main!==null,
++      committed:false,recovering:bot.f4RecoveringInk===true,ink:bot.ink,cost,capacity,distance,
++      mainRange:range,subMin:GAME_CONFIG.cpu.kit.subMinTargetDistanceMeters,
++      subMax:GAME_CONFIG.cpu.kit.subMaxTargetDistanceMeters}))return false;
++    const direction=target.clone().sub(bot.position);
++    if(direction.lengthSq()<=1e-8)return false;
++    return this.queueCpuPaidSub(bot,subId,target,direction.normalize());
++  }
++
++  /** Shared SUB charge transaction: physical bomb pool, ink, cooldown,
+@@ -3538,7 +3608,11 @@
+          direction.x,direction.y,direction.z].every(Number.isFinite)||
+        direction.lengthSq()<=1e-8)return false;
+-    const priorRecoveryLock=bot.inkRecoveryLockSeconds;
+-    bot.ink=Math.max(0,bot.ink-profile.inkCost);
+-    bot.inkRecoveryLockSeconds=this.f4SharedBombsEnabled?f4SubRecovery(subId):GAME_CONFIG.inkEconomy.recoveryLockSeconds;
++    const priorRecoveryLock=bot.inkRecoveryLockSeconds;
++    const recovery=this.f4SharedBombsEnabled?f4SubRecovery(subId):GAME_CONFIG.inkEconomy.recoveryLockSeconds;
++    const nextLock=this.f4SharedBombsEnabled?mergedRecovery(priorRecoveryLock,recovery):recovery;
++    if(this.f4SharedBombsEnabled&&(!Number.isFinite(bot.ink)||!Number.isFinite(profile.inkCost)||
++       profile.inkCost<=0||nextLock===null))return false;
++    bot.ink=Math.max(0,bot.ink-profile.inkCost);
++    bot.inkRecoveryLockSeconds=nextLock!;
+     bot.subCooldownSeconds=this.f4SharedBombsEnabled?F4_SUB_REPEAT:cpuSubCooldownSeconds(subId,bot.role);
+     this.pendingKitRequests.push({
+@@ -4087,10 +4161,12 @@
+     if (!this.f4WholeNavigation || !bot || bot.team !== request.team ||
+         bot.weaponId !== request.weaponId || !this.sourceCpuMayStartActions(bot)) return false;
+-    if (bot.ink + 1e-6 < cost) {
+-      bot.contactMovingFrames = 0;
+-      return false;
+-    }
+-    bot.ink = Math.max(0, bot.ink - cost);
+-    bot.inkRecoveryLockSeconds = recovery;
++    const nextLock=mergedRecovery(bot.inkRecoveryLockSeconds,recovery);
++    if (!Number.isFinite(bot.ink)||!Number.isFinite(cost)||cost<0||
++        nextLock===null||bot.ink + 1e-6 < cost) {
++      bot.contactMovingFrames = 0;
++      return false;
++    }
++    bot.ink = Math.max(0, bot.ink - cost);
++    bot.inkRecoveryLockSeconds = nextLock;
+     bot.contactMovingFrames = (bot.contactMovingFrames ?? 0) + 1;
+     return true;
+@@ -4754,6 +4830,9 @@
+   ): boolean {
+     const profile = weaponProfile(bot.weaponId, this.f4WholeNavigation);
+-    const inkCost = cpuWeaponInkCost(profile, action, charge);
+-    if (bot.ink + 1e-6 < inkCost) {
++    const inkCost = cpuWeaponInkCost(profile, action, charge);
++    if(this.f4WholeNavigation&&(!Number.isFinite(bot.ink)||!Number.isFinite(inkCost)||
++       inkCost<=0||!Number.isFinite(charge)||charge<0||charge>1||
++       ![target.x,target.y,target.z].every(Number.isFinite)))return false;
++    if (bot.ink + 1e-6 < inkCost) {
+       // A validated aim is NOT a paid projectile. Count an actual main
+       // weapon resource denial in the selected SOURCE battle only.
+@@ -4768,11 +4847,14 @@
+     const oldBurstShots=bot.weaponBurstShotsRemaining;
+     const oldBurstCooldown=bot.weaponBurstCooldown;
+-    bot.ink = Math.max(0, bot.ink - inkCost);
+-    bot.inkRecoveryLockSeconds =
+-      profile.shooter?.recoveryLockSeconds ?? profile.blaster?.recoveryLockSeconds ??
+-      profile.contactWeapon?.swingRecovery ?? profile.slosher?.recoveryLockSeconds ??
+-      profile.canopy?.recoveryLockSeconds ??
+-      (this.f4WholeNavigation && action === 'SPLATANA_RELEASE' ? F4_SABER_TIMING.recovery :
+-        GAME_CONFIG.inkEconomy.recoveryLockSeconds);
++    const recovery =
++      profile.shooter?.recoveryLockSeconds ?? profile.blaster?.recoveryLockSeconds ??
++      profile.contactWeapon?.swingRecovery ?? profile.slosher?.recoveryLockSeconds ??
++      profile.canopy?.recoveryLockSeconds ??
++      (this.f4WholeNavigation && action === 'SPLATANA_RELEASE' ? F4_SABER_TIMING.recovery :
++        GAME_CONFIG.inkEconomy.recoveryLockSeconds);
++    const nextLock=this.f4WholeNavigation?mergedRecovery(oldRecoveryLock,recovery):recovery;
++    if(nextLock===null)return false;
++    bot.ink = Math.max(0, bot.ink - inkCost);
++    bot.inkRecoveryLockSeconds = nextLock;
+ 
+     const origin = new Vec3(
+@@ -5401,6 +5483,7 @@
+     bot.contactMovingFrames = 0;
+     bot.weaponGuarding = false;
+-    bot.f4CanopyHold = false;
+-    bot.f4CanopyOpen = false;
++    bot.f4CanopyHold = false;
++    bot.f4CanopyOpen = false;
++    bot.f4RecoveringInk = false;
+     bot.guardEntity.enabled = false;
+     if (resetGuard) {
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -82,5 +82,6 @@
+  fireRemaining:number;jumpCooldownSeconds:number;
+  lifeState?:'ACTIVE'|'SPLATTED';hp?:number;weaponId?:WeaponId;
+- ink?:number;b213ActualAttackerId?:string|null;b213ActualHitTick?:number;
++ ink?:number;b213ActualAttackerId?:string|null;b213ActualHitTick?:number;
++ f4RecoveringInk?:boolean;
+ }
+ /** Read-only SOURCE QA observation: a native splat may occur in the
+@@ -1649,1 +1650,1 @@
+-   (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18;
++   (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
