@@ -1,0 +1,122 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -9,7 +9,8 @@
+  * result while the human is controlled by real PlayerInput.
+  */
+ import {Vec3} from 'playcanvas';
+-import {F4PatrolNavigation,type PatrolCandidate,type PatrolInk} from '../ai/F4PatrolNavigation.mjs';
++import {F4PatrolNavigation,type PatrolCandidate,type PatrolInk} from '../ai/F4PatrolNavigation.mjs';
++import {F4PatrolSurvey} from '../ai/F4PatrolSurvey.mjs';
+ import type {CrowdAgent} from 'recast-navigation';
+ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
+@@ -619,7 +620,8 @@
+  }>();
+  private readonly f4LastSeenOpponent=new Map<string,{id:string;point:Vec3;tick:number}>();
+  private readonly f4WholeDirections=new Map<string,number>();
+- private readonly f4PatrolNavigation=new F4PatrolNavigation();
++ private readonly f4PatrolNavigation=new F4PatrolNavigation();
++ private readonly f4PatrolSurvey=new F4PatrolSurvey();
+ 
+  constructor(
+   private readonly stage:StageDefinition,private nav:RecastStageNavigation,
+@@ -1794,8 +1796,17 @@
+   }
+  }
+ 
+- private f4WholeWalkTarget(from:Vec3,target:Vec3,shortLeg=false):Vec3|null{
+-  const path=this.nav.auditPath(from,target,.20);
++ private f4WholeWalkTarget(from:Vec3,target:Vec3,shortLeg=false,maxRouteMeters=Infinity):Vec3|null{
++  const path=this.nav.auditPath(from,target,.20);
++  if(Number.isFinite(maxRouteMeters)){
++   if(!path.querySuccess||!path.reachedTarget)return null;
++   let length=0;
++   for(let i=1;i<path.nativePathPoints.length;i++){
++    const a=path.nativePathPoints[i-1]!,b=path.nativePathPoints[i]!;
++    length+=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
++   }
++   if(!Number.isFinite(length)||length>maxRouteMeters)return null;
++  }
+   const [start]=path.nativePathPoints;
+   const goal=path.nativePathPoints.at(-1);
+   if(!(path.reachedTarget&&path.pointCount>=2&&start&&goal&&
+@@ -1979,14 +1990,49 @@
+   const orderedFronts=stalledOnRoute?[]:this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,
+    frontsBySide.map((p,i)=>{const point=new Vec3(...p);return {point,ink:inkAt(point),order:i,index:i};}),
+    allies.map(a=>a.position),options).map(r=>[r.point.x,r.point.y,r.point.z] as const);
+-  const candidates=[...ahead,...centerLegs,...orderedFronts];
+-  for(const candidate of stalledOnRoute?[]:candidates){
+-   const target=new Vec3(...candidate);
+-   if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
+-   const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
+-   if(!point||avoids(point))continue;
+-   return request(point,false);
+-  }
++  // Preserve measured ingress and center transfer priority before optional survey.
++  for(const candidate of stalledOnRoute?[]:[...ahead,...centerLegs]){
++   const target=new Vec3(...candidate);
++   if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
++   const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
++   if(!point||avoids(point))continue;
++   return request(point,false);
++  }
++  // Sparse real owner-grid survey, only on ordinary free patrol away from
++  // spawn/center transfers. Existing actual-floor/route/KCC gates remain.
++  if(this.freeCombat&&this.sourceInk&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42){
++   const current=this.sourceNativeCharacterFootHit(foot);
++   const sample=current&&this.sourceInk.sampleWorld(current.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++   if(sample&&(!recovering||sample.owner!==bot.team)){
++    const proposed=this.f4PatrolSurvey.propose(id,this.b137NativeTick,sample.surface,sample.u,sample.v,
++     bot.team,SurfaceFlags.Paintable,SurfaceFlags.Wall,Team.Neutral,recovering);
++    const verified:PatrolCandidate<Vec3>[]=[];
++    for(const [i,candidate] of proposed.entries()){
++     const point=sample.surface.localToWorld(candidate.u,candidate.v);
++     const projection=this.nav.auditNavMeshProjection(point);
++     const p=projection.nearestPoint;
++     if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
++        Math.abs(p.y-foot.y)>.65||Math.abs(p.z)<=12||Math.abs(p.z)>=42||avoids(new Vec3(p.x,p.y,p.z)))continue;
++     const floor=this.sourceNativeCharacterFootHit(p);
++     const live=floor&&this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++     if(!live||live.surface!==sample.surface||
++        (recovering?live.owner!==bot.team:live.owner===bot.team))continue;
++     verified.push({point:new Vec3(p.x,p.y,p.z),ink:live.owner===bot.team?'OWN':live.owner===Team.Neutral?'NEUTRAL':'ENEMY',
++      order:i,index:i});
++    }
++    for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,verified,allies.map(a=>a.position),options).slice(0,2)){
++     const point=this.f4WholeWalkTarget(foot,candidate.point,false,8);
++     if(point&&!avoids(point)&&point.distance(candidate.point)<=.25)return request(point,true);
++    }
++   }
++  }
++  for(const candidate of orderedFronts){
++   const target=new Vec3(...candidate);
++   if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
++   const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
++   if(!point||avoids(point))continue;
++   return request(point,false);
++  }
+   // Test short native walking targets toward the center first. A target
+   // across a drop, another level or without a real floor stays on HOLD.
+   const directions=[[0,side],[1,side],[-1,side],[1,0],[-1,0],[0,-side]] as const;
+@@ -3793,7 +3839,7 @@
+   // relocation and no synthetic actor position. Even when all CPUs are
+   // released, refresh validity each physical tick before CPU goal choice.
+   this.b137NativeTick=frame;
+-  if(this.f4WholeSupport)this.f4PatrolNavigation.beginTick(frame);
++  if(this.f4WholeSupport){this.f4PatrolNavigation.beginTick(frame);this.f4PatrolSurvey.beginTick(frame);}
+   // Genuine player foot from THIS 60Hz physics step, never historical
+   // pursuit data. F4-only: a dead or airborne HUMAN cannot freeze B CPUs.
+   // The pinned original terrain uses its own corridor goals instead of
+@@ -4252,8 +4298,9 @@
+   if(this.f4WholeSupport){
+    this.f4WholeGoals.delete(id);
+    this.f4WholeDirections.delete(id);
+-   this.f4PatrolNavigation.clear(id);
+-   this.f4LastSeenOpponent.delete(id);
++   this.f4PatrolNavigation.clear(id);
++   this.f4PatrolSurvey.clear(id);
++   this.f4LastSeenOpponent.delete(id);
+    return;
+   }
+   this.f4OriginalPatrol?.delete(id);
