@@ -1,0 +1,8 @@
+# F4 live input exclusivity (Windows source patch)
+Base shared source: 4142f0b41b17ed6afa87b0f95ad5d77ead259daa. At Windows repository root run git apply --check <patch>, then git apply <patch> only if current context matches. Do not reset/stash/replace dirty work. Four source files, no new runtime helper.
+- src/app/B379NativePlayerWeaponMobility.ts base blob 81beb811fa9d96b0b7813858fe2adc1b97bda6d4
+- src/special/F4SpecialRuntime.ts base blob 1c00f2d366186c98cec5b9cafd55aef600b9d3de
+- src/projectile/ProjectileSystem.ts base blob 6c2e0ef10e17b7412d2f92bcd2b5f82ca0f59571
+- src/app/UndertowF3PlayablePreviewApp.ts base blob 22f4dcc8e8d6521ea2e1041aa2a31adc33c3dfcd
+G is consumed once before normal weapon movement; active cast/lock and otherwise valid isolated G attempt suppress main weapon-specific mobility, fire/secondary/primary tap/contact travel/weaponEnabled including existing pending attack gates. Ordinary WASD/jump and already launched projectiles remain. A rejected valid G attempt intentionally blocks normal weapon actions for one tick. No changes to CPU permission, score, geometry or probe-only admission. Special muzzle uses existing Rapier stage ray for every main class, leaves main muzzle and aim intact; not a clearance proof for projectile radius or Zipcaster.
+Verification: unique anchors and independent unified diff replay against four exact retrieved files; 16 isolated checks (11 actual method-body V8 checks, 5 source linkage assertions). No full TypeScript/build/Chrome/Windows KCC verification. Batch apply with next integration; targeted typecheck and G+RMB/held fire/near-wall cases. No new 180s run just for patch.

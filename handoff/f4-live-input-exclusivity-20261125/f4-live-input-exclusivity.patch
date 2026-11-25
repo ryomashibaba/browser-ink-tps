@@ -1,0 +1,168 @@
+diff --git a/src/app/B379NativePlayerWeaponMobility.ts b/src/app/B379NativePlayerWeaponMobility.ts
+--- a/src/app/B379NativePlayerWeaponMobility.ts
++++ b/src/app/B379NativePlayerWeaponMobility.ts
+@@ -14,13 +14,14 @@
+  readonly realPointerLocked:boolean;readonly sourceRoundPhase:string;
+  readonly stopped:boolean;
+  /** Only the user-selected genuine 180-second original SOURCE round. */
+- readonly canonicalSourceRound?:boolean;
+- readonly payTwinCometsDodgeInk?:()=>boolean;
++ readonly canonicalSourceRound?:boolean;
++ readonly weaponInputBlocked?:boolean;
++ readonly payTwinCometsDodgeInk?:()=>boolean;
+ }):{readonly movementMultiplier:number;readonly realDodgeAccepted:boolean;
+  readonly realBrellaGuardTap:boolean}{
+  // Consume a queued right-click even during death/timeout; no stale dodge.
+  const secondaryPress=input.input.consumeSecondaryPressed();
+- const eligible=input.humanAlive&&input.realPointerLocked&&!input.stopped&&
++ const eligible=!input.weaponInputBlocked&&input.humanAlive&&input.realPointerLocked&&!input.stopped&&
+   (input.sourceRoundPhase==='STAGING'||input.sourceRoundPhase==='PLAYING');
+  // A physical right-click can start AND finish between two 60Hz
+  // ticks. B379 already consumes that edge for DUALIES, so the actual
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -121,7 +121,12 @@
+     }
+   }
+ 
+-  actorTick(tick: number, actor: Actor, input: Input, open: boolean, isolatedRequest: boolean): boolean {
++  /** Read-only ownership before normal weapon movement and attacks. */
++  ownsWeaponInput(actorId:string,tick:number):boolean {
++    return this.active.has(actorId)||tick<(this.actorUnlock.get(actorId)??0);
++  }
++
++  actorTick(tick: number, actor: Actor, input: Input, open: boolean, isolatedRequest: boolean): boolean {
+     this.frame=Math.max(this.frame,tick);
+     const {actorId,lifeId,team,weapon}=actor;
+     const key={roundId:this.roundId,tick,actorId,lifeId};
+@@ -140,7 +145,7 @@
+         if(this.port.begin({...key,team,special,input:{weapon}}))
+           this.completedProbeLives.add(probeKey);
+       }
+-      if(!this.active.has(actorId))return tick<(this.actorUnlock.get(actorId)??0);
++      if(!this.active.has(actorId))return this.ownsWeaponInput(actorId,tick);
+       this.livePose.get(actorId)?.();
+       this.port.step({...key,input:{trigger:input.trigger,holdStamp:input.trigger,
+         holdThrow:input.holdThrow,releaseThrow:input.releaseThrow,airborne:input.airborne,
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -791,7 +791,14 @@
+       muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
+   }
+ 
+-  public solvePlayerLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
++  /** Special muzzle uses the existing stage ray for every main class. */
++  public clipF4SpecialMuzzle(body:Vec3,muzzle:Vec3):Vec3 {
++    return this.physics.hasF4WholeResearchTrimesh
++      ?this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle).clone()
++      :muzzle.clone();
++  }
++
++  public solvePlayerLaunchDirection(origin: Vec3, target: Vec3, out = new Vec3()): Vec3 {
+     const profile = this.currentPlayerWeapon;
+     if (profile.contactWeapon && origin.distance(target) > 1e-4)
+       return out.sub2(target, origin).normalize();
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -5859,24 +5859,34 @@
+     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
+     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
+     const profile=this.projectiles.currentPlayerWeapon;
+-    const twin=profile.twinComets===true;
+-    const b379Mobility=applyB379NativePlayerWeaponMobility({
++    const twin=profile.twinComets===true;
++    // Consume G once, before normal weapon-specific KCC actions.
++    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
++    const f4SpecialNextTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
++    const f4SpecialStartRequest=Boolean(this.f4SpecialProbe&&this.f4Special&&
++     this.f4WholeTrimeshInstalled&&f4SpecialPressed&&alive&&this.player.canShoot&&
++     this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas);
++    const f4SpecialOwnsMobility=Boolean(this.f4SpecialProbe&&this.f4Special&&
++     this.f4WholeTrimeshInstalled&&(f4SpecialStartRequest||
++      this.f4Special.ownsWeaponInput('human',f4SpecialNextTick)));
++    const b379Mobility=applyB379NativePlayerWeaponMobility({
+      input:this.input,player:this.player,weapons:this.projectiles,
+      realPointerLocked:document.pointerLockElement===this.canvas,
+      humanAlive:alive,sourceRoundPhase:this.matchState,
+      stopped:Boolean(this.stopReason),
+-     canonicalSourceRound:this.nativeLiveSourcePrestart,
+-     payTwinCometsDodgeInk:twin?()=>this.resources.tryConsumeContactInk(
++     canonicalSourceRound:this.nativeLiveSourcePrestart,
++     weaponInputBlocked:f4SpecialOwnsMobility,
++     payTwinCometsDodgeInk:twin?()=>this.resources.tryConsumeContactInk(
+       7,profile.shooter!.recoveryLockSeconds):undefined
+     });
+-    const contactStart=alive&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
++    const contactStart=alive&&!f4SpecialOwnsMobility&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'&&
+      (twin||this.input.fireHeld&&profile.contactWeapon)?
+      this.player.getPosition().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)):
+      undefined;
+     const mist=this.f4SharedBombsEnabled?this.humanSub.sampleF4Mist('human',Team.A,
+      alive?this.player.getPosition(this.p):null,this.stats.playerInk):undefined;
+-    if(alive)this.player.computeFixed(seconds,twin?this.input.fireHeld:undefined,
+-     this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
++    if(alive)this.player.computeFixed(seconds,twin&&!f4SpecialOwnsMobility?this.input.fireHeld:undefined,
++     f4SpecialOwnsMobility?undefined:this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
+     this.physics.step();
+     this.player.syncAfterPhysics(seconds);
+     const contactTravel=contactStart&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'?
+@@ -6019,10 +6029,9 @@
+     const primaryTap=this.input.consumePrimaryPressed();
+     const realPointerFire=this.input.fireHeld||primaryTap;
+     const subTap=this.input.consumeSubPressed();
+-    const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
+-    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
++    const f4RoundTick=this.f4Special?Math.round((180-this.remainingSeconds)*60):0;
+     if(this.f4SpecialProbe&&this.matchState==='PLAYING')this.f4Special?.update(f4RoundTick);
+-    let f4SpecialOwnsInput=false;
++    let f4SpecialOwnsInput=f4SpecialOwnsMobility;
+     const humanShotsBefore=this.stats.shotsFired;
+     if(this.w10b14){
+      const w=this.w10b14;
+@@ -6065,18 +6074,20 @@
+       const secondary=specialOpen&&this.input.secondaryHeld;
+       if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
+       this.f4SpecialWasAlive=alive;
+-      f4SpecialOwnsInput=this.f4Special.actorTick(f4RoundTick,{
++      const specialAcceptedOrActive=this.f4Special.actorTick(f4RoundTick,{
+        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
+       },{
+-       origin:this.muzzle.clone(),forward:this.aim.clone(),
++       origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),
++       forward:this.aim.clone(),
+        foot:this.player.getPosition(new Vec3()).sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0)),
+        cannon:this.player.canShoot&&subTap,
+        trigger:this.player.canShoot&&realPointerFire,
+        holdThrow:this.player.canShoot&&secondary,
+        releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
+        airborne:!this.stats.playerGrounded
+-      },specialOpen,f4SpecialPressed&&this.player.canShoot);
+-      this.f4SpecialSecondaryHeld=secondary;
++      },specialOpen,f4SpecialStartRequest&&this.player.canShoot);
++      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
++      this.f4SpecialSecondaryHeld=secondary;
+      }
+      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
+@@ -6088,11 +6099,13 @@
+        (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
+        this.player.canShoot,
+       this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
+-      actionWindow.humanCanStartNewActions,alive,contactTravel,primaryTap,
+-      twin?{aimTarget:this.target,phase:this.player.twinCometsPhase,
+-       rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
+-      actionWindow.cpuCanStartNewActions,
+-      this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
++      actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput,
++      alive&&(!this.f4SpecialProbe||this.resources.currentHp>0),
++      f4SpecialOwnsInput?undefined:contactTravel,!f4SpecialOwnsInput&&primaryTap,
++      twin&&!f4SpecialOwnsInput?{aimTarget:this.target,phase:this.player.twinCometsPhase,
++       rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
++      actionWindow.cpuCanStartNewActions,
++      !f4SpecialOwnsInput&&this.input.moveY > 0 && this.input.moveX === 0 && !this.input.squidHeld);
+     }
+     if(this.stats.shotsFired>humanShotsBefore&&
+        this.input.primaryPressSequence>this.lastRealFirePressMeasured){
