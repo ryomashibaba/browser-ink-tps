@@ -1,0 +1,128 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -299,7 +299,9 @@
+   readonly b150ApprovedInkAims:number;
+   /** B153 source-verified A1 aim proposals after rotation. */
+   readonly b153DiversifiedAimApprovals:number;
+-  readonly realGoalRequests:number;
++  readonly realGoalRequests:number;
++  /** Local combat proposals, not proof of executed Crowd/KCC motion. */
++  readonly f4LocalCombatProposals?:Readonly<{attempts:number;candidateCount:number;admitted:number}>;
+   readonly heldRequests:number;
+   readonly engagementGoalRequests:number;
+   /** Native original upper-spawn return, no synthetic respawns. */
+@@ -485,7 +487,8 @@
+  /** Original-source CPU recovery intent; based only on its native HP. */
+  private readonly originalSourceRecoveryIntent=new Set<string>();
+  private auditedTargets=0;
+- private realGoalRequests=0;
++ private realGoalRequests=0;
++ private readonly f4LocalCombatProposals={attempts:0,candidateCount:0,admitted:0};
+  private heldRequests=0;
+  private engagementGoalRequests=0;
+  private b137RealCandidateChecks=0;
+@@ -1652,18 +1655,12 @@
+      foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+      this.b137NativeTick-previous.advanced<30)return result(previous.point);
+ 
+-  if(localActionsOpen&&visible&&sight?.actorId&&previous?.local&&
+-     !this.respawnOriginalDrops.has(bot.id)&&this.isLiveRejoinedSourceCpu(bot.id)){
+-   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range);
+-   if(tactical)return result(tactical);
+-  }
+-
+-  const forwardX=dx/distance,forwardZ=dz/distance;
++  const forwardX=dx/distance,forwardZ=dz/distance;
+   const advance=recovering||distance<range*.42?-1:
+    !visible||distance>range*.78?1:0;
+   const side=bot.id.endsWith('2')||bot.id.endsWith('4')?-1:1;
+   const step=Math.min(1.8,Math.max(.65,range*.19));
+-  const candidates:{point:Vec3;score:number;covered:boolean}[]=[];
++  const candidates:{point:Vec3;score:number;covered:boolean;localVerified:boolean}[]=[];
+   for(const lateral of [side,-side,0]){
+    if(advance===0&&lateral===0)continue;
+    const point=new Vec3(foot.x+step*(forwardX*advance-forwardZ*lateral),
+@@ -1680,16 +1677,29 @@
+    const spacing=Math.hypot(p.x-target.x,p.z-target.z);
+    const score=recovering?(covered?6:0)+(ownsInk(floor.point)?2:0)+spacing*.2:
+     (covered?-5:0)-Math.abs(spacing-range*.64)*.25+(lateral===0?-.2:0);
+-   candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered});
+-  }
+-  for(const {point,covered} of candidates.sort((a,b)=>b.score-a.score)){
++   candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
++    localVerified:projection.success&&projection.distanceMeters!==null&&
++     projection.distanceMeters<=.25&&Math.abs(floor.point.y-p.y)<=.12});
++  }
++  // Reuse this thought's actual F4 NavMesh projections. The frozen original
++  // patrol list is concentrated at |Z|>=33, mostly outside the local lane.
++  // Never broaden the local lane or bypass a pending nonlocal movement.
++  if(localActionsOpen&&visible&&sight?.actorId&&previous?.local&&
++     !this.respawnOriginalDrops.has(bot.id)&&this.isLiveRejoinedSourceCpu(bot.id)){
++   const nativeCandidates=candidates.filter(c=>c.localVerified&&
++    (recovering||!c.covered)).map(c=>c.point);
++   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range,nativeCandidates);
++   if(tactical)return result(tactical);
++  }
++  for(const {point,covered} of candidates.sort((a,b)=>b.score-a.score)){
+    if(!recovering&&covered&&visible&&distance<=range)continue;
+    const walk=this.f4WholeWalkTarget(foot,point);
+    if(walk)return result(walk);
+   }
+   return visible&&distance<=range?result(null):null;
+  }
+- private f4AdmitLocalCombat(bot:F3TrafficCpu,foot:Vec3,opponent:string,range:number):Vec3|null{
++ private f4AdmitLocalCombat(bot:F3TrafficCpu,foot:Vec3,opponent:string,range:number,
++  nativeCandidates:readonly Vec3[]):Vec3|null{
+   if(!this.physics||!bot.weaponId)return null;
+   // Stay on the same local lane, clear of all center transfer and spawn bands.
+   const local=(point:Readonly<{x:number;y:number;z:number}>)=>
+@@ -1704,11 +1714,23 @@
+    const ink=this.sourceInk?.sampleWorld(point,.10,SurfaceFlags.Paintable,SurfaceFlags.Scoreable|SurfaceFlags.Wall);
+    return !ink?'UNKNOWN':ink.owner===bot.team?'OWN':ink.owner===Team.Neutral?'NEUTRAL':'ENEMY';
+   };
+-  const candidates=(this.patrolGoals.get(bot.id)??[]).slice(0,16)
+-   .filter(point=>local(point)&&point.distance(foot)<=3.2)
+-   .map(point=>({foot:point,existingNativePoint:true as const,localTrafficAllowed:true as const,
+-    inkRelation:inkRelation(point)}));
++  // Native projected candidates first; retain old patrol points as fallback
++  // only within the original strict lane. No additional projection searches.
++  const points:Vec3[]=[];
++  for(const point of [...nativeCandidates,...(this.patrolGoals.get(bot.id)??[]).slice(0,16)]){
++   if(!local(point)||point.distance(foot)>3.2||point.distance(foot)<.35||
++      points.some(p=>p.distance(point)<.12))continue;
++   const floor=this.sourceNativeCharacterFootHit(point);
++   if(!floor||floor.solidId!==support.solidId||(floor.normal?.y??0)<.97||
++      Math.abs(floor.point.y-point.y)>.12)continue;
++   points.push(point);
++   if(points.length>=16)break;
++  }
++  const candidates=points.map(point=>({foot:point,existingNativePoint:true as const,
++   localTrafficAllowed:true as const,inkRelation:inkRelation(point)}));
+-  const admitted=chooseLocalCombatGoal({
++  this.f4LocalCombatProposals.attempts++;
++  this.f4LocalCombatProposals.candidateCount+=candidates.length;
++  const admitted=chooseLocalCombatGoal({
+    f4:true,alive:true,grounded:true,rejoined:true,localWalkingAllowed:true,
+    centerTransferPending:false,respawnPending:false,currentSupport:true,
+    foot,hp:bot.hp,ink:bot.ink,weaponClass:weaponProfile(bot.weaponId,true).weaponClass,
+@@ -1727,7 +1749,8 @@
+    }
+    return {reached:true,staticSupport:true,trafficAllowed:true,step};
+   });
+-  return admitted?new Vec3(admitted.step.x,admitted.step.y,admitted.step.z):null;
++  if(admitted)this.f4LocalCombatProposals.admitted++;
++  return admitted?new Vec3(admitted.step.x,admitted.step.y,admitted.step.z):null;
+  }
+ 
+  useF4WholeNavigation(nav:RecastStageNavigation,support:(id:string,foot:Vec3)=>boolean,
+@@ -4431,7 +4454,8 @@
+     b150SourceCandidateSamples:this.b150SourceCandidateSamples,
+     b150ApprovedInkAims:this.b150ApprovedInkAims,
+     b153DiversifiedAimApprovals:this.b153DiversifiedAimApprovals,
+-    realGoalRequests:this.realGoalRequests,
++    realGoalRequests:this.realGoalRequests,
++    ...(this.f4WholeSupport?{f4LocalCombatProposals:{...this.f4LocalCombatProposals}}:{}),
+     heldRequests:this.heldRequests,
+     engagementGoalRequests:this.engagementGoalRequests,
+     respawnOriginalDetected:this.respawnOriginalDetected,
