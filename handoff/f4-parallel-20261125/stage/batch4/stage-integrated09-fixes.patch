@@ -1,0 +1,118 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -62,2 +62,3 @@
+   private isPhysicallyBacked(surface:PaintSurface,x:number,y:number,index:number):boolean{
+-    if(!this.backedCell)return true;
++    // A provisional wall has no paint/ink authority without live mesh backing.
++    if(!this.backedCell)return !surface.id.startsWith('F4ProvisionalWall:');
+@@ -114,3 +115,24 @@
+ 
+-  public getSurface(id: string): PaintSurface | undefined {
++  /** Read-only seam proof; use the very same five-ray raster backing cache. */
++  public isF4WallCellBacked(surface:PaintSurface,x:number,y:number):boolean{
++    if(!this.backedCell||!surface.id.startsWith('F4ProvisionalWall:')||
++       this.surfaces.get(surface.id)!==surface||!Number.isInteger(x)||!Number.isInteger(y)||
++       !surface.isCellActive(x,y))return false;
++    const index=surface.index(x,y),required=SurfaceFlags.Paintable|SurfaceFlags.Wall;
++    return ((surface.flagsGrid[index]??0)&required)===required&&
++      this.isPhysicallyBacked(surface,x,y,index);
++  }
++
++  /** Boot rollback only; never remove the frozen SOURCE registration. */
++  public unregisterF4ProvisionalWall(surface:PaintSurface):void{
++    if(!surface.id.startsWith('F4ProvisionalWall:')||surface.isScoreable||
++       this.surfaces.get(surface.id)!==surface)return;
++    this.surfaces.delete(surface.id);
++    this.backingCache.delete(surface.id);
++    const index=this.sampleBounds.findIndex(row=>row.surface===surface);
++    if(index>=0)this.sampleBounds.splice(index,1);
++    this.f4ProvisionalTurf=null;
++  }
++
++  public getSurface(id: string): PaintSurface | undefined {
+     return this.surfaces.get(id);
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -1,1 +1,2 @@
+-import { PerformanceStats } from '../core/PerformanceStats';
++import { PerformanceStats } from '../core/PerformanceStats';
++import {f4WallContinuationBrushes} from '../stage/F4WallContinuationBrushes.mjs';
+@@ -64,2 +65,8 @@
+   }
+-  public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
++  public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
++  public detachF4WallAtlas(atlas:GpuInkAtlas):void{
++    if(this.f4WallAtlas!==atlas)return;
++    this.f4WallAtlas=null;
++    for(let i=this.requests.length-1;i>=0;i--)
++      if(this.requests[i]!.surfaceId.startsWith('F4ProvisionalWall:'))this.requests.splice(i,1);
++  }
+@@ -109,3 +116,7 @@
+     const cpuScoreableAreaMeters2ByActor: Record<string, number> = {};
+-    for (const request of batch) {
+-      const source = request.source ?? PaintSource.System;
++    // Split one authentic brush only after the original tile accepts raster cells.
++    // Insert its continuations immediately, retaining opposing-team FIFO order.
++    let continuations: Set<Readonly<PaintRequest>>|undefined;
++    for (let requestIndex=0;requestIndex<batch.length;requestIndex++) {
++      const request=batch[requestIndex]!;
++      const source = request.source ?? PaintSource.System;
+@@ -115,3 +126,19 @@
+       const result = this.gameplay.apply(event);
+-      changedCells += result.changedCells;
++      changedCells += result.changedCells;
++      if(this.f4WallAtlas&&event.type===PaintEventType.WallImpact&&
++         (source===PaintSource.Human||source===PaintSource.Cpu)&&
++         event.surfaceId.startsWith('F4ProvisionalWall:')&&result.rasterEligibleCells>0&&
++         !continuations?.has(request)){
++        const surface=this.gameplay.getSurface(event.surfaceId);
++        if(surface){
++          const adjacent=f4WallContinuationBrushes(surface,this.gameplay.getSurfaces(),event,
++            result.paintableRuns,(s,x,y)=>this.gameplay.isF4WallCellBacked(s,x,y));
++          if(adjacent.length){
++            const extra=adjacent.map(p=>Object.freeze({...request,...p,gaugeEligible:false}));
++            continuations??=new Set();
++            for(const item of extra)continuations.add(item);
++            batch.splice(requestIndex+1,0,...extra);
++          }
++        }
++      }
+       // Existing QA uses the raster observation to distinguish denied
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3316,2 +3316,15 @@
+    new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
+-  let f4WallVertices:Float32Array|null=null;
++  let f4WallVertices:Float32Array|null=null;
++  let wallInstallation:ReturnType<typeof prepareF4ProvisionalWalls>=null;
++  const rollbackWalls=()=>{
++   const walls=wallInstallation;if(!walls)return;
++   wallInstallation=null;
++   this.coordinator.detachF4WallAtlas(walls.atlas);
++   for(const surface of walls.surfaces){
++    this.ink.unregisterF4ProvisionalWall(surface);
++    const index=this.f4PhysicalPaintSurfaces.indexOf(surface);
++    if(index>=0)this.f4PhysicalPaintSurfaces.splice(index,1);
++   }
++   walls.root.destroy();walls.atlas.destroy();
++   this.canvas.dataset.t21F4ProvisionalWalls='ROLLED_BACK';
++  };
+@@ -3417,2 +3430,2 @@
+      try{
+-      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices);
++      const walls=wallInstallation=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices);
+@@ -3428,2 +3441,2 @@
+       }else this.canvas.dataset.t21F4ProvisionalWalls='HOLD_NO_ACCESSIBLE_CONCRETE';
+-     }catch(error){this.canvas.dataset.t21F4ProvisionalWalls='HOLD '+String(error).slice(0,180);}
++     }catch(error){rollbackWalls();this.canvas.dataset.t21F4ProvisionalWalls='HOLD '+String(error).slice(0,180);}
+@@ -3468,4 +3481,5 @@
+    }
+-  }catch(error){
+-   this.f4WholeStudyNav?.destroy();
++  }catch(error){
++   rollbackWalls();
++   this.f4WholeStudyNav?.destroy();
+    this.f4WholeStudyNav=null;
