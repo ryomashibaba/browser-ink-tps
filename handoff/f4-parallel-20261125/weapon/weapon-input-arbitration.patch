@@ -1,0 +1,205 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -314,8 +314,9 @@
+   private chargeSeconds = 0;
+   private f4StringerTapPending = false;
+   private f4RailTapPending = false;
+-  private f4PressBufferedUntil = -1;
+-  private f4SaberReleaseUntil = -1;
++  private f4PressBufferedUntil = -1;
++  private f4InstantPressUntil = -1;
++  private f4SaberReleaseUntil = -1;
+   private f4SaberReleaseCharged = false;
+   private wasFireHeld = false;
+   private dualiesFocusSeconds = 0;
+@@ -830,12 +831,36 @@
+   }
+ 
+   private clearF4WeaponInputBuffers(): void {
+-    this.f4PressBufferedUntil = -1;
+-    this.f4SaberReleaseUntil = -1;
++    this.f4PressBufferedUntil = -1;
++    this.f4InstantPressUntil = -1;
++    this.f4SaberReleaseUntil = -1;
+     this.f4SaberReleaseCharged = false;
+   }
+ 
+-  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
++  /** No overlapping paid main windup and human sub launch in provisional play.
++   * Recovery cooldown alone does not bar F; released physical projectiles remain active. */
++  public canStartF4HumanSub(): boolean {
++    return this.chargeSeconds <= 0 && this.burstShotsRemaining <= 0 &&
++      !this.pendingSloshes?.has('human') && !this.pendingSaberSwings?.has('human') &&
++      !this.pendingCanopyVolleys?.has('human') &&
++      this.canopies?.lookup('human')?.phase !== 'OPEN';
++  }
++
++  private f4InstantTrigger(profile: WeaponProfile, allowed: boolean, held: boolean, pressed: boolean): boolean {
++    if (!allowed || !['SHOOTER','DUALIES','BLASTER','SLOSHER'].includes(profile.weaponClass)) {
++      this.f4InstantPressUntil = -1;
++      return held;
++    }
++    if (held && pressed) this.f4InstantPressUntil = this.b367NativeFrame + 3;
++    return held || this.b367NativeFrame <= this.f4InstantPressUntil;
++  }
++
++  private f4ConsumeInstantTrigger(shotsBefore: number, cooldownBefore: number): void {
++    if (this.stats.shotsFired > shotsBefore || this.fireCooldown > cooldownBefore + 1e-8)
++      this.f4InstantPressUntil = -1;
++  }
++
++  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
+     if (this.currentPlayerWeapon.canopy) return this.canopies?.lookup('human')?.phase === 'OPEN' ? 0.74 : 1;
+     const { weaponClass, contactWeapon } = this.currentPlayerWeapon;
+     if (contactWeapon && fireHeld) {
+@@ -1154,9 +1179,14 @@
+     this.rollPaintCooldown = Math.max(-0.5, this.rollPaintCooldown - dt);
+     this.meleeCooldown = Math.max(-0.5, this.meleeCooldown - dt);
+     this.dualiesFocusSeconds = Math.max(0, this.dualiesFocusSeconds - dt);
+-    this.guardBreakSeconds = Math.max(0, this.guardBreakSeconds - dt);
+-
+-    const guarding =
++    this.guardBreakSeconds = Math.max(0, this.guardBreakSeconds - dt);
++    const f4InstantRequested = f4 ? this.f4InstantTrigger(profile,
++      f4HumanAllowed && (!profile.twinComets || twinComets?.phase !== 'ROLL_LOCK'),
++      fireHeld, risingFire || primaryPressed) : fireHeld;
++    const f4InstantShotsBefore = this.stats.shotsFired;
++    const f4InstantCooldownBefore = this.fireCooldown;
++
++    const guarding =
+       profile.weaponClass === 'BRELLA' &&
+       !profile.canopy &&
+       secondaryHeld &&
+@@ -1198,7 +1228,7 @@
+       if (playerWeaponEnabled && playerDamageable) {
+         if (twinComets?.rollTravel) this.paintTwinCometsDodge(twinComets.rollTravel, team);
+         if (twinComets?.phase !== 'ROLL_LOCK') {
+-          this.updateTwinComets(profile, fireHeld, {
++          this.updateTwinComets(profile, f4InstantRequested, {
+             muzzle: muzzlePosition, forward: aimDirection, target: twinComets?.aimTarget ??
+               muzzlePosition.clone().add(aimDirection.clone().mulScalar(profile.shooter!.combatRangeMeters)),
+             body: playerPosition, grounded: this.stats.playerGrounded,
+@@ -1219,10 +1249,10 @@
+     } else if (playerWeaponEnabled && (!this.physics.hasF4WholeResearchTrimesh ||
+         (playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'))) {
+       this.updatePlayerWeapon(
+-        dt,
+-        profile,
+-        fireHeld,
+-        risingFire,
++        dt,
++        profile,
++        f4InstantRequested,
++        risingFire,
+         fallingFire,
+         guarding,
+         muzzlePosition,
+@@ -1241,8 +1271,10 @@
+       this.stats.playerWeaponAction = 'LOCKED';
+     }
+ 
+-    this.feedback.updateChargeVisual(
+-      profile,
++    if (f4) this.f4ConsumeInstantTrigger(f4InstantShotsBefore, f4InstantCooldownBefore);
++
++    this.feedback.updateChargeVisual(
++      profile,
+       team,
+       muzzlePosition,
+       aimDirection,
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -5496,10 +5496,8 @@
+   this.f4CurlingHeldFrames=null;
+   // Pointer lock loss must not become an implicit charged-weapon mouseup.
+   // No real SOURCE projectiles, actors, ink or clock are reset.
+-  const weapon=this.projectiles.currentPlayerWeapon.id;
+-  if(this.nativeLiveSourcePrestart||this.f4WholeTrimeshInstalled&&
+-     (weapon==='ink-saber'||weapon==='rotor-splatling'))
+-   this.projectiles.cancelUnreleasedNativeSourceHumanFire();
++  if(this.nativeLiveSourcePrestart||this.f4WholeTrimeshInstalled)
++   this.projectiles.cancelUnreleasedNativeSourceHumanFire();
+   this.player.releaseTwinCometsStance();
+   if(document.pointerLockElement===this.canvas)document.exitPointerLock();
+   this.refreshB25PaintRun();this.refresh();
+@@ -6259,14 +6257,16 @@
+      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
+       this.muzzle,this.target,this.aim);
+-     this.projectiles.fixedUpdate(seconds,
+-      actionWindow.humanCanStartNewActions&&
+-       !f4SpecialOwnsInput&&realPointerFire&&this.player.canShoot,
+-      actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput&&
+-       (this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
+-       this.player.canShoot,
+-      this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
+-      actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput,alive,
++     // Only the provisional natural round: lock loss cannot masquerade as
++     // a charge release or allow a buffered shot before pause notification.
++     const f4MainInputOpen=actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput&&
++      (!naturalSpecial||document.pointerLockElement===this.canvas);
++     this.projectiles.fixedUpdate(seconds,
++      f4MainInputOpen&&realPointerFire&&this.player.canShoot,
++      f4MainInputOpen&&(this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
++       this.player.canShoot,
++      this.muzzle,this.aim,Team.A,this.player.getPosition(this.p),
++      f4MainInputOpen,alive,
+       f4SpecialOwnsInput?undefined:contactTravel,!f4SpecialOwnsInput&&primaryTap,
+       twin&&!f4SpecialOwnsInput?{aimTarget:this.target,phase:this.player.twinCometsPhase,
+        rollTravel:this.player.weaponDodgeTravelActive?contactTravel:undefined}:undefined,
+@@ -6288,8 +6288,9 @@
+     // a projectile injected by QA. Original Rapier/paint physics resolve it.
+     // Consume even when disabled or splatted: never fire stale buffered F.
+     const humanSubId=this.sourceWeaponKit(profile.id).sub;
+-    const canUseSub=!zipOwnsInput&&!f4SpecialOwnsInput&&this.humanSubAvailable&&actionWindow.humanCanStartNewActions&&
+-     this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas;
++    const canUseSub=!zipOwnsInput&&!f4SpecialOwnsInput&&this.humanSubAvailable&&actionWindow.humanCanStartNewActions&&
++     this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas&&
++     (!naturalSpecial||(this.stats.shotsFired===humanShotsBefore&&this.projectiles.canStartF4HumanSub()));
+     this.f4HumanSubActionOpen=canUseSub;
+     let throwSub=canUseSub&&subTap;
+     let heldFrames=0;
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -188,8 +188,9 @@
+   }
+ 
+   public canStartF4HumanSub(subId: SubWeaponId): boolean {
+-    return Boolean(this.f4Runtime) && this.physics.hasF4WholeResearchTrimesh &&
+-      this.f4HumanRepeat <= 0 && this.bombs.some(slot => !slot.active) &&
++    return Boolean(this.f4Runtime) && this.physics.hasF4WholeResearchTrimesh &&
++      this.stats.playerInk + 1e-6 >= subWeaponProfile(subId).inkCost &&
++      this.f4HumanRepeat <= 0 && this.bombs.some(slot => !slot.active) &&
+       (subId !== 'torpedo' || !this.bombs.some(slot =>
+         slot.active && slot.torpedo && slot.f4?.actor === undefined));
+   }
+diff --git a/src/combat/PlayerResources.ts b/src/combat/PlayerResources.ts
+--- a/src/combat/PlayerResources.ts
++++ b/src/combat/PlayerResources.ts
+@@ -86,14 +86,15 @@
+   }
+ 
+   public tryConsumeContactInk(cost: number, lockSeconds: number): boolean {
+-    if (!Number.isFinite(cost) || cost <= 0) return false;
+-    if (this.ink + 1e-6 < cost) {
+-      this.stats.inkDryFireAttempts += 1;
+-      return false;
+-    }
+-
+-    this.ink = Math.max(0, this.ink - cost);
+-    this.inkRecoveryLockSeconds = lockSeconds;
++    if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(lockSeconds) || lockSeconds < 0) return false;
++    if (this.ink + 1e-6 < cost) {
++      this.stats.inkDryFireAttempts += 1;
++      return false;
++    }
++
++    this.ink = Math.max(0, this.ink - cost);
++    this.inkRecoveryLockSeconds = this.f4SubRecoverySeconds > 0
++      ? Math.max(this.inkRecoveryLockSeconds,lockSeconds) : lockSeconds;
+     this.syncStats('LOCKED', this.stats.playerHpRecoveryState);
+     return true;
+   }
