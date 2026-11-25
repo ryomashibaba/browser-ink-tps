@@ -1,0 +1,77 @@
+{
+  "sourceHead": "c52b86e9e1d554b1f3de3232a8921774ca2bb60a",
+  "windowsShare": "175e1a63f4825d28761e57eef9ca2b44aeccb6db",
+  "passed": [
+    {
+      "id": "baseline",
+      "path": "handoff/f4-live-followup-20261125/f4-provisional-playable-batch.patch",
+      "blob": "4cdc430a48a7d00017b28e7fe210e9b82ee024d4"
+    },
+    {
+      "id": "stage-safety",
+      "path": "handoff/f4-parallel-20261125/stage/stage-safety.patch",
+      "blob": "8256fa5535cb4ab937a56f3e894cb4685ffaa172"
+    },
+    {
+      "id": "player-camera",
+      "path": "handoff/f4-parallel-20261125/player/f4-stable-camera-aim.patch",
+      "blob": "9cbdd757cd0c6e31c164ca0aa390b0d4ab26ffb9"
+    },
+    {
+      "id": "performance-mask",
+      "path": "handoff/f4-parallel-20261125/performance/provisional-mask-memory.patch",
+      "blob": "431a80b6cdb3710d904abf4a5316c70dd1d5f832"
+    },
+    {
+      "id": "performance-raster",
+      "path": "handoff/f4-parallel-20261125/performance/paint-raster-row.patch",
+      "blob": "af8626b547195fe84abb7602d3397546e1b69edb"
+    }
+  ],
+  "changed": [
+    "src/ink/GameplayInkSystem.ts",
+    "src/player/PlayerController.ts",
+    "src/app/CompactF4Hud.mjs",
+    "src/app/CompactF4Hud.d.mts",
+    "src/physics/RapierStagePhysics.ts",
+    "src/combat/PlayerResources.ts",
+    "src/special/F4SpecialRuntime.ts",
+    "src/app/UndertowF3PlayablePreviewApp.ts",
+    "src/camera/ThirdPersonCamera.ts",
+    "src/ai/CpuAgentSystem.ts",
+    "src/ink/F4ProvisionalTurf.mjs",
+    "src/ink/F4ProvisionalTurf.d.mts",
+    "src/special/F4ProvisionalGauge.mjs",
+    "src/special/F4ProvisionalGauge.d.mts",
+    "src/special/F4CpuSpecialTactics.mjs",
+    "src/special/F4CpuSpecialTactics.d.mts",
+    "src/stage/F4PhysicalStageSafety.mjs",
+    "src/stage/F4PhysicalStageSafety.d.mts",
+    "src/camera/F4StableCameraAim.mjs",
+    "src/camera/F4StableCameraAim.d.mts"
+  ],
+  "blobs": {
+    "src/ink/GameplayInkSystem.ts": "4648b556c3345f8a70149ed7772215be72d443f6",
+    "src/player/PlayerController.ts": "b003456f0b67a5caec9caee35bd74c65ddbe0450",
+    "src/app/CompactF4Hud.mjs": "6f06b271af2d82628121e1d043627f0219ec196f",
+    "src/app/CompactF4Hud.d.mts": "eec5e41b259282f4cace23c0b7238c0262b3d600",
+    "src/physics/RapierStagePhysics.ts": "57579a64169dbb795cde98f263764ad582b6407c",
+    "src/combat/PlayerResources.ts": "6b9599e72099ec30c29e5b1bfd7c39bd2f7164a0",
+    "src/special/F4SpecialRuntime.ts": "32dc3b34f2196f4711f0c6bc5030b9836dab66da",
+    "src/app/UndertowF3PlayablePreviewApp.ts": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+    "src/camera/ThirdPersonCamera.ts": "63a19c350eccda0310f75ee730fbac065003216c",
+    "src/ai/CpuAgentSystem.ts": "7927e774962904418abc693ea53d05d934e75d25"
+  },
+  "replay": 79,
+  "nativeBuild": "NOT_RUN",
+  "stageModules": [
+    {
+      "path": "src/stage/F4PhysicalStageSafety.mjs",
+      "blob": "a73960ff7bb85b50c1aabab03edc22b0408ee81e"
+    },
+    {
+      "path": "src/stage/F4PhysicalStageSafety.d.mts",
+      "blob": "217916238d48d69bcde499ea60166c9d2154993b"
+    }
+  ]
+}

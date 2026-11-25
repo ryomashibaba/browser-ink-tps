@@ -1,0 +1,2 @@
+# Chief partial integration 01
+Pinned source c52b86e9e1d554b1f3de3232a8921774ca2bb60a; Windows share 175e1a63f4825d28761e57eef9ca2b44aeccb6db. Apply f4-partial-integrated-01.patch INSTEAD OF baseline and included overlays, not on top. Preserve Windows local changes; inspect preimages, do not force. Included: baseline, stage-safety, player-camera, performance-mask, performance-raster. Remaining overlays not yet integrated. 79 exact generated hunk replays; no native TS/Vite/Rapier/Chrome. All specialists continue independently in their own folders; do not edit chief files.
