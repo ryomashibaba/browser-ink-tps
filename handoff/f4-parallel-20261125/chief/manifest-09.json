@@ -1,0 +1,73 @@
+{
+  "base": "c9a06da60abb24c343311344758994b4f4e67ed0",
+  "previous": "aacf7459bec149282a3b975aa263566967e72a8f",
+  "passed": [
+    {
+      "id": "vfx-audio-v3",
+      "scripts": [
+        "ae085fcb0721786363ac8ccd5637f2db2a823498",
+        "d86d398b7905d2a2ae41676ab026bc5787ceb63f"
+      ],
+      "modules": [
+        {
+          "path": "F4FeedbackMotion.mjs",
+          "sha": "7775df50f20bb7b29cf3ec7048be7abd9a38c559"
+        },
+        {
+          "path": "F4FeedbackMotion.d.mts",
+          "sha": "4e2ea9b94fd504b8c99640d3265c1848f827128d"
+        },
+        {
+          "path": "F4SpatialAudio.mjs",
+          "sha": "e0fbee317b95504e81453ee12a11ef495ceead2f"
+        },
+        {
+          "path": "F4SpatialAudio.d.mts",
+          "sha": "547acacf7dda1b9468a75e01a12aadb139e66e80"
+        },
+        {
+          "path": "F4AudioBus.mjs",
+          "sha": "d552c3d5f13a4ef5ef4b25117a0ab326e19478fc"
+        },
+        {
+          "path": "F4AudioBus.d.mts",
+          "sha": "802a783ad41c004e17d07c3ce997d4325fd8fa3f"
+        }
+      ],
+      "anchors": 95,
+      "adjustments": [
+        "listener anchor adjusted per v3"
+      ]
+    }
+  ],
+  "held": [],
+  "blobs": {
+    "src/projectile/ProjectileSystem.ts": {
+      "sha": "ce40e1ba42c400d4e7e2a32279d845a0f1b283f2",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/ai/CpuAgentSystem.ts": {
+      "sha": "7927e774962904418abc693ea53d05d934e75d25",
+      "source": "windows-share"
+    },
+    "src/special/F4SpecialRuntime.ts": {
+      "sha": "32dc3b34f2196f4711f0c6bc5030b9836dab66da",
+      "source": "windows-share"
+    },
+    "src/feedback/GameFeedback.ts": {
+      "sha": "626b17f5a7bb88ecd74445a8b6ecdb2d1e34f6a1",
+      "source": "research-root"
+    },
+    "src/audio/SourcePracticeAudio.ts": {
+      "sha": "07f8d2c7d3c9967f47992704c90de86cd7d49307",
+      "source": "research-root"
+    }
+  },
+  "replay": 166,
+  "files": 72,
+  "nativeBuild": "NOT_RUN"
+}
