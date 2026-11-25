@@ -1,0 +1,205 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -1,7 +1,8 @@
+ import { Vec3 } from 'playcanvas';
+ import type { PaintEvent, TurfSnapshot } from './types';
+ import { SurfaceFlags, Team } from './types';
+-import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import { CertifiedTurf720 } from '../special/f4/shared-special-score720-20261125/shared-special-score720.mjs';
+ 
+ /** Contiguous authority-approved raster cells, including same-team repaint. */
+ export interface PaintRasterRun {
+@@ -18,7 +19,9 @@
+   rasterAlreadyTeamOwnedCells: number;
+   testedCells: number;
+   dirtyTilesTouched: number;
+-  scoreableAreaMeters2Changed: number;
++  scoreableAreaMeters2Changed: number;
++  /** Present only with complete F4 score authority, separate from legacy score. */
++  f4CertifiedProjectedAreaMeters2Changed?: number;
+ }
+ 
+ export interface GameplayInkSample {
+@@ -33,13 +36,32 @@
+ export class GameplayInkSystem {
+   private readonly surfaces = new Map<string, PaintSurface>();
+   private backedCell:((surface:PaintSurface,u:number,v:number)=>boolean)|null=null;
+-  private readonly backingCache=new Map<string,Uint8Array>();
++  private readonly backingCache=new Map<string,Uint8Array>();
++  private f4CertifiedTurf:CertifiedTurf720|null=null;
++
++  public bindF4CertifiedTurf(turf:CertifiedTurf720):boolean {
++    if(this.f4CertifiedTurf||!this.backedCell||!(turf instanceof CertifiedTurf720)||!turf.complete)return false;
++    const surfaces=[...this.surfaces.values()];
++    if(surfaces.some(s=>s.ownerGrid.some(owner=>owner!==Team.Neutral)))return false;
++    if(!turf.verifyBinding(surfaces,(s,index)=>this.isPhysicallyBacked(s,index%s.widthCells,
++      Math.floor(index/s.widthCells),index)))return false;
++    this.f4CertifiedTurf=turf;
++    return true;
++  }
++
++  /** No score promotion: live reads use the same actual owner arrays. */
++  public readF4CertifiedTurf(roundId:string,tick:number,roundEnded:boolean){
++    const turf=this.f4CertifiedTurf;
++    if(!turf||turf.roundId!==roundId)return {status:'HOLD' as const,reason:'score-authority-incomplete',winner:'NONE' as const};
++    return roundEnded?turf.result({roundId,tick,roundEnded}):turf.live({roundId,tick});
++  }
+ 
+   public setPhysicalPaintBacking(
+     backing:((surface:PaintSurface,u:number,v:number)=>boolean)|null
+   ):void{
+-    this.backedCell=backing;
+-    this.backingCache.clear();
++    this.f4CertifiedTurf=null;
++    this.backedCell=backing;
++    this.backingCache.clear();
+   }
+ 
+   private isPhysicallyBacked(surface:PaintSurface,x:number,y:number,index:number):boolean{
+@@ -81,7 +103,8 @@
+ 
+   public registerSurface(surface: PaintSurface): void {
+     if (this.surfaces.has(surface.id)) throw new Error(`Duplicate PaintSurface id: ${surface.id}`);
+-    this.surfaces.set(surface.id, surface);
++    this.f4CertifiedTurf=null;
++    this.surfaces.set(surface.id, surface);
+     // Orthogonal normalized original basis gives rectangle half-diagonal.
+     // Add 0.2% + 2cm to cover footprint edge epsilon and float roundoff.
+     // A real candidate with plane distance <= requested maxDistance
+@@ -220,7 +243,9 @@
+     let rasterEligibleCells = 0;
+     let rasterAlreadyTeamOwnedCells = 0;
+     let testedCells = 0;
+-    let scoreableAreaMeters2Changed = 0;
++    let scoreableAreaMeters2Changed = 0;
++    const certified=this.f4CertifiedTurf;
++    let certifiedDelta=0;
+     const touchedTiles = this.touchedTilesScratch;
+     touchedTiles.clear();
+     const paintableRuns: PaintRasterRun[] = [];
+@@ -259,8 +284,9 @@
+           continue;
+         }
+ 
+-        surface.ownerGrid[index] = event.team;
+-        changedCells += 1;
++        surface.ownerGrid[index] = event.team;
++        if(certified)certifiedDelta+=certified.changedArea(surface,index,oldOwner,event.team);
++        changedCells += 1;
+         touchedTiles.add(surface.tileIndexForCell(x, y));
+ 
+         if (surface.isScoreable) {
+@@ -285,8 +311,9 @@
+       rasterAlreadyTeamOwnedCells,
+       testedCells,
+       dirtyTilesTouched: touchedTiles.size,
+-      scoreableAreaMeters2Changed,
+-      paintableRuns
++      scoreableAreaMeters2Changed,
++      ...(certified?{f4CertifiedProjectedAreaMeters2Changed:certifiedDelta}:{}),
++      paintableRuns
+     };
+   }
+ 
+@@ -308,8 +335,9 @@
+     return result;
+   }
+ 
+-  public reset(): void {
+-    this.areaA = 0;
++  public reset(): void {
++    this.f4CertifiedTurf=null;
++    this.areaA = 0;
+     this.areaB = 0;
+     for (const surface of this.surfaces.values()) surface.resetOwnership();
+   }
+diff --git a/src/special/f4/shared-special-score720-20261125/shared-special-score720.mjs b/src/special/f4/shared-special-score720-20261125/shared-special-score720.mjs
+--- a/src/special/f4/shared-special-score720-20261125/shared-special-score720.mjs
++++ b/src/special/f4/shared-special-score720-20261125/shared-special-score720.mjs
+@@ -35,7 +35,18 @@
+   if(!Number.isFinite(this.#total))throw Error("invalid total");
+   this.#complete=complete===true&&this.#total>0
+  }
+- get roundId(){return this.#roundId} get complete(){return this.#complete} get totalProjectedM2(){return this.#total}
++ get roundId(){return this.#roundId} get complete(){return this.#complete} get totalProjectedM2(){return this.#total}
++ // Every admitted weighted cell must still belong to the registered physical raster.
++ verifyBinding(surfaces,backed){
++  if(!this.#complete||!Array.isArray(surfaces)||typeof backed!=="function")return false;
++  const registered=new Map(surfaces.map(s=>[s.id,s]));
++  for(const s of surfaces)if((s.baseFlags&(PAINT|SCORE))===(PAINT|SCORE)&&!this.#entries.has(s.id))return false;
++  for(const {surface:s,weights,flags} of this.#entries.values()){
++   if(registered.get(s.id)!==s||s.ownerGrid.length!==weights.length||s.flagsGrid.length!==weights.length)return false;
++   for(let j=0;j<weights.length;j++)if(s.flagsGrid[j]!==flags[j]||(weights[j]>0&&!backed(s,j)))return false;
++  }
++  return true
++ }
+  // Called once immediately AFTER actual GameplayInk changes a cell, never from GPU or request.
+  // Does not reconstruct an ownership transition; oldOwner must be captured by actual raster.
+  changedArea(surface,index,oldOwner,newOwner){
+@@ -43,19 +54,29 @@
+   return e.weights[index]
+  }
+  // Read the actual ownership arrays directly only at finalization; no second score grid.
+- result({roundId,tick,roundEnded}){
+-  if(roundId!==this.#roundId||tick!==10800||roundEnded!==true)return hold("round-not-final");
+-  if(!this.#complete)return hold("score-authority-incomplete");
++ result({roundId,tick,roundEnded}){
++  if(roundId!==this.#roundId||tick!==10800||roundEnded!==true)return hold("round-not-final");
++  return this.#read(true)
++ }
++ live({roundId,tick}){
++  if(roundId!==this.#roundId||!validTick(tick)||tick>=10800)return hold("round-not-live");
++  return this.#read(false)
++ }
++ #read(final){
++  if(!this.#complete)return hold("score-authority-incomplete");
+   let a=0,b=0,neutral=0;
+-  for(const {surface:s,weights,flags} of this.#entries.values())for(let j=0;j<weights.length;j++){
+-   if(s.flagsGrid[j]!==flags[j])return hold("score-authority-changed");
++  for(const {surface:s,weights,flags} of this.#entries.values()){
++   if(s.ownerGrid.length!==weights.length||s.flagsGrid.length!==weights.length||(s.baseFlags&(PAINT|SCORE))!==(PAINT|SCORE)||(s.baseFlags&WALL)!==0)return hold("score-authority-changed");
++   for(let j=0;j<weights.length;j++){
++   if(s.flagsGrid[j]!==flags[j])return hold("score-authority-changed");
+    const w=weights[j],o=s.ownerGrid[j];if(w===0)continue;
+    if(o===1)a+=w;else if(o===-1)b+=w;else if(o===0)neutral+=w;else return hold("invalid-ownership")
+-  }
+-  const total=a+b+neutral;if(!Number.isFinite(total)||Math.abs(total-this.#total)>Math.max(EPS,total*EPS))return hold("area-inconsistent");
++   }
++  }
++  const total=a+b+neutral;if(!Number.isFinite(total)||Math.abs(total-this.#total)>Math.max(EPS,total*EPS))return hold("area-inconsistent");
+   // Do not invent original tie-breaking, or choose a winner using rounded HUD percentages.
+   const diff=a-b, tie=Math.abs(diff)<=Math.max(EPS,total*EPS);
+-  return {status:tie?"HOLD":"READY",reason:tie?"tie-rule-unverified":null,winner:tie?"NONE":diff>0?"A":"B",areaA:a,areaB:b,neutralArea:neutral,totalProjectedM2:total,percentA:100*a/total,percentB:100*b/total}
++  return {status:!final?"LIVE":tie?"HOLD":"READY",reason:final&&tie?"tie-rule-unverified":null,winner:!final||tie?"NONE":diff>0?"A":"B",areaA:a,areaB:b,neutralArea:neutral,totalProjectedM2:total,percentA:100*a/total,percentB:100*b/total}
+  }
+ }
+ // One shared gauge for human and seven CPU. No debug fill or alternative score source.
+diff --git a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+--- a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
++++ b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+@@ -2,9 +2,17 @@
+   'microLaser' | 'tripleTornado' | 'waveBreaker' | 'ultraStamp';
+ export const KIT720: Readonly<Record<import('../../../weapons/WeaponCatalog').WeaponId,
+   { special: F4SpecialId; required: number }>>;
+-export class CertifiedTurf720 {
+-  constructor(options: { roundId: string });
+-  readonly complete: boolean;
+-  result(frame: { roundId: string; tick: number; roundEnded: boolean }):
+-    { status: 'HOLD' | 'READY'; reason: string | null; winner: 'NONE' | 'A' | 'B' };
+-}
++type Surface = import('../../../ink/PaintSurface').PaintSurface;
++type ScoreResult = { status: 'HOLD' | 'READY' | 'LIVE'; reason: string | null; winner: 'NONE' | 'A' | 'B';
++  areaA?:number;areaB?:number;neutralArea?:number;totalProjectedM2?:number;percentA?:number;percentB?:number };
++export class CertifiedTurf720 {
++  constructor(options: {roundId:string;complete?:boolean;entries?:readonly {surface:Surface;evidenceId:string;
++    physicalBacked:true;originalScoreAuthorized:true;projectedAreaM2:ArrayLike<number>}[]});
++  readonly complete: boolean;
++  readonly roundId:string;
++  readonly totalProjectedM2:number;
++  verifyBinding(surfaces:readonly Surface[],backed:(surface:Surface,index:number)=>boolean):boolean;
++  changedArea(surface:Surface,index:number,oldOwner:number,newOwner:number):number;
++  live(frame:{roundId:string;tick:number}):ScoreResult;
++  result(frame:{roundId:string;tick:number;roundEnded:boolean}):ScoreResult;
++}
