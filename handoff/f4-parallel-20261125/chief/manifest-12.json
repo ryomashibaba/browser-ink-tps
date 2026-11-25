@@ -113,5 +113,24 @@
       "nativeBuild": "NOT_RUN"
     },
     "limitations": "Policy ordering only; no confirmed root cause or new actual navigation evidence; native support, route and KCC gates unchanged."
+  },
+  "combatSightFollowup": {
+    "base": "bcdc3cb2ad0a135142eef3a1fca07d8a1972e92c",
+    "previousPatch": "11b009b1a1eaeadf4498f7979c971d4b7424f193",
+    "incrementalBase": "80aceaed5e1175cae0769e5db470a39d1b29a906",
+    "incrementalPath": "handoff/f4-parallel-20261125/chief/f4-live-combat-followup.patch",
+    "changed": [
+      "src/ai/CpuAgentSystem.ts",
+      "src/ai/F4CpuAttackPolicy.mjs",
+      "src/ai/F4CpuAttackPolicy.d.mts"
+    ],
+    "includesEarlierFrontlineFollowup": true,
+    "verification": {
+      "isolatedAssertions": 19,
+      "cumulativeHunks": 359,
+      "incrementalHunks": 8,
+      "nativeBuild": "NOT_RUN"
+    },
+    "limitations": "F4-only conservative 3D aim candidate eligibility and nearest-first current Rapier sight. No actual hit or Windows runtime claim; old B181 behavior retained."
   }
 }
