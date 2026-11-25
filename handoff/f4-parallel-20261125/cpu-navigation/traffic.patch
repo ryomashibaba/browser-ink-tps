@@ -1,70 +1,184 @@
 diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
 --- a/src/app/UndertowF3SourceTraffic.ts
 +++ b/src/app/UndertowF3SourceTraffic.ts
-@@ -70,1 +70,2 @@
--import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
-+import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
+@@ -9,6 +9,7 @@
+  * result while the human is controlled by real PlayerInput.
+  */
+ import {Vec3} from 'playcanvas';
 +import {F4PatrolNavigation,type PatrolCandidate,type PatrolInk} from '../ai/F4PatrolNavigation.mjs';
-@@ -620,1 +621,2 @@
-- private readonly f4WholeDirections=new Map<string,number>();
-+ private readonly f4WholeDirections=new Map<string,number>();
+ import type {CrowdAgent} from 'recast-navigation';
+ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
+@@ -618,6 +619,7 @@
+  }>();
+  private readonly f4LastSeenOpponent=new Map<string,{id:string;point:Vec3;tick:number}>();
+  private readonly f4WholeDirections=new Map<string,number>();
 + private readonly f4PatrolNavigation=new F4PatrolNavigation();
-@@ -1894,2 +1896,4 @@
--  this.f4WholeGoals.delete(id);
--  const request=(point:Vec3,local:boolean)=>{
-+  if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
-+  this.f4WholeGoals.delete(id);
-+  const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
-+  const request=(point:Vec3,local:boolean)=>{
-@@ -1905,3 +1909,3 @@
--   if(point){
--    return request(point,false);
--   }
-+   if(point&&!avoids(point)){
-+    return request(point,false);
+ 
+  constructor(
+   private readonly stage:StageDefinition,private nav:RecastStageNavigation,
+@@ -1407,6 +1409,19 @@
+   realKccOwners:readonly string[]=[],realKccCause?:string
+  ):void{
+   const bot=this.bots.find(b=>b.id===id);
++  if(this.f4WholeSupport){
++   const goal=this.f4WholeGoals.get(id);
++   if(realKccCause==='UNSUPPORTED_OR_BLOCKED_F4_GROUND'&&bot?.agent&&goal?.local&&!goal.opponent&&
++      bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&(bot.hp??0)>0&&
++      [actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)&&
++      bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))<=.01&&
++      this.f4WholeSupport(id,bot.position)&&
++      this.f4PatrolNavigation.noteKccReject(id,this.b137NativeTick,actualFoot,goal.point)){
++    goal.advanced=Math.min(goal.advanced,this.b137NativeTick-48);
++    bot.thinkRemaining=Math.min(bot.thinkRemaining,0);
 +   }
-@@ -1925,1 +1929,1 @@
++   return;
++  }
+   if(!bot||!sourceNativeLiveRejoinedCpu(bot,this.physicallyRejoined)||
+      this.stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+      ![actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)||
+@@ -1865,6 +1880,7 @@
+   const previous=this.f4WholeGoals.get(id);
+   const combat=this.freeCombat?this.f4WholeCombatGoal(bot,foot,previous,localActionsOpen):null;
+   if(combat){
++   this.f4PatrolNavigation.newGoal(id);
+    if(!combat.point){
+     this.f4WholeGoals.delete(id);
+     return false;
+@@ -1880,6 +1896,7 @@
+    return true;
+   }
+   const reached=!!previous&&foot.distance(previous.point)<=.35;
++  if(reached&&!previous?.opponent)this.f4PatrolNavigation.noteReached(id,this.b137NativeTick,foot);
+   if(previous&&!previous.opponent&&!reached&&this.b137NativeTick-previous.advanced<48&&
+      (!previous.local||this.b137NativeTick-previous.issued<120)){
+    out.copy(previous.point);
+@@ -1891,8 +1908,11 @@
+   // the separate 120-tick local-target lifetime.
+   const stalledOnRoute=!!previous&&!previous.opponent&&!reached&&
+    this.b137NativeTick-previous.advanced>=48;
++  if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
+   this.f4WholeGoals.delete(id);
++  const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
+   const request=(point:Vec3,local:boolean)=>{
++   this.f4PatrolNavigation.newGoal(id);
+    this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
+     advanced:this.b137NativeTick,bestDistance:foot.distance(point)});
+    out.copy(point);
+@@ -1902,7 +1922,7 @@
+   const drop=this.f4WholeDrops.get(bot.team);
+   if(!stalledOnRoute&&drop&&Math.abs(foot.y-drop.approach.y)<=.4){
+    const point=this.f4WholeWalkTarget(foot,drop.approach);
+-   if(point){
++   if(point&&!avoids(point)){
+     return request(point,false);
+    }
+   }
+@@ -1922,7 +1942,7 @@
+    // by a direct Recast query to the upper guide point.
+    const target=foot.z>22.75?new Vec3(-2.6,.5,22.4):new Vec3(...rampUpper);
+    const point=this.f4WholeWalkTarget(foot,target);
 -   if(point)return request(point,false);
 +   if(point&&!avoids(point))return request(point,false);
-@@ -1937,1 +1941,1 @@
+   }
+   if(!stalledOnRoute&&foot.z>0&&slopeBottom&&slopeTop&&
+      foot.z*side>=slopeTop[2]*side-.5&&
+@@ -1934,7 +1954,7 @@
+    const slopeX=slopeTop[0]+fraction*(slopeBottom[0]-slopeTop[0]);
+    const target=Math.abs(foot.x-slopeX)>.75?slopeTop:slopeBottom;
+    const point=this.f4WholeWalkTarget(foot,new Vec3(...target));
 -   if(point)return request(point,false);
 +   if(point&&!avoids(point))return request(point,false);
-@@ -1951,2 +1955,2 @@
+   }
+   const ahead=ingress.filter(p=>Math.abs(p[2])<Math.abs(foot.z)-.5&&
+    Math.abs(foot.z)-Math.abs(p[2])<9).reverse();
+@@ -1942,20 +1962,36 @@
+   const far=bot.team===Team.A?F4_CENTER_STEP[-1]:F4_CENTER_STEP[1];
+   const centerLegs=Math.abs(foot.z)<=12?
+    [far.shoulder,own.takeoff]:[];
+-  const candidates=[...ahead,...centerLegs,...[firstSide,-firstSide].flatMap(entry=>
+-   fronts.filter(s=>Math.sign(s.center[2])===entry).map(s=>s.center))];
++  const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
++   a.mobilityState==='GROUND'&&(a.hp??0)>0);
++  const reservations=allies.flatMap(a=>{const g=this.f4WholeGoals.get(a.id);return g&&!g.opponent?[g.point]:[];});
++  const recovering=(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
++   (bot.hp??Infinity)<GAME_CONFIG.combat.playerMaxHp*.45;
++  const options={recovering,reservations};
++  const inkAt=(point:Vec3):PatrolInk=>{
++   const floor=this.sourceNativeCharacterFootHit(point);
++   const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++   return !sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
++  };
++  // Mandatory ingress/center priorities remain; only rank existing fronts.
++  const frontsBySide=[firstSide,-firstSide].flatMap(entry=>
++   fronts.filter(s=>Math.sign(s.center[2])===entry).map(s=>s.center));
++  const orderedFronts=stalledOnRoute?[]:this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,
++   frontsBySide.map((p,i)=>{const point=new Vec3(...p);return {point,ink:inkAt(point),order:i,index:i};}),
++   allies.map(a=>a.position),options).map(r=>[r.point.x,r.point.y,r.point.z] as const);
++  const candidates=[...ahead,...centerLegs,...orderedFronts];
+   for(const candidate of stalledOnRoute?[]:candidates){
+    const target=new Vec3(...candidate);
+    if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
+    const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
 -   if(!point)continue;
--   return request(point,false);
 +   if(!point||avoids(point))continue;
-+   return request(point,false);
-@@ -1957,2 +1961,2 @@
+    return request(point,false);
+   }
+   // Test short native walking targets toward the center first. A target
+   // across a drop, another level or without a real floor stays on HOLD.
+   const directions=[[0,side],[1,side],[-1,side],[1,0],[-1,0],[0,-side]] as const;
 -  const first=reached?
 -   0:this.f4WholeDirections.get(id)??0;
 +  const first=this.f4WholeDirections.get(id)??0;
 +  const localCandidates:PatrolCandidate<Vec3>[]=[];
-@@ -1965,5 +1969,14 @@
--   if(!projection.success||!goal||!this.sourceNativeCharacterFootHit(goal)||
--      Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
--      Math.abs(goal.y-foot.y)>.7)continue;
+   for(let i=0;i<directions.length;i++){
+    const index=(first+i)%directions.length;
+    const [x,z]=directions[index]!;
+@@ -1965,11 +2001,15 @@
+    if(!projection.success||!goal||!this.sourceNativeCharacterFootHit(goal)||
+       Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
+       Math.abs(goal.y-foot.y)>.7)continue;
 -   const point=this.f4WholeWalkTarget(foot,new Vec3(goal.x,goal.y,goal.z));
 -   if(!point)continue;
-+   if(!projection.success||!goal||
-+      Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
-+      Math.abs(goal.y-foot.y)>.7)continue;
-+   const floor=this.sourceNativeCharacterFootHit(goal);
-+   if(!floor)continue;
-+   const sample=this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-+   const ink:PatrolInk=!sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
-+   localCandidates.push({point:new Vec3(goal.x,goal.y,goal.z),ink,order:i,index});
++   const point=new Vec3(goal.x,goal.y,goal.z);
++   localCandidates.push({point,ink:inkAt(point),order:i,index});
 +  }
-+  const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
-+   a.mobilityState==='GROUND'&&(a.hp??0)>0).map(a=>a.position);
-+  for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies)){
++  for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies.map(a=>a.position),options)){
 +   const point=this.f4WholeWalkTarget(foot,candidate.point);
 +   if(!point||avoids(point))continue;
-@@ -1972,1 +1985,1 @@
+    // The Crowd target is only an intention. Each incremental step still
+    // needs a same-world Rapier KCC result and capsule support.
 -   this.f4WholeDirections.set(id,(index+1)%directions.length);
 +   this.f4WholeDirections.set(id,(candidate.index+1)%directions.length);
-@@ -4213,2 +4226,3 @@
--   this.f4WholeDirections.delete(id);
--   this.f4LastSeenOpponent.delete(id);
-+   this.f4WholeDirections.delete(id);
+    return request(point,true);
+   }
+   return false;
+@@ -3753,6 +3793,7 @@
+   // relocation and no synthetic actor position. Even when all CPUs are
+   // released, refresh validity each physical tick before CPU goal choice.
+   this.b137NativeTick=frame;
++  if(this.f4WholeSupport)this.f4PatrolNavigation.beginTick(frame);
+   // Genuine player foot from THIS 60Hz physics step, never historical
+   // pursuit data. F4-only: a dead or airborne HUMAN cannot freeze B CPUs.
+   // The pinned original terrain uses its own corridor goals instead of
+@@ -4211,6 +4252,7 @@
+   if(this.f4WholeSupport){
+    this.f4WholeGoals.delete(id);
+    this.f4WholeDirections.delete(id);
 +   this.f4PatrolNavigation.clear(id);
-+   this.f4LastSeenOpponent.delete(id);
+    this.f4LastSeenOpponent.delete(id);
+    return;
+   }
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -1903,6 +1903,9 @@
+         if(!ground){
+           this.observeSourceGroundStep(bot,'KCC_REJECTED',p,
+             'UNSUPPORTED_OR_BLOCKED_F4_GROUND');
++          if(this.f4WholeNavigation&&Math.hypot(p.x-bot.position.x,p.z-bot.position.z)>.015)
++            this.f3dSourceGoals?.noteRealSourceKccRejectedStep?.(
++              bot.id,bot.position,[],'UNSUPPORTED_OR_BLOCKED_F4_GROUND');
+           this.reconcileBlockedT21F2CrowdProxy(bot);
+           this.continueBlockedOriginalSourceCpuActions(bot,dt,
+             humanTeam,humanPosition,humanActive,canStartNewCombatActions);
