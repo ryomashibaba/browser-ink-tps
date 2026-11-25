@@ -1,0 +1,64 @@
+{
+  "base": "e39c3edee0a50f768c8c9fa3dfa27d6644efe6bc",
+  "previous": "030d2aaf5e8d736cd77f03415aeb6aff01701c45",
+  "passed": [
+    {
+      "id": "cpu-attack",
+      "patches": [
+        {
+          "p": "cpu-combat/cpu-attack.patch",
+          "sha": "44da0563f42648a3458ce1def3265d0decfc96f8"
+        }
+      ],
+      "modules": [
+        {
+          "p": "cpu-combat/F4CpuAttackPolicy.mjs",
+          "sha": "d1e9ddd1a2c9b3620912271596098cd00205d627"
+        },
+        {
+          "p": "cpu-combat/F4CpuAttackPolicy.d.mts",
+          "sha": "71e859b81210e885e7819e666508b676cb60b00b"
+        }
+      ]
+    },
+    {
+      "id": "cpu-recovery",
+      "patches": [
+        {
+          "p": "cpu-combat/cpu-recovery.patch",
+          "sha": "18526cacc7a38802b711c4324a1f5cecd5ba6734"
+        }
+      ],
+      "modules": [
+        {
+          "p": "cpu-combat/F4CpuRecoveryPolicy.mjs",
+          "sha": "8e11ca3c0b68548e3169cebdf6137268ab6dc108"
+        },
+        {
+          "p": "cpu-combat/F4CpuRecoveryPolicy.d.mts",
+          "sha": "b62016b17f86d30103ef13feb0c33a76bf9ee64f"
+        }
+      ]
+    },
+    {
+      "id": "special-blocked",
+      "patches": [
+        {
+          "p": "special/cpu-special-blocked-actions.patch",
+          "sha": "51215263186487bd3cc179e2405aab857808071b"
+        }
+      ],
+      "modules": []
+    }
+  ],
+  "held": [],
+  "relaxed": [],
+  "blobs": {
+    "src/ai/CpuAgentSystem.ts": "7927e774962904418abc693ea53d05d934e75d25",
+    "src/app/UndertowF3SourceTraffic.ts": "b9159b80a8dcae5520068455129abbc13d03fea3",
+    "src/projectile/ProjectileSystem.ts": "ce40e1ba42c400d4e7e2a32279d845a0f1b283f2"
+  },
+  "replay": 80,
+  "files": 43,
+  "nativeBuild": "NOT_RUN"
+}
