@@ -1,0 +1,516 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -481,7 +481,8 @@
+  private readonly f4Special: F4SpecialRuntime|null;
+  private readonly f4SpecialProbe: boolean;
+  private f4SpecialLife=1;
+- private f4SpecialWasAlive=true;
++ private f4HumanDeathTick:number|null=null;
++ private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
+  private f4SpecialSecondaryHeld=false;
+  private readonly b202PauseOverlay:HTMLElement;
+  private readonly b167CombatNotice:HTMLElement;
+@@ -3036,7 +3037,11 @@
+   canvas.dataset.t21F3SourceStage=stage.metadata.id;
+   canvas.dataset.t21F3Production='FORBIDDEN';
+   const api={snapshot:()=>this.snapshot(),
+-   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
++    humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
++    projectile:this.projectiles.f4ActualEnemyProjectileEvidence()
++   }:null,
+    auditF4ZipGeometry:(rangeM:number)=>{
+     if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||this.resources.currentHp<=0)
+      return {status:'HOLD',reason:'F4_LIVE_PROBE_UNAVAILABLE'};
+@@ -5732,7 +5737,8 @@
+   this.humanSub.reset();
+   this.f4Special?.reset();
+   this.f4SpecialLife=1;
+-  this.f4SpecialWasAlive=true;
++  this.f4HumanDeathTick=null;
++  this.f4HumanLifePairs.length=0;
+   this.f4SpecialSecondaryHeld=false;
+   this.cpuKit?.reset();
+   this.cpuKitArtificialGaugeArms=0;
+@@ -5909,9 +5915,7 @@
+     if(alive)this.resources.fixedUpdate(
+      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+     if(this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
+-     if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
+-     this.f4SpecialWasAlive=alive;
+-     this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
++     this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
+       alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
+     }
+     const cpuWorldReady=!this.f4WholeTrimeshRequested||this.f4WholeCpuConnected;
+@@ -6203,10 +6207,10 @@
+      frame,this.stats.playerSubExplosions,
+      b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
+     this.b20ProfileStop('inkOwnershipTick',paintStart);
+-    if(this.resources.currentHp<=0){
+-     if(this.respawnFrames===0&&
+-        (!this.nativeLiveSourcePrestart||
+-         this.nativeHumanSplatTick===null)){
++    if(this.resources.currentHp<=0){
++     const exactRespawn=this.nativeLiveSourcePrestart||this.f4WholeTrimeshInstalled;
++     if(this.respawnFrames===0&&
++        (!exactRespawn||this.nativeHumanSplatTick===null)){
+       // B374: never replay an attack held through real native HP zero.
+       this.input.setCombatInputActive(false);
+       this.f4CurlingHeldFrames=null;
+@@ -6222,9 +6226,10 @@
+       }
+       this.feedback.splat(Team.A,this.player.getPosition(this.p));
+       // The lethal physics frame itself must not count as tick 1.
+-      if(this.nativeLiveSourcePrestart)this.nativeHumanSplatTick=frame;
+-     }
+-     this.respawnFrames=this.nativeLiveSourcePrestart&&
++      if(exactRespawn)this.nativeHumanSplatTick=frame;
++      if(this.f4WholeTrimeshInstalled)this.f4HumanDeathTick=frame;
++     }
++     this.respawnFrames=exactRespawn&&
+        this.nativeHumanSplatTick!==null?
+        nativeSourceHumanRespawnElapsedTicks(this.nativeHumanSplatTick,frame):
+        this.respawnFrames+1;
+@@ -6245,15 +6250,25 @@
+       this.player.setLifecycleActive(true);
+       // Genuine restored life needs a fresh shot/sub press.
+       this.input.setCombatInputActive(true);
+-      this.humanRespawns++;
+-      this.respawnFrames=0;
++      this.humanRespawns++;
++      if(this.f4WholeTrimeshInstalled){
++       if(this.f4HumanDeathTick!==null){
++        this.f4HumanLifePairs.push({deathTick:this.f4HumanDeathTick,respawnTick:frame,
++         elapsedTicks:frame-this.f4HumanDeathTick,hpAfter:this.resources.currentHp});
++        if(this.f4HumanLifePairs.length>32)this.f4HumanLifePairs.shift();
++       }
++       this.f4HumanDeathTick=null;
++       this.f4SpecialLife++;
++      }
++      this.respawnFrames=0;
+       this.nativeHumanSplatTick=null;
+      }
+-    }else{
+-     this.respawnFrames=0;
+-     this.nativeHumanSplatTick=null;
+-    }
+-    const actualHumanInk=this.b23InkFeedback.snapshot(frame);
++    }else{
++     this.respawnFrames=0;
++     this.nativeHumanSplatTick=null;
++     this.f4HumanDeathTick=null;
++    }
++    const actualHumanInk=this.b23InkFeedback.snapshot(frame);
+     const realFoot=this.player.getPosition(this.p);
+     // B183: real native Rapier player KCC, unscored first-drop activity.
+     if(this.b183DropPlayEnabled){
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -258,7 +258,27 @@
+   // remain separate from the strict frozen 25-solid B351 authority.
+   private f4PhysicalHitCueOn=false;
+   private f4ConfirmedDamageCues=0;
+-  private f4SpecialSplashHits=0;
++  private f4SpecialSplashHits=0;
++  private readonly f4EnemyProjectileEvidence={spawned:0,terrain:0,expired:0,cpuContact:0,
++    humanContact:0,canopy:0,device:0,absorbed:0,other:0,humanHpLossContacts:0,humanHpLoss:0};
++
++  /** Counts actual enemy pooled projectile slots, not all CPU attacks or aim intentions. */
++  public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
++
++  private f4CountEnemyTerminal(slot:ProjectileSlot,reason:string):void {
++    if(!this.physics.hasF4WholeResearchTrimesh||slot.sourceKind!=='CPU'||slot.team===this.currentHumanTeam)return;
++    const e=this.f4EnemyProjectileEvidence;
++    switch(reason){
++      case 'ORIGINAL_PAINTABLE':case 'ORIGINAL_SOLID':e.terrain++;break;
++      case 'TTL':e.expired++;break;
++      case 'REAL_CPU_HIT':e.cpuContact++;break;
++      case 'REAL_PLAYER_HIT':e.humanContact++;break;
++      case 'CANOPY':e.canopy++;break;
++      case 'DEVICE':e.device++;break;
++      case 'ABSORBED':e.absorbed++;break;
++      default:e.other++;
++    }
++  }
+   private f4SpecialCueFrame=-1;
+   public f4SpecialSplashHitCount():number{return this.f4SpecialSplashHits;}
+   private noteF4SpecialDamageCue(point:Vec3,team:Team.A|Team.B):void {
+@@ -886,8 +906,10 @@
+     this.b367NativeFrame=0;
+     this.nativeHumanDamageCueFrame=-1;
+     this.nativeSourceHumanSplashCueFrame=-1;
+-    this.f4SpecialSplashHits=0;
+-    this.f4SpecialCueFrame=-1;
++    this.f4SpecialSplashHits=0;
++    for(const key of Object.keys(this.f4EnemyProjectileEvidence) as (keyof typeof this.f4EnemyProjectileEvidence)[])
++      this.f4EnemyProjectileEvidence[key]=0;
++    this.f4SpecialCueFrame=-1;
+     this.f4HumanLifeId=null;
+     this.f4HumanGrounded=false;
+     this.b367RealHumanCpuHits=0;
+@@ -1366,8 +1388,9 @@
+           const suction = this.f4Absorption(previous,next,{
+             team:slot.team,damage:slot.damage,id:slot.entity.name+':'+this.b367NativeFrame,
+             consume:()=>{
+-              if(!slot.active)return false;
+-              this.deactivate(slot);
++              if(!slot.active)return false;
++              this.f4CountEnemyTerminal(slot,'ABSORBED');
++              this.deactivate(slot);
+               return true;
+             }
+           });
+@@ -1488,8 +1511,12 @@
+               }
+             } else {
+               const hpLoss=this.resources.applyDamage(shotDamage);
+-              applied = hpLoss;
+-              if (hpLoss > 0) slosher?.resolvedTargets.add('human');
++              applied = hpLoss;
++              if(this.physics.hasF4WholeResearchTrimesh&&slot.sourceKind==='CPU'&&slot.team!==team&&hpLoss>0){
++                this.f4EnemyProjectileEvidence.humanHpLossContacts++;
++                this.f4EnemyProjectileEvidence.humanHpLoss+=hpLoss;
++              }
++              if (hpLoss > 0) slosher?.resolvedTargets.add('human');
+               this.confirmNativeHumanDamage(hpLoss,combatPoint,slot.team);
+               this.recordCpuPlayerDamageHit(hpLoss);
+             }
+@@ -3799,8 +3826,10 @@
+     slot.canopyPellet = undefined;
+     slot.ttl = life;
+     slot.team = team;
+-    slot.sourceKind = sourceKind;
+-    slot.sourceId = sourceId;
++    slot.sourceKind = sourceKind;
++    slot.sourceId = sourceId;
++    if(this.physics.hasF4WholeResearchTrimesh&&sourceKind==='CPU'&&team!==this.currentHumanTeam)
++      this.f4EnemyProjectileEvidence.spawned++;
+     slot.qaSourceAim=sourceKind==='CPU'&&sourceId==='A1'?
+       qaSourceAim:undefined;
+     if(slot.qaSourceAim==='A1_ORIGINAL_ALLY_SUPPORT_INK')
+@@ -3880,8 +3909,9 @@
+     paintHit: SurfaceRayHit | null,
+     reason:B346ShooterExitKind|'CANOPY'|'DEVICE'='TTL'
+   ): void {
+-    const stageNormal = slot.terrainContactNormal;
+-    if(slot.b346LaunchId!==undefined){
++    this.f4CountEnemyTerminal(slot,reason);
++    const stageNormal = slot.terrainContactNormal;
++    if(slot.b346LaunchId!==undefined){
+       if (reason !== 'CANOPY' && reason !== 'DEVICE') this.b346ShooterWitness.exit(slot.b346LaunchId,{
+         reason,
+         worldPosition:[point.x,point.y,point.z],
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -34,7 +34,9 @@
+   private readonly suctionQueries = new Set<SuctionQuery>();
+   private readonly actorUnlock = new Map<string,number>();
+   private readonly livePose = new Map<string,()=>void>();
+-  private absorbed = 0;
++  private absorbed = 0;
++  private readonly suctionEvidence={eligibleSegments:0,apertureMisses:0,terrainBlocked:0,
++    candidateContacts:0,admissionAttempts:0,admissionRejected:0};
+   private waves = 0;
+   private readonly active = new Map<string,string>();
+   private readonly completedProbeLives = new Set<string>();
+@@ -95,7 +97,9 @@
+     this.livePose.clear();
+     this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
+     this.lastPlacementReject=null;
+-    this.placementAttempts=this.guideTerrainRejected=0;
++    this.placementAttempts=this.guideTerrainRejected=0;
++    for(const key of Object.keys(this.suctionEvidence) as (keyof typeof this.suctionEvidence)[])
++      this.suctionEvidence[key]=0;
+     this.special=null;
+     this.terminal=null;
+     this.score=null;
+@@ -140,7 +144,8 @@
+     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
+       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
+       castEnd:this.terminal,placementAttempts:this.placementAttempts,
+-      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected};
++      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected,
++      suction:{...this.suctionEvidence}};
+   }
+ 
+   update(tick: number): void {
+@@ -372,20 +377,28 @@
+     let visual:Entity|null=null;
+     let consume:{id:string;apply():boolean}|null=null;
+     const query:SuctionQuery=(from,to,shot)=>{
+-      if(shot.team===team||shot.damage<=0||!at.trigger||!visual)return null;
+-      const center=at.origin.clone().add(at.forward.clone().normalize().mulScalar(1.18));
+-      const distance=this.physics.castInkSegmentAtBall(from,to,center,.84);
+-      if(distance===null)return null;
+-      const overlap=from.clone().lerp(from,to,distance/from.distance(to));
+-      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile'))return null;
+-      return {distance,accept:()=>{
+-        consume={id:shot.id,apply:shot.consume};
++      if(shot.team===team||shot.damage<=0||!at.trigger||!visual)return null;
++      const span=from.distance(to);
++      if(!Number.isFinite(span)||span<=1e-8)return null;
++      this.suctionEvidence.eligibleSegments++;
++      const center=at.origin.clone().add(at.forward.clone().normalize().mulScalar(1.18));
++      const distance=this.physics.castInkSegmentAtBall(from,to,center,.84);
++      if(distance===null){this.suctionEvidence.apertureMisses++;return null;}
++      const overlap=from.clone().lerp(from,to,distance/span);
++      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile')){
++        this.suctionEvidence.terrainBlocked++;return null;
++      }
++      this.suctionEvidence.candidateContacts++;
++      return {distance,accept:()=>{
++        this.suctionEvidence.admissionAttempts++;
++        consume={id:shot.id,apply:shot.consume};
+         try{
+           const accepted=this.port.contact({roundId:this.roundId,tick:this.frame,actorId:actor,lifeId,
+             projectileId:shot.id,sourceTeam:shot.team,eligible:true,physicalContact:true,
+             unoccluded:true,chargeValue:shot.damage})===true;
+-          if(accepted)this.absorbed++;
+-          return accepted;
++          if(accepted)this.absorbed++;
++          else this.suctionEvidence.admissionRejected++;
++          return accepted;
+         }finally{consume=null;}
+       }};
+     };
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -430,7 +430,10 @@
+     current: Vec3; previous: Vec3 | null; tick: number; mode: string; life: symbol
+   }>();
+   private f4LeadTargets = new WeakMap<Vec3,{id: string;offsetY: number;life: symbol}>();
+-  private f4LeadAccepted = 0;
++  private f4LeadAccepted = 0;
++  private readonly f4AimEvidence={currentTarget:0,predictedTarget:0,staleTargetRejected:0,
++    outOfRange:0,covered:0};
++  public f4AimEvidenceSnapshot(){return {...this.f4AimEvidence};}
+   private b212PreviousHuman:Vec3|null=null;
+   private b212NativeLeadCandidates=0;
+   private b212NativeAimAccepted=0;
+@@ -1158,7 +1161,9 @@
+ 
+   public reset(humanTeam: Team.A | Team.B): void {
+     this.clearF4LeadHistory();
+-    this.f4LeadAccepted=0;
++    this.f4LeadAccepted=0;
++    this.f4AimEvidence.currentTarget=this.f4AimEvidence.predictedTarget=
++      this.f4AimEvidence.staleTargetRejected=this.f4AimEvidence.outOfRange=this.f4AimEvidence.covered=0;
+     this.qaContinuity.reset();
+     this.qaMotionGoals.clear();
+     this.sourceLastAdmittedRouteGoal.clear();
+@@ -1336,8 +1341,15 @@
+       humanPhysicalColliderMode:'HUMAN';
+     if(nativeSight)this.b181NativeFrame++;
+     this.b212PriorHuman=this.b212PreviousHuman;
+-    this.b212PreviousHuman=(this.b212NativeLeadEnabled||this.f4WholeNavigation)&&humanActive?
+-      humanPosition.clone():null;
++    this.b212PreviousHuman=(this.b212NativeLeadEnabled||this.f4WholeNavigation)&&humanActive?
++      humanPosition.clone():null;
++    // Actual player KCC already finished for this tick. Sample before any
++    // CPU chooses a target; airborne targets get direct aim, never lead.
++    if(this.f4LeadEnabled&&this.f4WholeNavigation){
++      this.sampleF4LeadBody('HUMAN',humanActive?humanPosition:null,
++        humanNativeGrounded?humanPhysicalColliderMode:humanPhysicalColliderMode+':AIR',
++        humanNativeGrounded);
++    }
+     // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
+     // passive Crowd neighbour is moved to its source-backed physical foot.
+     // This cannot be applied to production T20 or non-source T21 terrain.
+@@ -2073,9 +2085,7 @@
+         this.tryRefreshStalledOriginalSourceCrowd(report);
+     }
+     if (this.f4LeadEnabled && this.f4WholeNavigation) {
+-      this.sampleF4LeadBody('HUMAN', humanActive && humanNativeGrounded ? humanPosition : null,
+-        humanPhysicalColliderMode);
+-      for (const bot of this.bots) this.sampleF4LeadBody(bot.id,
++      for (const bot of this.bots) this.sampleF4LeadBody(bot.id,
+         bot.lifeState === 'ACTIVE' && bot.hp > 0 && this.liveSourceCombatOpponent(bot) &&
+         bot.mobilityState === 'GROUND' ? bot.position : null,'CPU');
+     }
+@@ -4821,17 +4831,20 @@
+     return this.f4LeadAccepted;
+   }
+ 
+-  private sampleF4LeadBody(id: string, position: Vec3 | null, mode: string): void {
++  private sampleF4LeadBody(id: string, position: Vec3 | null, mode: string,predictable=true): void {
+     if (!position) {
+       this.f4LeadHistory.delete(id);
+       return;
+     }
+     const old = this.f4LeadHistory.get(id);
+-    const consecutive = old && old.mode === mode && this.b181NativeFrame-old.tick === 1 &&
+-      Math.hypot(position.x-old.current.x,position.z-old.current.z) <= .20 &&
+-      Math.abs(position.y-old.current.y) <= .12;
+-    this.f4LeadHistory.set(id,{current:position.clone(),previous:consecutive ? old.current : null,
+-      tick:this.b181NativeFrame,mode,life:consecutive ? old.life : Symbol(id)});
++    const sameTrack=old&&old.mode===mode&&this.b181NativeFrame-old.tick===1;
++    const consecutive = predictable&&sameTrack&&
++      Math.hypot(position.x-old.current.x,position.z-old.current.z) <= .20 &&
++      Math.abs(position.y-old.current.y) <= .12;
++    // Motion discontinuity disables extrapolation, not a valid current
++    // physical target. Death/respawn clears the track independently.
++    this.f4LeadHistory.set(id,{current:position.clone(),previous:consecutive ? old.current : null,
++      tick:this.b181NativeFrame,mode,life:sameTrack ? old.life : Symbol(id)});
+   }
+ 
+   public aimF4ShotAtLaunch(request: CpuFireRequest, origin: Vec3, range: number,
+@@ -4841,16 +4854,20 @@
+     if (!this.f4LeadEnabled || !ray || !opponent || request.sourceFloorPaint) return request.target;
+     const sample = this.f4LeadHistory.get(opponent.id);
+     const enemy = opponent.id === 'HUMAN' ? null : this.bots.find(bot=>bot.id===opponent.id);
+-    if (!sample || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
+-        (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))) return null;
++    if (!sample || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
++        (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))){
++      this.f4AimEvidence.staleTargetRejected++;return null;
++    }
+     const offset = new Vec3(0,opponent.offsetY,0);
+     const actual = sample.current.clone().add(offset);
+     const clear = (from: Vec3, to: Vec3) => !ray(from,to);
+-    if (Math.hypot(actual.x-origin.x,actual.z-origin.z) > range || !clear(origin,actual)) return null;
++    if(Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
++    if(!clear(origin,actual)){this.f4AimEvidence.covered++;return null;}
+     const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
+       1,range,solveFlightTicks,clear);
+-    if (predicted) this.f4LeadAccepted++;
+-    return predicted ?? actual;
++    if (predicted){this.f4LeadAccepted++;this.f4AimEvidence.predictedTarget++;}
++    else this.f4AimEvidence.currentTarget++;
++    return predicted ?? actual;
+   }
+ 
+   /** Aim adjustment: original Rapier blocker rechecked BEFORE shot. All
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -299,7 +299,9 @@
+   readonly b150ApprovedInkAims:number;
+   /** B153 source-verified A1 aim proposals after rotation. */
+   readonly b153DiversifiedAimApprovals:number;
+-  readonly realGoalRequests:number;
++  readonly realGoalRequests:number;
++  /** Local combat proposals, not proof of executed Crowd/KCC motion. */
++  readonly f4LocalCombatProposals?:Readonly<{attempts:number;candidateCount:number;admitted:number}>;
+   readonly heldRequests:number;
+   readonly engagementGoalRequests:number;
+   /** Native original upper-spawn return, no synthetic respawns. */
+@@ -485,7 +487,8 @@
+  /** Original-source CPU recovery intent; based only on its native HP. */
+  private readonly originalSourceRecoveryIntent=new Set<string>();
+  private auditedTargets=0;
+- private realGoalRequests=0;
++ private realGoalRequests=0;
++ private readonly f4LocalCombatProposals={attempts:0,candidateCount:0,admitted:0};
+  private heldRequests=0;
+  private engagementGoalRequests=0;
+  private b137RealCandidateChecks=0;
+@@ -1652,18 +1655,12 @@
+      foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+      this.b137NativeTick-previous.advanced<30)return result(previous.point);
+ 
+-  if(localActionsOpen&&visible&&sight?.actorId&&previous?.local&&
+-     !this.respawnOriginalDrops.has(bot.id)&&this.isLiveRejoinedSourceCpu(bot.id)){
+-   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range);
+-   if(tactical)return result(tactical);
+-  }
+-
+-  const forwardX=dx/distance,forwardZ=dz/distance;
++  const forwardX=dx/distance,forwardZ=dz/distance;
+   const advance=recovering||distance<range*.42?-1:
+    !visible||distance>range*.78?1:0;
+   const side=bot.id.endsWith('2')||bot.id.endsWith('4')?-1:1;
+   const step=Math.min(1.8,Math.max(.65,range*.19));
+-  const candidates:{point:Vec3;score:number;covered:boolean}[]=[];
++  const candidates:{point:Vec3;score:number;covered:boolean;localVerified:boolean}[]=[];
+   for(const lateral of [side,-side,0]){
+    if(advance===0&&lateral===0)continue;
+    const point=new Vec3(foot.x+step*(forwardX*advance-forwardZ*lateral),
+@@ -1680,16 +1677,29 @@
+    const spacing=Math.hypot(p.x-target.x,p.z-target.z);
+    const score=recovering?(covered?6:0)+(ownsInk(floor.point)?2:0)+spacing*.2:
+     (covered?-5:0)-Math.abs(spacing-range*.64)*.25+(lateral===0?-.2:0);
+-   candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered});
+-  }
+-  for(const {point,covered} of candidates.sort((a,b)=>b.score-a.score)){
++   candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
++    localVerified:projection.success&&projection.distanceMeters!==null&&
++     projection.distanceMeters<=.25&&Math.abs(floor.point.y-p.y)<=.12});
++  }
++  // Reuse this thought's actual F4 NavMesh projections. The frozen original
++  // patrol list is concentrated at |Z|>=33, mostly outside the local lane.
++  // Never broaden the local lane or bypass a pending nonlocal movement.
++  if(localActionsOpen&&visible&&sight?.actorId&&previous?.local&&
++     !this.respawnOriginalDrops.has(bot.id)&&this.isLiveRejoinedSourceCpu(bot.id)){
++   const nativeCandidates=candidates.filter(c=>c.localVerified&&
++    (recovering||!c.covered)).map(c=>c.point);
++   const tactical=this.f4AdmitLocalCombat(bot,foot,sight.actorId,range,nativeCandidates);
++   if(tactical)return result(tactical);
++  }
++  for(const {point,covered} of candidates.sort((a,b)=>b.score-a.score)){
+    if(!recovering&&covered&&visible&&distance<=range)continue;
+    const walk=this.f4WholeWalkTarget(foot,point);
+    if(walk)return result(walk);
+   }
+   return visible&&distance<=range?result(null):null;
+  }
+- private f4AdmitLocalCombat(bot:F3TrafficCpu,foot:Vec3,opponent:string,range:number):Vec3|null{
++ private f4AdmitLocalCombat(bot:F3TrafficCpu,foot:Vec3,opponent:string,range:number,
++  nativeCandidates:readonly Vec3[]):Vec3|null{
+   if(!this.physics||!bot.weaponId)return null;
+   // Stay on the same local lane, clear of all center transfer and spawn bands.
+   const local=(point:Readonly<{x:number;y:number;z:number}>)=>
+@@ -1704,11 +1714,23 @@
+    const ink=this.sourceInk?.sampleWorld(point,.10,SurfaceFlags.Paintable,SurfaceFlags.Scoreable|SurfaceFlags.Wall);
+    return !ink?'UNKNOWN':ink.owner===bot.team?'OWN':ink.owner===Team.Neutral?'NEUTRAL':'ENEMY';
+   };
+-  const candidates=(this.patrolGoals.get(bot.id)??[]).slice(0,16)
+-   .filter(point=>local(point)&&point.distance(foot)<=3.2)
+-   .map(point=>({foot:point,existingNativePoint:true as const,localTrafficAllowed:true as const,
+-    inkRelation:inkRelation(point)}));
++  // Native projected candidates first; retain old patrol points as fallback
++  // only within the original strict lane. No additional projection searches.
++  const points:Vec3[]=[];
++  for(const point of [...nativeCandidates,...(this.patrolGoals.get(bot.id)??[]).slice(0,16)]){
++   if(!local(point)||point.distance(foot)>3.2||point.distance(foot)<.35||
++      points.some(p=>p.distance(point)<.12))continue;
++   const floor=this.sourceNativeCharacterFootHit(point);
++   if(!floor||floor.solidId!==support.solidId||(floor.normal?.y??0)<.97||
++      Math.abs(floor.point.y-point.y)>.12)continue;
++   points.push(point);
++   if(points.length>=16)break;
++  }
++  const candidates=points.map(point=>({foot:point,existingNativePoint:true as const,
++   localTrafficAllowed:true as const,inkRelation:inkRelation(point)}));
+-  const admitted=chooseLocalCombatGoal({
++  this.f4LocalCombatProposals.attempts++;
++  this.f4LocalCombatProposals.candidateCount+=candidates.length;
++  const admitted=chooseLocalCombatGoal({
+    f4:true,alive:true,grounded:true,rejoined:true,localWalkingAllowed:true,
+    centerTransferPending:false,respawnPending:false,currentSupport:true,
+    foot,hp:bot.hp,ink:bot.ink,weaponClass:weaponProfile(bot.weaponId,true).weaponClass,
+@@ -1727,7 +1749,8 @@
+    }
+    return {reached:true,staticSupport:true,trafficAllowed:true,step};
+   });
+-  return admitted?new Vec3(admitted.step.x,admitted.step.y,admitted.step.z):null;
++  if(admitted)this.f4LocalCombatProposals.admitted++;
++  return admitted?new Vec3(admitted.step.x,admitted.step.y,admitted.step.z):null;
+  }
+ 
+  useF4WholeNavigation(nav:RecastStageNavigation,support:(id:string,foot:Vec3)=>boolean,
+@@ -4431,7 +4454,8 @@
+     b150SourceCandidateSamples:this.b150SourceCandidateSamples,
+     b150ApprovedInkAims:this.b150ApprovedInkAims,
+     b153DiversifiedAimApprovals:this.b153DiversifiedAimApprovals,
+-    realGoalRequests:this.realGoalRequests,
++    realGoalRequests:this.realGoalRequests,
++    ...(this.f4WholeSupport?{f4LocalCombatProposals:{...this.f4LocalCombatProposals}}:{}),
+     heldRequests:this.heldRequests,
+     engagementGoalRequests:this.engagementGoalRequests,
+     respawnOriginalDetected:this.respawnOriginalDetected,
