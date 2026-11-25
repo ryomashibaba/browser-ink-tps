@@ -1,0 +1,203 @@
+diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
+--- a/src/input/PlayerInput.ts
++++ b/src/input/PlayerInput.ts
+@@ -10,8 +10,18 @@
+ import {f4MouseHeldAfterMask} from '../player/F4PlayerIntent.mjs';
+ 
+ export class PlayerInput {
+-  private f4ProvisionalControls=false;
+-  public enableF4ProvisionalControls():void{
++  private f4ProvisionalControls=false;
++  // bit 1: pointer cancellation; bit 2: keyboard combat cancellation.
++  private f4CombatCancellation=0;
++  private markF4CombatCancellation(keyboard:boolean):void{
++    if(this.f4ProvisionalControls)this.f4CombatCancellation|=keyboard?3:1;
++  }
++  public consumeF4CombatCancellation():number{
++    const value=this.f4CombatCancellation;
++    this.f4CombatCancellation=0;
++    return value;
++  }
++  public enableF4ProvisionalControls():void{
+     if(!this.deterministicQaEnabled)this.f4ProvisionalControls=true;
+   }
+ 
+@@ -59,8 +69,9 @@
+    * stale OS-repeat or duplicate-down events from rearming the action.
+    * T20 and deterministic QA never enable this source-only guard. */
+   private cancelSourceShortcutInputs(shortcutCode?:string):void{
+-    if(!this.sourceLiveInputGuardsEnabled||this.deterministicQaEnabled)return;
+-    for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
++    if(!this.sourceLiveInputGuardsEnabled||this.deterministicQaEnabled)return;
++    this.markF4CombatCancellation(true);
++    for(const code of SOURCE_PRESTART_MOVEMENT_CODES){
+       if(this.keys.has(code))this.sourcePrestartHeldKeys.add(code);
+       this.keys.delete(code);
+     }
+@@ -161,15 +172,17 @@
+       if(event.code==='Space')this.jumpRequiresRelease=false;
+     });
+ 
+-    const clearPointerState = (): void => {
+-      this.fire = false;
++    const clearPointerState = (): void => {
++      this.markF4CombatCancellation(false);
++      this.fire = false;
+       this.primaryPressedQueued = false;
+       this.secondary = false;
+       this.secondaryPressedQueued = false;
+     };
+ 
+-    const clearGameplayState = (): void => {
+-      this.keys.clear();
++    const clearGameplayState = (): void => {
++      this.markF4CombatCancellation(true);
++      this.keys.clear();
+       this.sourcePrestartHeldKeys.clear();
+       clearPointerState();
+       this.jumpQueued = false;
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -826,12 +826,51 @@
+     this.stats.playerWeaponChargePercent = 0;
+     if (this.burstShotsRemaining <= 0) {
+       this.splatlingStoredChargeSeconds = 0;
+-      this.stats.playerWeaponChargeRing = 0;
+-      this.stats.playerWeaponFirstRingPercent = 0;
+-    }
+-  }
+-
+-  private clearF4WeaponInputBuffers(): void {
++      this.stats.playerWeaponChargeRing = 0;
++      // FirstRingPercent is the static profile threshold, not live charge.
++      if (!this.physics.hasF4WholeResearchTrimesh) this.stats.playerWeaponFirstRingPercent = 0;
++    }
++  }
++
++  /** Cancellation is not a physical trigger release. Keep already paid
++   * slosh/saber/canopy windups, committed bursts and airborne projectiles. */
++  public cancelF4UncommittedHumanIntent(): void {
++    if (!this.physics.hasF4WholeResearchTrimesh) return;
++    this.wasFireHeld = false;
++    this.chargeSeconds = 0;
++    this.f4StringerTapPending = false;
++    this.f4RailTapPending = false;
++    this.clearF4WeaponInputBuffers();
++    this.clearHumanContactInput();
++    this.canopies?.releaseAttached('human');
++    this.stats.playerWeaponChargePercent = 0;
++    if (this.burstShotsRemaining <= 0) this.stats.playerWeaponChargeRing = 0;
++  }
++
++  /** Only the actual HP-zero transition calls this. Never retire launched
++   * projectiles, CPU reservations, paint, HP or round state. */
++  public resetF4HumanWeaponLife(): void {
++    if (!this.physics.hasF4WholeResearchTrimesh) return;
++    this.cancelF4UncommittedHumanIntent();
++    this.cancelHumanSlosh();
++    this.cancelSaberSwing('human');
++    this.discardF4Canopy('human');
++    this.burstShotsRemaining = 0;
++    this.splatlingStoredChargeSeconds = 0;
++    this.fireCooldown = 0;
++    this.burstCooldown = 0;
++    this.rollPaintCooldown = 0;
++    this.meleeCooldown = 0;
++    this.dualiesFocusSeconds = 0;
++    this.shooterCadence?.delete('human');
++    this.brushSwings?.delete('human');
++    this.contactHitFrames?.delete('human');
++    this.stats.playerWeaponChargeRing = 0;
++    this.stats.playerWeaponGuarding = false;
++    this.stats.playerWeaponAction = 'LOCKED';
++  }
++
++  private clearF4WeaponInputBuffers(): void {
+     this.f4PressBufferedUntil = -1;
+     this.f4InstantPressUntil = -1;
+     this.f4ChargeReleaseUntil = -1;
+@@ -849,10 +888,10 @@
+   }
+ 
+   private f4InstantTrigger(profile: WeaponProfile, allowed: boolean, held: boolean, pressed: boolean): boolean {
+-    if (!allowed || !['SHOOTER','DUALIES','BLASTER','SLOSHER'].includes(profile.weaponClass)) {
+-      this.f4InstantPressUntil = -1;
+-      return held;
+-    }
++    if (!allowed || !['SHOOTER','DUALIES','BLASTER','SLOSHER'].includes(profile.weaponClass)) {
++      this.f4InstantPressUntil = -1;
++      return allowed && held;
++    }
+     if (held && pressed) this.f4InstantPressUntil = this.b367NativeFrame + 3;
+     return held || this.b367NativeFrame <= this.f4InstantPressUntil;
+   }
+@@ -1246,8 +1285,8 @@
+       this.stats.playerWeaponAction = 'LOCKED';
+       if (playerWeaponEnabled && playerDamageable) {
+         if (twinComets?.rollTravel) this.paintTwinCometsDodge(twinComets.rollTravel, team);
+-        if (twinComets?.phase !== 'ROLL_LOCK') {
+-          this.updateTwinComets(profile, f4InstantRequested, {
++        if (twinComets?.phase !== 'ROLL_LOCK' && (!f4 || f4HumanAllowed)) {
++          this.updateTwinComets(profile, f4InstantRequested, {
+             muzzle: muzzlePosition, forward: aimDirection, target: twinComets?.aimTarget ??
+               muzzlePosition.clone().add(aimDirection.clone().mulScalar(profile.shooter!.combatRangeMeters)),
+             body: playerPosition, grounded: this.stats.playerGrounded,
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -5916,9 +5916,13 @@
+   this.player.resetF4ZipResearch();
+   this.f4SpecialLife=1;
+   this.f4HumanDeathTick=null;
+-  this.f4HumanLifePairs.length=0;
+-  this.f4SpecialSecondaryHeld=false;
+-  this.cpuKit?.reset();
++  this.f4HumanLifePairs.length=0;
++  this.f4SpecialSecondaryHeld=false;
++  if(this.f4ProvisionalTurfEnabled){
++   this.f4CurlingHeldFrames=null;
++   this.f4HumanSubActionOpen=false;
++  }
++  this.cpuKit?.reset();
+   this.cpuKitArtificialGaugeArms=0;
+   this.cpuKitManualSubQa=0;
+   this.cpuKitManualSpecialQa=0;
+@@ -6060,8 +6064,19 @@
+     // B379: genuine 60Hz player inputs and B378-selected weapon runtime
+     // act on the real Rapier KCC BEFORE the physical step, not a fake move.
+     const profile=this.projectiles.currentPlayerWeapon;
+-    const twin=profile.twinComets===true;
+-    // Consume the genuine G edge once before normal weapon-specific mobility.
++    const twin=profile.twinComets===true;
++    // A cancelled pointer/keyboard event is not a completed charge release.
++    // Consume before KCC, special input and normal weapon updates. Fresh
++    // edges arriving after cancellation are still available in PlayerInput.
++    if(this.f4ProvisionalTurfEnabled){
++     const cancelled=this.input.consumeF4CombatCancellation();
++     if(cancelled&1){
++      this.projectiles.cancelF4UncommittedHumanIntent();
++      this.f4SpecialSecondaryHeld=false;
++     }
++     if(cancelled&2)this.f4CurlingHeldFrames=null;
++    }
++    // Consume the genuine G edge once before normal weapon-specific mobility.
+     const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
+     const zipResearchKit=this.f4ZipResearchEnabled&&profile.id==='arc-blaster';
+     const zipOpen=zipResearchKit&&this.f4WholeTrimeshInstalled&&alive&&
+@@ -6481,9 +6496,12 @@
+       this.player.cancelF4ZipResearch('HUMAN_SPLATTED');
+       this.f4SpecialSecondaryHeld=false;
+       this.player.setLifecycleActive(false);
+-      this.projectiles.cancelHumanSlosh();
+-      this.projectiles.discardF4Canopy('human');
+-      if(twin){
++      if(this.f4ProvisionalTurfEnabled)this.projectiles.resetF4HumanWeaponLife();
++      else{
++       this.projectiles.cancelHumanSlosh();
++       this.projectiles.discardF4Canopy('human');
++      }
++      if(twin){
+        this.player.resetWeaponDodge();
+        this.projectiles.resetTwinCometsLife();
+       }
