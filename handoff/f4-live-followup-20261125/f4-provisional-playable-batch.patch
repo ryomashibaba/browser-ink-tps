@@ -176,7 +176,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    const f4ProbeCpu=this.f4SpecialProbe?sessionStorage.getItem('t21F4SpecialProbeCpu'):null;
    if(f4ProbeCpu&&/^(A[123]|B[1234])$/.test(f4ProbeCpu)&&this.f4Special){
     const runtime=this.f4Special;
-@@ -1281,7 +1301,23 @@
+@@ -1281,7 +1301,22 @@
      cancel:()=>runtime.cancelActor(f4ProbeCpu,nextRoundTick())
     });
    }
@@ -185,14 +185,13 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +   const runtime=this.f4Special;
 +   const tick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
 +   this.cpu.useF4NaturalSpecial({
-+    wantsTick:id=>runtime.ownsWeaponInput(id,tick())||runtime.naturalReady(id,tick()),
-+    step:({actorId,lifeId,team,weapon,foot,aim,hasOpponent,canStart})=>{
-+     const actor={actorId,lifeId,team,weapon};runtime.syncNaturalActor(actor,true);
-+     const before=runtime.naturalActivations(actorId);
++    wantsTick:id=>runtime.wantsNaturalCpuTick(id,tick()),
++    step:({actorId,lifeId,team,weapon,foot,aim,canStart,distance,hp,ink,recentHit,grounded})=>{
++     const actor={actorId,lifeId,team,weapon};
 +     const origin=this.projectiles.clipF4SpecialMuzzle(foot,foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)));
-+     const owns=runtime.actorTick(tick(),actor,{origin,forward:aim.clone(),foot:foot.clone(),
-+      trigger:hasOpponent,holdThrow:false,releaseThrow:false,cannon:false,airborne:false},true,false,hasOpponent&&canStart);
-+     return {owns,activated:runtime.naturalActivations(actorId)>before};
++     return runtime.naturalCpuTick(tick(),actor,{origin,forward:aim.clone(),foot:foot.clone(),
++      trigger:false,holdThrow:false,releaseThrow:false,cannon:false,airborne:!grounded},
++      {canStart,distance,hp,ink,recentHit,grounded});
 +    },cancel:id=>runtime.cancelActor(id,tick()),
 +    splat:actor=>{runtime.cancelActor(actor.actorId,tick());runtime.syncNaturalActor(actor,false);}
 +   });
@@ -201,7 +200,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // entrances now reuse the proven real physical-slot budget: a full
    // projectile pool must NOT spend the human's real ink for zero shots.
    // Explicit older B343 QA remains selectable; T20, deterministic
-@@ -2000,21 +2036,37 @@
+@@ -2000,21 +2035,37 @@
       const profile=subWeaponProfile(sub);
       return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
        subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
@@ -244,7 +243,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
        weapon:this.projectiles.currentPlayerWeapon.id
       }):null;
-@@ -3050,8 +3102,9 @@
+@@ -3050,8 +3101,9 @@
    canvas.dataset.t21F3SourceStage=stage.metadata.id;
    canvas.dataset.t21F3Production='FORBIDDEN';
    const api={snapshot:()=>this.snapshot(),
@@ -256,7 +255,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
      humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
      projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),
-@@ -3268,8 +3321,9 @@
+@@ -3268,8 +3320,9 @@
      this.f4WholeTrimeshInstalled=true;
      // The F3L root draws all stage geometry. Existing backed ink cells
      // render over it without the old opaque neutral paint planes.
@@ -268,7 +267,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
       this.b45SourceSurfaces,wholeNavWorld);
      this.sourceCompletion.root.enabled=false;
-@@ -5936,17 +5990,47 @@
+@@ -5936,17 +5989,47 @@
      const zipResearchKit=this.f4ZipResearchEnabled&&profile.id==='arc-blaster';
      const zipOpen=zipResearchKit&&this.f4WholeTrimeshInstalled&&alive&&
       this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
@@ -324,7 +323,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
         !this.stopReason&&document.pointerLockElement===this.canvas)));
      const b379Mobility=applyB379NativePlayerWeaponMobility({
       input:this.input,player:this.player,weapons:this.projectiles,
-@@ -5978,7 +6062,7 @@
+@@ -5978,7 +6061,7 @@
      this.b20ProfileStop('rapierAndHumanKcc',playerStart);
      if(alive)this.resources.fixedUpdate(
       seconds,this.player.currentMode,this.player.currentInkRelation,mist);
@@ -333,7 +332,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
        alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
      }
-@@ -6111,10 +6195,9 @@
+@@ -6111,10 +6194,9 @@
      });
      this.camera.update(this.player.getPosition(this.p));
      const primaryTap=this.input.consumePrimaryPressed();
@@ -346,7 +345,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      let f4SpecialOwnsInput=f4SpecialOwnsMobility;
      const humanShotsBefore=this.stats.shotsFired;
      if(this.w10b14){
-@@ -6152,11 +6235,12 @@
+@@ -6152,11 +6234,12 @@
       this.camera.getAimDirection(this.aim);
       this.player.getMuzzlePosition(this.aim,this.muzzle);
       this.camera.getAimTarget(this.target);
@@ -361,7 +360,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
         actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,weapon:profile.id
        },{
         origin:this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle),forward:this.aim.clone(),
-@@ -6166,8 +6250,10 @@
+@@ -6166,8 +6249,10 @@
         holdThrow:this.player.canShoot&&secondary,
         releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
         airborne:!this.stats.playerGrounded
@@ -374,7 +373,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.f4SpecialSecondaryHeld=secondary;
       }
       this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
-@@ -6202,7 +6288,7 @@
+@@ -6202,7 +6287,7 @@
      // a projectile injected by QA. Original Rapier/paint physics resolve it.
      // Consume even when disabled or splatted: never fire stale buffered F.
      const humanSubId=this.sourceWeaponKit(profile.id).sub;
@@ -383,7 +382,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas;
      this.f4HumanSubActionOpen=canUseSub;
      let throwSub=canUseSub&&subTap;
-@@ -6242,8 +6328,12 @@
+@@ -6242,8 +6327,12 @@
      this.cpuKit?.fixedUpdate(seconds);
      this.b20ProfileStop('aimProjectilesAndKits',projectileStart);
      const paintStart=this.b20ProfileStart();
@@ -398,7 +397,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
      // Read life states after CPU and projectile updates on every native tick.
      // HUD and external QA sampling can skip a splat or respawn boundary.
      if(this.f4WholeCpuConnected){
-@@ -6279,7 +6369,8 @@
+@@ -6279,7 +6368,8 @@
        this.input.setCombatInputActive(false);
        this.f4CurlingHeldFrames=null;
        this.humanSplats++;
@@ -408,7 +407,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        this.player.cancelF4ZipResearch('HUMAN_SPLATTED');
        this.f4SpecialSecondaryHeld=false;
        this.player.setLifecycleActive(false);
-@@ -6940,8 +7031,12 @@
+@@ -6940,8 +7030,12 @@
    hud.dataset.t21B401NeutralCells=String(next.neutral);
    hud.dataset.t21B401OfficialWinner='NONE';
   }
@@ -423,7 +422,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // No player/CPU physics ticks with old colliders while F3L verifies.
    if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
     this.paused=true;
-@@ -9673,7 +9768,10 @@
+@@ -9673,7 +9767,10 @@
     const actualStop=state.stopReason?
      'NATIVE STOP · TICK '+state.tick+' · '+
      state.stopReason.slice(0,160)+'\n':'';
@@ -453,7 +452,7 @@ diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
   const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
   const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
 - return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証',danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?probe==='ACTIVE'?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
-+ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
++ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:valid&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
  }
  const CSS=`[data-f4-compact-active="true"]{box-sizing:border-box!important;width:min(420px,calc(100vw - 24px))!important;padding:9px 12px!important;background:rgba(8,16,29,.89)!important;border:1px solid #ffffff35!important;border-radius:14px!important;box-shadow:0 4px 18px #0005!important;top:10px!important;pointer-events:none!important}[data-f4-compact-active="true"] > [data-f4-legacy-display],[data-f4-compact-active="true"] > #t21-f3-source-practice-ink-balance{display:none!important}.f4-compact-hud{color:#f5f7fc;font:600 12px/1.3 system-ui,sans-serif;font-variant-numeric:tabular-nums}.f4-compact-hud[hidden]{display:none!important}.f4-compact-hud .f4-top,.f4-compact-hud .f4-line{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.f4-compact-hud .f4-clock{font-size:28px;line-height:1;font-weight:850;letter-spacing:.5px}.f4-compact-hud .f4-meta{color:#d1d8e6;font-size:11px;text-align:right}.f4-compact-hud .f4-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.f4-compact-hud .f4-track{height:7px;background:#ffffff26;border-radius:5px;overflow:hidden;margin-top:3px}.f4-compact-hud .f4-fill{height:100%;width:0%;background:#70e2c3;border-radius:5px}.f4-compact-hud .f4-ink{background:#ff88c7}.f4-compact-hud .f4-sp{background:#ffcf6f}.f4-compact-hud .f4-weapon{font-size:14px;overflow-wrap:anywhere}.f4-compact-hud .f4-muted{color:#c0cad9;font-size:11px;overflow-wrap:anywhere}.f4-compact-hud .f4-notice{color:#ffd9ae;font-size:12px;font-weight:750;margin-top:4px}.f4-compact-hud .f4-sub[data-ready="true"]{color:#a5f5d5}.f4-compact-hud .f4-sub[data-ready="false"]{color:#c0cad9}.f4-compact-hud .f4-special{margin-top:5px}.f4-compact-hud .f4-help{font-size:10px;color:#d1d8e6;margin-top:5px;overflow-wrap:anywhere}@media(max-width:480px){.f4-compact-hud .f4-clock{font-size:23px}.f4-compact-hud .f4-meta{font-size:10px}.f4-compact-hud .f4-help{font-size:10px}}`;
  export function installCompactF4Hud(legacy,{visible,readKit,readSpecial}){
@@ -693,17 +692,18 @@ diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
 diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 --- a/src/special/F4SpecialRuntime.ts
 +++ b/src/special/F4SpecialRuntime.ts
-@@ -4,7 +4,8 @@
+@@ -4,7 +4,9 @@
  import type { F4SpecialFlight, ProjectileSystem } from '../projectile/ProjectileSystem';
  import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
  import type { WeaponId } from '../weapons/WeaponCatalog';
 -import { CertifiedTurf720, KIT720, type F4SpecialId } from './f4/shared-special-score720-20261125/shared-special-score720.mjs';
 +import {F4ProvisionalGauge} from './F4ProvisionalGauge.mjs';
++import {F4CpuSpecialTactics,cpuSpecialDecisionDue} from './F4CpuSpecialTactics.mjs';
 +import { CertifiedTurf720, KIT720, type F4SpecialId } from './f4/shared-special-score720-20261125/shared-special-score720.mjs';
  import { PhysicalSpecialPort720, type SpecialPlan, type LaserPair, type TornadoPulse, type WaveDevice, type BarrierDevice } from './f4/shared-special-score720-20261125/physical-special-port720.mjs';
  
  const HUMAN = 'human';
-@@ -39,7 +40,33 @@
+@@ -39,7 +41,60 @@
      candidateContacts:0,admissionAttempts:0,admissionRejected:0};
    private waves = 0;
    private readonly active = new Map<string,string>();
@@ -711,6 +711,33 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 +  private readonly completedProbeLives = new Set<string>();
 +  private readonly naturalGauge=new F4ProvisionalGauge(KIT720,10,.5);
 +  private naturalOpen=false;
++  private readonly cpuTactics=new F4CpuSpecialTactics();
++  private cpuDecisions=0;
++  private cpuAdmissions=0;
++  private cpuCannonCommands=0;
++  private cpuRollCommands=0;
++  private cpuThrowReleaseCommands=0;
++  wantsNaturalCpuTick(actorId:string,tick:number):boolean {
++    return tick<10800&&(this.ownsWeaponInput(actorId,tick)||
++      (this.naturalReady(actorId,tick)&&cpuSpecialDecisionDue(actorId,tick)));
++  }
++  naturalCpuTick(tick:number,actor:Actor,input:Input,context:{canStart:boolean;grounded:boolean;hp:number;ink:number;recentHit:boolean;distance:number|null}) {
++    this.syncNaturalActor(actor,context.hp>0);
++    const special=KIT720[actor.weapon].special,active=this.active.get(actor.actorId)===actor.lifeId;
++    const command=this.cpuTactics.choose({id:actor.actorId,lifeId:actor.lifeId,special,tick,active,
++      ready:this.naturalReady(actor.actorId,tick),...context,direction:[input.forward.x,input.forward.y,input.forward.z]});
++    this.cpuDecisions++;
++    const before=this.naturalActivations(actor.actorId);
++    const owns=this.actorTick(tick,actor,{...input,trigger:command.trigger,cannon:command.cannon,
++      holdThrow:command.holdThrow,releaseThrow:command.releaseThrow,
++      forward:command.lob?new Vec3(...command.lob):input.forward},true,false,command.request);
++    const activated=this.naturalActivations(actor.actorId)>before;
++    if(activated){this.cpuAdmissions++;this.cpuTactics.accepted(actor.actorId,actor.lifeId,special,tick);}
++    if(active&&command.cannon)this.cpuCannonCommands++;
++    if(active&&special==='chariot'&&command.holdThrow)this.cpuRollCommands++;
++    if(active&&command.releaseThrow)this.cpuThrowReleaseCommands++;
++    return {owns,activated};
++  }
 +  setNaturalOpen(open:boolean):void {this.naturalOpen=open;}
 +  syncNaturalActor(actor:Actor,alive:boolean):void {this.naturalGauge.sync(actor,alive);}
 +  creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
@@ -718,11 +745,11 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
 +  }
 +  naturalReady(actorId:string,tick:number):boolean {
 +    const state=this.naturalGauge.state(actorId);
-+    return this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
++    return tick>=0&&tick<10800&&this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
 +  }
 +  naturalZipReady(actor:Actor,tick:number):boolean {
 +    const state=this.naturalGauge.state(actor.actorId);
-+    return this.naturalOpen&&actor.actorId===HUMAN&&actor.weapon==='arc-blaster'&&
++    return tick>=0&&tick<10800&&this.naturalOpen&&actor.actorId===HUMAN&&actor.weapon==='arc-blaster'&&
 +      !!state?.ready&&state.lifeId===actor.lifeId&&state.weapon===actor.weapon&&!this.ownsWeaponInput(actor.actorId,tick);
 +  }
 +  consumeNaturalZip(actor:Actor,tick:number):boolean {
@@ -738,39 +765,43 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
    private input: Input|null = null;
    private paintCells = 0;
    private launches = 0;
-@@ -92,7 +119,9 @@
+@@ -92,7 +147,11 @@
      this.round++;
      this.port=this.newPort();
      this.turf=new CertifiedTurf720({roundId:this.roundId});
 -    this.completedProbeLives.clear();
 +    this.completedProbeLives.clear();
 +    this.naturalGauge.reset();
++    this.cpuTactics.reset();
++    this.cpuDecisions=this.cpuAdmissions=this.cpuCannonCommands=this.cpuRollCommands=this.cpuThrowReleaseCommands=0;
 +    this.naturalOpen=false;
      this.actorUnlock.clear();
      this.livePose.clear();
      this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
-@@ -116,7 +145,10 @@
+@@ -116,7 +175,10 @@
      this.effects.length=0;
      this.devices.clear();
      this.suctionQueries.clear();
 -    if (legalRoundEnd) this.score=this.turf.result({roundId:this.roundId,tick,roundEnded:true});
 +    if (legalRoundEnd) {
-+      this.naturalOpen=false;this.naturalGauge.close();
++      this.naturalOpen=false;this.naturalGauge.close();this.cpuTactics.reset();
 +      this.score=this.turf.result({roundId:this.roundId,tick,roundEnded:true});
 +    }
    }
  
    notePaint(changed: number): void {this.paintCells+=changed;}
-@@ -145,7 +177,7 @@
+@@ -145,7 +207,9 @@
        launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
        castEnd:this.terminal,placementAttempts:this.placementAttempts,
        lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected,
 -      suction:{...this.suctionEvidence}};
-+      suction:{...this.suctionEvidence},provisionalGauge:this.naturalGauge.snapshot()};
++      suction:{...this.suctionEvidence},provisionalGauge:this.naturalGauge.snapshot(),
++      cpuSpecialTactics:{decisions:this.cpuDecisions,admissions:this.cpuAdmissions,
++       cannonCommands:this.cpuCannonCommands,rollCommands:this.cpuRollCommands,throwReleaseCommands:this.cpuThrowReleaseCommands}};
    }
  
    update(tick: number): void {
-@@ -160,7 +192,7 @@
+@@ -160,7 +224,7 @@
      }
    }
  
@@ -779,7 +810,7 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
      this.frame=Math.max(this.frame,tick);
      const {actorId,lifeId,team,weapon}=actor;
      const key={roundId:this.roundId,tick,actorId,lifeId};
-@@ -174,7 +206,12 @@
+@@ -174,7 +238,12 @@
      this.input=input;
      const probeKey=actorId+':'+lifeId;
      try {
@@ -793,6 +824,18 @@ diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
          const special=KIT720[weapon].special;
          if(this.port.begin({...key,team,special,input:{weapon}}))
            this.completedProbeLives.add(probeKey);
+@@ -193,8 +262,9 @@
+     return this.active.has(actorId)||tick<(this.actorUnlock.get(actorId)??0);
+   }
+ 
+-  cancelActor(actorId:string,tick:number):void {
+-    const lifeId=this.active.get(actorId);
++  cancelActor(actorId:string,tick:number):void {
++    this.cpuTactics.cancel(actorId);
++    const lifeId=this.active.get(actorId);
+     if(lifeId)this.port.cancel({roundId:this.roundId,tick,actorId,lifeId,reason:'life-ended'});
+     this.actorUnlock.delete(actorId);
+   }
 diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 --- a/src/ai/CpuAgentSystem.ts
 +++ b/src/ai/CpuAgentSystem.ts
@@ -803,7 +846,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 -  private readonly f4PendingSpawns = new Set<string>();
 +  private f4NaturalSpecial?:{
 +    wantsTick(actorId:string):boolean;
-+    step(input:{actorId:string;foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;hasOpponent:boolean;canStart:boolean;lifeId:string}):{owns:boolean;activated:boolean};
++    step(input:{actorId:string;foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;hasOpponent:boolean;canStart:boolean;lifeId:string;distance:number|null;hp:number;ink:number;recentHit:boolean;grounded:boolean}):{owns:boolean;activated:boolean};
 +    cancel(actorId:string):void;
 +    splat(actor:{actorId:string;team:Team.A|Team.B;weapon:WeaponId;lifeId:string}):void;
 +  };
@@ -827,7 +870,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
          const frame=this.phase14eFirstDrop?.advance(bot.id,dt);
          if (!frame||!frame.continuous)
            throw new Error('T21_PHASE14E_CPU_FALL_UNSAFE_FRAME');
-@@ -2052,8 +2059,19 @@
+@@ -2052,8 +2059,21 @@
            if(probe.step({foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
              hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial)}))continue;
          }
@@ -840,8 +883,10 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 +          const aim=target?target.clone().sub(origin).normalize():bot.weaponFacing;
 +          const canStart=!bot.weaponGuarding&&!bot.f4CanopyOpen&&bot.weaponChargeSeconds<=0&&bot.weaponBurstShotsRemaining<=0;
 +          const result=natural.step({actorId:bot.id,foot:bot.position,aim,team:bot.team,weapon:bot.weaponId,
-+            hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial)});
-+          if(result.activated){bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;this.stats.cpuSpecialActivations++;}
++            hasOpponent:target!==null,canStart,lifeId:String(bot.f4LifeSerial),distance:target?origin.distance(target):null,
++            hp:bot.hp,ink:bot.ink,recentHit:bot.b213ActualHitTick>=0&&this.b181NativeFrame-bot.b213ActualHitTick<=60,
++            grounded:bot.mobilityState==='GROUND'});
++          if(result.activated){bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;this.stats.cpuSpecialActivations++;}
 +          if(result.owns)continue;
 +        }
 +        this.updateCpuWeaponsAndKit(
@@ -849,7 +894,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        }
      }
  
-@@ -3514,7 +3532,13 @@
+@@ -3514,7 +3534,13 @@
  
    /** Shared SUB charge transaction: physical bomb pool, ink, cooldown,
     * real collision and rejected-request refund remain unchanged. */
@@ -864,7 +909,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      this.f4PhysicalSpecialProbe=probe;
    }
  
-@@ -5540,8 +5564,9 @@
+@@ -5540,8 +5566,9 @@
    private splatBot(bot: CpuBot): void {
      this.f4LeadHistory?.delete(bot.id);
      if(this.f4WholeNavigation)this.f4Drops.delete(bot.id);
@@ -1049,4 +1094,108 @@ new file mode 100644
 + state(id:string):F4GaugeState|null;
 + consume(id:string,lifeId:string):boolean;
 + snapshot():F4GaugeState[];
++}
+diff --git a/src/special/F4CpuSpecialTactics.mjs b/src/special/F4CpuSpecialTactics.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/special/F4CpuSpecialTactics.mjs
+@@ -0,0 +1,86 @@
++// Provisional AI only. Chooses real controls; never writes HP, geometry, paint or score.
++const ranges=Object.freeze({ultraShot:[2,24],chariot:[2,17],blower:[2,12],greatBarrier:[0,7],waveBreaker:[0,7],microLaser:[2,18],tripleTornado:[3,11],ultraStamp:[0,14]});
++const minTime=Object.freeze({ultraShot:100,chariot:140,blower:420,greatBarrier:50,waveBreaker:110,microLaser:110,tripleTornado:120,ultraStamp:85});
++export function cpuSpecialDecisionDue(id,tick){
++ const phase=[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)%12;
++ return Number.isInteger(tick)&&tick>=0&&tick<10800&&tick%12===phase
++}
++// Low ballistic arc, solved using the existing launch speed/gravity.
++// Null means there is no finite feasible flight in the executor's lifetime.
++export function cpuSpecialLob(direction,distance,speed,gravity,lifetime){
++ if(!direction||![...direction,distance,speed,gravity,lifetime].every(Number.isFinite)||distance<=0||speed<=0||gravity<=0||lifetime<=0)return null;
++ const [dx,dy,dz]=direction,h=Math.hypot(dx,dz);
++ if(h<1e-5)return null;
++ const len=Math.hypot(dx,dy,dz),x=distance*h/len,y=distance*dy/len,v2=speed*speed;
++ const disc=v2*v2-gravity*(gravity*x*x+2*y*v2);
++ if(disc<0)return null;
++ const theta=Math.atan2(v2-Math.sqrt(disc),gravity*x),c=Math.cos(theta);
++ if(c<=0||x/(speed*c)>lifetime)return null;
++ return [dx/h*c,Math.sin(theta),dz/h*c]
++}
++export class F4CpuSpecialTactics {
++ #state=new Map();
++ reset(){this.#state.clear()}
++ cancel(id){this.#state.delete(id)}
++ accepted(id,lifeId,special,tick){
++  this.#state.set(id,{lifeId,special,start:tick,rollUntil:-1,nextRoll:tick,throwAt:null,released:false})
++ }
++ choose({id,lifeId,special,tick,active,ready,canStart,grounded,hp,ink,recentHit,distance,direction}){
++  const neutral={request:false,trigger:false,cannon:false,holdThrow:false,releaseThrow:false,lob:null,reason:'WAIT'};
++  const range=ranges[special];
++  if(!range||!Number.isInteger(tick)||tick<0||tick>=10800||!Number.isFinite(hp)||hp<=0)return neutral;
++  const visible=Number.isFinite(distance)&&distance>=0;
++  const near=visible&&distance<=range[1]&&distance>=range[0];
++  const low=hp<=40,threat=recentHit===true,remaining=10800-tick;
++  const lob=(speed,g,life)=>visible?cpuSpecialLob(direction,distance,speed,g,life):null;
++  let row=this.#state.get(id);
++  if(row&&(row.lifeId!==lifeId||row.special!==special||!active)){this.#state.delete(id);row=null}
++  let request=false;
++  if(!active){
++   if(!ready||!canStart||!grounded||!visible||remaining<minTime[special])return neutral;
++   switch(special){
++    case 'greatBarrier':request=near&&(low||threat||distance<=3.5);break;
++    case 'waveBreaker':request=near;break;
++    case 'blower':request=near&&(threat||distance<=7);break;
++    case 'tripleTornado':request=near&&lob(12,12,2.1)!==null;break;
++    case 'chariot':request=near&&(distance>=4||low||ink<25);break;
++    case 'ultraStamp':request=near&&(distance<=2.2||lob(23,8,1.45)!==null);break;
++    default:request=near;
++   }
++   if(!request)return neutral;
++  }
++  if(active&&!row)return {...neutral,reason:'ACTIVE_WITHOUT_CPU_ADMISSION'};
++  const age=row?tick-row.start:0;
++  const out={...neutral,request,reason:request?'ADMIT':'ACTIVE'};
++  switch(special){
++   case 'ultraShot':out.trigger=near;break;
++   case 'chariot':{
++    if(row&&tick>=row.nextRoll&&low&&threat&&visible&&distance<3){
++     row.rollUntil=tick+24;row.nextRoll=tick+90;
++    }
++    const roll=!!row&&tick<row.rollUntil;
++    out.holdThrow=roll;
++    if(!roll&&near){
++     const arc=distance>=8?lob(21,4,1.15):null;
++     out.cannon=arc!==null;out.lob=arc;out.trigger=!out.cannon;
++    }
++    break
++   }
++   case 'blower':out.trigger=age<380||near;break;
++   case 'greatBarrier':case 'waveBreaker':out.trigger=grounded;break;
++   case 'microLaser':out.trigger=near;break;
++   case 'tripleTornado':out.lob=near?lob(12,12,2.1):null;out.trigger=out.lob!==null;break;
++   case 'ultraStamp':{
++    if(row&&row.throwAt!==null){
++     if(!row.released&&tick>=row.throwAt){row.released=true;out.releaseThrow=true}
++     else if(!row.released)out.holdThrow=true;
++     out.lob=lob(23,8,1.45);
++    }else if(row&&near&&distance>2.2&&age>=18&&age<410&&lob(23,8,1.45)){
++     row.throwAt=tick+18;out.holdThrow=true;out.lob=lob(23,8,1.45);
++    }else out.trigger=near&&distance<=2.2;
++    break
++   }
++  }
++  return out
++ }
++}
+diff --git a/src/special/F4CpuSpecialTactics.d.mts b/src/special/F4CpuSpecialTactics.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/special/F4CpuSpecialTactics.d.mts
+@@ -0,0 +1,8 @@
++import type {F4SpecialId} from './f4/shared-special-score720-20261125/shared-special-score720.mjs';
++export function cpuSpecialDecisionDue(id:string,tick:number):boolean;
++export function cpuSpecialLob(direction:readonly [number,number,number],distance:number,speed:number,gravity:number,lifetime:number):[number,number,number]|null;
++export class F4CpuSpecialTactics {
++ reset():void;cancel(id:string):void;accepted(id:string,lifeId:string,special:F4SpecialId,tick:number):void;
++ choose(input:{id:string;lifeId:string;special:F4SpecialId;tick:number;active:boolean;ready:boolean;canStart:boolean;grounded:boolean;hp:number;ink:number;recentHit:boolean;distance:number|null;direction:readonly [number,number,number]}):
++ {request:boolean;trigger:boolean;cannon:boolean;holdThrow:boolean;releaseThrow:boolean;lob:[number,number,number]|null;reason:string};
 +}
