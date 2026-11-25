@@ -1,0 +1,94 @@
+{
+  "base": "8f27825a5cdca880324b704821576c284456594f",
+  "previous": "5a7d066595e6260528d8a55cfb3ce94db680be2f",
+  "passed": [
+    {
+      "id": "cpu-combat",
+      "path": "cpu-combat/cpu-integrated-commitment.patch",
+      "sha": "14d0b33faaa2c402a98ae5b979177a03d0a16db4",
+      "modules": [
+        {
+          "p": "cpu-combat/F4CpuCommitment.mjs",
+          "sha": "a6eabae5ae66ade72f54a3afebf49040620d1219"
+        },
+        {
+          "p": "cpu-combat/F4CpuCommitment.d.mts",
+          "sha": "a23daa25733e353aceedb9963c6efca2f530996c"
+        }
+      ],
+      "relaxed": []
+    },
+    {
+      "id": "performance-projectile",
+      "path": "performance/projectile-pool-early-exit.patch",
+      "sha": "bfd39cbd440694df3fd5009186dbd7a55f59547f",
+      "modules": [],
+      "relaxed": []
+    },
+    {
+      "id": "performance-wall",
+      "path": "performance/wall-mask-scalar.patch",
+      "sha": "1e5bddd5c7c11d614323538bbb133468e40e2b39",
+      "modules": [],
+      "relaxed": []
+    },
+    {
+      "id": "weapon",
+      "path": "weapon/weapon-lifecycle-integrated09.patch",
+      "sha": "37e465fdb065db28b131f7190fa2ec9ee49bea61",
+      "modules": [],
+      "relaxed": []
+    },
+    {
+      "id": "special",
+      "path": "special/special-integrated-09-fixes.patch",
+      "sha": "9a20ede79620c42ba6a1d91bcce05190bfdd9d00",
+      "modules": [],
+      "relaxed": [
+        {
+          "path": "src/ai/CpuAgentSystem.ts",
+          "hunk": 2183,
+          "trim": [
+            3,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "held": [
+    {
+      "id": "cpu-navigation",
+      "reason": "Error: src/ai/F4PatrolNavigation.mjs @43 matches=0   }\n }\n \n+// Local survey routes can be 8m long; keep genuine progress through a bend\n+// or enemy-ink slowdown, with a hard six-second bound. No KCC override.\n+export function localPatrolProgress(trail,foot){\n+ if(!foot||![foot.x,foot.y,foot.z].every(Number.isFinite)||!Array.isArray(trail)||trail.length>=96)return false;\n+ // Only a new horizontal location earns progress; repeated or vertical\n+ // jitter does not. Trail is scoped to this goal, never a movement command.\n+ if(trail.some(p=>Math.hypot(p.x-foot.x,p.z-foot.z)<.25))return false;\n+ trail.push({x:foot.x,y:foot.y,z:foot.z});\n+ return true;\n+}\n+export function localPatrolCanContinue(tick,issued,advanced,veto=false){\n+ return [tick,issued,advanced].every(Number.isSafeInteger)&&!veto&&tick>=issued&&tick>=advanced&&tick-advanced<48&&tick-issued<360;\n+}\n+"
+    }
+  ],
+  "blobs": {
+    "src/ai/CpuAgentSystem.ts": {
+      "sha": "7927e774962904418abc693ea53d05d934e75d25",
+      "source": "windows-share"
+    },
+    "src/projectile/ProjectileSystem.ts": {
+      "sha": "ce40e1ba42c400d4e7e2a32279d845a0f1b283f2",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3SourceTraffic.ts": {
+      "sha": "b9159b80a8dcae5520068455129abbc13d03fea3",
+      "source": "windows-share"
+    },
+    "src/input/PlayerInput.ts": {
+      "sha": "877cf9c641d8cee3fc5b7091d7e4f9fb95920e2f",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/special/F4SpecialRuntime.ts": {
+      "sha": "32dc3b34f2196f4711f0c6bc5030b9836dab66da",
+      "source": "windows-share"
+    }
+  },
+  "replay": 194,
+  "files": 78,
+  "nativeBuild": "NOT_RUN"
+}
