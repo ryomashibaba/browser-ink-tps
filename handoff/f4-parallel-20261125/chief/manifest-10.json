@@ -1,0 +1,83 @@
+{
+  "base": "619372b1a9817f9c7e61721a8a22bc9043973978",
+  "previous": "529edbd0a9aa560a87f4304cc2fee13062406e7e",
+  "passed": [
+    {
+      "id": "stage",
+      "path": "stage/batch4/stage-integrated09-fixes.patch",
+      "sha": "e26f9ddd532188b2cd8655fbe8b97e46caef79a3",
+      "modules": [
+        {
+          "p": "stage/batch4/F4WallContinuationBrushes.mjs",
+          "sha": "ec2087ab377026f7e9548c1dc0b29799618c577e"
+        },
+        {
+          "p": "stage/batch4/F4WallContinuationBrushes.d.mts",
+          "sha": "27cb7d0e2e3bd4e7157ba28b9cc3c1435bce606d"
+        }
+      ],
+      "relaxed": []
+    },
+    {
+      "id": "player",
+      "path": "player/f4-zip-reticle.patch",
+      "sha": "19b5c84bb9898853e9743caf3bfaa117ab68a9b6",
+      "modules": [],
+      "relaxed": []
+    },
+    {
+      "id": "ui",
+      "path": "ui-ux/f4-integrated09-hud-admission.patch",
+      "sha": "3d97333d8ced3e14eb2f96d47ace987a230b9d25",
+      "modules": [],
+      "relaxed": []
+    }
+  ],
+  "held": [
+    {
+      "id": "visual",
+      "reason": "Error: src/app/UndertowF3PlayablePreviewApp.ts @3415 matches=0      this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';\n     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&f4WallVertices){\n      try{\n-      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices);\n+      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices,\n+       f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined);\n       if(walls){\n        // Original 17-surface QA list remains separate. Existing weapon\n        // runtimes share the mutable physical array, not a copied snapshot."
+    }
+  ],
+  "blobs": {
+    "src/ink/GameplayInkSystem.ts": {
+      "sha": "4648b556c3345f8a70149ed7772215be72d443f6",
+      "source": "windows-share"
+    },
+    "src/ink/PaintCoordinator.ts": {
+      "sha": "22b047e5d1f903087b562e1d5818971bc51c2811",
+      "source": "research-root"
+    },
+    "src/camera/ThirdPersonCamera.ts": {
+      "sha": "63a19c350eccda0310f75ee730fbac065003216c",
+      "source": "windows-share"
+    },
+    "src/player/PlayerController.ts": {
+      "sha": "b003456f0b67a5caec9caee35bd74c65ddbe0450",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/app/CompactF4Hud.mjs": {
+      "sha": "6f06b271af2d82628121e1d043627f0219ec196f",
+      "source": "windows-share"
+    },
+    "src/ink/InkSurfaceMaterial.ts": {
+      "sha": "7364357a20cd7781fc65f1774ee33a25cc539ace",
+      "source": "windows-share"
+    },
+    "src/app/B248SourceActorVisuals.ts": {
+      "sha": "71f42a6a1e9e8f8a66ac67e4f9c2dee2ee6a8396",
+      "source": "research-root"
+    },
+    "src/stage/TestStage.ts": {
+      "sha": "f62c7df7a1e1f6c83445acc3d1aca6d38ea6c409",
+      "source": "windows-share"
+    }
+  },
+  "replay": 110,
+  "files": 76,
+  "nativeBuild": "NOT_RUN"
+}
