@@ -1,0 +1,280 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -481,7 +481,8 @@
+  private readonly f4Special: F4SpecialRuntime|null;
+  private readonly f4SpecialProbe: boolean;
+  private f4SpecialLife=1;
+- private f4SpecialWasAlive=true;
++ private f4HumanDeathTick:number|null=null;
++ private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
+  private f4SpecialSecondaryHeld=false;
+  private readonly b202PauseOverlay:HTMLElement;
+  private readonly b167CombatNotice:HTMLElement;
+@@ -3036,7 +3037,11 @@
+   canvas.dataset.t21F3SourceStage=stage.metadata.id;
+   canvas.dataset.t21F3Production='FORBIDDEN';
+   const api={snapshot:()=>this.snapshot(),
+-   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
++   f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
++    humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
++    projectile:this.projectiles.f4ActualEnemyProjectileEvidence()
++   }:null,
+    auditF4ZipGeometry:(rangeM:number)=>{
+     if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||this.resources.currentHp<=0)
+      return {status:'HOLD',reason:'F4_LIVE_PROBE_UNAVAILABLE'};
+@@ -5732,7 +5737,8 @@
+   this.humanSub.reset();
+   this.f4Special?.reset();
+   this.f4SpecialLife=1;
+-  this.f4SpecialWasAlive=true;
++  this.f4HumanDeathTick=null;
++  this.f4HumanLifePairs.length=0;
+   this.f4SpecialSecondaryHeld=false;
+   this.cpuKit?.reset();
+   this.cpuKitArtificialGaugeArms=0;
+@@ -5909,9 +5915,7 @@
+     if(alive)this.resources.fixedUpdate(
+      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+     if(this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
+-     if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
+-     this.f4SpecialWasAlive=alive;
+-     this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
++     this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
+       alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
+     }
+     const cpuWorldReady=!this.f4WholeTrimeshRequested||this.f4WholeCpuConnected;
+@@ -6203,10 +6207,10 @@
+      frame,this.stats.playerSubExplosions,
+      b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
+     this.b20ProfileStop('inkOwnershipTick',paintStart);
+-    if(this.resources.currentHp<=0){
+-     if(this.respawnFrames===0&&
+-        (!this.nativeLiveSourcePrestart||
+-         this.nativeHumanSplatTick===null)){
++    if(this.resources.currentHp<=0){
++     const exactRespawn=this.nativeLiveSourcePrestart||this.f4WholeTrimeshInstalled;
++     if(this.respawnFrames===0&&
++        (!exactRespawn||this.nativeHumanSplatTick===null)){
+       // B374: never replay an attack held through real native HP zero.
+       this.input.setCombatInputActive(false);
+       this.f4CurlingHeldFrames=null;
+@@ -6222,9 +6226,10 @@
+       }
+       this.feedback.splat(Team.A,this.player.getPosition(this.p));
+       // The lethal physics frame itself must not count as tick 1.
+-      if(this.nativeLiveSourcePrestart)this.nativeHumanSplatTick=frame;
+-     }
+-     this.respawnFrames=this.nativeLiveSourcePrestart&&
++      if(exactRespawn)this.nativeHumanSplatTick=frame;
++      if(this.f4WholeTrimeshInstalled)this.f4HumanDeathTick=frame;
++     }
++     this.respawnFrames=exactRespawn&&
+        this.nativeHumanSplatTick!==null?
+        nativeSourceHumanRespawnElapsedTicks(this.nativeHumanSplatTick,frame):
+        this.respawnFrames+1;
+@@ -6245,15 +6250,25 @@
+       this.player.setLifecycleActive(true);
+       // Genuine restored life needs a fresh shot/sub press.
+       this.input.setCombatInputActive(true);
+-      this.humanRespawns++;
+-      this.respawnFrames=0;
++      this.humanRespawns++;
++      if(this.f4WholeTrimeshInstalled){
++       if(this.f4HumanDeathTick!==null){
++        this.f4HumanLifePairs.push({deathTick:this.f4HumanDeathTick,respawnTick:frame,
++         elapsedTicks:frame-this.f4HumanDeathTick,hpAfter:this.resources.currentHp});
++        if(this.f4HumanLifePairs.length>32)this.f4HumanLifePairs.shift();
++       }
++       this.f4HumanDeathTick=null;
++       this.f4SpecialLife++;
++      }
++      this.respawnFrames=0;
+       this.nativeHumanSplatTick=null;
+      }
+-    }else{
+-     this.respawnFrames=0;
+-     this.nativeHumanSplatTick=null;
+-    }
+-    const actualHumanInk=this.b23InkFeedback.snapshot(frame);
++    }else{
++     this.respawnFrames=0;
++     this.nativeHumanSplatTick=null;
++     this.f4HumanDeathTick=null;
++    }
++    const actualHumanInk=this.b23InkFeedback.snapshot(frame);
+     const realFoot=this.player.getPosition(this.p);
+     // B183: real native Rapier player KCC, unscored first-drop activity.
+     if(this.b183DropPlayEnabled){
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -258,7 +258,27 @@
+   // remain separate from the strict frozen 25-solid B351 authority.
+   private f4PhysicalHitCueOn=false;
+   private f4ConfirmedDamageCues=0;
+-  private f4SpecialSplashHits=0;
++  private f4SpecialSplashHits=0;
++  private readonly f4EnemyProjectileEvidence={spawned:0,terrain:0,expired:0,cpuContact:0,
++    humanContact:0,canopy:0,device:0,absorbed:0,other:0,humanHpLossContacts:0,humanHpLoss:0};
++
++  /** Counts actual enemy pooled projectile slots, not all CPU attacks or aim intentions. */
++  public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
++
++  private f4CountEnemyTerminal(slot:ProjectileSlot,reason:string):void {
++    if(!this.physics.hasF4WholeResearchTrimesh||slot.sourceKind!=='CPU'||slot.team===this.currentHumanTeam)return;
++    const e=this.f4EnemyProjectileEvidence;
++    switch(reason){
++      case 'ORIGINAL_PAINTABLE':case 'ORIGINAL_SOLID':e.terrain++;break;
++      case 'TTL':e.expired++;break;
++      case 'REAL_CPU_HIT':e.cpuContact++;break;
++      case 'REAL_PLAYER_HIT':e.humanContact++;break;
++      case 'CANOPY':e.canopy++;break;
++      case 'DEVICE':e.device++;break;
++      case 'ABSORBED':e.absorbed++;break;
++      default:e.other++;
++    }
++  }
+   private f4SpecialCueFrame=-1;
+   public f4SpecialSplashHitCount():number{return this.f4SpecialSplashHits;}
+   private noteF4SpecialDamageCue(point:Vec3,team:Team.A|Team.B):void {
+@@ -886,8 +906,10 @@
+     this.b367NativeFrame=0;
+     this.nativeHumanDamageCueFrame=-1;
+     this.nativeSourceHumanSplashCueFrame=-1;
+-    this.f4SpecialSplashHits=0;
+-    this.f4SpecialCueFrame=-1;
++    this.f4SpecialSplashHits=0;
++    for(const key of Object.keys(this.f4EnemyProjectileEvidence) as (keyof typeof this.f4EnemyProjectileEvidence)[])
++      this.f4EnemyProjectileEvidence[key]=0;
++    this.f4SpecialCueFrame=-1;
+     this.f4HumanLifeId=null;
+     this.f4HumanGrounded=false;
+     this.b367RealHumanCpuHits=0;
+@@ -1366,8 +1388,9 @@
+           const suction = this.f4Absorption(previous,next,{
+             team:slot.team,damage:slot.damage,id:slot.entity.name+':'+this.b367NativeFrame,
+             consume:()=>{
+-              if(!slot.active)return false;
+-              this.deactivate(slot);
++              if(!slot.active)return false;
++              this.f4CountEnemyTerminal(slot,'ABSORBED');
++              this.deactivate(slot);
+               return true;
+             }
+           });
+@@ -1488,8 +1511,12 @@
+               }
+             } else {
+               const hpLoss=this.resources.applyDamage(shotDamage);
+-              applied = hpLoss;
+-              if (hpLoss > 0) slosher?.resolvedTargets.add('human');
++              applied = hpLoss;
++              if(this.physics.hasF4WholeResearchTrimesh&&slot.sourceKind==='CPU'&&slot.team!==team&&hpLoss>0){
++                this.f4EnemyProjectileEvidence.humanHpLossContacts++;
++                this.f4EnemyProjectileEvidence.humanHpLoss+=hpLoss;
++              }
++              if (hpLoss > 0) slosher?.resolvedTargets.add('human');
+               this.confirmNativeHumanDamage(hpLoss,combatPoint,slot.team);
+               this.recordCpuPlayerDamageHit(hpLoss);
+             }
+@@ -3799,8 +3826,10 @@
+     slot.canopyPellet = undefined;
+     slot.ttl = life;
+     slot.team = team;
+-    slot.sourceKind = sourceKind;
+-    slot.sourceId = sourceId;
++    slot.sourceKind = sourceKind;
++    slot.sourceId = sourceId;
++    if(this.physics.hasF4WholeResearchTrimesh&&sourceKind==='CPU'&&team!==this.currentHumanTeam)
++      this.f4EnemyProjectileEvidence.spawned++;
+     slot.qaSourceAim=sourceKind==='CPU'&&sourceId==='A1'?
+       qaSourceAim:undefined;
+     if(slot.qaSourceAim==='A1_ORIGINAL_ALLY_SUPPORT_INK')
+@@ -3880,8 +3909,9 @@
+     paintHit: SurfaceRayHit | null,
+     reason:B346ShooterExitKind|'CANOPY'|'DEVICE'='TTL'
+   ): void {
+-    const stageNormal = slot.terrainContactNormal;
+-    if(slot.b346LaunchId!==undefined){
++    this.f4CountEnemyTerminal(slot,reason);
++    const stageNormal = slot.terrainContactNormal;
++    if(slot.b346LaunchId!==undefined){
+       if (reason !== 'CANOPY' && reason !== 'DEVICE') this.b346ShooterWitness.exit(slot.b346LaunchId,{
+         reason,
+         worldPosition:[point.x,point.y,point.z],
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -34,7 +34,9 @@
+   private readonly suctionQueries = new Set<SuctionQuery>();
+   private readonly actorUnlock = new Map<string,number>();
+   private readonly livePose = new Map<string,()=>void>();
+-  private absorbed = 0;
++  private absorbed = 0;
++  private readonly suctionEvidence={eligibleSegments:0,apertureMisses:0,terrainBlocked:0,
++    candidateContacts:0,admissionAttempts:0,admissionRejected:0};
+   private waves = 0;
+   private readonly active = new Map<string,string>();
+   private readonly completedProbeLives = new Set<string>();
+@@ -95,7 +97,9 @@
+     this.livePose.clear();
+     this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
+     this.lastPlacementReject=null;
+-    this.placementAttempts=this.guideTerrainRejected=0;
++    this.placementAttempts=this.guideTerrainRejected=0;
++    for(const key of Object.keys(this.suctionEvidence) as (keyof typeof this.suctionEvidence)[])
++      this.suctionEvidence[key]=0;
+     this.special=null;
+     this.terminal=null;
+     this.score=null;
+@@ -140,7 +144,8 @@
+     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
+       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
+       castEnd:this.terminal,placementAttempts:this.placementAttempts,
+-      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected};
++      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected,
++      suction:{...this.suctionEvidence}};
+   }
+ 
+   update(tick: number): void {
+@@ -372,20 +377,28 @@
+     let visual:Entity|null=null;
+     let consume:{id:string;apply():boolean}|null=null;
+     const query:SuctionQuery=(from,to,shot)=>{
+-      if(shot.team===team||shot.damage<=0||!at.trigger||!visual)return null;
+-      const center=at.origin.clone().add(at.forward.clone().normalize().mulScalar(1.18));
+-      const distance=this.physics.castInkSegmentAtBall(from,to,center,.84);
+-      if(distance===null)return null;
+-      const overlap=from.clone().lerp(from,to,distance/from.distance(to));
+-      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile'))return null;
+-      return {distance,accept:()=>{
+-        consume={id:shot.id,apply:shot.consume};
++      if(shot.team===team||shot.damage<=0||!at.trigger||!visual)return null;
++      const span=from.distance(to);
++      if(!Number.isFinite(span)||span<=1e-8)return null;
++      this.suctionEvidence.eligibleSegments++;
++      const center=at.origin.clone().add(at.forward.clone().normalize().mulScalar(1.18));
++      const distance=this.physics.castInkSegmentAtBall(from,to,center,.84);
++      if(distance===null){this.suctionEvidence.apertureMisses++;return null;}
++      const overlap=from.clone().lerp(from,to,distance/span);
++      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile')){
++        this.suctionEvidence.terrainBlocked++;return null;
++      }
++      this.suctionEvidence.candidateContacts++;
++      return {distance,accept:()=>{
++        this.suctionEvidence.admissionAttempts++;
++        consume={id:shot.id,apply:shot.consume};
+         try{
+           const accepted=this.port.contact({roundId:this.roundId,tick:this.frame,actorId:actor,lifeId,
+             projectileId:shot.id,sourceTeam:shot.team,eligible:true,physicalContact:true,
+             unoccluded:true,chargeValue:shot.damage})===true;
+-          if(accepted)this.absorbed++;
+-          return accepted;
++          if(accepted)this.absorbed++;
++          else this.suctionEvidence.admissionRejected++;
++          return accepted;
+         }finally{consume=null;}
+       }};
+     };
