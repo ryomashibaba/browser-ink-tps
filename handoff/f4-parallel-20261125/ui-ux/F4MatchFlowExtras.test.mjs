@@ -29,3 +29,6 @@ function runFlowTests(){
  return cases.length;
 }
 console.log('PASS match flow',runFlowTests());
+
+if(f4PickerOptions(Array(12).fill(null))!==null)throw Error('null options');
+console.log('PASS invalid options',1);

@@ -2,7 +2,7 @@
 import {installF4PlayerPresentation} from './F4PlayerPresentation.mjs';
 export function f4PickerOptions(options) {
  const rows=Array.from(options??[]);
- if(rows.length!==12||new Set(rows.map(o=>o.value)).size!==12)return null;
+ if(rows.length!==12||rows.some(o=>!o)||new Set(rows.map(o=>o.value)).size!==12)return null;
  if(rows.some(o=>!o||typeof o.value!=='string'||!o.value.trim()||typeof o.textContent!=='string'||!o.textContent.trim()||o.disabled))return null;
  return rows.map(o=>{
   const text=o.textContent.trim(),sep=text.indexOf(' · ');
@@ -40,7 +40,7 @@ export function installF4MatchFlowExtras(root,finish,ui){
  const statNote=make('div','f4-flow-note');statNote.textContent='直撃と塗装の実測値。サブ・スペシャルを含む総撃破数や個人得点ではありません。';
  const tiles=make('div','f4-flow-tiles');stats.append(statTitle,tiles,statNote);
  const scroll=finish.querySelector('#t21-f3-b59-scroll-stats');
- if(scroll)scroll.append(stats);
+ if(scroll)scroll.insertBefore(stats,scroll.querySelector('#t21-f3-b59-final-stats'));
  let current=null,disposed=false;
  const entries=[],statNodes=new Map();
  const set=(n,s)=>{if(n.textContent!==s)n.textContent=s};
