@@ -45,16 +45,16 @@ export class PhysicalSpecialPort720{
    s=controller(ctx,plan.config||{});if(plan.commit()!==true){plan.abort();return false}
    if(q.special==="chariot")s=new Crab720({tick:q.tick,roundId:q.roundId,lifeId:ctx.scoped,team:team(q.team),armorId:plan.config.armorId,physicalArmorInstalled:plan.ops.physicalMode()==="turret"});
   }catch(e){if(typeof plan.abort==="function")plan.abort();return false}
-  this.#active.set(q.actorId,{ctx,plan,s,last:q.tick-1});return true
+  this.#active.set(q.actorId,{ctx,plan,s,last:q.tick-1,lastEvent:q.tick});return true
  }
  #get(q){const a=this.#active.get(q.actorId);return a&&q.roundId===this.#round&&q.lifeId===a.ctx.lifeId?a:null}
- #finish(a,reason,tick){this.#active.delete(a.ctx.actorId);a.plan.finish(reason,tick);return {ended:true,reason}}
+ #finish(a,reason,tick,details=null){this.#active.delete(a.ctx.actorId);a.plan.finish(reason,tick,details);return {ended:true,reason}}
  step(q){
-  const a=this.#get(q);if(!a||this.#closed)return {ended:true,reason:"inactive"};if(!f(q.tick)||q.tick>=10800||q.tick<=a.last)return {ended:false,ignored:true};a.last=q.tick;
+  const a=this.#get(q);if(!a||this.#closed)return {ended:true,reason:"inactive"};if(!f(q.tick)||q.tick>=10800||q.tick<a.lastEvent||q.tick<=a.last)return {ended:false,ignored:true};a.last=q.tick;a.lastEvent=q.tick;
   const {ctx,plan}=a,o=plan.ops,c=plan.config||{},x=q.input||{},b={tick:q.tick,roundId:q.roundId,lifeId:ctx.scoped,alive:true};let s=a.s,r;
   switch(ctx.special){
   case "ultraShot":r=stepUltraShot(s,{...b,trigger:x.trigger===true},v=>o.launchVolley({...v,aim:x.aim,orbitalOffsets})===true);a.s=r.state;if(!r.state||r.finished)return this.#finish(a,"completed",q.tick);break;
-  case "chariot":r=s.step({...b,roll:x.roll===true,rapid:x.rapid===true,cannon:x.cannon===true,physicalMode:o.physicalMode()},o);if(r.ended)return this.#finish(a,r.ended.reason,q.tick);break;
+  case "chariot":r=s.step({...b,roll:x.roll===true,rapid:x.rapid===true,cannon:x.cannon===true,physicalMode:o.physicalMode()},o);if(r.ended)return this.#finish(a,r.ended.reason,q.tick,r.ended);break;
   case "tripleTornado":
    if(q.tick>=s.startTick+360)return this.#finish(a,"timeout",q.tick);
    if(x.trigger===true&&q.tick>=s.startTick+c.readyDelayF&&(s.lastThrowTick===null||q.tick>=s.lastThrowTick+c.repeatF)){
@@ -79,11 +79,11 @@ export class PhysicalSpecialPort720{
   }return {ended:false}
  }
  contact(q){
-  const a=this.#get(q);if(!a||!f(q.tick)||q.tick>=10800)return null;const b={...q,lifeId:a.ctx.scoped,alive:true};
+  const a=this.#get(q);if(!a||!f(q.tick)||q.tick>=10800||q.tick<a.lastEvent)return null;a.lastEvent=q.tick;const b={...q,lifeId:a.ctx.scoped,alive:true};
   switch(a.ctx.special){case "chariot":return a.s.hit({...b,sourceTeam:team(q.sourceTeam)});case "blower":return a.s.absorb({...b,sourceTeam:team(q.sourceTeam)},a.plan.ops);case "ultraStamp":return a.s.contact({...b,targetTeam:team(q.targetTeam)});default:return null}
  }
  closeSwing(q){const a=this.#get(q);if(a?.ctx.special!=="ultraStamp")return false;a.s.closeSwing(q.swingId);return true}
  spendZipMain(q,commit){const a=this.#get(q);return a?.ctx.special==="superHook"?a.s.spendMain(q.cost,commit):false}
- cancel(q){const a=this.#get(q);if(a)this.#finish(a,q.reason,q.tick)}
+ cancel(q){const a=this.#get(q);if(a&&f(q.tick)&&q.tick>=a.lastEvent&&q.tick<=10800)this.#finish(a,q.reason,q.tick)}
  close(tick){this.#closed=true;for(const a of this.#active.values())this.#finish(a,"round",tick)}
 }

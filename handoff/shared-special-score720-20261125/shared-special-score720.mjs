@@ -69,9 +69,9 @@ export class SharedSpecial720 {
  }
  register({actorId,lifeId,team,weaponId,source}){
   if(this.#closed||!validId(actorId)||!validId(lifeId)||!teamOK(team)||!Object.hasOwn(KIT720,weaponId)||!["HUMAN","CPU"].includes(source)||this.#actors.has(actorId))throw Error("invalid actor");
-  this.#actors.set(actorId,{actorId,lifeId,team,weaponId,source,points:0,active:false,alive:true,lastStep:-1,activations:0})
+  this.#actors.set(actorId,{actorId,lifeId,team,weaponId,source,points:0,active:false,alive:true,lastStep:-1,lastTick:-1,deathTick:null,lastActivationTick:-1,usedLives:new Set([lifeId]),activations:0})
  }
- state(actorId){const a=this.#actors.get(actorId);if(!a)return null;const k=KIT720[a.weaponId];return {...a,...k,ready:!this.#closed&&this.#turf.complete&&a.alive&&!a.active&&a.points+EPS>=k.required,percent:100*a.points/k.required}}
+ state(actorId){const a=this.#actors.get(actorId);if(!a)return null;const k=KIT720[a.weaponId];const {usedLives,...view}=a;return {...view,...k,ready:!this.#closed&&this.#turf.complete&&a.alive&&!a.active&&a.points+EPS>=k.required,percent:100*a.points/k.required}}
  // Exactly one ordered callback per real immutable PaintEvent, after raster apply.
  // Sequence is the PaintCoordinator batch index. Projected delta comes from changedArea only.
  acceptPaint({roundId,tick,sequence,event,projectedChangedM2,lifeId}){
@@ -79,27 +79,28 @@ export class SharedSpecial720 {
   this.#lastPaintTick=tick;this.#lastPaintSequence=sequence;
   if(!this.#turf.complete||!event||event.tick!==tick||event.gaugeEligible===false||event.type==="SPECIAL"||event.type==="DEBUG"||!finiteNonneg(projectedChangedM2)||projectedChangedM2<=0)return 0;
   const a=this.#actors.get(event.actorId);
-  if(!a||!a.alive||a.active||a.lifeId!==lifeId||event.team!==a.team||event.source!==a.source)return 0;
+  if(!a||!a.alive||a.active||a.lifeId!==lifeId||tick<a.lastTick||event.team!==a.team||event.source!==a.source)return 0;
+  a.lastTick=tick;
   const old=a.points;a.points=Math.min(KIT720[a.weaponId].required,old+projectedChangedM2*this.#pointsPerM2);return a.points-old
  }
  activate({roundId,tick,actorId,lifeId,input}){
   if(this.#closed||this.#busy||roundId!==this.#roundId||!validTick(tick)||tick>=10800)return false;
-  const a=this.#actors.get(actorId),s=this.state(actorId);if(!a||!s.ready||lifeId!==a.lifeId)return false;
+  const a=this.#actors.get(actorId),s=this.state(actorId);if(!a||!s.ready||lifeId!==a.lifeId||tick<a.lastTick||tick===a.lastActivationTick)return false;
   this.#busy=true;let ok;try{ok=this.#port.begin({roundId,tick,actorId,lifeId,team:a.team,special:s.special,input})===true}finally{this.#busy=false}
-  if(!ok)return false;a.active=true;a.points=0;a.activations++;return true
+  if(!ok)return false;a.active=true;a.points=0;a.lastTick=tick;a.lastActivationTick=tick;a.activations++;return true
  }
  step({roundId,tick,actorId,lifeId,input}){
   if(this.#closed||roundId!==this.#roundId||!validTick(tick)||tick>=10800)return false;
-  const a=this.#actors.get(actorId);if(!a||!a.alive||!a.active||a.lifeId!==lifeId||tick<=a.lastStep)return false;a.lastStep=tick;
+  const a=this.#actors.get(actorId);if(!a||!a.alive||!a.active||a.lifeId!==lifeId||tick<a.lastTick||tick<=a.lastStep)return false;a.lastStep=tick;a.lastTick=tick;
   const r=this.#port.step({roundId,tick,actorId,lifeId,input});if(r?.ended===true)a.active=false;return true
  }
  splat({roundId,actorId,lifeId,tick}){
-  const a=this.#actors.get(actorId);if(this.#closed||roundId!==this.#roundId||!validTick(tick)||!a||!a.alive||a.lifeId!==lifeId)return false;
-  if(a.active)this.#port.cancel({roundId,actorId,lifeId,tick,reason:"splat"});a.active=false;a.alive=false;a.points*=this.#retention;return true
+  const a=this.#actors.get(actorId);if(this.#closed||roundId!==this.#roundId||!validTick(tick)||!a||!a.alive||a.lifeId!==lifeId||tick<a.lastTick||tick>=10800)return false;
+  if(a.active)this.#port.cancel({roundId,actorId,lifeId,tick,reason:"splat"});a.active=false;a.alive=false;a.deathTick=tick;a.lastTick=tick;a.points*=this.#retention;return true
  }
  respawn({roundId,actorId,oldLifeId,newLifeId,tick}){
-  const a=this.#actors.get(actorId);if(this.#closed||roundId!==this.#roundId||!validTick(tick)||!a||a.alive||a.lifeId!==oldLifeId||!validId(newLifeId)||newLifeId===oldLifeId)return false;
-  a.lifeId=newLifeId;a.alive=true;a.lastStep=-1;return true
+  const a=this.#actors.get(actorId);if(this.#closed||roundId!==this.#roundId||!validTick(tick)||!a||a.alive||a.lifeId!==oldLifeId||!validId(newLifeId)||a.usedLives.has(newLifeId)||a.deathTick===null||tick<a.deathTick+150||tick<a.lastTick||tick>=10800)return false;
+  a.usedLives.add(newLifeId);a.lifeId=newLifeId;a.alive=true;a.lastStep=-1;a.lastTick=tick;a.deathTick=null;return true
  }
  close(tick){if(this.#closed)return;if(!validTick(tick))throw Error("tick");this.#closed=true;for(const a of this.#actors.values())if(a.active){this.#port.cancel({roundId:this.#roundId,actorId:a.actorId,lifeId:a.lifeId,tick,reason:"round"});a.active=false}}
 }
