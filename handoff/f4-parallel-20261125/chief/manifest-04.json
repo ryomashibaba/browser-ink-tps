@@ -1,0 +1,78 @@
+{
+  "base": "ecd6fc7c7758ecded97ba82acc34699b2513ea04",
+  "previous": "f4e6f68216eeb3e034475c0b7bd51652fb062dec",
+  "passed": [
+    {
+      "id": "stage-walls",
+      "patches": [
+        {
+          "p": "stage/batch3/stage-walls-integrated-01-next.patch",
+          "sha": "ede5bd19b7905c9376cb46e37523dceac8eee086"
+        }
+      ],
+      "modules": [
+        {
+          "p": "stage/batch3/F4ConcreteWallTiles.mjs",
+          "sha": "7505f6c887f15e26efc19a1e119dc85be193842d"
+        },
+        {
+          "p": "stage/batch3/F4ConcreteWallTiles.d.mts",
+          "sha": "01dae2082dbf270a7e9cecde14d68a29bf3412e7"
+        },
+        {
+          "p": "stage/batch3/F4WallContinuity.mjs",
+          "sha": "978dbb2adbc644d1641f093c881f04fcb1afe21b"
+        },
+        {
+          "p": "stage/batch3/F4WallContinuity.d.mts",
+          "sha": "4387c06061647b8f286b43dae57c861bed175494"
+        },
+        {
+          "p": "stage/batch3/F4ProvisionalWalls.ts",
+          "sha": "60f4765f78b4812c03e4ad039f303fd470b23520"
+        }
+      ]
+    },
+    {
+      "id": "performance-backing",
+      "patches": [
+        {
+          "p": "performance/paint-backing-query.patch",
+          "sha": "5cda7ae93c2a5c47bf822883026f0d79c66048c3"
+        }
+      ],
+      "modules": []
+    }
+  ],
+  "held": [],
+  "relaxed": [],
+  "blobs": {
+    "src/app/UndertowF3LTexturedSourcePreview.ts": {
+      "sha": "25ad13acab7c438c1c6822807595a8c63593f5f8",
+      "source": "windows-share"
+    },
+    "src/ai/CpuAgentSystem.ts": {
+      "sha": "7927e774962904418abc693ea53d05d934e75d25",
+      "source": "windows-share"
+    },
+    "src/physics/RapierStagePhysics.ts": {
+      "sha": "57579a64169dbb795cde98f263764ad582b6407c",
+      "source": "windows-share"
+    },
+    "src/player/PlayerController.ts": {
+      "sha": "b003456f0b67a5caec9caee35bd74c65ddbe0450",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/ink/PaintCoordinator.ts": {
+      "sha": "22b047e5d1f903087b562e1d5818971bc51c2811",
+      "source": "research-root"
+    }
+  },
+  "replay": 82,
+  "files": 39,
+  "nativeBuild": "NOT_RUN"
+}
