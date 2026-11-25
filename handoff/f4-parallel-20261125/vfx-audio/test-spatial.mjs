@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {spatial,eventTone} from './F4SpatialAudio.mjs';
+assert.equal(spatial(0,0,0,0,-1,0,0,0)[0],1);
+assert.equal(spatial(0,0,0,0,-1,3,0,0)[1],1);
+assert.equal(spatial(0,0,0,0,-1,-3,0,0)[1],-1);
+assert.equal(spatial(0,0,0,0,-1,0,0,42)[0],0);
+assert.ok(spatial(0,0,0,0,-1,0,0,18)[0]<spatial(0,0,0,0,-1,0,0,9)[0]);
+assert.equal(spatial(0,0,0,NaN,0,0,0,0)[0],0);
+assert.equal(spatial(0,0,0,0,0,1,0,0)[1],0);
+for(const k of ['ultraShot','tripleTornado','chariot','blower','waveBreaker','greatBarrier','microLaser','ultraStamp','zipcaster'])assert.equal(eventTone(k).length,4);
+console.log('F4 spatial audio PASS');
