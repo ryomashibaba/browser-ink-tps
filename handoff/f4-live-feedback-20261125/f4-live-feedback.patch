@@ -1,0 +1,316 @@
+diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
+--- a/src/app/CompactF4Hud.mjs
++++ b/src/app/CompactF4Hud.mjs
+@@ -10,10 +10,12 @@
+  const valid=special?.authorityComplete===true&&number(special.required,1,1000)&&number(special.points,0,special.required);
+  const enabled=valid&&special.executorReady===true;
+  const specialPercent=valid?Math.floor(100*special.points/special.required):null;
+- const specialStatus=!valid?'得点未認証':special.active===true?'発動中':!enabled?'実行未接続':alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
++ const probe=kit?.probe===true?special?.probeState:null;
++ const probeLabels={AVAILABLE:'G 単独検証',ACTIVE:'単独実行中',LOCKED:'終了動作中',USED:'このライフで実行済み',UNSUPPORTED:'物理実行 HOLD'};
++ const specialStatus=probe&&Object.hasOwn(probeLabels,probe)?probeLabels[probe]:!valid?'得点未認証':special.active===true?'発動中':!enabled?'実行未接続':alive&&special.ready===true&&special.points>=special.required?'G 発動可能':`${specialPercent}%`;
+  const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
+- const subReady=alive&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
+- return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled?specialPercent:null,specialStatus,scoreLabel:kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証',danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?label(kit?.controls):'復活待ち'};
++ const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
++ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:enabled&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.probe===true?'物理単独検証':valid?'認証済み得点面':'研究試合・得点未認証',danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?probe==='ACTIVE'?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':label(kit?.controls):'復活待ち'};
+ }
+ const CSS=`[data-f4-compact-active="true"]{box-sizing:border-box!important;width:min(420px,calc(100vw - 24px))!important;padding:9px 12px!important;background:rgba(8,16,29,.89)!important;border:1px solid #ffffff35!important;border-radius:14px!important;box-shadow:0 4px 18px #0005!important;top:10px!important;pointer-events:none!important}[data-f4-compact-active="true"] > [data-f4-legacy-display],[data-f4-compact-active="true"] > #t21-f3-source-practice-ink-balance{display:none!important}.f4-compact-hud{color:#f5f7fc;font:600 12px/1.3 system-ui,sans-serif;font-variant-numeric:tabular-nums}.f4-compact-hud[hidden]{display:none!important}.f4-compact-hud .f4-top,.f4-compact-hud .f4-line{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.f4-compact-hud .f4-clock{font-size:28px;line-height:1;font-weight:850;letter-spacing:.5px}.f4-compact-hud .f4-meta{color:#d1d8e6;font-size:11px;text-align:right}.f4-compact-hud .f4-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.f4-compact-hud .f4-track{height:7px;background:#ffffff26;border-radius:5px;overflow:hidden;margin-top:3px}.f4-compact-hud .f4-fill{height:100%;width:0%;background:#70e2c3;border-radius:5px}.f4-compact-hud .f4-ink{background:#ff88c7}.f4-compact-hud .f4-sp{background:#ffcf6f}.f4-compact-hud .f4-weapon{font-size:14px;overflow-wrap:anywhere}.f4-compact-hud .f4-muted{color:#c0cad9;font-size:11px;overflow-wrap:anywhere}.f4-compact-hud .f4-notice{color:#ffd9ae;font-size:12px;font-weight:750;margin-top:4px}.f4-compact-hud .f4-sub[data-ready="true"]{color:#a5f5d5}.f4-compact-hud .f4-sub[data-ready="false"]{color:#c0cad9}.f4-compact-hud .f4-special{margin-top:5px}.f4-compact-hud .f4-help{font-size:10px;color:#d1d8e6;margin-top:5px;overflow-wrap:anywhere}@media(max-width:480px){.f4-compact-hud .f4-clock{font-size:23px}.f4-compact-hud .f4-meta{font-size:10px}.f4-compact-hud .f4-help{font-size:10px}}`;
+ export function installCompactF4Hud(legacy,{visible,readKit,readSpecial}){
+diff --git a/src/app/CompactF4Hud.d.mts b/src/app/CompactF4Hud.d.mts
+--- a/src/app/CompactF4Hud.d.mts
++++ b/src/app/CompactF4Hud.d.mts
+@@ -4,5 +4,6 @@
+ export function installCompactF4Hud(legacy: LegacyHud, options: {
+   visible(): boolean;
+   readKit(): { weapon: string; sub: string; subCost: number; subUsable: boolean; special: string; controls: string; probe?: boolean };
+-  readSpecial(): { authorityComplete: boolean; executorReady: boolean; required: number; points: number; ready: boolean; active: boolean } | null;
++  readSpecial(): { authorityComplete: boolean; executorReady: boolean; required?: number; points?: number; ready?: boolean; active: boolean;
++    probeState?: 'AVAILABLE'|'ACTIVE'|'LOCKED'|'USED'|'UNSUPPORTED'; probeControls?: string } | null;
+ }): LegacyHud & { refreshCompactVisibility(): void; disposeCompact(): void };
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -1,4 +1,4 @@
+-import { Color, Entity, Mesh, MeshInstance, StandardMaterial, TorusGeometry, Vec3, type AppBase } from 'playcanvas';
++import { BLEND_NORMAL, CULLFACE_NONE, Color, Entity, Mesh, MeshInstance, StandardMaterial, TorusGeometry, Vec3, type AppBase } from 'playcanvas';
+ import { Team } from '../ink/types';
+ import { crabProjectileDamage } from './f4/crab-barrier720-20261125/crab-barrier720.mjs';
+ import type { F4SpecialFlight, ProjectileSystem } from '../projectile/ProjectileSystem';
+@@ -47,7 +47,9 @@
+   private terminal: string|null = null;
+   private score: ReturnType<CertifiedTurf720['result']>|null = null;
+   private readonly visualMaterials = new Map<Team.A|Team.B,StandardMaterial>();
+-  private ringMesh?: Mesh;
++  private ringMesh?: Mesh;
++  private barrierShellMesh?: Mesh;
++  private readonly barrierMaterials = new Map<Team.A|Team.B,StandardMaterial>();
+   private frame = 0;
+ 
+   constructor(private readonly app: AppBase, private readonly physics: RapierStagePhysics,
+@@ -103,7 +105,26 @@
+     if (legalRoundEnd) this.score=this.turf.result({roundId:this.roundId,tick,roundEnded:true});
+   }
+ 
+-  notePaint(changed: number): void {this.paintCells+=changed;}
++  notePaint(changed: number): void {this.paintCells+=changed;}
++
++  /** Per-life HUD state, not the most recent cast of any CPU. Never grants gauge. */
++  actorPresentation(actor:Actor) {
++    const {actorId,lifeId,weapon}=actor;
++    const id=KIT720[weapon].special;
++    const controls:Record<F4SpecialId,string>={
++      ultraShot:'左クリック 射撃',chariot:'左クリック 連射 · F 砲撃 · 右クリック 球形態',
++      blower:'左クリック 吸引／吐き出し',superHook:'物理実行 HOLD',
++      greatBarrier:'左クリック 設置',waveBreaker:'左クリック 設置',
++      microLaser:'自動発射 · 移動可能',tripleTornado:'左クリック ガイド投擲',
++      ultraStamp:'左クリック 振る · 右クリック 長押し→離す 投擲'
++    };
++    const active=this.active.get(actorId)===lifeId;
++    const locked=this.frame<(this.actorUnlock.get(actorId)??0);
++    const probeState=active?'ACTIVE' as const:locked?'LOCKED' as const:
++      id==='superHook'?'UNSUPPORTED' as const:
++      this.completedProbeLives.has(actorId+':'+lifeId)?'USED' as const:'AVAILABLE' as const;
++    return {authorityComplete:this.turf.complete,executorReady:false,active,probeState,probeControls:controls[id]};
++  }
+ 
+   snapshot() {
+     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
+@@ -433,7 +454,7 @@
+           this.waves++;
+         }
+         const ring=rings[wave.index]!;
+-        const size=wave.radiusMeters*2;
++        const size=wave.radiusMeters/.48;
+         ring.enabled=size>.02;
+         ring.setLocalScale(size,.7,size);
+         this.sweptHpLoss+=this.projectiles.applyF4GroundWave(foot,wave.previousRadiusMeters,wave.radiusMeters,
+@@ -454,9 +475,12 @@
+     const anchor=this.visual('F4 barrier anchor','cylinder',team);
+     anchor.setPosition(body);
+     anchor.setLocalScale(.54,.62,.54);
+-    const field=this.visual('F4 barrier perimeter','torus',team);
+-    field.setPosition(foot.clone().add(new Vec3(0,.055,0)));
+-    field.enabled=false;
++    const field=this.visual('F4 barrier perimeter','torus',team);
++    field.setPosition(foot.clone().add(new Vec3(0,.055,0)));
++    field.enabled=false;
++    const shell=this.barrierShell(team);
++    shell.setPosition(foot);
++    shell.enabled=false;
+     const contact:DeviceQuery=(from,to,enemy)=>{
+       if(enemy===team||device.ended)return null;
+       const drone=this.physics.castInkSegmentAtBall(from,to,body,.28);
+@@ -477,12 +501,15 @@
+     this.effects.push({step:tick=>{
+       radius=device.radius(tick,this.roundId);
+       field.enabled=radius>0;
+-      field.setLocalScale(radius*2,.85,radius*2);
+-      return !device.ended;
++      field.setLocalScale(radius/.48,.85,radius/.48);
++      shell.enabled=radius>0;
++      shell.setLocalScale(radius,radius,radius);
++      return !device.ended;
+     },dispose:()=>{
+       this.devices.delete(contact);
+-      anchor.destroy();
+-      field.destroy();
++      anchor.destroy();
++      field.destroy();
++      shell.destroy();
+     }});
+   }
+ 
+@@ -491,11 +518,15 @@
+     const visual=this.visual('F4 tornado','cylinder',team);
+     visual.enabled=false;
+     const bottom=foot.clone().add(new Vec3(0,.08,0));
+-    const top=bottom.clone().add(new Vec3(0,3,0));
+-    visual.setPosition(bottom.clone().lerp(bottom,top,.5));
++    const top=bottom.clone().add(new Vec3(0,3,0));
++    visual.setPosition(bottom.clone().lerp(bottom,top,.5));
++    const warning=this.visual('F4 tornado landing warning','torus',team);
++    warning.setPosition(bottom);
++    warning.setLocalScale(1.65/.48,.45,1.65/.48);
+     this.effects.push({step:tick=>{
+-      if(tick<start)return true;
+-      const value=pulse(tick-start,{damageRadiusMeters:1.65,paintRadiusMeters:1.5,damageStartRadiusMeters:.14});
++      if(tick<start)return true;
++      warning.enabled=false;
++      const value=pulse(tick-start,{damageRadiusMeters:1.65,paintRadiusMeters:1.5,damageStartRadiusMeters:.14});
+       if(!value)return false;
+       visual.enabled=true;
+       const width=value.damageRadiusMeters*2;
+@@ -505,10 +536,10 @@
+       if(value.paintDue)
+         this.projectiles.applyF4SpecialPulse(bottom,team,actor,value.paintRadiusMeters,0,.26);
+       return true;
+-    },dispose:()=>visual.destroy()});
+-  }
+-
+-  private laser(beams:{position:Vec3;visual:Entity;direction:Vec3;target?:string}[],
++    },dispose:()=>{visual.destroy();warning.destroy();}});
++  }
++
++  private laser(beams:{position:Vec3;visual:Entity;direction:Vec3;target?:string}[],
+     pair:LaserPair, start:number, team:Team.A|Team.B, actor:string): void {
+     this.effects.push({step:tick=>{
+       if(pair.finished(tick))return false;
+@@ -531,7 +562,50 @@
+     },dispose:()=>{for(const beam of beams)beam.visual.destroy();}});
+   }
+ 
+-  private visual(name:string,type:'box'|'cylinder'|'torus'|'sphere',team:Team.A|Team.B): Entity {
++  /** Unit hemisphere matches the current research barrier's outside-in shell.
++   * Pure rendering: no extra collider, score, HP or attack admission. */
++  private barrierShell(team:Team.A|Team.B):Entity {
++    if(!this.barrierShellMesh){
++      const positions:number[]=[],indices:number[]=[];
++      const bands=12,segments=32;
++      for(let y=0;y<=bands;y++){
++        const angle=Math.PI*.5*y/bands;
++        const h=Math.sin(angle),r=Math.cos(angle);
++        for(let x=0;x<=segments;x++){
++          const a=2*Math.PI*x/segments;
++          positions.push(r*Math.cos(a),h,r*Math.sin(a));
++        }
++      }
++      for(let y=0;y<bands;y++)for(let x=0;x<segments;x++){
++        const a=y*(segments+1)+x,b=a+segments+1;
++        indices.push(a,b,a+1,a+1,b,b+1);
++      }
++      const mesh=new Mesh(this.app.graphicsDevice);
++      mesh.setPositions(new Float32Array(positions));
++      mesh.setNormals(new Float32Array(positions));
++      mesh.setIndices(new Uint16Array(indices));
++      mesh.update();
++      this.barrierShellMesh=mesh;
++    }
++    let material=this.barrierMaterials.get(team);
++    if(!material){
++      material=new StandardMaterial();
++      material.diffuse=team===Team.A?new Color(.08,.74,.86):new Color(.91,.28,.66);
++      material.emissive=team===Team.A?new Color(.035,.18,.22):new Color(.30,.055,.18);
++      material.opacity=.18;
++      material.blendType=BLEND_NORMAL;
++      material.depthWrite=false;
++      material.cull=CULLFACE_NONE;
++      material.update();
++      this.barrierMaterials.set(team,material);
++    }
++    const entity=new Entity('F4 barrier shell');
++    entity.addComponent('render',{meshInstances:[new MeshInstance(this.barrierShellMesh,material,entity)],castShadows:false});
++    this.app.root.addChild(entity);
++    return entity;
++  }
++
++  private visual(name:string,type:'box'|'cylinder'|'torus'|'sphere',team:Team.A|Team.B): Entity {
+     let material=this.visualMaterials.get(team);
+     if(!material){
+       material=new StandardMaterial();
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -2000,7 +2000,9 @@
+       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
+        (this.f4SpecialProbe?' · G 単独検証':'')};
+     },
+-    readSpecial:()=>null
++    readSpecial:()=>this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
++     actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
++     weapon:this.projectiles.currentPlayerWeapon.id}):null
+    }):null;
+   this.practiceHud=this.compactF4Hud??practiceHud;
+   // A compact real-paint balance inside the normal full-round HUD.
+@@ -7887,7 +7889,8 @@
+  }
+  private refreshF4CombatReticle():void{
+   if(!this.f4ResearchMode||!this.b203FullRound)return;
+-  const {humanCpuDirectHits:hits,humanCpuDirectSplats:splats}=this.stats;
++  const {humanCpuDirectHits,humanCpuDirectSplats:splats}=this.stats;
++  const hits=humanCpuDirectHits+this.projectiles.f4SpecialSplashHitCount();
+   const tick=this.clock.tick;
+   const active=this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
+    this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -257,7 +257,17 @@
+   // F4 nonproduction: real-source physical HUMAN capsule and hit FX
+   // remain separate from the strict frozen 25-solid B351 authority.
+   private f4PhysicalHitCueOn=false;
+-  private f4ConfirmedDamageCues=0;
++  private f4ConfirmedDamageCues=0;
++  private f4SpecialSplashHits=0;
++  private f4SpecialCueFrame=-1;
++
++  public f4SpecialSplashHitCount():number{return this.f4SpecialSplashHits;}
++  private noteF4SpecialDamageCue(point:Vec3,team:Team.A|Team.B):void {
++    if(!this.f4PhysicalHitCueOn||team!==this.currentHumanTeam||this.f4SpecialCueFrame===this.b367NativeFrame)return;
++    this.f4SpecialCueFrame=this.b367NativeFrame;
++    this.f4ConfirmedDamageCues++;
++    this.feedback.confirmedHumanCpuDamage(team,point,this.currentPlayerWeapon);
++  }
+   private b367Enabled=false;
+   private b367SelectedRealLoadout=false;
+   private b367NativeFrame=0;
+@@ -339,10 +349,11 @@
+         if(damage<=0)return;
+         const result=this.cpuAgents.applyProjectileHit({botId:id,guarded:false,point:foot,distance:0},
+           damage,actor==='human'?'HUMAN':'CPU',actor);
+-        hpLoss+=result?.realHpLoss??0;
+-      }
+-    });
+-    if(this.currentHumanDamageable && team!==this.currentHumanTeam && this.resources.currentHp>0){
++        hpLoss+=result?.realHpLoss??0;
++        if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(foot,team);
++      }
++    });
++    if(this.currentHumanDamageable && team!==this.currentHumanTeam && this.resources.currentHp>0){
+       const foot=this.currentHumanPosition.clone().sub(new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0));
+       if(contact(foot)){
+         const damage=accept('human');
+@@ -400,9 +411,10 @@
+       const damage = resolveDamage(hit.botId,team===Team.A?Team.B:Team.A);
+       if (damage <= 0) continue;
+       const result = this.cpuAgents.applyProjectileHit(hit,damage,actor==='human'?'HUMAN':'CPU',actor);
+-      hpLoss += result?.realHpLoss ?? 0;
+-    }
+-    const human = this.findNativeSourceHumanPhysicalHit(start,end,team,radius,terrainCover);
++      hpLoss += result?.realHpLoss ?? 0;
++      if(actor==='human'&&(result?.realHpLoss??0)>0)this.noteF4SpecialDamageCue(hit.point,team);
++    }
++    const human = this.findNativeSourceHumanPhysicalHit(start,end,team,radius,terrainCover);
+     if (human && human.distance <= limit &&
+         (!terrainCover || this.sourceMeleeLineClear(human.point,this.currentHumanPosition))) {
+       const damage = resolveDamage('human',this.currentHumanTeam);
+@@ -418,7 +430,15 @@
+   public applyF4SpecialPulse(point: Vec3, team: Team.A|Team.B, actor: string, radius: number,
+     damage: number, paint: number, near?: {radius: number; damage: number}): void {
+     if (!this.physics.hasF4WholeResearchTrimesh) return;
+-    if (damage > 0) this.applyAreaDamage(point,radius,damage,team,undefined,false,undefined,near);
++    if (damage > 0) {
++      const before=this.stats.cpuCombatHits;
++      this.applyAreaDamage(point,radius,damage,team,undefined,false,undefined,near);
++      // Synchronous CPU HP-loss counter, not the area contact/guard count.
++      if(actor==='human'&&team===this.currentHumanTeam&&this.stats.cpuCombatHits>before){
++        this.f4SpecialSplashHits+=this.stats.cpuCombatHits-before;
++        this.noteF4SpecialDamageCue(point,team);
++      }
++    }
+     if (paint > 0 && radius > 0) this.enqueueF4BurstPaint(point,team,actor,radius,paint,true,PaintEventType.Special);
+   }
+ 
+@@ -841,8 +861,10 @@
+     this.b351TrueDamageCues=0;
+     this.b367NativeFrame=0;
+     this.nativeHumanDamageCueFrame=-1;
+-    this.nativeSourceHumanSplashCueFrame=-1;
+-    this.b367RealHumanCpuHits=0;
++    this.nativeSourceHumanSplashCueFrame=-1;
++    this.f4SpecialSplashHits=0;
++    this.f4SpecialCueFrame=-1;
++    this.b367RealHumanCpuHits=0;
+     this.b367PhysicalEvents.length=0;
+     this.pendingSloshes?.clear();
+     this.pendingSaberSwings?.clear();
