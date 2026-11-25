@@ -1,0 +1,168 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -46,5 +46,6 @@
+ import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
+ import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
+-import { predictF4Lead } from './F4FlightLead';
++import { predictF4Lead } from './F4FlightLead';
++import { chooseRailRelease, reachablePreference } from './F4CpuAttackPolicy.mjs';
+ import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
+ import { F4_SABER_TIMING, railCharge, weaponProfile, type WeaponId } from '../weapons/WeaponCatalog';
+@@ -229,5 +230,5 @@
+   /** An already audited SOURCE floor aim, not enemy or path authority. */
+   sourceFloorPaint?: true;
+-  f4Opponent?: { id: string; offsetY: number; life: symbol };
++  f4Opponent?: { id: string; offsetY: number; life: symbol | null };
+   /** SOURCE-only paid main shot awaiting an actual physical projectile
+    * slot. Failure to dispatch must restore the same bot's real ink.
+@@ -430,5 +431,5 @@
+     current: Vec3; previous: Vec3 | null; tick: number; mode: string; life: symbol
+   }>();
+-  private f4LeadTargets = new WeakMap<Vec3,{id: string;offsetY: number;life: symbol}>();
++  private f4LeadTargets = new WeakMap<Vec3,{id: string;offsetY: number;life: symbol | null}>();
+   private f4LeadAccepted = 0;
+   private readonly f4AimEvidence={currentTarget:0,predictedTarget:0,staleTargetRejected:0,
+@@ -3032,6 +3033,10 @@
+           bot.b213ActualAttackerId=shooter;
+           bot.b213ActualHitTick=this.b181NativeFrame;
+-          this.b181CachedCombat.delete(bot.id);
+-          if(this.f4WholeNavigation)bot.thinkRemaining=0;
++          this.b181CachedCombat.delete(bot.id);
++          if(this.f4WholeNavigation){
++            this.b181CachedCombat.delete(bot.id+':main');
++            this.b181CachedCombat.delete(bot.id+':kit');
++            bot.thinkRemaining=0;
++          }
+           this.b213RealAttackerDamageEvents++;
+         }
+@@ -4312,13 +4317,24 @@
+     if (bot.fireRemaining > 0) return;
+ 
+-    bot.weaponChargeSeconds = Math.min(
+-      profile.chargeSeconds,
+-      bot.weaponChargeSeconds + dt
+-    );
+-
+-    if (bot.weaponChargeSeconds + 1e-6 < profile.chargeSeconds) return;
+-
+-    if (this.queueCpuWeaponRequest(
+-      bot,target,1,'PROJECTILE',undefined,turfShot)) {
++    let release=1;
++    if(this.f4WholeNavigation&&profile.charger&&!turfShot){
++      const origin=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++      const decision=chooseRailRelease({
++        heldSeconds:bot.weaponChargeSeconds,dt,fullSeconds:profile.chargeSeconds,
++        minSeconds:profile.minChargeSeconds,distance:origin.distance(target),ink:bot.ink,
++        recentlyHit:bot.b213ActualHitTick>=0&&
++          this.b181NativeFrame-bot.b213ActualHitTick>=0&&
++          this.b181NativeFrame-bot.b213ActualHitTick<=72
++      },railCharge);
++      bot.weaponChargeSeconds=decision.heldSeconds;
++      if(decision.releaseFraction===null)return;
++      release=decision.releaseFraction;
++    }else{
++      bot.weaponChargeSeconds = Math.min(profile.chargeSeconds,bot.weaponChargeSeconds+dt);
++      if (bot.weaponChargeSeconds + 1e-6 < profile.chargeSeconds) return;
++    }
++
++    if (this.queueCpuWeaponRequest(
++      bot,target,release,'PROJECTILE',undefined,turfShot)) {
+       if (turfShot) this.recordQaSourceTurfShot(bot);
+       bot.fireRemaining = profile.fireIntervalSeconds;
+@@ -4855,5 +4871,5 @@
+     const sample = this.f4LeadHistory.get(opponent.id);
+     const enemy = opponent.id === 'HUMAN' ? null : this.bots.find(bot=>bot.id===opponent.id);
+-    if (!sample || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
++    if (!sample || opponent.life===null || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
+         (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))){
+       this.f4AimEvidence.staleTargetRejected++;return null;
+@@ -4862,5 +4878,6 @@
+     const actual = sample.current.clone().add(offset);
+     const clear = (from: Vec3, to: Vec3) => !ray(from,to);
+-    if(Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
++    if(!Number.isFinite(range)||range<=0||![actual.x,actual.y,actual.z,origin.x,origin.y,origin.z].every(Number.isFinite)||
++       Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
+     if(!clear(origin,actual)){this.f4AimEvidence.covered++;return null;}
+     const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
+@@ -4881,5 +4898,7 @@
+         const sample = this.f4LeadHistory.get(id);
+         const body = id === 'HUMAN' ? this.b212PreviousHuman : this.bots.find(e=>e.id===id)?.position;
+-        if (sample && body) this.f4LeadTargets.set(fixed, {id,offsetY:fixed.y-body.y,life:sample.life});
++        // A newly visible actor without a native track must not silently bypass
++        // launch validation. Null life is rejected and the paid request refunded.
++        if (body) this.f4LeadTargets.set(fixed, {id,offsetY:fixed.y-body.y,life:sample?.life??null});
+       }
+       return fixed;
+@@ -5012,7 +5031,12 @@
+         Math.abs(humanPosition.y-bot.position.y)<=2.4&&
+         horizontalDistanceSq(bot.position,humanPosition)<=36;
+-      const preferredVisibleEnemy=hitAttacker??
+-        (nearRealHuman||bot.role==='SKIRMISHER'?'HUMAN':null);
+-      const old=this.b181CachedCombat.get(bot.id);
++      const preferred=hitAttacker??
++        (nearRealHuman||bot.role==='SKIRMISHER'?'HUMAN':null);
++      const preferredRange=this.f4WholeNavigation&&hitAttacker?maxMainRange:12;
++      const preferredVisibleEnemy=this.f4WholeNavigation?
++        reachablePreference(origin,candidates,preferred,Math.min(maxMainRange,preferredRange)):preferred;
++      // Keep long-range kit sight from overwriting a valid main-gun lock.
++      const cacheKey=this.f4WholeNavigation?bot.id+(nativeMainWeaponOnly?':main':':kit'):bot.id;
++      const old=this.b181CachedCombat.get(cacheKey);
+       if(old&&this.b181NativeFrame-old.frame<8&&
+          (!preferredVisibleEnemy||old.actorId===preferredVisibleEnemy)){
+@@ -5034,7 +5058,7 @@
+             // physical actors, not fired at or promoted to a phantom hit.
+             this.b181ActualSourceOcclusions++;
+-            this.b181CachedCombat.delete(bot.id);
+-          }
+-          this.b182RecheckedStaleNativeSight++;
++            this.b181CachedCombat.delete(cacheKey);
++          }
++          this.b182RecheckedStaleNativeSight++;
+         }else if(candidates.length===0){
+           return null;
+@@ -5052,5 +5076,5 @@
+       const aim=result.target?new Vec3(
+         result.target.x,result.target.y,result.target.z):null;
+-      this.b181CachedCombat.set(bot.id,{
++      this.b181CachedCombat.set(cacheKey,{
+         frame:this.b181NativeFrame,actorId:result.actorId,origin,
+         target:result.target
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -3443,6 +3443,8 @@
+ 
+   private f4CpuLaunchTarget(request: CpuFireRequest, profile: WeaponProfile, origin: Vec3): Vec3 | null {
+-    if (!request.f4Opponent || !(profile.shooter || profile.arrowFlight || profile.blaster || profile.slosher || profile.canopy))
+-      return request.target;
++    if (!request.f4Opponent || !(profile.shooter || profile.arrowFlight || profile.blaster || profile.slosher || profile.canopy))
++      return request.target;
++    // Human HP can reach zero earlier in this same projectile tick.
++    if(request.f4Opponent.id==='HUMAN'&&this.resources.currentHp<=0)return null;
+     const flight = profile.shooter ?? profile.arrowFlight ?? profile.blaster ??
+       (profile.canopy ? F4_CANOPY_PELLET_FLIGHT : undefined);
+@@ -3640,7 +3642,20 @@
+     playerAimDirection: Vec3
+   ): void {
+-    const direction = request.target.clone().sub(request.origin);
+-    if (direction.lengthSq() <= 1e-8) {
+-      // The actual CPU charger ray cannot paint or deal damage when
++    // The physical hitscan has no travel lead, but its opponent still must
++    // be the same living native target at the actual launch boundary.
++    const railRange=profile.charger?railCharge(request.charge).range:null;
++    let target:Vec3|null=request.target;
++    if(railRange!==null&&request.f4Opponent){
++      target=request.f4Opponent.id==='HUMAN'&&(!playerDamageable||this.resources.currentHp<=0)?
++        null:this.cpuAgents.aimF4ShotAtLaunch(request,request.origin,railRange,()=>null);
++      if(target&&target.distance(request.origin)>railRange)target=null;
++    }
++    if(!target){
++      if(request.sourceInkTransaction)this.cpuAgents.rollbackUndeliveredSourceCpuMainShot(request);
++      return;
++    }
++    const direction = target.clone().sub(request.origin);
++    if (direction.lengthSq() <= 1e-8) {
++      // The actual CPU charger ray cannot paint or deal damage when
+       // origin and target coincide. Return SOURCE-only precharged ink.
+       if(request.sourceInkTransaction)
