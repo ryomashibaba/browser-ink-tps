@@ -1,0 +1,201 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -315,8 +315,9 @@
+   private f4StringerTapPending = false;
+   private f4RailTapPending = false;
+   private f4PressBufferedUntil = -1;
+-  private f4InstantPressUntil = -1;
+-  private f4SaberReleaseUntil = -1;
++  private f4InstantPressUntil = -1;
++  private f4ChargeReleaseUntil = -1;
++  private f4SaberReleaseUntil = -1;
+   private f4SaberReleaseCharged = false;
+   private wasFireHeld = false;
+   private dualiesFocusSeconds = 0;
+@@ -832,8 +833,9 @@
+ 
+   private clearF4WeaponInputBuffers(): void {
+     this.f4PressBufferedUntil = -1;
+-    this.f4InstantPressUntil = -1;
+-    this.f4SaberReleaseUntil = -1;
++    this.f4InstantPressUntil = -1;
++    this.f4ChargeReleaseUntil = -1;
++    this.f4SaberReleaseUntil = -1;
+     this.f4SaberReleaseCharged = false;
+   }
+ 
+@@ -860,7 +862,19 @@
+       this.f4InstantPressUntil = -1;
+   }
+ 
+-  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
++  /** A real released charge may wait briefly for existing recovery; never adds charge. */
++  private f4ResolveChargeRelease(released: boolean): 'WAIT' | 'READY' | 'NONE' {
++    if (released) this.f4ChargeReleaseUntil = this.b367NativeFrame + 6;
++    if (this.b367NativeFrame > this.f4ChargeReleaseUntil) {
++      this.f4ChargeReleaseUntil = -1;
++      return 'NONE';
++    }
++    if (this.fireCooldown > 1e-8) return 'WAIT';
++    this.f4ChargeReleaseUntil = -1;
++    return 'READY';
++  }
++
++  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
+     if (this.currentPlayerWeapon.canopy) return this.canopies?.lookup('human')?.phase === 'OPEN' ? 0.74 : 1;
+     const { weaponClass, contactWeapon } = this.currentPlayerWeapon;
+     if (contactWeapon && fireHeld) {
+@@ -885,8 +899,13 @@
+   }
+ 
+   public clipF4PlayerShooterMuzzle(body:Vec3,muzzle:Vec3):void {
+-    if(this.physics.hasF4WholeResearchTrimesh && this.currentPlayerWeapon.weaponClass==='SHOOTER')
+-      muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
++    if (!this.physics.hasF4WholeResearchTrimesh) return;
++    // Aim and launch must use the same near-side physical muzzle. Twin
++    // Comets and delayed/contact weapons retain their own origin solvers.
++    const kind = this.currentPlayerWeapon.weaponClass;
++    if (kind === 'SHOOTER' || kind === 'SPLATLING' || kind === 'BLASTER' ||
++        kind === 'CHARGER' || kind === 'STRINGER')
++      muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
+   }
+ 
+   /** Clips an experimental special throw to the same physical muzzle path as live shots. */
+@@ -1959,8 +1978,10 @@
+   ): void {
+     const f4Rail = profile.charger === true && this.physics.hasF4WholeResearchTrimesh;
+     if (fireHeld) {
+-      this.f4RailTapPending = false;
+-      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
++      this.f4RailTapPending = false;
++      if (this.f4ChargeReleaseUntil >= 0) this.chargeSeconds = 0;
++      this.f4ChargeReleaseUntil = -1;
++      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+       this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+       this.stats.playerWeaponAction = 'CHARGING_BEAM';
+       return;
+@@ -1981,8 +2002,18 @@
+       fallingFire = true;
+     }
+ 
+-    if (fallingFire && this.chargeSeconds + (f4Rail ? 1e-8 : 0) >= profile.minChargeSeconds &&
+-        this.fireCooldown <= (f4Rail ? 1e-8 : 0)) {
++    if (f4Rail && (fallingFire || this.f4ChargeReleaseUntil >= 0)) {
++      const release = this.f4ResolveChargeRelease(fallingFire);
++      if (release === 'WAIT') {
++        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++        this.stats.playerWeaponAction = 'CHARGING_BEAM';
++        return;
++      }
++      fallingFire = release === 'READY';
++    }
++
++    if (fallingFire && this.chargeSeconds + (f4Rail ? 1e-8 : 0) >= profile.minChargeSeconds &&
++        this.fireCooldown <= (f4Rail ? 1e-8 : 0)) {
+       const charge = chargeFraction(profile, this.chargeSeconds);
+       const physicalOrigin = profile.charger
+         ? this.clipF4Muzzle(new Vec3(body.x, origin.y, body.z), origin) : origin;
+@@ -2014,11 +2045,13 @@
+         this.enqueueF4Foot(body, team, 'human', profile.blaster.footRadius);
+       }
+       this.fireCooldown = profile.fireIntervalSeconds;
+-      this.stats.playerWeaponAction = 'BLAST_SHOT';
+-    }
+-  }
+-
+-  private clearHumanContactInput(): void {
++      this.stats.playerWeaponAction = 'BLAST_SHOT';
++    } else if (profile.blaster && this.physics.hasF4WholeResearchTrimesh) {
++      this.fireCooldown = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
++    }
++  }
++
++  private clearHumanContactInput(): void {
+     this.contactHeldFrames = 0;
+     this.contactMovingFrames = 0;
+   }
+@@ -2688,8 +2721,10 @@
+   ): void {
+     const f4 = this.physics.hasF4WholeResearchTrimesh;
+     if (fireHeld) {
+-      this.f4StringerTapPending = false;
+-      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
++      this.f4StringerTapPending = false;
++      if (this.f4ChargeReleaseUntil >= 0) this.chargeSeconds = 0;
++      this.f4ChargeReleaseUntil = -1;
++      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+       const stage = chargeStageProgress(profile, this.chargeSeconds);
+       this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+       this.stats.playerWeaponChargeRing = stage.full ? 2 : stage.firstReached ? 1 : 0;
+@@ -2702,13 +2737,25 @@
+         this.chargeSeconds + 1e-8 < profile.minChargeSeconds) {
+       this.chargeSeconds = Math.min(profile.minChargeSeconds, this.chargeSeconds + dt);
+       this.f4StringerTapPending = this.chargeSeconds + 1e-8 < profile.minChargeSeconds;
+-      if (this.f4StringerTapPending) return;
+-      fallingFire = true;
+-    }
+-
+-    if (
+-      fallingFire &&
+-      this.fireCooldown <= 0 &&
++      if (this.f4StringerTapPending) {
++        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++        return;
++      }
++      fallingFire = true;
++    }
++
++    if (f4 && (fallingFire || this.f4ChargeReleaseUntil >= 0)) {
++      const release = this.f4ResolveChargeRelease(fallingFire);
++      if (release === 'WAIT') {
++        this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++        return;
++      }
++      fallingFire = release === 'READY';
++    }
++
++    if (
++      fallingFire &&
++      this.fireCooldown <= (f4 ? 1e-8 : 0) &&
+       this.chargeSeconds + (f4 ? 1e-8 : 0) >= profile.minChargeSeconds
+     ) {
+       const charge = chargeFraction(profile, this.chargeSeconds);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -6275,8 +6275,17 @@
+       this.muzzle,this.target,this.aim);
+      // Only the provisional natural round: lock loss cannot masquerade as
+      // a charge release or allow a buffered shot before pause notification.
+-     const f4MainInputOpen=actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput&&
+-      (!naturalSpecial||document.pointerLockElement===this.canvas);
++     // An admissible physical F press (or already-held curling charge)
++     // takes precedence over a NEW main action, but never interrupts a
++     // committed main windup/burst or an attached guard.
++     const requestedSubId=this.sourceWeaponKit(profile.id).sub;
++     const naturalSubOwnsInput=naturalSpecial&&!zipOwnsInput&&!f4SpecialOwnsInput&&
++      this.humanSubAvailable&&actionWindow.humanCanStartNewActions&&
++      this.resources.currentHp>0&&this.player.canShoot&&document.pointerLockElement===this.canvas&&
++      (subTap||(requestedSubId==='curling-bomb'&&this.f4CurlingHeldFrames!==null))&&
++      this.humanSub.canStartF4HumanSub(requestedSubId)&&this.projectiles.canStartF4HumanSub();
++     const f4MainInputOpen=actionWindow.humanCanStartNewActions&&!f4SpecialOwnsInput&&!naturalSubOwnsInput&&
++      (!naturalSpecial||document.pointerLockElement===this.canvas);
+      this.projectiles.fixedUpdate(seconds,
+       f4MainInputOpen&&realPointerFire&&this.player.canShoot,
+       f4MainInputOpen&&(this.input.secondaryHeld||b379Mobility.realBrellaGuardTap)&&
+@@ -6310,8 +6319,12 @@
+     this.f4HumanSubActionOpen=canUseSub;
+     let throwSub=canUseSub&&subTap;
+     let heldFrames=0;
+-    if(canUseSub&&humanSubId==='curling-bomb'){
+-     if(subTap)this.f4CurlingHeldFrames=0;
++    if(canUseSub&&humanSubId==='curling-bomb'){
++     if(subTap&&(!naturalSpecial||this.humanSub.canStartF4HumanSub(humanSubId)))this.f4CurlingHeldFrames=0;
++     if(naturalSpecial&&!this.humanSub.canStartF4HumanSub(humanSubId)){
++      this.f4CurlingHeldFrames=null;throwSub=false;
++     }
++     if(naturalSpecial&&this.f4CurlingHeldFrames===null)throwSub=false;
+      if(this.f4CurlingHeldFrames!==null){
+       if(this.input.subHeld){
+        this.f4CurlingHeldFrames=Math.min(60,this.f4CurlingHeldFrames+1);
