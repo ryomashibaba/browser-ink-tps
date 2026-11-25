@@ -1,0 +1,147 @@
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -6,5 +6,6 @@
+ import type { WeaponId } from '../weapons/WeaponCatalog';
+ import {F4ProvisionalGauge} from './F4ProvisionalGauge.mjs';
+-import {F4CpuSpecialTactics,cpuSpecialDecisionDue} from './F4CpuSpecialTactics.mjs';
++import {F4CpuSpecialTactics,cpuSpecialDecisionDue,cpuSpecialLob} from './F4CpuSpecialTactics.mjs';
++import {cpuTornadoAim} from './F4CpuSpecialAim.mjs';
+ import { CertifiedTurf720, KIT720, type F4SpecialId } from './f4/shared-special-score720-20261125/shared-special-score720.mjs';
+ import { PhysicalSpecialPort720, type SpecialPlan, type LaserPair, type TornadoPulse, type WaveDevice, type BarrierDevice } from './f4/shared-special-score720-20261125/physical-special-port720.mjs';
+@@ -15,6 +16,7 @@
+ type Input = {
+   origin: Vec3; forward: Vec3; foot: Vec3; trigger: boolean; holdThrow: boolean; cannon: boolean;
+-  releaseThrow: boolean; airborne: boolean;
+-};
++  releaseThrow: boolean; airborne: boolean;
++  cpuTactical?:boolean;cpuLobValid?:boolean;cpuTarget?:Vec3;
++};
+ type Effect = { step(tick: number): boolean; dispose(): void };
+ type ObjectContact = { distance:number; damage(hp:number):void };
+@@ -63,7 +65,10 @@
+     this.cpuDecisions++;
+     const before=this.naturalActivations(actor.actorId);
+-    const owns=this.actorTick(tick,actor,{...input,trigger:command.trigger,cannon:command.cannon,
+-      holdThrow:command.holdThrow,releaseThrow:command.releaseThrow,
+-      forward:command.lob?new Vec3(...command.lob):input.forward},true,false,command.request);
++    const cpuTarget=context.distance!==null&&Number.isFinite(context.distance)&&context.distance>=0?
++      input.origin.clone().add(input.forward.clone().normalize().mulScalar(context.distance)):undefined;
++    const owns=this.actorTick(tick,actor,{...input,trigger:command.trigger,cannon:command.cannon,
++      holdThrow:command.holdThrow,releaseThrow:command.releaseThrow,cpuTactical:true,
++      cpuLobValid:command.lob!==null,cpuTarget,
++      forward:command.lob?new Vec3(...command.lob):input.forward},true,false,command.request);
+     const activated=this.naturalActivations(actor.actorId)>before;
+     if(activated){this.cpuAdmissions++;this.cpuTactics.accepted(actor.actorId,actor.lifeId,special,tick);}
+@@ -254,5 +259,7 @@
+         const special=KIT720[weapon].special;
+         const place=special==='greatBarrier'||special==='waveBreaker';
+-        if((!place||this.placement(input))&&this.port.begin({...key,team,special,input:{weapon}}))
++        if((!place||this.placementForCast(input))&&
++           (!(input.cpuTactical&&special==='tripleTornado')||this.cpuGuideAim(input))&&
++           this.port.begin({...key,team,special,input:{weapon}}))
+           this.naturalGauge.consume(actorId,lifeId);
+       }else if(isolatedRequest && !this.active.has(actorId) && !this.completedProbeLives.has(probeKey)){
+@@ -287,5 +294,5 @@
+     const weapon=query.input.weapon;
+     if(!this.physics.hasF4WholeResearchTrimesh)return null;
+-    const launch=(flight:F4SpecialFlight,count=1)=>{
++    const launch=(flight:F4SpecialFlight,count=1,aim?:Vec3)=>{
+       const input=this.input;
+       if(!input)return false;
+@@ -292,3 +299,3 @@
+-      if(!this.projectiles.launchF4Special(input.origin,input.forward,team,actorId,weapon,flight,count))return false;
++      if(!this.projectiles.launchF4Special(input.origin,aim??input.forward,team,actorId,weapon,flight,count))return false;
+       this.launches+=count;
+       return true;
+@@ -317,5 +324,10 @@
+         },volley.count)});
+       case 'tripleTornado':
+-        return reserve({readyDelayF:20,repeatF:33},{launchGuide:guide=>launch({
++        return reserve({readyDelayF:20,repeatF:33},{launchGuide:guide=>{
++          const input=this.input;
++          if(!input)return false;
++          const aim=input.cpuTactical?this.cpuGuideAim(input):input.forward;
++          if(!aim)return false;
++          return launch({
+           speed:12,gravity:12,lifeSeconds:2.1,diameter:.22,directDamage:0,collisions:'stage',
+           onTerrain:hit=>{
+@@ -324,6 +336,6 @@
+             this.tornado(hit.point,team,actorId,guide.tornadoPulse);
+           }
+-        })});
+-      case 'chariot':
++        },1,aim);}});
++      case 'chariot':
+         return this.crab(actorId,lifeId,team,initial,launch,reserve);
+       case 'blower':
+@@ -336,5 +348,6 @@
+         {deploy:({tick,factory})=>{
+           if(!this.input)return false;
+-          const foot=this.placement(this.input);
++          if(this.input.cpuTactical&&!cpuSpecialDecisionDue(actorId,tick))return false;
++          const foot=this.placementForCast(this.input);
+           if(!foot)return false;
+           const device=factory({deviceId:this.roundId+':device:'+ ++this.deviceSequence,
+@@ -387,4 +400,7 @@
+             return true;
+           },
+-          launchThrow:({direct,near,far})=>launch({
++          launchThrow:({direct,near,far})=>{
++            // No stale last-facing fallback during the actual delayed CPU throw.
++            if(this.input?.cpuTactical&&!this.input.cpuLobValid)return false;
++            return launch({
+             speed:23,gravity:8,lifeSeconds:1.45,diameter:.4,directDamage:direct,
+@@ -391,4 +407,4 @@
+-            blast:{radius:1.45,damage:far,paint:.55,near:{radius:.7,damage:near}}
+-          })
++            blast:{radius:1.45,damage:far,paint:.55,near:{radius:.7,damage:near}}
++          });}
+         });
+       default:return null;
+@@ -520,5 +536,29 @@
+   }
+ 
+-  private placement(input:Input):Vec3|null {
++  private cpuGuideAim(input:Input):Vec3|null {
++    if(!input.cpuTarget)return null;
++    const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
++    const aim=cpuTornadoAim(v(input.origin),v(input.cpuTarget),(a,b)=>{
++      const hit=this.physics.castStageSegment(new Vec3(...a),new Vec3(...b),'ink-projectile');
++      return hit?.normal?{point:v(hit.point),normal:v(hit.normal)}:null;
++    },cpuSpecialLob);
++    return aim?new Vec3(...aim):null;
++  }
++
++  private placementForCast(input:Input):Vec3|null {
++    const first=this.placement(input);
++    if(first||!input.cpuTactical||input.airborne)return first;
++    // CPU may put a device next to itself rather than into the enemy-facing obstruction.
++    // Every alternative goes through the unchanged real floor / edge / obstruction tests.
++    const yaw=Math.atan2(input.forward.x,input.forward.z);
++    for(const offset of [-Math.PI/2,Math.PI/2,Math.PI]){
++      const forward=new Vec3(Math.sin(yaw+offset),0,Math.cos(yaw+offset));
++      const point=this.placement({...input,forward});
++      if(point)return point;
++    }
++    return null;
++  }
++
++  private placement(input:Input):Vec3|null {
+     this.placementAttempts++;
+     const reject=(reason:string)=>{this.lastPlacementReject=reason;return null;};
+diff --git a/src/special/F4CpuSpecialTactics.mjs b/src/special/F4CpuSpecialTactics.mjs
+--- a/src/special/F4CpuSpecialTactics.mjs
++++ b/src/special/F4CpuSpecialTactics.mjs
+@@ -73,7 +73,8 @@
+    case 'ultraStamp':{
+     if(row&&row.throwAt!==null){
+-     if(!row.released&&tick>=row.throwAt){row.released=true;out.releaseThrow=true}
+-     else if(!row.released)out.holdThrow=true;
+-     out.lob=lob(23,8,1.45);
++     // The physical throw is delayed after release; keep supplying only fresh feasible aim.
++     out.lob=near?lob(23,8,1.45):null;
++     if(!row.released&&tick>=row.throwAt&&out.lob){row.released=true;out.releaseThrow=true}
++     else if(!row.released)out.holdThrow=true;
+     }else if(row&&near&&distance>2.2&&age>=18&&age<410&&lob(23,8,1.45)){
+      row.throwAt=tick+18;out.holdThrow=true;out.lob=lob(23,8,1.45);
