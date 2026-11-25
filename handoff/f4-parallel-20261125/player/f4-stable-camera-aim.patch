@@ -1,0 +1,79 @@
+diff --git a/src/camera/F4StableCameraAim.mjs b/src/camera/F4StableCameraAim.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/camera/F4StableCameraAim.mjs
+@@ -0,0 +1,9 @@
++// F4 provisional human view only. Physical camera sweep still owns eye position.
++// Translate the nominal look vector to the real clipped eye; no target acquisition.
++export function f4StableCameraLookPoint(out,eye,nominalEye,nominalTarget) {
++  return out.set(
++    eye.x + (nominalTarget.x - nominalEye.x),
++    eye.y + (nominalTarget.y - nominalEye.y),
++    eye.z + (nominalTarget.z - nominalEye.z)
++  );
++}
+diff --git a/src/camera/F4StableCameraAim.d.mts b/src/camera/F4StableCameraAim.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/camera/F4StableCameraAim.d.mts
+@@ -0,0 +1,4 @@
++interface Point { readonly x:number; readonly y:number; readonly z:number }
++export function f4StableCameraLookPoint<T extends {set(x:number,y:number,z:number):T}>(
++  out:T,eye:Point,nominalEye:Point,nominalTarget:Point
++):T;
+diff --git a/src/camera/ThirdPersonCamera.ts b/src/camera/ThirdPersonCamera.ts
+--- a/src/camera/ThirdPersonCamera.ts
++++ b/src/camera/ThirdPersonCamera.ts
+@@ -1,7 +1,8 @@
+ import { Entity, Vec3 } from 'playcanvas';
+ import {sourceNativeEditingHotkeyTarget,sourceNativePointerLockClickAllowed}
+  from '../app/SourceNativeInputProjection';
+-import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
++import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
++import {f4StableCameraLookPoint} from './F4StableCameraAim.mjs';
+ import {readSourceCameraPreferences,writeSourceCameraPreferences,
+  type SourceCameraPreferences} from './SourceCameraPreferences';
+ import {b258Pose,type B258CameraProfile}
+@@ -45,7 +46,14 @@
+   private shoulder = 0.72;
+   private currentCameraDistance = Number.NaN;
+   /** Gameplay options are opt-in for the T21 source practice preview only. */
+-  private sourcePracticeControls = false;
++  private sourcePracticeControls = false;
++  private f4StableAimEnabled = false;
++
++  /** Only the provisional native F4 full-round app may opt in. */
++  public enableF4StableAim():void {
++    if(!this.sourcePracticeControls)throw Error('SOURCE_PRACTICE_REQUIRED');
++    this.f4StableAimEnabled=true;
++  }
+   // B375: source-practice camera aim only; T20 stays at the original 1x.
+   private sourceAimSensitivityMultiplier = 1;
+   // Source practice player-only camera preference. Never affects T20,
+@@ -409,7 +417,12 @@
+       this.target.y+this.forward.y*12,
+       this.target.z+this.forward.z*12
+     );
+-    this.cameraEntity.lookAt(this.lookAtPoint);
++    if(this.f4StableAimEnabled&&this.physics.hasF4WholeResearchTrimesh&&
++       !this.b258ResearchEnabled){
++      f4StableCameraLookPoint(this.lookAtPoint,this.cameraEntity.getPosition(),
++        this.desiredCameraPosition,this.lookAtPoint);
++    }
++    this.cameraEntity.lookAt(this.lookAtPoint);
+   }
+ 
+   public getAimDirection(out = new Vec3()): Vec3 {
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -940,7 +940,8 @@
+    this.nativeLiveSourcePrestart);
+   this.camera=new ThirdPersonCamera(canvas,cameraEntity,surfaces,this.physics);
+   this.sourceAudio=new SourcePracticeAudio(canvas);
+-  this.camera.enableSourcePracticeControls();
++  this.camera.enableSourcePracticeControls();
++  if(this.f4ProvisionalTurfEnabled)this.camera.enableF4StableAim();
+   if(qa.get('t21B258')==='cameraStudy'&&
+      qa.get('t21Play')==='preview'&&
+      qa.get('t21FullSource')==='review')
