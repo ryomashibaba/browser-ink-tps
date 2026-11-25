@@ -1,0 +1,73 @@
+{
+  "base": "1688830573be8645f2533f7b4a2a0d2908ba6567",
+  "previous": "76023f2fcf81f600d5af60bff0727183066d21ba",
+  "passed": [
+    {
+      "id": "cpu-navigation",
+      "sha": "8fcc007a407f0bb6f3c3703e22842df2ab8340bf",
+      "relaxed": [
+        {
+          "path": "src/ai/F4PatrolNavigation.mjs",
+          "hunk": 43,
+          "merge": "omit absent terminal blank context at exact EOF"
+        },
+        {
+          "path": "src/ai/F4PatrolNavigation.d.mts",
+          "hunk": 12,
+          "merge": "omit absent terminal blank context at exact EOF"
+        }
+      ]
+    },
+    {
+      "id": "visual",
+      "sha": "54e10823088bb2308bca05f381b37d9f6a069692",
+      "relaxed": [
+        {
+          "path": "src/app/UndertowF3PlayablePreviewApp.ts",
+          "hunk": 3415,
+          "merge": "preserve wallInstallation rollback handle"
+        }
+      ]
+    },
+    {
+      "id": "vfx-audio",
+      "sha": "71139783e1d41c542e7d4ee0f4be9ffe5f79f199",
+      "relaxed": [],
+      "edits": 16
+    }
+  ],
+  "held": [],
+  "blobs": {
+    "src/app/B248SourceActorVisuals.ts": {
+      "sha": "71f42a6a1e9e8f8a66ac67e4f9c2dee2ee6a8396",
+      "source": "research-root"
+    },
+    "src/stage/TestStage.ts": {
+      "sha": "f62c7df7a1e1f6c83445acc3d1aca6d38ea6c409",
+      "source": "windows-share"
+    },
+    "src/app/UndertowF3SourceTraffic.ts": {
+      "sha": "b9159b80a8dcae5520068455129abbc13d03fea3",
+      "source": "windows-share"
+    },
+    "src/ink/InkSurfaceMaterial.ts": {
+      "sha": "7364357a20cd7781fc65f1774ee33a25cc539ace",
+      "source": "windows-share"
+    },
+    "src/feedback/GameFeedback.ts": {
+      "sha": "626b17f5a7bb88ecd74445a8b6ecdb2d1e34f6a1",
+      "source": "research-root"
+    },
+    "src/app/UndertowF3PlayablePreviewApp.ts": {
+      "sha": "d4858dbacac56ddc7c65993059deb3f6bf5d4f1b",
+      "source": "windows-share"
+    },
+    "src/audio/SourcePracticeAudio.ts": {
+      "sha": "07f8d2c7d3c9967f47992704c90de86cd7d49307",
+      "source": "research-root"
+    }
+  },
+  "replay": 116,
+  "files": 78,
+  "nativeBuild": "NOT_RUN"
+}
