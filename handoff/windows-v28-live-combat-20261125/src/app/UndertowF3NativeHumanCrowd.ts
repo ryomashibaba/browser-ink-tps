@@ -1,0 +1,167 @@
+import {isT21F4ResearchStage} from '../stage/undertow/UndertowT21F4PhotoRouteReconstruction';
+/**
+ * F3C opt-in live human Crowd presence. Only the actual grounded source-
+ * supported Rapier player's FOOT is projected as a passive steering
+ * neighbour. If the human jumps/offmesh/respawns, the eighth native Crowd
+ * neighbour is removed (never invent a NavMesh path in mid-air).
+ * This affects native CPU avoidance, NOT Rapier authority or a CPU foot.
+ */
+import {Vec3} from 'playcanvas';
+import {GAME_CONFIG} from '../config/game/gameConfig';
+import type {CpuHumanCrowdFootAuthority} from '../ai/CpuAgentSystem';
+import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+import type {StageDefinition} from '../stage/StageDefinition';
+import {UNDERTOW_T21D_PARTIAL_BLOCKOUT_GEOMETRY as frozen}
+ from '../stage/undertow/UndertowSpillwayBlockoutGeometry';
+import {UndertowPhase14QHumanCrowdAnchor}
+ from '../stage/undertow/UndertowPhase14QHumanCrowdAnchor';
+import type {B118NativeCrowdDriftWitness}
+ from '../stage/undertow/UndertowPhase14QRealCrowdDriftWitness';
+import {auditB119OriginalFirstDropLanding,auditOriginalHighSpawnPassiveGuard,
+ type B119OriginalLandingDecision,type OriginalHighSpawnPassiveDecision}
+ from '../stage/undertow/UndertowPhase14QFirstDropPassiveProxyGate';
+import {auditB123RegisteredOriginalUphillPassiveGuard,
+ type B123NativePassiveRampGate}
+ from '../stage/undertow/UndertowPhase14QRegisteredUphillPassiveGate';
+
+type Foot=Readonly<{x:number;y:number;z:number}>;
+export class UndertowF3NativeHumanCrowd implements CpuHumanCrowdFootAuthority{
+ private anchor:UndertowPhase14QHumanCrowdAnchor|null=null;
+ private previous:Foot|null=null;
+ private lastFoot:Foot|null=null;
+ private b118Witness:B118NativeCrowdDriftWitness|null=null;
+ private b119LastGate:B119OriginalLandingDecision|null=null;
+ private b119PassiveProxyWithheldTicks=0;
+ private originalHighSpawnLastGuard:OriginalHighSpawnPassiveDecision|null=null;
+ private originalHighSpawnProxyWithheldTicks=0;
+ private b123LastRealSourceRampGuard:B123NativePassiveRampGate|null=null;
+ private b123OriginalRampPassiveProxyWithheldNativeTicks=0;
+ readonly sourceOnly=true;
+ attaches=0;
+ detaches=0;
+ private excluded=0;
+ constructor(
+  private readonly nav:RecastStageNavigation,
+  private readonly stage:StageDefinition
+ ){
+  if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
+    frozen.activationReady!==false||
+    (!isT21F4ResearchStage(stage)&&stage.solids!==frozen.solids)||
+    stage.paintSurfaces!==frozen.paintSurfaces||
+    stage.navigationLinks!==frozen.navigationLinks)
+   throw Error('T21_F3C_HUMAN_NATIVE_CROWD_NONPRODUCTION_ONLY');
+ }
+ syncActualPlayerFoot(foot:Foot,rapierGrounded=true){
+  if(![foot.x,foot.y,foot.z].every(Number.isFinite))
+   throw Error('T21_F3C_HUMAN_NONFINITE_PHYSICAL_FOOT');
+  // B280: physical Rapier KCC may be airborne while source Recast
+  // closestPoint coincidentally reports a 0m projection residual.
+  // The eighth nonphysical HUMAN steering proxy MUST be withheld until
+  // genuine Rapier grounded. This does not suppress seven CPUs, change
+  // collision, relax the original 2m drift safety fence or add geometry.
+  if(rapierGrounded!==true){
+   this.suspend();
+   this.excluded++;
+   this.previous={...foot};
+   return;
+  }
+  // In Windows the passive eighth HUMAN proxy jumped 111.76m at tick 121
+  // while the real Rapier human remained grounded on the HIGH spawn.
+  // Suppress only the eighth NONPHYSICAL agent on the two exact source
+  // spawn polygons. Retain CPU7, Rapier authority and the 2m safety stop.
+  this.originalHighSpawnLastGuard=
+   // Read-only original polygon audit must always receive the frozen
+   // SOURCE solids, even when F4 Crowd navigates the 51-solid lab world.
+   auditOriginalHighSpawnPassiveGuard(foot,frozen.solids);
+  if(this.originalHighSpawnLastGuard.withheld){
+   this.suspend();
+   this.excluded++;
+   this.originalHighSpawnProxyWithheldTicks++;
+   this.previous={...foot};
+   return;
+  }
+  // A single Recast update moved ONLY this passive human crowd proxy
+  // 108m at a genuine first-drop landing. Withhold the unsafe passive
+  // proxy solely on the exact two original-source slab footprints.
+  // The REAL physical HUMAN and all seven original CPU actors stay.
+  this.b119LastGate=auditB119OriginalFirstDropLanding(
+   foot,frozen.solids);
+  if(this.b119LastGate.withheld){
+   this.suspend();
+   this.excluded++;
+   this.b119PassiveProxyWithheldTicks++;
+   this.previous={...foot};
+   return;
+  }
+  // W10-B123: the actual original Y3-to-Y4.5 source ramp KCC at tick
+  // 256 was grounded, but the nonphysical passive steering neighbour
+  // leapt 7.15m across the source Recast NavMesh in ONE update.
+  // Withhold ONLY that eighth passive HUMAN agent on the exact source
+  // ramp mesh and Y; preserve the true 2m fence everywhere else.
+  this.b123LastRealSourceRampGuard=
+   auditB123RegisteredOriginalUphillPassiveGuard(foot);
+  if(this.b123LastRealSourceRampGuard.withheld){
+   this.suspend();
+   this.excluded++;
+   this.b123OriginalRampPassiveProxyWithheldNativeTicks++;
+   this.previous={...foot};
+   return;
+  }
+  const native=this.nav.closestPoint(new Vec3(foot.x,foot.y,foot.z));
+  const snap=Math.hypot(native.x-foot.x,native.y-foot.y,native.z-foot.z);
+  const sourceSupported=Number.isFinite(snap)&&snap<=.22;
+  const boundedStep=!this.previous||Math.hypot(
+   foot.x-this.previous.x,foot.y-this.previous.y,
+   foot.z-this.previous.z) <=
+    GAME_CONFIG.player.humanSpeedMetersPerSecond/60+.12;
+  // One F3 frame after a jump or explicit respawn may move beyond a
+  // normal grounded KCC stride; invalidate only the proxy, not physics.
+  if(!sourceSupported||!boundedStep){
+   this.suspend();
+   this.excluded++;
+  }else{
+   if(!this.anchor){
+    this.anchor=new UndertowPhase14QHumanCrowdAnchor(
+     this.nav,this.stage,true,foot);
+    this.attaches++;
+   }else this.anchor.syncActualPlayerFoot(foot);
+  }
+  this.previous={...foot};
+  this.lastFoot=this.anchor?{...foot}:null;
+ }
+ sealAfterCrowdUpdate(foot:Foot){
+  if(!this.anchor)return;
+  if(!this.lastFoot||Math.hypot(
+   foot.x-this.lastFoot.x,foot.y-this.lastFoot.y,
+   foot.z-this.lastFoot.z)>1e-5)
+   throw Error('T21_F3C_HUMAN_PROXY_REAL_FOOT_DRIFT');
+  // Preserve the measured pre/post actual Recast tick even if the
+  // original strict >2m safety fence throws before a restoration.
+  try{this.anchor.sealAfterCrowdUpdate(foot);}
+  finally{this.b118Witness=this.anchor.lastB118RealCrowdWitness;}
+ }
+ private suspend(){
+  if(this.anchor){this.anchor.dispose();this.anchor=null;this.detaches++;}
+  this.lastFoot=null;
+ }
+ get snapshot(){
+  return {active:!!this.anchor,attaches:this.attaches,
+   detaches:this.detaches,airborneOrUnverifiableTicks:this.excluded,
+   b118LastRealCrowdDriftWitness:this.b118Witness,
+   originalHighSpawnPassiveProxyGate:this.originalHighSpawnLastGuard,
+   originalHighSpawnProxyWithheldNativeTicks:
+    this.originalHighSpawnProxyWithheldTicks,
+   originalHighSpawnHumanCpuAvoidanceCertified:false,
+   b119OriginalFirstDropPassiveProxyGate:this.b119LastGate,
+   b119FirstDropProxyWithheldNativeTicks:this.b119PassiveProxyWithheldTicks,
+   b119HumanCpuCrowdAvoidanceCertifiedAtLanding:false,
+   b123LastOriginalUphillPassiveAgentGate:
+    this.b123LastRealSourceRampGuard,
+   b123OriginalRampPassiveProxyWithheldNativeTicks:
+    this.b123OriginalRampPassiveProxyWithheldNativeTicks,
+   b123HumanCpuAvoidanceCertifiedOnRamp:false,
+   fakeHumanPhysicalActors:0,playerFootMoved:false,
+   sourceNavmeshChanged:false,productionAuthorized:false};
+ }
+ dispose(){this.suspend();this.previous=null;}
+}

@@ -1,0 +1,824 @@
+import {
+  Color,
+  Entity,
+  StandardMaterial,
+  Vec3,
+  type AppBase
+} from 'playcanvas';
+import type { CpuAgentSystem, CpuKitRequest } from '../ai/CpuAgentSystem';
+import { GAME_CONFIG } from '../config/game/gameConfig';
+import type { PerformanceStats } from '../core/PerformanceStats';
+import type { GameFeedback } from '../feedback/GameFeedback';
+import type { PaintCoordinator } from '../ink/PaintCoordinator';
+import {sourceRegisteredPaintCellActive,
+ sourceRegisteredPaintHitActive,sourceThrownSubPaintBeforeRegisteredSolid,
+ sourceOriginalBlastPaintLineClear,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
+import {
+  PaintEventType,
+  PaintSource,
+  SurfaceFlags,
+  Team
+} from '../ink/types';
+import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+import type { ProjectileSystem } from '../projectile/ProjectileSystem';
+import {
+  subWeaponProfile,
+  type SpecialWeaponId,
+  type SubWeaponId,
+  type SubWeaponProfile
+} from '../weapons/WeaponKitCatalog';
+
+interface CpuBombSlot {
+  active: boolean;
+  landed: boolean;
+  actorId: string;
+  subId: SubWeaponId;
+  team: Team.A | Team.B;
+  position: Vec3;
+  previousPosition: Vec3;
+  velocity: Vec3;
+  ttl: number;
+  fuseSeconds: number;
+  entity: Entity;
+}
+
+interface CpuScheduledStrike {
+  actorId: string;
+  team: Team.A | Team.B;
+  point: Vec3;
+  seconds: number;
+}
+
+type CpuSpecialRequest = Extract<CpuKitRequest, { kind: 'SPECIAL' }>;
+
+interface CpuDriftStorm {
+  actorId: string;
+  team: Team.A | Team.B;
+  position: Vec3;
+  direction: Vec3;
+  seconds: number;
+  pulseCooldown: number;
+}
+
+
+/** Bounded ballistic aim for an ALREADY-authorized original unpainted
+ * SOURCE turf cell. The real thrown SUB still uses its catalog speed,
+ * initial upward boost, gravity, 60Hz semi-implicit integration and
+ * original Rapier/world contact; this NEVER authorizes collision/paint.
+ * No solution => preserve the ordinary original throw exactly. */
+export function nativeOriginalSourceTurfSubBallisticAim(
+ origin:Vec3,target:Vec3,profile:SubWeaponProfile,dt=1/60
+):Vec3|null{
+ const speed=profile.throwSpeedMetersPerSecond;
+ const gravity=profile.gravityMetersPerSecond2;
+ const boost=profile.upwardBoostMetersPerSecond;
+ const maxTime=profile.maxFlightSeconds;
+ const dx=target.x-origin.x,dy=target.y-origin.y,dz=target.z-origin.z;
+ const horizontalSq=dx*dx+dz*dz;
+ if(![speed,gravity,boost,maxTime,dt,dx,dy,dz].every(Number.isFinite)||
+    speed<=0||gravity<=0||maxTime<=dt||dt<=0||
+    horizontalSq<.01)return null;
+ // Fixed-speed muzzle direction plus the existing separate upward
+ // boost. The +dt term models the REAL native vY -= g*dt followed
+ // by position += vY*dt, instead of inventing a different flight.
+ const residual=(t:number)=>{
+  const nativeY=dy/t+gravity*(t+dt)*.5-boost;
+  return horizontalSq/(t*t)+nativeY*nativeY-speed*speed;
+ };
+ let prevT=dt,prev=residual(prevT);
+ for(let n=2;n<=Math.floor(maxTime/dt);n++){
+  const t=n*dt,next=residual(t);
+  if(prev>0&&next<=0){
+   let lo=prevT,hi=t;
+   for(let i=0;i<22;i++){
+    const mid=(lo+hi)*.5;
+    if(residual(mid)>0)lo=mid;
+    else hi=mid;
+   }
+   const flight=(lo+hi)*.5;
+   const aim=new Vec3(dx/flight/speed,
+    (dy/flight+gravity*(flight+dt)*.5-boost)/speed,
+    dz/flight/speed);
+   return aim.lengthSq()>1e-8&&
+    [aim.x,aim.y,aim.z].every(Number.isFinite)?
+    aim.normalize():null;
+  }
+  prev=next;prevT=t;
+ }
+ return null;
+}
+
+/** The same physically bounded SUB ballistics can aim a genuine SOURCE
+ * human camera reticle. This is trajectory calculation ONLY: it does
+ * not authorize a floor, enemy, hit, score or paint. The real human SUB
+ * and the CPU SUB both resolve through original Rapier every native tick.
+ * Caller must opt in only when the camera target is canonical SOURCE. */
+export const nativeSourceSubBallisticAim=
+ nativeOriginalSourceTurfSubBallisticAim;
+
+export class CpuKitSystem {
+  private readonly bombs: CpuBombSlot[] = [];
+  private readonly scheduledStrikes: CpuScheduledStrike[] = [];
+  private readonly storms: CpuDriftStorm[] = [];
+  private readonly pendingSpecials: CpuSpecialRequest[] = [];
+  private readonly materialA: StandardMaterial;
+  private readonly materialB: StandardMaterial;
+  private readonly delta = new Vec3();
+
+  public constructor(
+    app: AppBase,
+    private readonly surfaces: readonly PaintSurface[],
+    private readonly physics: RapierStagePhysics,
+    private readonly coordinator: PaintCoordinator,
+    private readonly projectiles: ProjectileSystem,
+    private readonly cpuAgents: CpuAgentSystem,
+    private readonly feedback: GameFeedback,
+    private readonly stats: PerformanceStats,
+    /** Exact canonical SOURCE 180s mode only; historic manual kit QA
+     * and frozen T20 retain their original stage-only SUB collision. */
+    private readonly nativeOriginalSourceCombatantSubContactEnabled = false
+  ) {
+    this.materialA = makeCpuKitMaterial(GAME_CONFIG.visual.teamA);
+    this.materialB = makeCpuKitMaterial(GAME_CONFIG.visual.teamB);
+
+    for (let i = 0; i < 16; i += 1) {
+      const entity = new Entity(`CpuSubWeapon:${i}`);
+      entity.addComponent('render', {
+        type: 'sphere',
+        material: this.materialA,
+        castShadows: false,
+        receiveShadows: false
+      });
+      entity.enabled = false;
+      app.root.addChild(entity);
+
+      this.bombs.push({
+        active: false,
+        landed: false,
+        actorId: '-',
+        subId: 'pulse-bomb',
+        team: Team.A,
+        position: new Vec3(),
+        previousPosition: new Vec3(),
+        velocity: new Vec3(),
+        ttl: 0,
+        fuseSeconds: 0,
+        entity
+      });
+    }
+
+    this.stats.cpuSpecialEffectsExecuted = 0;
+    this.stats.cpuSpecialPaintRequestsEnqueued = 0;
+    this.stats.cpuSubProjectilesLaunched = 0;
+    this.syncStats();
+  }
+
+  public queue(request: CpuKitRequest): boolean {
+    if (request.kind === 'SUB') {
+      return this.spawnSub(request);
+    }
+
+    this.pendingSpecials.push({
+      kind: 'SPECIAL',
+      sourceId: request.sourceId,
+      team: request.team,
+      position: request.position.clone(),
+      target: request.target.clone(),
+      direction: request.direction.clone(),
+      specialId: request.specialId,
+      // Preserve the already-paid SOURCE transaction through the real
+      // effect phase, so an unactivated rejoin-loss can be refunded.
+      rollbackBefore:request.rollbackBefore
+    });
+    return true;
+  }
+
+  public fixedUpdate(dt: number): void {
+    this.activatePendingSpecials();
+    this.updateBombs(dt);
+    this.updateTripleStrikes(dt);
+    this.updateDriftStorms(dt);
+    this.syncStats();
+  }
+
+  public render(alpha: number): void {
+    const t = clamp01(alpha);
+    for (const slot of this.bombs) {
+      if (!slot.active) continue;
+      if (slot.landed) {
+        slot.entity.setPosition(slot.position);
+        continue;
+      }
+      slot.entity.setPosition(
+        lerp(slot.previousPosition.x, slot.position.x, t),
+        lerp(slot.previousPosition.y, slot.position.y, t),
+        lerp(slot.previousPosition.z, slot.position.z, t)
+      );
+    }
+  }
+
+  public reset(): void {
+    for (const slot of this.bombs) this.deactivateBomb(slot);
+    this.pendingSpecials.length = 0;
+    this.scheduledStrikes.length = 0;
+    this.storms.length = 0;
+    this.stats.cpuSpecialEffectsExecuted = 0;
+    this.stats.cpuSpecialPaintRequestsEnqueued = 0;
+    this.stats.cpuSubProjectilesLaunched = 0;
+    this.syncStats();
+  }
+
+  private spawnSub(request: Extract<CpuKitRequest, { kind: 'SUB' }>): boolean {
+    const slot = this.bombs.find((candidate) => !candidate.active);
+    if (!slot) {
+      this.stats.cpuKitPoolDrops += 1;
+      return false;
+    }
+
+    const profile = subWeaponProfile(request.subId);
+    const aim = request.direction.clone();
+    if (aim.lengthSq() <= 1e-8) {
+      aim.copy(request.target).sub(request.position);
+    }
+    if (aim.lengthSq() <= 1e-8) aim.set(0, 0.15, -1);
+    aim.normalize();
+
+    const origin = request.position.clone();
+    origin.y += GAME_CONFIG.cpu.muzzleHeightMeters;
+    // Only a true SOURCE-floor-targeted paid bomb gets physically
+    // compensated for its catalog upward boost and gravity. Enemy
+    // throws, T20, manually staged QA, and unverified trajectory
+    // solutions retain the exact legacy projectile direction.
+    const sourceTurfBallistic=request.sourceTurfSubAim&&
+      this.nativeOriginalSourceCombatantSubContactEnabled?
+      nativeOriginalSourceTurfSubBallisticAim(
+       origin,request.target,profile):null;
+    if(sourceTurfBallistic)aim.copy(sourceTurfBallistic);
+
+    slot.active = true;
+    slot.landed = false;
+    slot.actorId = request.sourceId;
+    slot.subId = request.subId;
+    slot.team = request.team;
+    slot.ttl = profile.maxFlightSeconds;
+    slot.fuseSeconds = profile.fuseSeconds;
+    slot.position.copy(origin);
+    slot.previousPosition.copy(origin);
+    slot.velocity.copy(aim).mulScalar(profile.throwSpeedMetersPerSecond);
+    slot.velocity.y += profile.upwardBoostMetersPerSecond;
+
+    const mesh = slot.entity.render?.meshInstances[0];
+    if (mesh) {
+      mesh.material = request.team === Team.A
+        ? this.materialA
+        : this.materialB;
+    }
+    const d = profile.visualDiameterMeters;
+    slot.entity.setLocalScale(d, d, d);
+    slot.entity.setPosition(origin);
+    slot.entity.enabled = true;
+    this.stats.cpuSubProjectilesLaunched += 1;
+
+    this.feedback.subThrow(request.team, origin);
+    return true;
+  }
+
+  private updateBombs(dt: number): void {
+    for (const slot of this.bombs) {
+      if (!slot.active) continue;
+      const profile = subWeaponProfile(slot.subId);
+
+      slot.previousPosition.copy(slot.position);
+
+      if (slot.landed) {
+        slot.fuseSeconds = Math.max(0, slot.fuseSeconds - dt);
+        if (slot.fuseSeconds <= 0) this.explodeBomb(slot, profile);
+        continue;
+      }
+
+      // Same SOURCE-only terminal flight fraction as the actual human
+      // SUB: no phantom full-tick travel and no missed last-frame Rapier
+      // contact. Frozen T20 CPU kits retain their previous TTL behavior.
+      const terminalSourceFlight=this.nativeOriginalSourceCombatantSubContactEnabled&&
+        slot.ttl>0&&slot.ttl<=dt;
+      const flightDt=this.nativeOriginalSourceCombatantSubContactEnabled?
+        Math.min(dt,Math.max(0,slot.ttl)):dt;
+      slot.ttl -= dt;
+      if (slot.ttl <= 0 && !terminalSourceFlight) {
+        this.explodeBomb(slot, profile);
+        continue;
+      }
+
+      slot.velocity.y -= profile.gravityMetersPerSecond2 * flightDt;
+      this.delta.copy(slot.velocity).mulScalar(flightDt);
+      const next = slot.position.clone().add(this.delta);
+
+      const blockerHit = this.physics.castStageSegment(
+        slot.position,
+        next,
+        'thrown-sub'
+      );
+      const paintHit = this.physics.hasF4WholeResearchTrimesh
+        ? this.physics.f4PaintAtStageHit(blockerHit,this.surfaces)
+        : this.findNearestSurfaceHit(slot.position, next);
+      const paintWins=sourceThrownSubPaintBeforeRegisteredSolid(
+        paintHit,blockerHit,
+        this.nativeOriginalSourceCombatantSubContactEnabled,
+        GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters
+      );
+
+      // A real thrown SUB has finite diameter and may hit an ACTUAL
+      // opposing human/CPU before reaching the original registered
+      // floor/wall. Use the existing CPU combat sphere and this same
+      // 60Hz human KCC position. An original solid at equal/shorter
+      // distance always wins: no shots through source-stage cover.
+      if(this.nativeOriginalSourceCombatantSubContactEnabled){
+        const cpu=this.cpuAgents.findNearestCombatHit(
+          slot.position,next,slot.team);
+        const human=this.projectiles.findNativeSourceHumanPhysicalHit(
+          slot.position,next,slot.team);
+        const actor=cpu&&human?
+          (cpu.distance<=human.distance?cpu:human):cpu??human;
+        // Preserve original SOURCE cover even when a nearby paint plane
+        // wins the independent paint-vs-stage contact priority.
+        const worldDistance=Math.min(
+          paintHit?.distance??Infinity,
+          blockerHit?.distance??Infinity);
+        const canopy=this.projectiles.findF4CanopyHit?.(slot.position,next,slot.team);
+        if(canopy&&canopy.distance<worldDistance&&canopy.distance<=(actor?.distance??Infinity)){
+          this.onBombContact(slot,profile,canopy.point);
+          continue;
+        }
+        if(actor&&Number.isFinite(actor.distance)&&
+           actor.distance>=0&&
+           actor.distance+GAME_CONFIG.combat.hitPriorityEpsilonMeters<
+            worldDistance){
+          this.onBombContact(slot,profile,actor.point);
+          continue;
+        }
+      }
+      if (paintWins && paintHit) {
+        this.onBombContact(slot, profile, paintHit.worldPoint);
+        continue;
+      }
+      if (blockerHit) {
+        this.onBombContact(slot, profile, blockerHit.point);
+        continue;
+      }
+
+      slot.position.copy(next);
+      if(terminalSourceFlight){
+        this.explodeBomb(slot,profile);
+        continue;
+      }
+      slot.entity.setPosition(slot.position);
+    }
+  }
+
+  private onBombContact(
+    slot: CpuBombSlot,
+    profile: SubWeaponProfile,
+    point: Vec3
+  ): void {
+    slot.position.copy(point);
+    slot.previousPosition.copy(point);
+    slot.velocity.set(0, 0, 0);
+
+    if (profile.detonateOnImpact) {
+      this.explodeBomb(slot, profile);
+      return;
+    }
+    if(this.nativeOriginalSourceCombatantSubContactEnabled&&slot.ttl<=0){
+      // The genuine final native flight fraction cannot start a fresh
+      // fuse on contact after its measured lifetime has expired.
+      this.explodeBomb(slot,profile);
+      return;
+    }
+
+    slot.landed = true;
+    slot.entity.setPosition(point);
+    this.feedback.subFuse(slot.team, point, slot.fuseSeconds);
+  }
+
+  private explodeBomb(
+    slot: CpuBombSlot,
+    profile: SubWeaponProfile
+  ): void {
+    this.projectiles.applyExternalAreaDamage(
+      slot.position,
+      profile.outerDamageRadiusMeters,
+      profile.outerDamage,
+      slot.team
+    );
+
+    if (
+      profile.innerExtraDamage > 0 &&
+      profile.innerDamageRadiusMeters > 0
+    ) {
+      this.projectiles.applyExternalAreaDamage(
+        slot.position,
+        profile.innerDamageRadiusMeters,
+        profile.innerExtraDamage,
+        slot.team
+      );
+    }
+
+    this.paintRadial(
+      slot.actorId,
+      slot.team,
+      slot.position,
+      Math.max(0.42, profile.paintRadiusMeters * 0.52),
+      profile.paintRadiusMeters * 0.58,
+      profile.paintRadiusMeters < 1.6 ? 6 : 8,
+      PaintEventType.Bomb,
+      true,
+      0.78,
+      2.2
+    );
+    this.feedback.subBurst(
+      slot.team,
+      slot.position,
+      profile.paintRadiusMeters
+    );
+    this.stats.cpuSubExplosions += 1;
+    this.deactivateBomb(slot);
+  }
+
+  private activatePendingSpecials(): void {
+    for (const request of this.pendingSpecials) {
+      if(!this.cpuAgents.approveQueuedSourceCpuSpecialAtActivation(request))
+        continue;
+      this.activateSpecial(
+        request.sourceId,
+        request.team,
+        request.specialId,
+        request.position,
+        request.target,
+        request.direction
+      );
+    }
+    this.pendingSpecials.length = 0;
+  }
+
+  private activateSpecial(
+    actorId: string,
+    team: Team.A | Team.B,
+    specialId: SpecialWeaponId,
+    position: Vec3,
+    target: Vec3,
+    direction: Vec3
+  ): void {
+    this.stats.cpuSpecialEffectsExecuted += 1;
+    switch (specialId) {
+      case 'turf-pulse':
+        this.activateTurfPulse(actorId, team, position);
+        return;
+      case 'triple-strike':
+        this.activateTripleStrike(actorId, team, target, direction);
+        return;
+      case 'drift-storm':
+        this.activateDriftStorm(actorId, team, position, direction);
+        return;
+    }
+  }
+
+  private activateTurfPulse(
+    actorId: string,
+    team: Team.A | Team.B,
+    position: Vec3
+  ): void {
+    this.projectiles.applyExternalAreaDamage(
+      position,
+      GAME_CONFIG.special.pulseDamageRadiusMeters,
+      GAME_CONFIG.special.pulseDamage,
+      team
+    );
+    this.paintRadial(
+      actorId,
+      team,
+      position,
+      GAME_CONFIG.special.pulsePaintRadiusMeters,
+      GAME_CONFIG.special.pulseRingRadiusMeters,
+      12,
+      PaintEventType.Special,
+      false,
+      1.0,
+      2.4
+    );
+    this.feedback.specialBurst(
+      team,
+      position,
+      GAME_CONFIG.special.pulseRingRadiusMeters
+    );
+  }
+
+  private activateTripleStrike(
+    actorId: string,
+    team: Team.A | Team.B,
+    target: Vec3,
+    direction: Vec3
+  ): void {
+    const right = new Vec3(direction.z, 0, -direction.x);
+    if (right.lengthSq() <= 1e-6) right.set(1, 0, 0);
+    else right.normalize();
+
+    const offsets = [-1.65, 0, 1.65] as const;
+    for (let i = 0; i < offsets.length; i += 1) {
+      this.scheduledStrikes.push({
+        actorId,
+        team,
+        point: target.clone().add(
+          right.clone().mulScalar(offsets[i]!)
+        ),
+        seconds: 0.72 + i * 0.16
+      });
+    }
+    this.feedback.specialBurst(team, target, 0.72);
+  }
+
+  private activateDriftStorm(
+    actorId: string,
+    team: Team.A | Team.B,
+    position: Vec3,
+    aimDirection: Vec3
+  ): void {
+    const direction = new Vec3(
+      aimDirection.x,
+      0,
+      aimDirection.z
+    );
+    if (direction.lengthSq() <= 1e-6) direction.set(0, 0, -1);
+    else direction.normalize();
+
+    const start = position.clone().add(
+      direction.clone().mulScalar(1.1)
+    );
+    this.storms.push({
+      actorId,
+      team,
+      position: start,
+      direction,
+      seconds: 4.8,
+      pulseCooldown: 0
+    });
+    this.feedback.specialBurst(team, start, 1.15);
+  }
+
+  private updateTripleStrikes(dt: number): void {
+    for (let i = this.scheduledStrikes.length - 1; i >= 0; i -= 1) {
+      const strike = this.scheduledStrikes[i]!;
+      if (!this.cpuAgents.isActorActive(strike.actorId)) {
+        this.scheduledStrikes.splice(i, 1);
+        continue;
+      }
+      strike.seconds -= dt;
+      if (strike.seconds > 0) continue;
+
+      this.projectiles.applyExternalAreaDamage(
+        strike.point,
+        2.15,
+        62,
+        strike.team
+      );
+      this.paintRadial(
+        strike.actorId,
+        strike.team,
+        strike.point,
+        0.92,
+        1.85,
+        10,
+        PaintEventType.Special,
+        false,
+        1.0,
+        2.4
+      );
+      this.feedback.specialBurst(
+        strike.team,
+        strike.point,
+        1.85
+      );
+      this.scheduledStrikes.splice(i, 1);
+    }
+  }
+
+  private updateDriftStorms(dt: number): void {
+    for (let i = this.storms.length - 1; i >= 0; i -= 1) {
+      const storm = this.storms[i]!;
+      if (!this.cpuAgents.isActorActive(storm.actorId)) {
+        this.storms.splice(i, 1);
+        continue;
+      }
+      storm.seconds -= dt;
+      storm.pulseCooldown -= dt;
+      storm.position.add(
+        storm.direction.clone().mulScalar(1.45 * dt)
+      );
+
+      if (storm.pulseCooldown <= 0) {
+        this.projectiles.applyExternalAreaDamage(
+          storm.position,
+          1.85,
+          16,
+          storm.team
+        );
+        this.paintRadial(
+          storm.actorId,
+          storm.team,
+          storm.position,
+          0.62,
+          1.25,
+          8,
+          PaintEventType.Special,
+          false,
+          1.0,
+          2.4
+        );
+        storm.pulseCooldown += 0.38;
+      }
+
+      if (storm.seconds <= 0) {
+        this.feedback.specialBurst(
+          storm.team,
+          storm.position,
+          1.35
+        );
+        this.storms.splice(i, 1);
+      }
+    }
+  }
+
+  private paintRadial(
+    actorId: string,
+    team: Team.A | Team.B,
+    center: Vec3,
+    paintRadius: number,
+    ringRadius: number,
+    count: number,
+    type: PaintEventType,
+    gaugeEligible: boolean,
+    ringPaintScale: number,
+    ringPlaneDistance: number
+  ): void {
+    this.paintWorldStamp(
+      actorId,
+      team,
+      center,
+      paintRadius,
+      2.0,
+      type,
+      gaugeEligible,
+      center
+    );
+
+    for (let i = 0; i < count; i += 1) {
+      const angle = i * Math.PI * 2 / count;
+      const point = center.clone().add(new Vec3(
+        Math.cos(angle) * ringRadius,
+        0,
+        Math.sin(angle) * ringRadius
+      ));
+      this.paintWorldStamp(
+        actorId,
+        team,
+        point,
+        paintRadius * ringPaintScale,
+        ringPlaneDistance,
+        type,
+        gaugeEligible,
+        center
+      );
+    }
+  }
+
+  private paintWorldStamp(
+    actorId: string,
+    team: Team.A | Team.B,
+    worldPoint: Vec3,
+    radius: number,
+    maxPlaneDistance: number,
+    type: PaintEventType,
+    gaugeEligible: boolean,
+    originalBlastCenter?:Vec3
+  ): boolean {
+    let best:
+      | {
+          surface: PaintSurface;
+          u: number;
+          v: number;
+          planeDistance: number;
+        }
+      | null = null;
+
+    for (const surface of this.surfaces) {
+      if ((surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
+      const projected = surface.projectWorldPoint(worldPoint);
+      if (
+        !projected.inside ||
+        projected.planeDistance > maxPlaneDistance ||
+        (this.physics.hasF4WholeResearchTrimesh&&
+         !this.physics.hasF4PaintBacking(surface,projected.u,projected.v))||
+        (this.nativeOriginalSourceCombatantSubContactEnabled &&
+         !sourceRegisteredPaintCellActive(surface,projected.u,projected.v))
+      ) {
+        continue;
+      }
+      if(this.nativeOriginalSourceCombatantSubContactEnabled&&originalBlastCenter){
+        const backingPoint=surface.localToWorld(projected.u,projected.v);
+        const cover=this.physics.castStageSegment(
+          originalBlastCenter,backingPoint,'ink-projectile');
+        if(!sourceOriginalBlastPaintLineClear(
+          originalBlastCenter,backingPoint,surface,cover))continue;
+      }
+
+      if (!best || projected.planeDistance < best.planeDistance) {
+        best = {
+          surface,
+          u: projected.u,
+          v: projected.v,
+          planeDistance: projected.planeDistance
+        };
+      }
+    }
+
+    if (!best) return false;
+
+    this.coordinator.enqueue({
+      source: PaintSource.Cpu,
+      actorId,
+      gaugeEligible,
+      team,
+      surfaceId: best.surface.id,
+      centerU: best.u,
+      centerV: best.v,
+      radiusU: radius,
+      radiusV: radius,
+      angle: 0,
+      type,
+      strength: 1
+    });
+    if (type === PaintEventType.Special) {
+      this.stats.cpuSpecialPaintRequestsEnqueued += 1;
+    }
+    return true;
+  }
+
+  private findNearestSurfaceHit(
+    from: Vec3,
+    to: Vec3
+  ): SurfaceRayHit | null {
+    let best: SurfaceRayHit | null = null;
+    for (const surface of this.surfaces) {
+      const hit = surface.intersectSegment(from, to);
+      // Actual original SOURCE bomb flight respects the same live
+      // paint raster as MAIN/CHARGER. Registered Rapier cover still wins.
+      // T20 and legacy CPU kit QA retain their historical ray.
+      if(hit&&(!this.nativeOriginalSourceCombatantSubContactEnabled||
+         sourceRegisteredPaintHitActive(surface,hit))&&
+         (!best||hit.distance<best.distance))best=hit;
+    }
+    return best;
+  }
+
+  private deactivateBomb(slot: CpuBombSlot): void {
+    slot.active = false;
+    slot.landed = false;
+    slot.actorId = '-';
+    slot.entity.enabled = false;
+  }
+
+  private syncStats(): void {
+    let activeBombs = 0;
+    for (const slot of this.bombs) {
+      if (slot.active) activeBombs += 1;
+    }
+    this.stats.cpuActiveSubs = activeBombs;
+    this.stats.cpuActiveSpecialEffects =
+      this.scheduledStrikes.length + this.storms.length;
+  }
+}
+
+function makeCpuKitMaterial(
+  rgb: readonly [number, number, number]
+): StandardMaterial {
+  const material = new StandardMaterial();
+  material.diffuse = new Color(rgb[0], rgb[1], rgb[2]);
+  material.emissive = new Color(
+    rgb[0] * 0.72,
+    rgb[1] * 0.72,
+    rgb[2] * 0.72
+  );
+  material.useMetalness = true;
+  material.metalness = 0.15;
+  material.gloss = 0.82;
+  material.update();
+  return material;
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}

@@ -1,0 +1,435 @@
+import { Crowd, NavMeshQuery, init as initRecast, type CrowdAgent, type NavMesh } from 'recast-navigation';
+import { generateSoloNavMesh } from 'recast-navigation/generators';
+import { Quat, Vec3 } from 'playcanvas';
+import { GAME_CONFIG } from '../config/game/gameConfig';
+import type { PerformanceStats } from '../core/PerformanceStats';
+import {
+  stageSolidNavigationEnabled,
+  type StageDefinition,
+  type StageSolidDefinition
+} from '../stage/StageDefinition';
+import { rasterizeStageFootprint } from '../stage/StageFootprint';
+import {
+  stageSolidTriangleMeshErrors,
+  stageSolidTriangleWorldVertices
+} from '../stage/StageTriangleMesh';
+
+export async function initializeRecastNavigation(): Promise<void> {
+  await initRecast();
+}
+
+
+
+export interface StageOffMeshConnectionConfig {
+  startPosition: { x: number; y: number; z: number };
+  endPosition: { x: number; y: number; z: number };
+  radius: number;
+  bidirectional: boolean;
+  area: number;
+  flags: number;
+  userId?: number;
+}
+
+export function stageNavigationOffMeshConnections(
+  definition: StageDefinition
+): StageOffMeshConnectionConfig[] {
+  return (definition.navigationLinks ?? []).map((link) => ({
+    startPosition: {
+      x: link.start[0],
+      y: link.start[1],
+      z: link.start[2]
+    },
+    endPosition: {
+      x: link.end[0],
+      y: link.end[1],
+      z: link.end[2]
+    },
+    radius: link.radiusMeters,
+    bidirectional: link.bidirectional,
+    area: link.area ?? 0,
+    flags: link.flags ?? 1,
+    ...(link.userId === undefined ? {} : { userId: link.userId })
+  }));
+}
+
+export class RecastStageNavigation {
+  public readonly crowd: Crowd;
+  private readonly query: NavMeshQuery;
+  private readonly navMesh: NavMesh;
+
+  public constructor(
+    definition: StageDefinition,
+    stats: PerformanceStats,
+    originalWalkableWorld?: Float32Array
+  ) {
+    const started = performance.now();
+    // A local whole-mesh F4 study uses the same world-space floor vertices
+    // as rendering and Rapier. Frozen SOURCE drop links belong to its own mesh.
+    if (originalWalkableWorld !== undefined &&
+        (originalWalkableWorld.length === 0 || originalWalkableWorld.length % 9 !== 0)) {
+      throw new Error('F4 original walking input must contain complete triangles');
+    }
+    const { positions, indices } = originalWalkableWorld === undefined
+      ? buildStageTriangleSoup(definition)
+      : {
+          positions: originalWalkableWorld,
+          indices: Uint32Array.from(
+            { length: originalWalkableWorld.length / 3 }, (_, index) => index
+          )
+        };
+    const generated = generateSoloNavMesh(positions, indices, {
+      cs: GAME_CONFIG.cpu.navigationCellSizeMeters,
+      ch: GAME_CONFIG.cpu.navigationCellHeightMeters,
+      walkableSlopeAngle: GAME_CONFIG.cpu.navigationMaxSlopeDegrees,
+      walkableHeight: GAME_CONFIG.cpu.navigationWalkableHeightVoxels,
+      walkableClimb: GAME_CONFIG.cpu.navigationWalkableClimbVoxels,
+      walkableRadius: GAME_CONFIG.cpu.navigationWalkableRadiusVoxels,
+      maxEdgeLen: 24,
+      maxSimplificationError: 1.1,
+      minRegionArea: 3,
+      mergeRegionArea: 8,
+      maxVertsPerPoly: 6,
+      detailSampleDist: 6,
+      detailSampleMaxError: 1,
+      offMeshConnections: originalWalkableWorld === undefined
+        ? stageNavigationOffMeshConnections(definition) : []
+    });
+
+    if (!generated.success) {
+      stats.cpuNavigationStatus = `FAILED: ${generated.error}`;
+      throw new Error(`Recast navmesh generation failed: ${generated.error}`);
+    }
+
+    this.navMesh = generated.navMesh;
+    this.query = new NavMeshQuery(this.navMesh);
+    this.crowd = new Crowd(this.navMesh, {
+      maxAgents: GAME_CONFIG.cpu.totalParticipants,
+      maxAgentRadius: GAME_CONFIG.cpu.agentRadiusMeters
+    });
+
+    stats.cpuNavigationBuildMs = performance.now() - started;
+    stats.cpuNavigationStatus = 'READY';
+  }
+
+  public addAgent(position: Vec3): CrowdAgent {
+    const start = this.closestPoint(position);
+    return this.crowd.addAgent(start, {
+      radius: GAME_CONFIG.cpu.agentRadiusMeters,
+      height: GAME_CONFIG.cpu.agentHeightMeters,
+      maxAcceleration: GAME_CONFIG.cpu.maxAccelerationMetersPerSecond2,
+      maxSpeed: GAME_CONFIG.cpu.maxSpeedMetersPerSecond,
+      collisionQueryRange: GAME_CONFIG.cpu.collisionQueryRangeMeters,
+      pathOptimizationRange: GAME_CONFIG.cpu.pathOptimizationRangeMeters,
+      separationWeight: GAME_CONFIG.cpu.separationWeight
+    });
+  }
+
+  public removeAgent(agent: CrowdAgent): void {
+    this.crowd.removeAgent(agent);
+  }
+
+  public closestPoint(position: Vec3): { x: number; y: number; z: number } {
+    const result = this.query.findClosestPoint({
+      x: position.x,
+      y: position.y,
+      z: position.z
+    });
+    return result.success && result.polyRef !== 0
+      ? result.point
+      : { x: position.x, y: position.y, z: position.z };
+  }
+
+  /**
+   * B159 read-only original Recast nearest-poly observation.
+   * Unlike closestPoint(), failed queries return null, never the request
+   * coordinate disguised as a native NavMesh point.
+   * Native proximity is NOT proof of source Face membership or KCC travel.
+   */
+  public auditNavMeshProjection(position: Vec3): {
+    success: boolean;
+    nearestPoint: Readonly<{x:number;y:number;z:number}>|null;
+    distanceMeters: number|null;
+  } {
+    const result=this.query.findClosestPoint({
+      x:position.x,y:position.y,z:position.z
+    });
+    if(!result.success||result.polyRef===0)return {
+      success:false,nearestPoint:null,distanceMeters:null
+    };
+    const nearestPoint={x:result.point.x,y:result.point.y,z:result.point.z};
+    const distanceMeters=distance3(position,
+      new Vec3(nearestPoint.x,nearestPoint.y,nearestPoint.z));
+    if(!Number.isFinite(distanceMeters))return {
+      success:false,nearestPoint:null,distanceMeters:null
+    };
+    return {success:true,nearestPoint,distanceMeters};
+  }
+
+  public auditPath(
+    from: Vec3,
+    to: Vec3,
+    endpointToleranceMeters = 0.6
+  ): {
+    startSnapDistanceMeters: number;
+    endSnapDistanceMeters: number;
+    querySuccess: boolean;
+    pointCount: number;
+    /** Recast path vertices, not physically certified KCC motion. */
+    nativePathPoints: ReadonlyArray<Readonly<{x:number;y:number;z:number}>>;
+    endpointErrorMeters: number;
+    reachedTarget: boolean;
+  } {
+    const startResult = this.query.findClosestPoint({
+      x: from.x,
+      y: from.y,
+      z: from.z
+    });
+    const endResult = this.query.findClosestPoint({
+      x: to.x,
+      y: to.y,
+      z: to.z
+    });
+
+    if (!startResult.success || startResult.polyRef === 0 ||
+        !endResult.success || endResult.polyRef === 0) {
+      return {
+        startSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        endSnapDistanceMeters: Number.POSITIVE_INFINITY,
+        querySuccess: false,
+        pointCount: 0,
+        nativePathPoints: [],
+        endpointErrorMeters: Number.POSITIVE_INFINITY,
+        reachedTarget: false
+      };
+    }
+
+    const startSnapDistanceMeters = distance3(
+      from,
+      new Vec3(startResult.point.x, startResult.point.y, startResult.point.z)
+    );
+    const endSnapDistanceMeters = distance3(
+      to,
+      new Vec3(endResult.point.x, endResult.point.y, endResult.point.z)
+    );
+    // Keep the refs from the foot projections. Re-querying at a projected
+    // portal can select a different polygon on an edge or another layer.
+    const corridor = this.query.findPath(
+      startResult.polyRef, endResult.polyRef, startResult.point, endResult.point
+    );
+    const path: { x: number; y: number; z: number }[] = [];
+    let querySuccess = false;
+    let reachedEndPolygon = false;
+    try {
+      if (corridor.success && corridor.polys.size > 0) {
+        const lastRef = corridor.polys.get(corridor.polys.size - 1);
+        reachedEndPolygon = lastRef === endResult.polyRef;
+        const partialEnd = reachedEndPolygon ? null
+          : this.query.closestPointOnPoly(lastRef, endResult.point);
+        const lastPoint = reachedEndPolygon ? endResult.point
+          : partialEnd?.success ? partialEnd.closestPoint : null;
+        if (lastPoint) {
+          const straight = this.query.findStraightPath(
+            startResult.point, lastPoint, corridor.polys
+          );
+          try {
+            querySuccess = straight.success;
+            if (querySuccess) {
+              for (let i = 0; i < straight.straightPathCount; i++) {
+                path.push({
+                  x: straight.straightPath.get(i * 3),
+                  y: straight.straightPath.get(i * 3 + 1),
+                  z: straight.straightPath.get(i * 3 + 2)
+                });
+              }
+            }
+          } finally {
+            straight.straightPath.destroy();
+            straight.straightPathFlags.destroy();
+            straight.straightPathRefs.destroy();
+          }
+        }
+      }
+    } finally {
+      corridor.polys.destroy();
+    }
+    const last = path.length > 0 ? path[path.length - 1]! : null;
+    const endpointErrorMeters = last
+      ? Math.hypot(
+          last.x - endResult.point.x,
+          last.y - endResult.point.y,
+          last.z - endResult.point.z
+        )
+      : Number.POSITIVE_INFINITY;
+
+    return {
+      startSnapDistanceMeters,
+      endSnapDistanceMeters,
+      querySuccess,
+      pointCount: path.length,
+      nativePathPoints: path,
+      endpointErrorMeters,
+      reachedTarget:
+        querySuccess && reachedEndPolygon &&
+        path.length > 0 &&
+        endpointErrorMeters <= endpointToleranceMeters
+    };
+  }
+
+  public destroy(): void {
+    this.crowd.destroy();
+    this.query.destroy();
+    this.navMesh.destroy();
+  }
+
+  public fixedUpdate(dt: number): void {
+    this.crowd.update(dt);
+  }
+}
+
+function distance3(a: Vec3, b: Vec3): number {
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+/**
+ * B240 uses the EXACT production triangle soup, but permits isolated native
+ * Recast parameter diagnostics without ever changing gameplay nav settings.
+ * Only a separately named source-only test stage may enter this gate.
+ */
+export function b240IsolatedOriginalStageTriangleSoup(
+  definition: StageDefinition
+): { positions: number[]; indices: number[] } {
+  if (!definition.metadata.id.startsWith('b240-isolated-original-floorline-')) {
+    throw new Error('B240_RECAST_SOURCE_SOUP_REQUIRES_ISOLATED_STAGE');
+  }
+  return buildStageTriangleSoup(definition);
+}
+
+function buildStageTriangleSoup(
+  definition: StageDefinition
+): { positions: number[]; indices: number[] } {
+  const positions: number[] = [];
+  const indices: number[] = [];
+
+  for (const solid of definition.solids) {
+    if (!stageSolidNavigationEnabled(solid)) continue;
+    const meshErrors = stageSolidTriangleMeshErrors(solid);
+    if (meshErrors.length > 0) throw new Error(meshErrors.join('; '));
+    if (solid.triangleMesh) {
+      appendTriangleMeshSolid(solid, positions, indices);
+    } else {
+      appendBoxSolid(solid, positions, indices);
+    }
+  }
+
+  return { positions, indices };
+}
+
+function appendTriangleMeshSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  const mesh = solid.triangleMesh;
+  if (!mesh) return;
+  const base = positions.length / 3;
+  for (const vertex of stageSolidTriangleWorldVertices(solid)) {
+    positions.push(vertex[0], vertex[1], vertex[2]);
+  }
+  for (const index of mesh.indices) indices.push(base + index);
+}
+
+function appendBoxSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  if (!solid.footprint) {
+    appendPlainBoxSolid(solid, positions, indices);
+    return;
+  }
+
+  const euler = solid.rotationEulerDegrees ?? [0, 0, 0];
+  const rotation = new Quat().setFromEulerAngles(euler[0], euler[1], euler[2]);
+  const center = new Vec3(solid.center[0], solid.center[1], solid.center[2]);
+  const raster = rasterizeStageFootprint(
+    solid.size[0],
+    solid.size[2],
+    solid.footprint
+  );
+
+  for (const rect of raster.rectangles) {
+    const offset = rotate(
+      new Vec3(
+        rect.centerU - solid.size[0] * 0.5,
+        0,
+        rect.centerV - solid.size[2] * 0.5
+      ),
+      rotation
+    );
+    appendPlainBoxSolid(
+      {
+        ...solid,
+        center: [
+          center.x + offset.x,
+          center.y + offset.y,
+          center.z + offset.z
+        ],
+        size: [rect.widthMeters, solid.size[1], rect.depthMeters],
+        footprint: undefined
+      },
+      positions,
+      indices
+    );
+  }
+}
+
+function appendPlainBoxSolid(
+  solid: StageSolidDefinition,
+  positions: number[],
+  indices: number[]
+): void {
+  const hx = solid.size[0] * 0.5;
+  const hy = solid.size[1] * 0.5;
+  const hz = solid.size[2] * 0.5;
+  const local = [
+    new Vec3(-hx, -hy, -hz),
+    new Vec3( hx, -hy, -hz),
+    new Vec3( hx, -hy,  hz),
+    new Vec3(-hx, -hy,  hz),
+    new Vec3(-hx,  hy, -hz),
+    new Vec3( hx,  hy, -hz),
+    new Vec3( hx,  hy,  hz),
+    new Vec3(-hx,  hy,  hz)
+  ];
+  const euler = solid.rotationEulerDegrees ?? [0, 0, 0];
+  const rotation = new Quat().setFromEulerAngles(euler[0], euler[1], euler[2]);
+  const center = new Vec3(solid.center[0], solid.center[1], solid.center[2]);
+  const base = positions.length / 3;
+
+  for (const point of local) {
+    const world = rotate(point, rotation).add(center);
+    positions.push(world.x, world.y, world.z);
+  }
+
+  const faces = [
+    0, 1, 2, 0, 2, 3,
+    4, 6, 5, 4, 7, 6,
+    3, 2, 6, 3, 6, 7,
+    0, 5, 1, 0, 4, 5,
+    1, 5, 6, 1, 6, 2,
+    0, 3, 7, 0, 7, 4
+  ];
+  for (const index of faces) indices.push(base + index);
+}
+
+function rotate(v: Vec3, q: Quat): Vec3 {
+  const ix = q.w * v.x + q.y * v.z - q.z * v.y;
+  const iy = q.w * v.y + q.z * v.x - q.x * v.z;
+  const iz = q.w * v.z + q.x * v.y - q.y * v.x;
+  const iw = -q.x * v.x - q.y * v.y - q.z * v.z;
+  return new Vec3(
+    ix * q.w + iw * -q.x + iy * -q.z - iz * -q.y,
+    iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z,
+    iz * q.w + iw * -q.z + ix * -q.y - iy * -q.x
+  );
+}

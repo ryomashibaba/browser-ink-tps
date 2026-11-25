@@ -1,0 +1,206 @@
+import './styles.css';
+
+const canvas = document.querySelector<HTMLCanvasElement>('#app-canvas');
+const uiRoot = document.querySelector<HTMLElement>('#ui-root');
+
+if (!canvas || !uiRoot) throw new Error('Required DOM roots are missing.');
+
+const appCanvas: HTMLCanvasElement = canvas;
+const appUiRoot: HTMLElement = uiRoot;
+
+async function boot(): Promise<void> {
+  if(new URL(window.location.href).searchParams.get('t21Qa')==='b228UnderpassInput'){
+    const {T21B224OriginalGapInputQaApp}=
+      await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas,appUiRoot);
+    return;
+  }
+  if(new URL(window.location.href).searchParams.get('t21Qa')==='b226InnerSlopeInput'){
+    const {T21B224OriginalGapInputQaApp}=
+      await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas,appUiRoot);
+    return;
+  }
+  if(new URL(window.location.href).searchParams.get('t21Qa')==='b225OriginalCorridorInput'){
+    const {T21B224OriginalGapInputQaApp}=await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas,appUiRoot);
+    return;
+  }
+  if (new URL(window.location.href).searchParams.get('t21Qa') === 'b224OriginalGapInput') {
+    const { T21B224OriginalGapInputQaApp } = await import('./app/T21B224OriginalGapInputQaApp');
+    await T21B224OriginalGapInputQaApp.boot(appCanvas, appUiRoot);
+    return;
+  }
+  if (new URL(window.location.href).searchParams.get('t21Play') === 'preview') {
+    // Give the player a visible, non-interactive boot state while the
+    // now lazy-loaded genuine Rapier/Recast SOURCE world initializes.
+    // Do not preload the unrelated InkLab or mutate native game state.
+    const sourceBootStarted=performance.now();
+    const loading=document.createElement('div');
+    loading.id='t21-source-boot-status';
+    loading.setAttribute('role','status');
+    loading.setAttribute('aria-live','polite');
+    loading.textContent='Preparing the 3D SOURCE match…';
+    loading.style.cssText='position:fixed;left:50%;top:50%;'+
+     'transform:translate(-50%,-50%);padding:16px 24px;'+
+     'border:1px solid #7595a8;border-radius:12px;'+
+     'background:#111d2d;color:#f2f8fd;'+
+     'font:600 14px/1.5 system-ui,sans-serif;'+
+     'pointer-events:none;z-index:2147483000';
+    document.body.appendChild(loading);
+    try {
+    const { UndertowF3PlayablePreviewApp } = await import('./app/UndertowF3PlayablePreviewApp');
+    await UndertowF3PlayablePreviewApp.boot(appCanvas, appUiRoot);
+    // B478: B464 read-only overlay is available for B441 with or
+    // without the separately authorized B448 A3 original-source study.
+    // The genuine 60Hz game, CPU goals and original score stay untouched.
+    const q=new URL(window.location.href).searchParams;
+    // Genuine SOURCE full-round R is no longer allowed to reach the
+    // legacy F3 in-place cpu.reset()/ink reset() while a match is live.
+    // Capture before the legacy bubble listener without modifying
+    // native controls, player/CPU state, the clock, or replay thresholds.
+    if(q.get('t21QaDrive')==='source'&&q.get('t21W10B203')==='fullRound'){
+      const {sourceReplayHotkeyAction,sourceFinishedReplayAction,
+       sourceNativeReplayOwnsKeyR}=
+        await import('./app/SourcePlayPortal');
+      type ReplayEvidence=Parameters<typeof sourceFinishedReplayAction>[0];
+      const liveReplay=()=>{
+        const game=(window as unknown as {__t21F3?:{
+          restart:()=>unknown;
+          finishedReplayEvidence:()=>ReplayEvidence;
+          snapshot:()=>{matchState?:string;stopReason?:string|null;
+            originalSourceSolids?:number;originalPaintSurfaces?:number;
+            originalSourceNavigationLinks?:number;
+            sourceScoreablePromotions?:number;
+            b25SourcePaintRun?:{status?:string}}
+        }}).__t21F3;
+        const state=game?.snapshot();
+        const finish=appUiRoot.querySelector<HTMLElement>(
+          '#t21-f3-b59-session-finished');
+        const replay=finish?.querySelector<HTMLButtonElement>(
+          '#t21-f3-b59-restart');
+        const native=game?.finishedReplayEvidence();
+        return {game,replay,state,evidence:{
+          href:window.location.href,
+          matchState:state?.matchState,stopped:!!state?.stopReason,
+          pointerLocked:document.pointerLockElement!==null,
+          originalSolids:state?.originalSourceSolids,
+          originalPaint:state?.originalPaintSurfaces,
+          originalLinks:state?.originalSourceNavigationLinks,
+          scoreable:state?.sourceScoreablePromotions,
+          localOriginalF4Round:native?.localOriginalF4Round,
+          localOriginalF4WholeRound:native?.localOriginalF4WholeRound,
+          finishedVisible:finish?.dataset.t21B59State==='FINISHED'&&
+            finish.hidden===false&&finish.style.display!=='none',
+          canClick:native?.canClick===true&&!!replay&&!replay.hidden&&!replay.disabled&&
+            replay.isConnected
+        }};
+      };
+      window.addEventListener('keydown',ev=>{
+        if(ev.code!=='KeyR')return;
+        const editable=ev.target instanceof HTMLElement&&Boolean(
+          ev.target.closest('input,textarea,select,[contenteditable="true"]'));
+        if(editable){
+          // Keep ordinary text input, but never bubble R into the
+          // legacy F3 cpu.reset()/paint reset() keyboard shortcut.
+          ev.stopImmediatePropagation();
+          return;
+        }
+        const {game,replay,state,evidence}=liveReplay();
+        // Only a genuine plain, non-repeated R may reach the native
+        // physical STOP or A1 CLEAR handler. Modified keys remain here.
+        const plainR=!ev.repeat&&!ev.shiftKey&&!ev.altKey&&
+          !ev.ctrlKey&&!ev.metaKey;
+        // Capture is for blocking unsafe legacy reset, NOT for swallowing
+        // the native game's genuine A1 CLEAR or proven physical-fall R.
+        // The existing bubble listener owns both with stronger live gates.
+        if(plainR&&sourceNativeReplayOwnsKeyR({
+          href:evidence.href,matchState:state?.matchState,
+          stopReason:state?.stopReason,
+          practiceStatus:state?.b25SourcePaintRun?.status,
+          pointerLocked:evidence.pointerLocked,
+          originalSolids:evidence.originalSolids,
+          originalPaint:evidence.originalPaint,
+          originalLinks:evidence.originalLinks,scoreable:evidence.scoreable
+        }))return;
+        const action=sourceReplayHotkeyAction({
+          ...evidence,code:ev.code,repeat:ev.repeat,
+          modified:ev.shiftKey||ev.ctrlKey||ev.altKey||ev.metaKey,
+          editing:editable
+        });
+        if(action==='UNRELATED')return;
+        ev.stopImmediatePropagation();
+        if(action==='BLOCK')return;
+        ev.preventDefault();
+        if(action==='CLICK_REAL_REPLAY')replay?.click();
+        else if(action==='RELOAD_NATIVE_SOURCE_WORLD')
+          game?.restart();
+      },true);
+      // The visible real TIME_UP button previously reached a legacy
+      // reset() in the opponent research mode. Route authorized replay
+      // through the native new-world restart, preserving selected kit. A1/B384 retain
+      // their existing fresh-world URL and weapon-selection actions.
+      appUiRoot.addEventListener('click',ev=>{
+        if(!(ev.target instanceof Element))return;
+        const button=ev.target.closest<HTMLButtonElement>(
+          '#t21-f3-b59-restart,#t21-f3-b58-restart');
+        if(!button||!appUiRoot.contains(button))return;
+        const {game,evidence}=liveReplay();
+        const action=sourceFinishedReplayAction(evidence);
+        if(action==='CLICK_REAL_REPLAY')return;
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+        if(action==='RELOAD_NATIVE_SOURCE_WORLD')
+          game?.restart();
+      },true);
+    }
+    if(q.get('t21QaDrive')==='source'&&
+       q.get('t21W10B203')==='fullRound'&&
+       q.get('t21W10B192')==='humanCombat'&&
+       q.get('t21W10B441')==='sourceFrontline'&&
+       q.get('t21QaInput')===null){
+      const {mountB464SourceFrontlineHud}=
+       await import('./app/B464PlayableSourceFrontlineHud');
+      mountB464SourceFrontlineHud(appUiRoot,()=>{
+       const game=(window as unknown as {
+        __t21F3?:{snapshot:()=>unknown}
+       }).__t21F3;
+       return game?.snapshot();
+      });
+    }
+    // The measured interval begins after main.ts itself has loaded.
+    // This is not network page-load time or an FPS measurement.
+    appCanvas.dataset.t21SourceJsBootMs=
+     String(Math.max(0,Math.round(performance.now()-sourceBootStarted)));
+    return;
+    } finally {
+      loading.remove();
+    }
+  }
+  if (['phase14i','phase14k','phase14l','phase14p'].includes(new URL(window.location.href).searchParams.get('t21Qa') ?? '')) {
+    const { UndertowPhase14IRealCrowdVisualQaApp } = await import('./app/UndertowPhase14IRealCrowdVisualQaApp');
+    await UndertowPhase14IRealCrowdVisualQaApp.boot(appCanvas, appUiRoot);
+    return;
+  }
+  if (new URL(window.location.href).searchParams.get('t21Qa') === 'phase14f') {
+    const { UndertowPhase14FVisualQaApp } = await import('./app/UndertowPhase14FVisualQaApp');
+    await UndertowPhase14FVisualQaApp.boot(appCanvas, appUiRoot);
+    return;
+  }
+  const review = new URL(window.location.href).searchParams.get('stageReview');
+  if (review === 'undertow') {
+    const { UndertowVisualReviewApp } = await import('./app/UndertowVisualReviewApp');
+    await UndertowVisualReviewApp.boot(appCanvas, appUiRoot);
+    return;
+  }
+  const { InkLabApp } = await import('./app/InkLabApp');
+  await InkLabApp.boot(appCanvas, appUiRoot);
+}
+
+void boot().catch((error: unknown) => {
+  console.error(error);
+  const panel = document.createElement('pre');
+  panel.id = 'boot-error';
+  panel.textContent = `Ink TPS boot failed\n\n${error instanceof Error ? `${error.message}\n\n${error.stack ?? ''}` : String(error)}`;
+  document.body.appendChild(panel);
+});
