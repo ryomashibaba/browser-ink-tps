@@ -1,0 +1,121 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -1,7 +1,8 @@
+ import { Vec3 } from 'playcanvas';
+ import type { PaintEvent, TurfSnapshot } from './types';
+ import { SurfaceFlags, Team } from './types';
+-import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import type { PaintSurface, SurfaceProjection } from './PaintSurface';
++import { CertifiedTurf720 } from '../special/f4/shared-special-score720-20261125/shared-special-score720.mjs';
+ 
+ /** Contiguous authority-approved raster cells, including same-team repaint. */
+ export interface PaintRasterRun {
+@@ -18,7 +19,9 @@
+   rasterAlreadyTeamOwnedCells: number;
+   testedCells: number;
+   dirtyTilesTouched: number;
+-  scoreableAreaMeters2Changed: number;
++  scoreableAreaMeters2Changed: number;
++  /** Separate, evidence-certified F4 projected delta; absent until authority is bound. */
++  f4CertifiedProjectedAreaMeters2Changed?: number;
+ }
+ 
+ export interface GameplayInkSample {
+@@ -33,13 +36,28 @@
+ export class GameplayInkSystem {
+   private readonly surfaces = new Map<string, PaintSurface>();
+   private backedCell:((surface:PaintSurface,u:number,v:number)=>boolean)|null=null;
+-  private readonly backingCache=new Map<string,Uint8Array>();
++  private readonly backingCache=new Map<string,Uint8Array>();
++  private f4CertifiedTurf:CertifiedTurf720|null=null;
++
++  /** Bind only a complete separately certified round, before any raster writes.
++   * No flag promotions, alternate owner grid or synthetic gauge credit. */
++  public bindF4CertifiedTurf(turf:CertifiedTurf720):boolean {
++    if(this.f4CertifiedTurf||!this.backedCell||!(turf instanceof CertifiedTurf720)||!turf.complete)return false;
++    for(const surface of this.surfaces.values()){
++      if(surface.ownerGrid.some(owner=>owner!==Team.Neutral))return false;
++    }
++    this.f4CertifiedTurf=turf;
++    return true;
++  }
++
++  public unbindF4CertifiedTurf():void {this.f4CertifiedTurf=null;}
+ 
+   public setPhysicalPaintBacking(
+     backing:((surface:PaintSurface,u:number,v:number)=>boolean)|null
+   ):void{
+-    this.backedCell=backing;
+-    this.backingCache.clear();
++    this.unbindF4CertifiedTurf();
++    this.backedCell=backing;
++    this.backingCache.clear();
+   }
+ 
+   private isPhysicallyBacked(surface:PaintSurface,x:number,y:number,index:number):boolean{
+@@ -220,7 +238,9 @@
+     let rasterEligibleCells = 0;
+     let rasterAlreadyTeamOwnedCells = 0;
+     let testedCells = 0;
+-    let scoreableAreaMeters2Changed = 0;
++    let scoreableAreaMeters2Changed = 0;
++    const certified=this.f4CertifiedTurf;
++    let certifiedDelta=0;
+     const touchedTiles = this.touchedTilesScratch;
+     touchedTiles.clear();
+     const paintableRuns: PaintRasterRun[] = [];
+@@ -259,8 +279,11 @@
+           continue;
+         }
+ 
+-        surface.ownerGrid[index] = event.team;
+-        changedCells += 1;
++        surface.ownerGrid[index] = event.team;
++        if(certified){
++          certifiedDelta+=certified.changedArea(surface,index,oldOwner,event.team);
++        }
++        changedCells += 1;
+         touchedTiles.add(surface.tileIndexForCell(x, y));
+ 
+         if (surface.isScoreable) {
+@@ -285,8 +308,9 @@
+       rasterAlreadyTeamOwnedCells,
+       testedCells,
+       dirtyTilesTouched: touchedTiles.size,
+-      scoreableAreaMeters2Changed,
+-      paintableRuns
++      scoreableAreaMeters2Changed,
++      ...(certified?{f4CertifiedProjectedAreaMeters2Changed:certifiedDelta}:{}),
++      paintableRuns
+     };
+   }
+ 
+@@ -308,8 +332,9 @@
+     return result;
+   }
+ 
+-  public reset(): void {
+-    this.areaA = 0;
++  public reset(): void {
++    this.unbindF4CertifiedTurf();
++    this.areaA = 0;
+     this.areaB = 0;
+     for (const surface of this.surfaces.values()) surface.resetOwnership();
+   }
+diff --git a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+--- a/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
++++ b/src/special/f4/shared-special-score720-20261125/shared-special-score720.d.mts
+@@ -4,7 +4,11 @@
+   { special: F4SpecialId; required: number }>>;
+ export class CertifiedTurf720 {
+   constructor(options: { roundId: string });
+-  readonly complete: boolean;
++  readonly complete: boolean;
++  readonly roundId: string;
++  readonly totalProjectedM2: number;
++  changedArea(surface:import('../../../ink/PaintSurface').PaintSurface,index:number,
++    oldOwner:import('../../../ink/types').Team,newOwner:import('../../../ink/types').Team.A|import('../../../ink/types').Team.B):number;
+   result(frame: { roundId: string; tick: number; roundEnded: boolean }):
+     { status: 'HOLD' | 'READY'; reason: string | null; winner: 'NONE' | 'A' | 'B' };
+ }
