@@ -178,9 +178,9 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 -      bot.mobilityState==='GROUND'&&
 -      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
 -       this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
-+      (bot.mobilityState==='GROUND'||(bot.mobilityState==='F4_ZIP'&&this.f4ZipRuns.get(bot.id)?.canFire===true))&&
-+      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
-+       this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id));
++      ((this.f4WholeNavigation&&bot.mobilityState==='F4_ZIP'&&this.f4ZipRuns.get(bot.id)?.motion.lifeId===String(bot.f4LifeSerial)&&this.f4ZipRuns.get(bot.id)?.canFire===true)||
++       (bot.mobilityState==='GROUND'&&(!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
++        this.f3dSourceGoals.isLiveRejoinedSourceCpu(bot.id))));
    }
  
 @@ -2917,5 +2998,5 @@
@@ -195,9 +195,10 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      return Number.isFinite(enemy.hp)&&enemy.hp>0&&
 -      enemy.mobilityState==='GROUND'&&
 -      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
-+      (enemy.mobilityState==='GROUND'||this.f4ZipRuns.has(enemy.id)||this.f4ZipRecovery.has(enemy.id))&&
-+      (!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
-        this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id));
+-       this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id));
++      ((this.f4WholeNavigation&&((enemy.mobilityState==='F4_ZIP'&&this.f4ZipRuns.get(enemy.id)?.motion.lifeId===String(enemy.f4LifeSerial))||(enemy.mobilityState==='FIRST_DROP_FALL'&&this.f4ZipRecovery.has(enemy.id))))||
++       (enemy.mobilityState==='GROUND'&&(!this.f3dSourceGoals.isLiveRejoinedSourceCpu||
++        this.f3dSourceGoals.isLiveRejoinedSourceCpu(enemy.id))));
    }
 @@ -4996,6 +5077,5 @@
            enemy.id!==bot.id&&enemy.team!==bot.team&&
