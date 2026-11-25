@@ -1,0 +1,55 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -2026,6 +2026,21 @@
+   // Returning false clears only the ordinary Crowd target; weapon recovery
+   // and all real resource rates remain owned by CpuAgentSystem.
+   if(holdRecovery)return false;
++  // Healthy bots still on their own approach lane should contest the center
++  // before repeatedly surveying local unpainted cells. Recovery retains
++  // priority, and all candidates still need the existing native route gate.
++  const prioritizeFront=!recovering&&foot.z*side<-12;
++  const tryFronts=():boolean=>{
++   for(const candidate of orderedFronts){
++    const target=new Vec3(...candidate);
++    if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
++    const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
++    if(!point||avoids(point))continue;
++    return request(point,false);
++   }
++   return false;
++  };
++  if(prioritizeFront&&tryFronts())return true;
+   // Sparse real owner-grid survey, only on ordinary free patrol away from
+   // spawn/center transfers. Existing actual-floor/route/KCC gates remain.
+   if(this.freeCombat&&this.sourceInk&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42){
+@@ -2054,13 +2069,7 @@
+     }
+    }
+   }
+-  for(const candidate of orderedFronts){
+-   const target=new Vec3(...candidate);
+-   if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
+-   const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
+-   if(!point||avoids(point))continue;
+-   return request(point,false);
+-  }
++  if(!prioritizeFront&&tryFronts())return true;
+   // Test short native walking targets toward the center first. A target
+   // across a drop, another level or without a real floor stays on HOLD.
+   const directions=[[0,side],[1,side],[-1,side],[1,0],[-1,0],[0,-side]] as const;
+@@ -2078,7 +2087,13 @@
+    const point=new Vec3(goal.x,goal.y,goal.z);
+    localCandidates.push({point,ink:inkAt(point),order:i,index});
+   }
+-  for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies.map(a=>a.position),options)){
++  const rankedLocal=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies.map(a=>a.position),options);
++  // Prefer real forward steps when no front corridor was admitted. Keep
++  // the existing rank within each group and permit sideways/backward escape.
++  const forward=(p:Vec3)=>(p.z-foot.z)*side>.25;
++  const localOrder=prioritizeFront?
++   [...rankedLocal.filter(c=>forward(c.point)),...rankedLocal.filter(c=>!forward(c.point))]:rankedLocal;
++  for(const candidate of localOrder){
+    const point=this.f4WholeWalkTarget(foot,candidate.point);
+    if(!point||avoids(point))continue;
+    // The Crowd target is only an intention. Each incremental step still

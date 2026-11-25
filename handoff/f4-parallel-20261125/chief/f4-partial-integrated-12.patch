@@ -5641,7 +5641,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
    }
    const ahead=ingress.filter(p=>Math.abs(p[2])<Math.abs(foot.z)-.5&&
     Math.abs(foot.z)-Math.abs(p[2])<9).reverse();
-@@ -1942,20 +1997,75 @@
+@@ -1942,20 +1997,84 @@
    const far=bot.team===Team.A?F4_CENTER_STEP[-1]:F4_CENTER_STEP[1];
    const centerLegs=Math.abs(foot.z)<=12?
     [far.shoulder,own.takeoff]:[];
@@ -5683,6 +5683,21 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
 +  // Returning false clears only the ordinary Crowd target; weapon recovery
 +  // and all real resource rates remain owned by CpuAgentSystem.
 +  if(holdRecovery)return false;
++  // Healthy bots still on their own approach lane should contest the center
++  // before repeatedly surveying local unpainted cells. Recovery retains
++  // priority, and all candidates still need the existing native route gate.
++  const prioritizeFront=!recovering&&foot.z*side<-12;
++  const tryFronts=():boolean=>{
++   for(const candidate of orderedFronts){
++    const target=new Vec3(...candidate);
++    if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
++    const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
++    if(!point||avoids(point))continue;
++    return request(point,false);
++   }
++   return false;
++  };
++  if(prioritizeFront&&tryFronts())return true;
 +  // Sparse real owner-grid survey, only on ordinary free patrol away from
 +  // spawn/center transfers. Existing actual-floor/route/KCC gates remain.
 +  if(this.freeCombat&&this.sourceInk&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42){
@@ -5711,13 +5726,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
 +    }
 +   }
 +  }
-+  for(const candidate of orderedFronts){
-+   const target=new Vec3(...candidate);
-+   if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
-+   const point=this.f4WholeWalkTarget(foot,target,Math.abs(foot.z)<44&&Math.abs(foot.z)>8);
-+   if(!point||avoids(point))continue;
-+   return request(point,false);
-+  }
++  if(!prioritizeFront&&tryFronts())return true;
    // Test short native walking targets toward the center first. A target
    // across a drop, another level or without a real floor stays on HOLD.
    const directions=[[0,side],[1,side],[-1,side],[1,0],[-1,0],[0,-side]] as const;
@@ -5728,7 +5737,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
    for(let i=0;i<directions.length;i++){
     const index=(first+i)%directions.length;
     const [x,z]=directions[index]!;
-@@ -1965,11 +2075,15 @@
+@@ -1965,11 +2084,21 @@
     if(!projection.success||!goal||!this.sourceNativeCharacterFootHit(goal)||
        Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
        Math.abs(goal.y-foot.y)>.7)continue;
@@ -5737,7 +5746,13 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
 +   const point=new Vec3(goal.x,goal.y,goal.z);
 +   localCandidates.push({point,ink:inkAt(point),order:i,index});
 +  }
-+  for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies.map(a=>a.position),options)){
++  const rankedLocal=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies.map(a=>a.position),options);
++  // Prefer real forward steps when no front corridor was admitted. Keep
++  // the existing rank within each group and permit sideways/backward escape.
++  const forward=(p:Vec3)=>(p.z-foot.z)*side>.25;
++  const localOrder=prioritizeFront?
++   [...rankedLocal.filter(c=>forward(c.point)),...rankedLocal.filter(c=>!forward(c.point))]:rankedLocal;
++  for(const candidate of localOrder){
 +   const point=this.f4WholeWalkTarget(foot,candidate.point);
 +   if(!point||avoids(point))continue;
     // The Crowd target is only an intention. Each incremental step still
@@ -5747,7 +5762,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
     return request(point,true);
    }
    return false;
-@@ -3753,6 +3867,7 @@
+@@ -3753,6 +3882,7 @@
    // relocation and no synthetic actor position. Even when all CPUs are
    // released, refresh validity each physical tick before CPU goal choice.
    this.b137NativeTick=frame;
@@ -5755,7 +5770,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
    // Genuine player foot from THIS 60Hz physics step, never historical
    // pursuit data. F4-only: a dead or airborne HUMAN cannot freeze B CPUs.
    // The pinned original terrain uses its own corridor goals instead of
-@@ -3852,12 +3967,13 @@
+@@ -3852,12 +3982,13 @@
       if(previous.distance(bot.position)>.015)this.lastMoved.set(bot.id,frame);
       previous.copy(bot.position);
       const goal=this.f4WholeGoals.get(bot.id);
@@ -5771,7 +5786,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
       }
      }else{
       this.physicallyRejoined.delete(bot.id);
-@@ -4211,7 +4327,9 @@
+@@ -4211,7 +4342,9 @@
    if(this.f4WholeSupport){
     this.f4WholeGoals.delete(id);
     this.f4WholeDirections.delete(id);
@@ -5782,7 +5797,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
     return;
    }
    this.f4OriginalPatrol?.delete(id);
-@@ -4295,6 +4413,16 @@
+@@ -4295,6 +4428,16 @@
    * patrol goals. The previous every-third-render traffic.snapshot()
    * also cloned unrelated QA ledgers and route audits. No game writes.
    */

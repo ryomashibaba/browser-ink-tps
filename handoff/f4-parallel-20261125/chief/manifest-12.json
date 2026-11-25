@@ -98,5 +98,20 @@
       "nativeBuild": "NOT_RUN"
     },
     "limitations": "Actual initial round movement/hit cause not established; no formal route promotions, no physics or resource changes."
+  },
+  "frontlineFollowup": {
+    "base": "80aceaed5e1175cae0769e5db470a39d1b29a906",
+    "previousPatch": "6c85f42938b6b840b6a01312ec120c060ba4fa97",
+    "incrementalPath": "handoff/f4-parallel-20261125/chief/f4-live-frontline-followup.patch",
+    "changed": [
+      "src/app/UndertowF3SourceTraffic.ts"
+    ],
+    "verification": {
+      "isolatedAssertions": 19,
+      "cumulativeHunks": 22,
+      "incrementalHunks": 3,
+      "nativeBuild": "NOT_RUN"
+    },
+    "limitations": "Policy ordering only; no confirmed root cause or new actual navigation evidence; native support, route and KCC gates unchanged."
   }
 }
