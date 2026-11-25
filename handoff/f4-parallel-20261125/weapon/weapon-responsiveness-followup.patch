@@ -1,0 +1,279 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -313,7 +313,10 @@
+   private contactHitFrames?: Map<string, number>;
+   private chargeSeconds = 0;
+   private f4StringerTapPending = false;
+-  private f4RailTapPending = false;
++  private f4RailTapPending = false;
++  private f4PressBufferedUntil = -1;
++  private f4SaberReleaseUntil = -1;
++  private f4SaberReleaseCharged = false;
+   private wasFireHeld = false;
+   private dualiesFocusSeconds = 0;
+   private guardHp = 100;
+@@ -778,8 +781,9 @@
+     this.contactHitFrames?.delete('human');
+     this.chargeSeconds = 0;
+     this.f4StringerTapPending = false;
+-    this.f4RailTapPending = false;
+-    this.wasFireHeld = false;
++    this.f4RailTapPending = false;
++    this.clearF4WeaponInputBuffers();
++    this.wasFireHeld = false;
+     this.dualiesFocusSeconds = 0;
+     this.guardEntity.enabled = false;
+     this.stats.playerWeaponSwitches += 1;
+@@ -815,16 +819,23 @@
+     this.clearHumanContactInput();
+     this.chargeSeconds = 0;
+     this.f4StringerTapPending = false;
+-    this.f4RailTapPending = false;
+-    this.stats.playerWeaponChargePercent = 0;
+-    if (this.burstShotsRemaining <= 0) {
++    this.f4RailTapPending = false;
++    this.clearF4WeaponInputBuffers();
++    this.stats.playerWeaponChargePercent = 0;
++    if (this.burstShotsRemaining <= 0) {
+       this.splatlingStoredChargeSeconds = 0;
+       this.stats.playerWeaponChargeRing = 0;
+       this.stats.playerWeaponFirstRingPercent = 0;
+     }
+   }
+ 
+-  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
++  private clearF4WeaponInputBuffers(): void {
++    this.f4PressBufferedUntil = -1;
++    this.f4SaberReleaseUntil = -1;
++    this.f4SaberReleaseCharged = false;
++  }
++
++  public getMovementMultiplier(fireHeld: boolean, secondaryHeld: boolean): number {
+     if (this.currentPlayerWeapon.canopy) return this.canopies?.lookup('human')?.phase === 'OPEN' ? 0.74 : 1;
+     const { weaponClass, contactWeapon } = this.currentPlayerWeapon;
+     if (contactWeapon && fireHeld) {
+@@ -836,7 +847,8 @@
+     if (weaponClass === 'BRUSH' && fireHeld) return 1.15;
+     if (weaponClass === 'ROLLER' && fireHeld) return 0.92;
+     if (weaponClass === 'CHARGER' && fireHeld) return 0.66;
+-    if (weaponClass === 'SPLATLING' && fireHeld) return 0.72;
++    if (weaponClass === 'SPLATLING' && (fireHeld ||
++        (this.physics.hasF4WholeResearchTrimesh && this.burstShotsRemaining > 0))) return 0.72;
+     if (weaponClass === 'SPLATANA' && fireHeld) return 0.82;
+     // SOURCE: a physically broken brella is not guarding; holding the
+     // shield button must not continue the movement penalty after HP-zero
+@@ -894,8 +906,9 @@
+     this.brushSwings?.clear();
+     this.contactHitFrames?.clear();
+     this.f4StringerTapPending = false;
+-    this.f4RailTapPending = false;
+-    this.b152OriginalAllyAimProjectilesSpawned=0;
++    this.f4RailTapPending = false;
++    this.clearF4WeaponInputBuffers();
++    this.b152OriginalAllyAimProjectilesSpawned=0;
+     this.b152OriginalAllyAimSurfaceCollisions=0;
+     this.b343RejectedVolleys=0;
+     this.sourceCpuPhysicalGrantSerial=0;
+@@ -1118,7 +1131,11 @@
+     this.saberForwardHeld = saberForwardHeld;
+     const profile = this.currentPlayerWeapon;
+     const risingFire = fireHeld && !this.wasFireHeld;
+-    const fallingFire = !fireHeld && this.wasFireHeld;
++    const fallingFire = !fireHeld && this.wasFireHeld;
++    const f4 = this.physics.hasF4WholeResearchTrimesh;
++    const f4HumanAllowed = playerWeaponEnabled && playerDamageable &&
++      this.nativeSourceHumanPhysicalMode?.() !== 'SQUID';
++    if (f4 && !f4HumanAllowed) this.clearF4WeaponInputBuffers();
+ 
+     this.fireCooldown = Math.max(-0.5, this.fireCooldown - dt);
+     // Additive shooter cadence must not count idle time toward the next
+@@ -1162,8 +1179,15 @@
+     if (profile.canopy) {
+       this.stats.playerWeaponChargePercent = 0;
+       this.stats.playerWeaponAction = 'READY';
+-      if (playerWeaponEnabled && playerDamageable && (risingFire || primaryPressed) &&
+-          fireHeld && this.fireCooldown <= 1e-8 && this.canopies?.lookup('human')?.phase !== 'OPEN') {
++      const open = this.canopies?.lookup('human')?.phase === 'OPEN';
++      if (f4 && open) this.f4PressBufferedUntil = -1;
++      if (f4 && f4HumanAllowed && !open && fireHeld && (risingFire || primaryPressed))
++        this.f4PressBufferedUntil = this.b367NativeFrame + 6;
++      const requested = f4 ? f4HumanAllowed && this.b367NativeFrame <= this.f4PressBufferedUntil
++        : playerWeaponEnabled && playerDamageable && (risingFire || primaryPressed) && fireHeld;
++      if (requested && this.fireCooldown <= 1e-8 && !open &&
++          (!f4 || !this.pendingCanopyVolleys?.has('human'))) {
++        if (f4) this.f4PressBufferedUntil = -1;
+         if (this.reserveCanopyVolley(profile, team, 'human', undefined,
+           () => this.resources.tryConsumeShotInk(profile.inkCost, profile.canopy!.recoveryLockSeconds))) {
+           this.fireCooldown = profile.fireIntervalSeconds;
+@@ -1184,8 +1208,8 @@
+       }
+     } else if (profile.contactWeapon) {
+       this.stats.playerWeaponAction = 'LOCKED';
+-      if (playerWeaponEnabled && playerDamageable) {
+-        this.updateContactWeapon(profile, fireHeld, risingFire || primaryPressed,
++      if (playerWeaponEnabled && playerDamageable && (!f4 || f4HumanAllowed)) {
++        this.updateContactWeapon(profile, fireHeld, risingFire || primaryPressed,
+           muzzlePosition, aimDirection, team, playerPosition, groundTravel);
+       } else {
+         this.clearHumanContactInput();
+@@ -1973,14 +1997,15 @@
+   ): void {
+     this.stats.playerWeaponAction = 'READY';
+     this.stats.playerWeaponChargePercent = 0;
+-    if (!fireHeld) {
+-      this.clearHumanContactInput();
+-      return;
+-    }
+-    const contact = profile.contactWeapon!;
+-    if (pressed) this.clearHumanContactInput();
+-    this.contactHeldFrames++;
+-    if (pressed && this.fireCooldown <= 1e-8) {
++    const f4 = this.physics.hasF4WholeResearchTrimesh;
++    if (pressed && f4 && fireHeld) this.f4PressBufferedUntil = this.b367NativeFrame + 6;
++    const requested = f4 ? this.b367NativeFrame <= this.f4PressBufferedUntil : pressed && fireHeld;
++    if (!fireHeld || pressed) this.clearHumanContactInput();
++    if (!fireHeld && !requested) return;
++    const contact = profile.contactWeapon!;
++    if (fireHeld) this.contactHeldFrames++;
++    if (requested && this.fireCooldown <= 1e-8) {
++      if (f4) this.f4PressBufferedUntil = -1;
+       const vertical = !!contact.vertical && !this.stats.playerGrounded;
+       const recovery = vertical ? contact.verticalRecovery! : contact.swingRecovery;
+       if (this.launchContactSwing(profile, muzzle, body, aim, team, 'human', vertical,
+@@ -1990,7 +2015,7 @@
+           : contact.vertical ? 'HORIZONTAL_FLICK' : 'BRUSH_SWIPE';
+       }
+     }
+-    if (this.contactHeldFrames <= contact.rollAfterFrames || !travel) {
++    if (!fireHeld || this.contactHeldFrames <= contact.rollAfterFrames || !travel) {
+       this.contactMovingFrames = 0;
+       return;
+     }
+@@ -2381,8 +2406,8 @@
+       return;
+     }
+ 
+-    if (fallingFire && this.chargeSeconds >= profile.minChargeSeconds) {
+-      const stage = chargeStageProgress(profile, this.chargeSeconds);
++    if (fallingFire && this.chargeSeconds + (profile.shooter ? 1e-8 : 0) >= profile.minChargeSeconds) {
++      const stage = chargeStageProgress(profile, this.chargeSeconds);
+       const firstRingShots = Math.max(3, Math.round(profile.burstMaxShots * 0.5));
+       this.burstShotsRemaining = stage.firstReached
+         ? Math.round(lerp(firstRingShots, profile.burstMaxShots, stage.second))
+@@ -2395,11 +2420,12 @@
+         : stage.firstReached ? 'SPIN_RELEASE_R1' : 'SPIN_RELEASE_PARTIAL';
+     }
+ 
+-    this.chargeSeconds = 0;
+-    this.stats.playerWeaponChargePercent = 0;
+-  }
+-
+-  private updateBrella(
++    this.chargeSeconds = 0;
++    this.stats.playerWeaponChargePercent = 0;
++    if (profile.shooter && this.burstShotsRemaining <= 0) this.stats.playerWeaponChargeRing = 0;
++  }
++
++  private updateBrella(
+     profile: WeaponProfile,
+     fireHeld: boolean,
+     guarding: boolean,
+@@ -2691,27 +2717,38 @@
+     direction: Vec3,
+     team: Team.A | Team.B
+   ): void {
+-    if (fireHeld) {
+-      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+-      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+-      this.stats.playerWeaponAction = 'SABER_CHARGE';
++    const f4 = profile === weaponProfile('ink-saber', true);
++    if (fireHeld) {
++      if (f4) this.f4SaberReleaseUntil = -1;
++      this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
++      this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
++      this.stats.playerWeaponAction = 'SABER_CHARGE';
+       return;
+     }
+ 
+-    if (fallingFire && this.fireCooldown <= 0) {
+-      const charge = chargeFraction(profile, this.chargeSeconds);
+-      if (profile === weaponProfile('ink-saber', true)) {
+-        const charged = this.chargeSeconds + 1e-8 >= profile.chargeSeconds;
+-        const timing = F4_SABER_TIMING[charged ? 'charged' : 'horizontal'];
+-        if (this.reserveSaberSwing(profile, team, direction, charged, undefined,
+-          () => this.resources.tryConsumeShotInk(timing.ink, F4_SABER_TIMING.recovery))) {
+-          this.fireCooldown = timing.cooldown;
+-          this.stats.playerWeaponAction = charged ? 'CHARGED_SLASH' : 'QUICK_SLASH';
+-        }
+-        this.chargeSeconds = 0;
+-        this.stats.playerWeaponChargePercent = 0;
+-        return;
+-      }
++    if (f4) {
++      if (fallingFire && this.chargeSeconds > 0) {
++        this.f4SaberReleaseUntil = this.b367NativeFrame + 6;
++        this.f4SaberReleaseCharged = this.chargeSeconds + 1e-8 >= profile.chargeSeconds;
++      }
++      if (this.b367NativeFrame <= this.f4SaberReleaseUntil && this.fireCooldown <= 1e-8 &&
++          !this.pendingSaberSwings?.has('human')) {
++        const charged = this.f4SaberReleaseCharged;
++        this.f4SaberReleaseUntil = -1;
++        const timing = F4_SABER_TIMING[charged ? 'charged' : 'horizontal'];
++        if (this.reserveSaberSwing(profile, team, direction, charged, undefined,
++          () => this.resources.tryConsumeShotInk(timing.ink, F4_SABER_TIMING.recovery))) {
++          this.fireCooldown = timing.cooldown;
++          this.stats.playerWeaponAction = charged ? 'CHARGED_SLASH' : 'QUICK_SLASH';
++        }
++      }
++      this.chargeSeconds = 0;
++      this.stats.playerWeaponChargePercent = 0;
++      return;
++    }
++
++    if (fallingFire && this.fireCooldown <= 0) {
++      const charge = chargeFraction(profile, this.chargeSeconds);
+       if (this.resources.tryConsumeShotInk(profile.inkCost)) {
+         const forward = flattened(direction);
+         const center = playerPosition.clone().add(forward.clone().mulScalar(charge >= 0.62 ? 1.15 : 0.92));
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -6228,14 +6228,16 @@
+      // In canonical real SOURCE only, use the already tested SUB catalog
+      // 60Hz physical flight. Original Rapier and actor contact still
+      // decide what is hit. Never alter the main-shot aim or spent ink.
+-     const nativeSubAim=(this.f4WholeTrimeshInstalled&&this.f4SharedBombsEnabled||this.nativeLiveSourcePrestart&&!this.w10b14&&
+-       sourceCanonicalPlayableMode(location.href)!==null)?
+-       nativeSourceSubBallisticAim(
+-        this.muzzle,this.target,subWeaponProfile(humanSubId)):null;
+-     // Unreachable crosshair/sky points keep the old physical throw,
+-     // and T20/deterministic QA never use this SOURCE-only correction.
+-     this.humanSub.tryThrow(humanSubId,Team.A,
+-       this.muzzle,nativeSubAim??this.aim,undefined,heldFrames);
++     const f4Sub=this.f4WholeTrimeshInstalled&&this.f4SharedBombsEnabled;
++     const subMuzzle=f4Sub?this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(this.p),this.muzzle):this.muzzle;
++     const nativeSubAim=(f4Sub||this.nativeLiveSourcePrestart&&!this.w10b14&&
++       sourceCanonicalPlayableMode(location.href)!==null)?
++       nativeSourceSubBallisticAim(
++        subMuzzle,this.target,subWeaponProfile(humanSubId)):null;
++     // F4 fallback uses the actual camera direction, not the main ballistic aim.
++     const subAim=nativeSubAim??(f4Sub?this.camera.getAimDirection(new Vec3()):this.aim);
++     this.humanSub.tryThrow(humanSubId,Team.A,
++       subMuzzle,subAim,undefined,heldFrames);
+     }
+     const b41PreExplosion=this.b23InkFeedback.snapshot(frame);
+     this.humanSub.fixedUpdate(seconds);
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -209,7 +209,8 @@
+       return false;
+     const curling = subId==='curling-bomb' ? curlingPlan(heldFrames) : undefined;
+     if (f4 && !cpuActor && this.f4HumanRepeat > 0) return false;
+-    if (f4 && (!Number.isFinite(direction.lengthSq()) || direction.lengthSq() <= 1e-8)) return false;
++    if (f4 && (!Number.isFinite(direction.lengthSq()) || direction.lengthSq() <= 1e-8 ||
++        !Number.isFinite(origin.x) || !Number.isFinite(origin.y) || !Number.isFinite(origin.z))) return false;
+     const slot = this.bombs.find((candidate) => !candidate.active);
+     if (!slot) return false;
+     if (!cpuActor && !(f4 ? this.resources.tryConsumeF4SubInk(profile.inkCost,curling?.recovery??f4SubRecovery(subId))
