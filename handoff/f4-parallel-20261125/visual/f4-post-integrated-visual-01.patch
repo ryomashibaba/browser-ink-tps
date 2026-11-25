@@ -1,0 +1,153 @@
+diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
+--- a/src/ink/InkSurfaceMaterial.ts
++++ b/src/ink/InkSurfaceMaterial.ts
+@@ -197,6 +197,17 @@
+   return output;
+ }`;
+ 
++/** Same optical-only settings for registered floors and new backed walls.
++ * Invalid light direction disables the optional wet-film path, never ink. */
++export function configureF4InkVisual(material: import('playcanvas').Material,
++  enabled: boolean, light?: { x:number; y:number; z:number }): void {
++  const valid=!!light&&Number.isFinite(light.x)&&Number.isFinite(light.y)&&
++    Number.isFinite(light.z)&&Math.hypot(light.x,light.y,light.z)>1e-6;
++  material.setParameter('uF4VisualPolish',enabled&&valid?1:0);
++  if(enabled&&valid&&light) material.setParameter('uF4LightDir',
++    new Float32Array([light.x,light.y,light.z]));
++}
++
+ export function createInkSurfaceMaterial(surface: PaintSurface, atlas: Texture, sourceWetInkStyle = false): ShaderMaterial {
+   const rect = surface.atlasRect;
+   if (!rect) throw new Error(`Surface ${surface.id} has no atlas rect.`);
+diff --git a/src/stage/TestStage.ts b/src/stage/TestStage.ts
+--- a/src/stage/TestStage.ts
++++ b/src/stage/TestStage.ts
+@@ -10,7 +10,7 @@
+ } from 'playcanvas';
+ import { GAME_CONFIG } from '../config/game/gameConfig';
+ import { GameplayInkSystem } from '../ink/GameplayInkSystem';
+-import { createInkSurfaceMaterial } from '../ink/InkSurfaceMaterial';
++import { createInkSurfaceMaterial, configureF4InkVisual } from '../ink/InkSurfaceMaterial';
+ import {
+   F4_PAINT_NORMAL_ALIGNMENT,
+   F4_PAINT_PLANE_TOLERANCE,
+@@ -167,9 +167,7 @@
+       ink.update();
+       instance.mesh = ink;
+       instance.material.setParameter('uInkOnly', 1);
+-      instance.material.setParameter('uF4VisualPolish', visualPolish ? 1 : 0);
+-      if (visualPolish && visualLightDirection) instance.material.setParameter('uF4LightDir',
+-        new Float32Array([visualLightDirection.x, visualLightDirection.y, visualLightDirection.z]));
++      configureF4InkVisual(instance.material,visualPolish,visualLightDirection);
+       instance.material.depthBias = -2;
+     }
+     for (const { child } of solids) child.enabled = false;
+diff --git a/src/stage/F4ProvisionalWalls.ts b/src/stage/F4ProvisionalWalls.ts
+--- a/src/stage/F4ProvisionalWalls.ts
++++ b/src/stage/F4ProvisionalWalls.ts
+@@ -1,7 +1,7 @@
+ import {Entity,Mesh,MeshInstance,Vec3,type AppBase} from 'playcanvas';
+ import {GAME_CONFIG} from '../config/game/gameConfig';
+ import {GpuInkAtlas} from '../ink/GpuInkAtlas';
+-import {createInkSurfaceMaterial} from '../ink/InkSurfaceMaterial';
++import {createInkSurfaceMaterial,configureF4InkVisual} from '../ink/InkSurfaceMaterial';
+ import {PaintSurface} from '../ink/PaintSurface';
+ import {SurfaceFlags} from '../ink/types';
+ import type {RapierStagePhysics} from '../physics/RapierStagePhysics';
+@@ -15,7 +15,7 @@
+ // Prepare a separate small atlas + exact source-triangle renderer before
+ // publishing any surface. No original StageDefinition or score flags change.
+ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics,
+- vertices:Float32Array){
++ vertices:Float32Array,visualPolish=false,visualLightDirection?:Vec3){
+  if(!physics.hasF4WholeResearchTrimesh)return null;
+  const cell=GAME_CONFIG.ink.cellSizeMeters;
+  if(cell!==.125)return null;
+@@ -79,6 +79,7 @@
+    mesh.setPositions(vertices);mesh.setUvs(0,uvs);mesh.update();
+    const mat=createInkSurfaceMaterial(surface,atlas.texture,true);
+    mat.setParameter('uInkOnly',1);mat.depthBias=-2;
++   configureF4InkVisual(mat,visualPolish,visualLightDirection);
+    const entity=new Entity('F4ProvisionalWallInk:'+surface.id);
+    entity.addComponent('render',{meshInstances:[new MeshInstance(mesh,mat)],castShadows:false,receiveShadows:false});
+    root.addChild(entity);
+diff --git a/src/app/F4ActorArt.mjs b/src/app/F4ActorArt.mjs
+--- a/src/app/F4ActorArt.mjs
++++ b/src/app/F4ActorArt.mjs
+@@ -110,7 +110,7 @@
+    return e;
+   }catch(error){e.destroy();throw error;}
+  };
+- let weaponRoot=null,weaponId=null,disposed=false,lastInkRatio=NaN;
++ let weaponRoot=null,weaponId=null,disposed=false,lastInkRatio=NaN,lastStride=NaN;
+  try{
+   for(const p of BODY){
+    const style=showOwnInkTank?(p.name==='tank'?{...p,tint:'DARK'}:
+@@ -130,6 +130,7 @@
+    root.addChild(next);
+   }catch(e){next.destroy();throw e;}
+   weaponRoot?.destroy();weaponRoot=next;weaponId=id;next.enabled=true;
++  lastStride=NaN; // weapon-specific arm posture may change even at rest.
+   return true;
+  }
+  function setInk(ink,capacity){
+@@ -148,7 +149,8 @@
+   panel.setLocalPosition(0,-.24+height*.5,.50);
+  }
+  function setStride(swing){
+-  if(disposed||!Number.isFinite(swing))return;
++  if(disposed||!Number.isFinite(swing)||swing===lastStride)return;
++  lastStride=swing;
+   nodes.get("left-leg").setLocalEulerAngles(swing,0,0);
+   nodes.get("right-leg").setLocalEulerAngles(-swing,0,0);
+   nodes.get("left-boot").setLocalEulerAngles(swing*.6,0,0);
+diff --git a/src/app/B248SourceActorVisuals.ts b/src/app/B248SourceActorVisuals.ts
+--- a/src/app/B248SourceActorVisuals.ts
++++ b/src/app/B248SourceActorVisuals.ts
+@@ -284,7 +284,7 @@
+    ['arm-left',-1],['arm-right',1],
+    ['leg-left',1],['leg-right',-1],
+    ['boot-left',1],['boot-right',-1]
+-  ] as const)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
++  ] as const)if(!f4Art)limbs.get(part)?.setLocalEulerAngles(swing*sign,0,0);
+  };
+  setMode('HUMAN');
+  const visual={setMode,setEnabled,setAuditDrawHidden,setCameraLineHidden,setPose,setResearchVariant};
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3415,7 +3415,8 @@
+     this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
+     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&f4WallVertices){
+      try{
+-      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices);
++      const walls=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices,
++       f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined);
+       if(walls){
+        // Original 17-surface QA list remains separate. Existing weapon
+        // runtimes share the mutable physical array, not a copied snapshot.
+@@ -7163,7 +7164,6 @@
+   }
+  }
+  private update(dt:number){
+-  this.syncF4ActorArt();
+   this.updateW10B22OwnerTrial();
+   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+    const deadline=performance.now()+3;
+@@ -7175,6 +7175,7 @@
+   // A generic QA/UI pause toggle cannot consume the player's ready time.
+   if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
+   if(this.paused||this.stopReason){
++   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
+    this.b399UpdateCameraAimClearance();
+    this.refreshF4CombatReticle();
+    this.lastSourceFrameAtMs=Number.NaN;
+@@ -7225,6 +7226,8 @@
+    this.stats.simulationTicksLastFrame=report.ticks;
+    this.stats.droppedSimulationSeconds=report.droppedSeconds;
+    const entityRenderStart=this.b20ProfileStart();
++   // Read the actual post-tick ink and loadout before this frame's pose.
++   this.syncF4ActorArt();
+    this.player.render(report.alpha,this.visual);
+    this.cpu.render(report.alpha);
+    this.projectiles.render(report.alpha);
