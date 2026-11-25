@@ -83,5 +83,20 @@
       "fullNativeBuild": "NOT_RUN"
     },
     "notes": "Local TypeScript 5.8.3 isolated enum reproduction TS2345 fixed by const narrowing; native full build not run."
+  },
+  "postWindowsFirstRound": {
+    "base": "651ac6457e94aa5f6fdcdba31845df3bde129902",
+    "previousPatch": "42193bd6321ca0a907949db83d8e6b8ebca8d92b",
+    "changes": [
+      "F4 local combat KCC rejection quarantine and alternative routes; keep retained goal rejection streak",
+      "Read-only actual human input and CPU F4 goal/foot evidence endpoint"
+    ],
+    "verification": {
+      "assertions": 14,
+      "replayedHunks": 67,
+      "totalHunks": 359,
+      "nativeBuild": "NOT_RUN"
+    },
+    "limitations": "Actual initial round movement/hit cause not established; no formal route promotions, no physics or resource changes."
   }
 }
