@@ -259,6 +259,26 @@ export class ProjectileSystem {
   private f4PhysicalHitCueOn=false;
   private f4ConfirmedDamageCues=0;
   private f4SpecialSplashHits=0;
+  private readonly f4EnemyProjectileEvidence={spawned:0,terrain:0,expired:0,cpuContact:0,
+    humanContact:0,canopy:0,device:0,absorbed:0,other:0,humanHpLossContacts:0,humanHpLoss:0};
+
+  /** Counts actual enemy pooled projectile slots, not all CPU attacks or aim intentions. */
+  public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
+
+  private f4CountEnemyTerminal(slot:ProjectileSlot,reason:string):void {
+    if(!this.physics.hasF4WholeResearchTrimesh||slot.sourceKind!=='CPU'||slot.team===this.currentHumanTeam)return;
+    const e=this.f4EnemyProjectileEvidence;
+    switch(reason){
+      case 'ORIGINAL_PAINTABLE':case 'ORIGINAL_SOLID':e.terrain++;break;
+      case 'TTL':e.expired++;break;
+      case 'REAL_CPU_HIT':e.cpuContact++;break;
+      case 'REAL_PLAYER_HIT':e.humanContact++;break;
+      case 'CANOPY':e.canopy++;break;
+      case 'DEVICE':e.device++;break;
+      case 'ABSORBED':e.absorbed++;break;
+      default:e.other++;
+    }
+  }
   private f4SpecialCueFrame=-1;
   public f4SpecialSplashHitCount():number{return this.f4SpecialSplashHits;}
   private noteF4SpecialDamageCue(point:Vec3,team:Team.A|Team.B):void {
@@ -887,6 +907,8 @@ export class ProjectileSystem {
     this.nativeHumanDamageCueFrame=-1;
     this.nativeSourceHumanSplashCueFrame=-1;
     this.f4SpecialSplashHits=0;
+    for(const key of Object.keys(this.f4EnemyProjectileEvidence) as (keyof typeof this.f4EnemyProjectileEvidence)[])
+      this.f4EnemyProjectileEvidence[key]=0;
     this.f4SpecialCueFrame=-1;
     this.f4HumanLifeId=null;
     this.f4HumanGrounded=false;
@@ -1367,6 +1389,7 @@ export class ProjectileSystem {
             team:slot.team,damage:slot.damage,id:slot.entity.name+':'+this.b367NativeFrame,
             consume:()=>{
               if(!slot.active)return false;
+              this.f4CountEnemyTerminal(slot,'ABSORBED');
               this.deactivate(slot);
               return true;
             }
@@ -1489,6 +1512,10 @@ export class ProjectileSystem {
             } else {
               const hpLoss=this.resources.applyDamage(shotDamage);
               applied = hpLoss;
+              if(this.physics.hasF4WholeResearchTrimesh&&slot.sourceKind==='CPU'&&slot.team!==team&&hpLoss>0){
+                this.f4EnemyProjectileEvidence.humanHpLossContacts++;
+                this.f4EnemyProjectileEvidence.humanHpLoss+=hpLoss;
+              }
               if (hpLoss > 0) slosher?.resolvedTargets.add('human');
               this.confirmNativeHumanDamage(hpLoss,combatPoint,slot.team);
               this.recordCpuPlayerDamageHit(hpLoss);
@@ -3801,6 +3828,8 @@ export class ProjectileSystem {
     slot.team = team;
     slot.sourceKind = sourceKind;
     slot.sourceId = sourceId;
+    if(this.physics.hasF4WholeResearchTrimesh&&sourceKind==='CPU'&&team!==this.currentHumanTeam)
+      this.f4EnemyProjectileEvidence.spawned++;
     slot.qaSourceAim=sourceKind==='CPU'&&sourceId==='A1'?
       qaSourceAim:undefined;
     if(slot.qaSourceAim==='A1_ORIGINAL_ALLY_SUPPORT_INK')
@@ -3880,6 +3909,7 @@ export class ProjectileSystem {
     paintHit: SurfaceRayHit | null,
     reason:B346ShooterExitKind|'CANOPY'|'DEVICE'='TTL'
   ): void {
+    this.f4CountEnemyTerminal(slot,reason);
     const stageNormal = slot.terrainContactNormal;
     if(slot.b346LaunchId!==undefined){
       if (reason !== 'CANOPY' && reason !== 'DEVICE') this.b346ShooterWitness.exit(slot.b346LaunchId,{

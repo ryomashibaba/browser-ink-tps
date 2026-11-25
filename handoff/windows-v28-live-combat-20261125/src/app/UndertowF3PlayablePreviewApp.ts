@@ -481,7 +481,8 @@ export class UndertowF3PlayablePreviewApp{
  private readonly f4Special: F4SpecialRuntime|null;
  private readonly f4SpecialProbe: boolean;
  private f4SpecialLife=1;
- private f4SpecialWasAlive=true;
+ private f4HumanDeathTick:number|null=null;
+ private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
  private f4SpecialSecondaryHeld=false;
  private readonly b202PauseOverlay:HTMLElement;
  private readonly b167CombatNotice:HTMLElement;
@@ -3037,6 +3038,12 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
    f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
+   f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
+    humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
+    projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),
+    aim:this.cpu.f4AimEvidenceSnapshot(),
+    localCombat:this.traffic.snapshot().sourcePatrol.f4LocalCombatProposals
+   }:null,
    auditF4ZipGeometry:(rangeM:number)=>{
     if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||this.resources.currentHp<=0)
      return {status:'HOLD',reason:'F4_LIVE_PROBE_UNAVAILABLE'};
@@ -3044,6 +3051,42 @@ export class UndertowF3PlayablePreviewApp{
     this.player.getMuzzlePosition(this.aim,this.muzzle);
     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(new Vec3()),this.muzzle);
     return this.player.auditF4ZipGeometry(origin,this.aim,rangeM);
+   },
+   // Bounded read-only search from the actual grounded human position.
+   // A physical wall candidate is NOT original hook authorization.
+   auditF4ZipWallCandidates:(rangeM:number)=>{
+    if(!this.f4SpecialProbe||!this.f4WholeTrimeshInstalled||
+       this.resources.currentHp<=0||this.player.currentMode!=='HUMAN'||
+       !this.stats.playerGrounded||!Number.isFinite(rangeM)||rangeM<=0||rangeM>64)
+     return {status:'HOLD',reason:'F4_LIVE_GROUNDED_PROBE_REQUIRED',rays:0,candidates:[]};
+    const body=this.player.getPosition(new Vec3());
+    const walls:{yawDeg:number;elevationDeg:number;distanceM:number;aim:Vec3;origin:Vec3}[]=[];
+    let rays=0,nonWall=0,misses=0;
+    for(const elevationDeg of [0,15,30])for(let yawDeg=0;yawDeg<360;yawDeg+=22.5){
+     const yaw=yawDeg*Math.PI/180,pitch=elevationDeg*Math.PI/180;
+     const aim=new Vec3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),
+      Math.cos(yaw)*Math.cos(pitch));
+     const origin=this.projectiles.clipF4SpecialMuzzle(body,this.player.getMuzzlePosition(aim));
+     const hit=this.physics.castStageSegment(origin,origin.clone().add(aim.clone().mulScalar(rangeM)),
+      'ink-projectile');
+     rays++;
+     if(!hit?.normal||hit.distance<=.05||hit.normal.lengthSq()<1e-8){misses++;continue;}
+     if(Math.abs(hit.normal.clone().normalize().y)>.35){nonWall++;continue;}
+     walls.push({yawDeg,elevationDeg,distanceM:hit.distance,aim,origin});
+    }
+    walls.sort((a,b)=>a.distanceM-b.distanceM);
+    const selected:typeof walls=[];
+    for(const wall of walls){
+     // Avoid spending the three capsule audits on nearly identical rays.
+     if(selected.some(s=>s.aim.dot(wall.aim)>.94))continue;
+     selected.push(wall);
+     if(selected.length===3)break;
+    }
+    const candidates=selected.map(w=>({yawDeg:w.yawDeg,elevationDeg:w.elevationDeg,
+     distanceM:w.distanceM,geometry:this.player.auditF4ZipGeometry(w.origin,w.aim,rangeM)}));
+    return {status:'HOLD',reason:!walls.length?'NO_SAMPLED_WALL_FIRST_CONTACT':
+     'ORIGINAL_HOOK_AUTHORITY_AND_LIVE_KCC_UNVERIFIED',rays,nonWall,misses,
+     wallFirstContacts:walls.length,candidates};
    },
    auditF4HumanResearchPath:(index:number,route?:'return'|'negative-candidate')=>
     this.auditF4HumanResearchPath(index,route),
@@ -5732,7 +5775,8 @@ export class UndertowF3PlayablePreviewApp{
   this.humanSub.reset();
   this.f4Special?.reset();
   this.f4SpecialLife=1;
-  this.f4SpecialWasAlive=true;
+  this.f4HumanDeathTick=null;
+  this.f4HumanLifePairs.length=0;
   this.f4SpecialSecondaryHeld=false;
   this.cpuKit?.reset();
   this.cpuKitArtificialGaugeArms=0;
@@ -5909,8 +5953,6 @@ export class UndertowF3PlayablePreviewApp{
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
     if(this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
-     if(alive&&!this.f4SpecialWasAlive)this.f4SpecialLife++;
-     this.f4SpecialWasAlive=alive;
      this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
       alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
     }
@@ -6204,9 +6246,9 @@ export class UndertowF3PlayablePreviewApp{
      b41PreExplosion.humanBombStampEvents,b41PreExplosion.humanBombChangedCells);
     this.b20ProfileStop('inkOwnershipTick',paintStart);
     if(this.resources.currentHp<=0){
+     const exactRespawn=this.nativeLiveSourcePrestart||this.f4WholeTrimeshInstalled;
      if(this.respawnFrames===0&&
-        (!this.nativeLiveSourcePrestart||
-         this.nativeHumanSplatTick===null)){
+        (!exactRespawn||this.nativeHumanSplatTick===null)){
       // B374: never replay an attack held through real native HP zero.
       this.input.setCombatInputActive(false);
       this.f4CurlingHeldFrames=null;
@@ -6222,9 +6264,10 @@ export class UndertowF3PlayablePreviewApp{
       }
       this.feedback.splat(Team.A,this.player.getPosition(this.p));
       // The lethal physics frame itself must not count as tick 1.
-      if(this.nativeLiveSourcePrestart)this.nativeHumanSplatTick=frame;
+      if(exactRespawn)this.nativeHumanSplatTick=frame;
+      if(this.f4WholeTrimeshInstalled)this.f4HumanDeathTick=frame;
      }
-     this.respawnFrames=this.nativeLiveSourcePrestart&&
+     this.respawnFrames=exactRespawn&&
        this.nativeHumanSplatTick!==null?
        nativeSourceHumanRespawnElapsedTicks(this.nativeHumanSplatTick,frame):
        this.respawnFrames+1;
@@ -6246,12 +6289,22 @@ export class UndertowF3PlayablePreviewApp{
       // Genuine restored life needs a fresh shot/sub press.
       this.input.setCombatInputActive(true);
       this.humanRespawns++;
+      if(this.f4WholeTrimeshInstalled){
+       if(this.f4HumanDeathTick!==null){
+        this.f4HumanLifePairs.push({deathTick:this.f4HumanDeathTick,respawnTick:frame,
+         elapsedTicks:frame-this.f4HumanDeathTick,hpAfter:this.resources.currentHp});
+        if(this.f4HumanLifePairs.length>32)this.f4HumanLifePairs.shift();
+       }
+       this.f4HumanDeathTick=null;
+       this.f4SpecialLife++;
+      }
       this.respawnFrames=0;
       this.nativeHumanSplatTick=null;
      }
     }else{
      this.respawnFrames=0;
      this.nativeHumanSplatTick=null;
+     this.f4HumanDeathTick=null;
     }
     const actualHumanInk=this.b23InkFeedback.snapshot(frame);
     const realFoot=this.player.getPosition(this.p);

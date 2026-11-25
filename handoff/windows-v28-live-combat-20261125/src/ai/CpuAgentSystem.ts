@@ -431,6 +431,9 @@ export class CpuAgentSystem {
   }>();
   private f4LeadTargets = new WeakMap<Vec3,{id: string;offsetY: number;life: symbol}>();
   private f4LeadAccepted = 0;
+  private readonly f4AimEvidence={currentTarget:0,predictedTarget:0,staleTargetRejected:0,
+    outOfRange:0,covered:0};
+  public f4AimEvidenceSnapshot(){return {...this.f4AimEvidence};}
   private b212PreviousHuman:Vec3|null=null;
   private b212NativeLeadCandidates=0;
   private b212NativeAimAccepted=0;
@@ -1159,6 +1162,8 @@ export class CpuAgentSystem {
   public reset(humanTeam: Team.A | Team.B): void {
     this.clearF4LeadHistory();
     this.f4LeadAccepted=0;
+    this.f4AimEvidence.currentTarget=this.f4AimEvidence.predictedTarget=
+      this.f4AimEvidence.staleTargetRejected=this.f4AimEvidence.outOfRange=this.f4AimEvidence.covered=0;
     this.qaContinuity.reset();
     this.qaMotionGoals.clear();
     this.sourceLastAdmittedRouteGoal.clear();
@@ -1338,6 +1343,13 @@ export class CpuAgentSystem {
     this.b212PriorHuman=this.b212PreviousHuman;
     this.b212PreviousHuman=(this.b212NativeLeadEnabled||this.f4WholeNavigation)&&humanActive?
       humanPosition.clone():null;
+    // Actual player KCC already finished for this tick. Sample before any
+    // CPU chooses a target; airborne targets get direct aim, never lead.
+    if(this.f4LeadEnabled&&this.f4WholeNavigation){
+      this.sampleF4LeadBody('HUMAN',humanActive?humanPosition:null,
+        humanNativeGrounded?humanPhysicalColliderMode:humanPhysicalColliderMode+':AIR',
+        humanNativeGrounded);
+    }
     // The REAL HUMAN PlayerController is at humanPosition. Only the eighth
     // passive Crowd neighbour is moved to its source-backed physical foot.
     // This cannot be applied to production T20 or non-source T21 terrain.
@@ -2073,8 +2085,6 @@ export class CpuAgentSystem {
         this.tryRefreshStalledOriginalSourceCrowd(report);
     }
     if (this.f4LeadEnabled && this.f4WholeNavigation) {
-      this.sampleF4LeadBody('HUMAN', humanActive && humanNativeGrounded ? humanPosition : null,
-        humanPhysicalColliderMode);
       for (const bot of this.bots) this.sampleF4LeadBody(bot.id,
         bot.lifeState === 'ACTIVE' && bot.hp > 0 && this.liveSourceCombatOpponent(bot) &&
         bot.mobilityState === 'GROUND' ? bot.position : null,'CPU');
@@ -4821,17 +4831,20 @@ export class CpuAgentSystem {
     return this.f4LeadAccepted;
   }
 
-  private sampleF4LeadBody(id: string, position: Vec3 | null, mode: string): void {
+  private sampleF4LeadBody(id: string, position: Vec3 | null, mode: string,predictable=true): void {
     if (!position) {
       this.f4LeadHistory.delete(id);
       return;
     }
     const old = this.f4LeadHistory.get(id);
-    const consecutive = old && old.mode === mode && this.b181NativeFrame-old.tick === 1 &&
+    const sameTrack=old&&old.mode===mode&&this.b181NativeFrame-old.tick===1;
+    const consecutive = predictable&&sameTrack&&
       Math.hypot(position.x-old.current.x,position.z-old.current.z) <= .20 &&
       Math.abs(position.y-old.current.y) <= .12;
+    // Motion discontinuity disables extrapolation, not a valid current
+    // physical target. Death/respawn clears the track independently.
     this.f4LeadHistory.set(id,{current:position.clone(),previous:consecutive ? old.current : null,
-      tick:this.b181NativeFrame,mode,life:consecutive ? old.life : Symbol(id)});
+      tick:this.b181NativeFrame,mode,life:sameTrack ? old.life : Symbol(id)});
   }
 
   public aimF4ShotAtLaunch(request: CpuFireRequest, origin: Vec3, range: number,
@@ -4842,14 +4855,18 @@ export class CpuAgentSystem {
     const sample = this.f4LeadHistory.get(opponent.id);
     const enemy = opponent.id === 'HUMAN' ? null : this.bots.find(bot=>bot.id===opponent.id);
     if (!sample || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
-        (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))) return null;
+        (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))){
+      this.f4AimEvidence.staleTargetRejected++;return null;
+    }
     const offset = new Vec3(0,opponent.offsetY,0);
     const actual = sample.current.clone().add(offset);
     const clear = (from: Vec3, to: Vec3) => !ray(from,to);
-    if (Math.hypot(actual.x-origin.x,actual.z-origin.z) > range || !clear(origin,actual)) return null;
+    if(Math.hypot(actual.x-origin.x,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
+    if(!clear(origin,actual)){this.f4AimEvidence.covered++;return null;}
     const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
       1,range,solveFlightTicks,clear);
-    if (predicted) this.f4LeadAccepted++;
+    if (predicted){this.f4LeadAccepted++;this.f4AimEvidence.predictedTarget++;}
+    else this.f4AimEvidence.currentTarget++;
     return predicted ?? actual;
   }
 

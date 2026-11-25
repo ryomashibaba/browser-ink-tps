@@ -35,6 +35,8 @@ export class F4SpecialRuntime {
   private readonly actorUnlock = new Map<string,number>();
   private readonly livePose = new Map<string,()=>void>();
   private absorbed = 0;
+  private readonly suctionEvidence={eligibleSegments:0,apertureMisses:0,terrainBlocked:0,
+    candidateContacts:0,admissionAttempts:0,admissionRejected:0};
   private waves = 0;
   private readonly active = new Map<string,string>();
   private readonly completedProbeLives = new Set<string>();
@@ -96,6 +98,8 @@ export class F4SpecialRuntime {
     this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
     this.lastPlacementReject=null;
     this.placementAttempts=this.guideTerrainRejected=0;
+    for(const key of Object.keys(this.suctionEvidence) as (keyof typeof this.suctionEvidence)[])
+      this.suctionEvidence[key]=0;
     this.special=null;
     this.terminal=null;
     this.score=null;
@@ -140,7 +144,8 @@ export class F4SpecialRuntime {
     return {authorityComplete:this.turf.complete,score:this.score,special:this.special,active:this.active.size,
       launches:this.launches,anchors:this.anchors,waves:this.waves,absorbed:this.absorbed,paintCells:this.paintCells,confirmedSweepHpLoss:this.sweptHpLoss,
       castEnd:this.terminal,placementAttempts:this.placementAttempts,
-      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected};
+      lastPlacementReject:this.lastPlacementReject,guideTerrainRejected:this.guideTerrainRejected,
+      suction:{...this.suctionEvidence}};
   }
 
   update(tick: number): void {
@@ -373,18 +378,26 @@ export class F4SpecialRuntime {
     let consume:{id:string;apply():boolean}|null=null;
     const query:SuctionQuery=(from,to,shot)=>{
       if(shot.team===team||shot.damage<=0||!at.trigger||!visual)return null;
+      const span=from.distance(to);
+      if(!Number.isFinite(span)||span<=1e-8)return null;
+      this.suctionEvidence.eligibleSegments++;
       const center=at.origin.clone().add(at.forward.clone().normalize().mulScalar(1.18));
       const distance=this.physics.castInkSegmentAtBall(from,to,center,.84);
-      if(distance===null)return null;
-      const overlap=from.clone().lerp(from,to,distance/from.distance(to));
-      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile'))return null;
+      if(distance===null){this.suctionEvidence.apertureMisses++;return null;}
+      const overlap=from.clone().lerp(from,to,distance/span);
+      if(this.physics.castStageSegment(at.origin,overlap,'ink-projectile')){
+        this.suctionEvidence.terrainBlocked++;return null;
+      }
+      this.suctionEvidence.candidateContacts++;
       return {distance,accept:()=>{
+        this.suctionEvidence.admissionAttempts++;
         consume={id:shot.id,apply:shot.consume};
         try{
           const accepted=this.port.contact({roundId:this.roundId,tick:this.frame,actorId:actor,lifeId,
             projectileId:shot.id,sourceTeam:shot.team,eligible:true,physicalContact:true,
             unoccluded:true,chargeValue:shot.damage})===true;
           if(accepted)this.absorbed++;
+          else this.suctionEvidence.admissionRejected++;
           return accepted;
         }finally{consume=null;}
       }};
