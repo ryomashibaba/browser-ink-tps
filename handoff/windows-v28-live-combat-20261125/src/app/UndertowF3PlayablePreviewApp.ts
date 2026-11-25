@@ -480,6 +480,7 @@ export class UndertowF3PlayablePreviewApp{
  private f4HumanSubActionOpen=false;
  private readonly f4Special: F4SpecialRuntime|null;
  private readonly f4SpecialProbe: boolean;
+ private readonly f4ZipResearchEnabled:boolean;
  private f4SpecialLife=1;
  private f4HumanDeathTick:number|null=null;
  private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
@@ -1263,6 +1264,7 @@ export class UndertowF3PlayablePreviewApp{
   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
+  this.f4ZipResearchEnabled=this.f4SpecialProbe&&sessionStorage.getItem('t21F4ZipKccResearch')==='wall-return';
   const f4ProbeCpu=this.f4SpecialProbe?sessionStorage.getItem('t21F4SpecialProbeCpu'):null;
   if(f4ProbeCpu&&/^(A[123]|B[1234])$/.test(f4ProbeCpu)&&this.f4Special){
    const runtime=this.f4Special;
@@ -2000,12 +2002,23 @@ export class UndertowF3PlayablePreviewApp{
       subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
       special:f4SpecialName(weapon.id),probe:this.f4SpecialProbe,
       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
-       (this.f4SpecialProbe?' · G 単独検証':'')};
+       (this.f4ZipResearchEnabled&&weapon.id==='arc-blaster'?
+        (this.player.f4ZipResearchStatus==='RETURNED'?' · 接地帰還完了':
+         this.player.f4ZipResearchStatus==='HOLD'?' · 往復停止 · G で再試行':
+         ' · G 壁往復検証（開始地点から正面約10 m）'):
+        this.f4SpecialProbe?' · G 単独検証':'')};
     },
-    readSpecial:()=>this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
-     actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
-     weapon:this.projectiles.currentPlayerWeapon.id
-    }):null
+    readSpecial:()=>{
+     if(this.f4ZipResearchEnabled&&this.projectiles.currentPlayerWeapon.id==='arc-blaster'){
+      const active=this.player.f4ZipResearchActive;
+      return {authorityComplete:false,executorReady:false,active,
+       probeState:active?'ACTIVE':'AVAILABLE',probeControls:'物理往復実行中 · 原作フック適格性 HOLD'};
+     }
+     return this.f4SpecialProbe&&this.f4Special?this.f4Special.actorPresentation({
+      actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A,
+      weapon:this.projectiles.currentPlayerWeapon.id
+     }):null;
+    }
    }):null;
   this.practiceHud=this.compactF4Hud??practiceHud;
   // A compact real-paint balance inside the normal full-round HUD.
@@ -3038,6 +3051,7 @@ export class UndertowF3PlayablePreviewApp{
   canvas.dataset.t21F3Production='FORBIDDEN';
   const api={snapshot:()=>this.snapshot(),
    f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
+   f4ZipKccResearch:()=>this.f4ZipResearchEnabled?this.player.f4ZipResearchSnapshot():null,
    f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
     humanLifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick,
     projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),
@@ -5774,6 +5788,7 @@ export class UndertowF3PlayablePreviewApp{
   this.projectiles.reset();
   this.humanSub.reset();
   this.f4Special?.reset();
+  this.player.resetF4ZipResearch();
   this.f4SpecialLife=1;
   this.f4HumanDeathTick=null;
   this.f4HumanLifePairs.length=0;
@@ -5918,8 +5933,18 @@ export class UndertowF3PlayablePreviewApp{
     const twin=profile.twinComets===true;
     // Consume the genuine G edge once before normal weapon-specific mobility.
     const f4SpecialPressed=this.f4ResearchMode&&this.input.consumeSpecialPressed();
+    const zipResearchKit=this.f4ZipResearchEnabled&&profile.id==='arc-blaster';
+    const zipOpen=zipResearchKit&&this.f4WholeTrimeshInstalled&&alive&&
+     this.matchState==='PLAYING'&&!this.stopReason&&document.pointerLockElement===this.canvas;
+    if(!zipOpen)this.player.cancelF4ZipResearch('RESEARCH_INPUT_CLOSED');
+    if(zipOpen&&f4SpecialPressed&&this.player.canShoot&&this.remainingSeconds>210/60){
+     const east=new Vec3(1,0,0);
+     const origin=this.projectiles.clipF4SpecialMuzzle(this.player.getPosition(),this.player.getMuzzlePosition(east));
+     this.player.beginF4ZipResearch(origin,east);
+    }
+    const zipOwnsInput=this.player.f4ZipResearchActive;
     const nextSpecialTick=Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
-    const f4SpecialOwnsMobility=Boolean(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled&&this.f4Special&&
+    const f4SpecialOwnsMobility=zipOwnsInput||Boolean(this.f4SpecialProbe&&this.f4WholeTrimeshInstalled&&this.f4Special&&
      (this.f4Special.ownsWeaponInput('human',nextSpecialTick)||
       (f4SpecialPressed&&alive&&this.player.canShoot&&this.matchState==='PLAYING'&&
        !this.stopReason&&document.pointerLockElement===this.canvas)));
@@ -5943,6 +5968,7 @@ export class UndertowF3PlayablePreviewApp{
      f4SpecialOwnsMobility?undefined:this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
     this.physics.step();
     this.player.syncAfterPhysics(seconds);
+    if(zipOwnsInput)this.player.observeF4ZipResearch();
     const contactTravel=contactStart&&this.stats.playerGrounded&&this.player.currentMode==='HUMAN'?
      {from:contactStart,to:this.player.getPosition().sub(
       new Vec3(0,PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,0))}:undefined;
@@ -6126,7 +6152,7 @@ export class UndertowF3PlayablePreviewApp{
      this.camera.getAimDirection(this.aim);
      this.player.getMuzzlePosition(this.aim,this.muzzle);
      this.camera.getAimTarget(this.target);
-     if(this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
+     if(!zipResearchKit&&this.f4SpecialProbe&&this.f4Special&&this.f4WholeTrimeshInstalled){
       const specialOpen=actionWindow.humanCanStartNewActions&&alive&&
        this.resources.currentHp>0&&document.pointerLockElement===this.canvas;
       const secondary=specialOpen&&this.input.secondaryHeld;
@@ -6254,6 +6280,7 @@ export class UndertowF3PlayablePreviewApp{
       this.f4CurlingHeldFrames=null;
       this.humanSplats++;
       this.f4Special?.cancelActor("human",f4RoundTick);
+      this.player.cancelF4ZipResearch('HUMAN_SPLATTED');
       this.f4SpecialSecondaryHeld=false;
       this.player.setLifecycleActive(false);
       this.projectiles.cancelHumanSlosh();

@@ -139,6 +139,23 @@ interface OwnWallSample {
   towardAmount: number;
 }
 
+type F4ZipResearchLeg = 'OUTBOUND' | 'WALL_CONTACT' | 'RETURN' | 'LANDING';
+
+interface F4ZipResearchRun {
+  leg: F4ZipResearchLeg;
+  start: Vec3;
+  wallApproach: Vec3;
+  wallNormal: Vec3;
+  wallColliderHandle: number;
+  returnSupportId: string;
+  hookDistanceM: number;
+  wallContact: Vec3 | null;
+  ticks: number;
+  stalledTicks: number;
+  maxAcceptedStepM: number;
+  travelledM: number;
+}
+
 export class PlayerController {
   private readonly body: RigidBody;
   private readonly humanCollider: Collider;
@@ -193,6 +210,8 @@ export class PlayerController {
   private nativeSourceGroundInkGuard = false;
   // F4 research-only KCC observation. Never changes the collision solver.
   private f4KccAuditEnabled=false;
+  private f4ZipResearch: F4ZipResearchRun | null = null;
+  private f4ZipResearchResult: {status:'HOLD'|'RETURNED';reason:string} | null = null;
   private f4LastKccMotion:Readonly<{
     requested:readonly number[];accepted:readonly number[];
     grounded:boolean;contacts:readonly Readonly<{
@@ -281,7 +300,7 @@ export class PlayerController {
 
   /** Current physical hook candidate audit only; no traversal or body movement occurs here. */
   public auditF4ZipGeometry(origin:Vec3,aim:Vec3,rangeM:number) {
-    const v=(p:Vec3)=>[p.x,p.y,p.z];
+    const v=(p:Vec3):[number,number,number]=>[p.x,p.y,p.z];
     if(!this.physics.hasF4WholeResearchTrimesh||this.mode!=='HUMAN'||!this.grounded||
        ![...v(origin),...v(aim),rangeM].every(Number.isFinite)||
        rangeM<=0||rangeM>64||aim.lengthSq()<1e-8)
@@ -329,6 +348,110 @@ export class PlayerController {
         solidId:support?.solidId??null,gapM:landingGap},
       outbound,reverse,groundRoute:{sampleSpacingM:.125,continuousSamples:!firstUnsupported,
         firstUnsupportedFoot:firstUnsupported},originalHookAuthorized:false,liveKccExecuted:false};
+  }
+
+  /** Local fixed wall experiment. The current ray and capsule decide admission. */
+  public beginF4ZipResearch(origin: Vec3, aim: Vec3): void {
+    if(this.f4ZipResearchActive)return;
+    this.f4ZipResearch=null;
+    this.f4ZipResearchResult={status:'HOLD',reason:'STAND_AT_REVIEWED_APPROACH'};
+    const start=this.getPosition();
+    if(Math.hypot(start.x-.075,start.z-57.52)>.55||Math.abs(start.y-8.445)>.16)return;
+    const audit=this.auditF4ZipGeometry(origin,aim,20);
+    if(!audit.witness||!audit.goal||!audit.returnLanding?.solidId||
+       !audit.outbound?.clear||!audit.reverse?.clear||
+       audit.witness.solidId!=='T21_F4_LOCAL_F3L_RESEARCH'||
+       audit.witness.distanceM<15||audit.witness.distanceM>18){
+      this.f4ZipResearchResult={status:'HOLD',reason:audit.reason};
+      return;
+    }
+    const [x,y,z]=audit.goal;
+    const [nx,,nz]=audit.witness.normal;
+    this.f4ZipResearch={
+      leg:'OUTBOUND',start,wallApproach:new Vec3(x,y,z),wallNormal:new Vec3(nx,0,nz).normalize(),
+      wallColliderHandle:audit.witness.colliderHandle,returnSupportId:audit.returnLanding.solidId,
+      hookDistanceM:audit.witness.distanceM,wallContact:null,ticks:0,stalledTicks:0,
+      maxAcceptedStepM:0,travelledM:0
+    };
+    this.f4ZipResearchResult=null;
+    this.velocity.set(0,0,0);
+    this.verticalVelocity=0;
+    this.sourceJumpBufferSeconds=0;
+  }
+
+  public get f4ZipResearchActive(): boolean {return this.f4ZipResearch!==null&&this.f4ZipResearchResult===null;}
+
+  public get f4ZipResearchStatus() {
+    return this.f4ZipResearchResult?.status??this.f4ZipResearch?.leg??'READY';
+  }
+
+  public f4ZipResearchSnapshot() {
+    const run=this.f4ZipResearch;
+    const v=(p:Vec3|null)=>p&&[p.x,p.y,p.z];
+    return {
+      status:this.f4ZipResearchStatus,
+      reason:this.f4ZipResearchResult?.reason??null,
+      originalHookAuthorized:false,
+      hookDistanceM:run?.hookDistanceM??null,
+      start:run?v(run.start):null,wallContact:run?v(run.wallContact):null,
+      position:v(this.position),grounded:this.grounded,ticks:run?.ticks??0,
+      travelledM:run?.travelledM??0,maxAcceptedStepM:run?.maxAcceptedStepM??0
+    };
+  }
+
+  public resetF4ZipResearch(): void {
+    this.f4ZipResearch=null;
+    this.f4ZipResearchResult=null;
+  }
+
+  public cancelF4ZipResearch(reason:string): void {
+    if(this.f4ZipResearchActive)this.f4ZipResearchResult={status:'HOLD',reason};
+  }
+
+  private computeF4ZipResearch(dt:number, bodyPosition: {x:number;y:number;z:number}, run:F4ZipResearchRun): void {
+    const landing=run.leg==='LANDING';
+    this.setSnapToGround(landing);
+    const target=run.leg==='OUTBOUND'?run.wallApproach:run.start;
+    const movement=run.leg==='WALL_CONTACT'?run.wallNormal.clone().mulScalar(-.06):
+      landing?new Vec3(0,-.06,0):target.clone().sub(new Vec3(bodyPosition.x,bodyPosition.y,bodyPosition.z));
+    const distance=movement.length();
+    if(distance>14*dt)movement.mulScalar(14*dt/distance);
+    this.computeKccMovement(bodyPosition,movement,dt);
+  }
+
+  /** Consume the solved movement only after the real Rapier world has stepped. */
+  public observeF4ZipResearch(): void {
+    const run=this.f4ZipResearch;
+    if(!run||!this.f4ZipResearchActive)return;
+    const moved=this.position.distance(this.previousPosition);
+    run.ticks++;
+    run.travelledM+=moved;
+    run.maxAcceptedStepM=Math.max(run.maxAcceptedStepM,moved);
+    run.stalledTicks=moved<.004?run.stalledTicks+1:0;
+    if(run.leg==='OUTBOUND'&&this.position.distance(run.wallApproach)<.035){
+      run.leg='WALL_CONTACT';
+    }else if(run.leg==='WALL_CONTACT'){
+      const wall=this.f4LastKccMotion?.contacts.some(hit=>
+        hit.colliderHandle===run.wallColliderHandle&&
+        hit.normal[0]!*run.wallNormal.x+hit.normal[2]!*run.wallNormal.z>.8);
+      if(wall){
+        run.wallContact=this.position.clone();
+        run.leg='RETURN';
+        run.stalledTicks=0;
+      }else if(this.position.distance(run.wallApproach)>.22){
+        this.cancelF4ZipResearch('REVIEWED_WALL_CONTACT_MISSING');
+      }
+    }else if(run.leg==='RETURN'&&this.position.distance(run.start)<.035){
+      run.leg='LANDING';
+    }else if(run.leg==='LANDING'&&this.grounded){
+      const support=this.physics.castCharacterFootSupport(
+        this.position,PlayerController.humanFootOffset,'HUMAN');
+      this.f4ZipResearchResult=support?.solidId===run.returnSupportId&&
+        (support.normal?.y??0)>=.70&&this.position.distance(run.start)<=.12?
+        {status:'RETURNED',reason:'KCC_WALL_CONTACT_AND_SUPPORTED_RETURN'}:
+        {status:'HOLD',reason:'RETURN_SUPPORT_MISMATCH'};
+    }
+    if(run.stalledTicks>=12||run.ticks>=210)this.cancelF4ZipResearch('KCC_ROUTE_BLOCKED_OR_TIMED_OUT');
   }
 
   public get canShoot(): boolean {
@@ -540,6 +663,11 @@ export class PlayerController {
   public computeFixed(dt: number, twinCometsTrigger?: boolean, saberLunge?: Vec3, mistSpeedScale = 1): void {
     this.mistSpeedScale = mistSpeedScale;
     const bodyPosition = this.body.translation();
+    if(this.f4ZipResearchActive&&this.f4ZipResearch){
+      this.input.consumeJump();
+      this.computeF4ZipResearch(dt,bodyPosition,this.f4ZipResearch);
+      return;
+    }
 
     this.footPoint.set(
       bodyPosition.x,
@@ -849,13 +977,19 @@ export class PlayerController {
       this.velocity.x = saberLunge.x;
       this.velocity.z = saberLunge.z;
     }
+    this.computeKccMovement(bodyPosition,{
+      x:this.velocity.x*dt,y:this.verticalVelocity*dt,z:this.velocity.z*dt
+    },dt);
+    if (this.grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.5;
+    this.stats.playerWeaponDodgeCharges = this.weaponDodgeCharges;
+  }
+
+  private computeKccMovement(
+    bodyPosition:{x:number;y:number;z:number},movement:{x:number;y:number;z:number},dt:number
+  ):void {
     this.character.computeColliderMovement(
       this.activeCollider,
-      {
-        x: this.velocity.x * dt,
-        y: this.verticalVelocity * dt,
-        z: this.velocity.z * dt
-      },
+      movement,
       undefined,
       undefined,
       this.characterCollisionFilter
@@ -874,8 +1008,7 @@ export class PlayerController {
         });
       }
       this.f4LastKccMotion={
-        requested:[this.velocity.x*dt,this.verticalVelocity*dt,
-          this.velocity.z*dt],
+        requested:[movement.x,movement.y,movement.z],
         accepted:[corrected.x,corrected.y,corrected.z],
         grounded:this.grounded,contacts
       };
@@ -893,8 +1026,6 @@ export class PlayerController {
       z: bodyPosition.z + corrected.z
     });
 
-    if (this.grounded && this.verticalVelocity < 0) this.verticalVelocity = -0.5;
-    this.stats.playerWeaponDodgeCharges = this.weaponDodgeCharges;
   }
 
   public syncAfterPhysics(dt?: number): void {
