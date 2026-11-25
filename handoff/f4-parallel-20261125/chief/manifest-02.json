@@ -1,0 +1,66 @@
+{
+  "base": "2a2399f374c1deba45e5dbe1d8a7fdd4aa90199c",
+  "previous": "40832b8e741b058c4a1b19827dc6c48b547ea96a",
+  "passed": [
+    {
+      "id": "cpu-navigation",
+      "patches": [
+        {
+          "p": "cpu-navigation/traffic.patch",
+          "sha": "6814e97be20f46c2a4b5768de0bfa8d960abb53a"
+        },
+        {
+          "p": "cpu-navigation/patrol-survey.patch",
+          "sha": "cbf63e226c693b0e7e9a86e236757a3725619fa3"
+        }
+      ],
+      "modules": [
+        {
+          "p": "cpu-navigation/F4PatrolNavigation.mjs",
+          "sha": "ba9cd649fded0058e55ec582f992200b6c3e679d"
+        },
+        {
+          "p": "cpu-navigation/F4PatrolNavigation.d.mts",
+          "sha": "2f590698d0853c0c6401a5948f0ee1b3f8a5fc72"
+        },
+        {
+          "p": "cpu-navigation/F4PatrolSurvey.mjs",
+          "sha": "2ae71ddfff51a7cf6e4e53211e1adcdbc6ee0e88"
+        },
+        {
+          "p": "cpu-navigation/F4PatrolSurvey.d.mts",
+          "sha": "c5d524623a6268bb18d8f684afb995b99b377162"
+        }
+      ]
+    },
+    {
+      "id": "cpu-combat-local",
+      "patches": [
+        {
+          "p": "cpu-combat/traffic.patch",
+          "sha": "63cbca95a2f4094d75e96df0f0ee17468ccf8bbf"
+        }
+      ],
+      "modules": [
+        {
+          "p": "cpu-combat/F4LocalCombat.mjs",
+          "sha": "7fbe8c42ed30746ece037b6077aab8195c4b8b56"
+        },
+        {
+          "p": "cpu-combat/F4LocalCombat.d.mts",
+          "sha": "f9ffa4195c4b67ba79b4a6590e00a5519be5a8c7"
+        }
+      ]
+    }
+  ],
+  "held": [],
+  "blobs": {
+    "src/app/UndertowF3SourceTraffic.ts": "b9159b80a8dcae5520068455129abbc13d03fea3",
+    "src/app/F4LocalCombat.mjs": "e6a4f880ba00bf2e72e3163709bf5c675db74df4",
+    "src/ai/CpuAgentSystem.ts": "7927e774962904418abc693ea53d05d934e75d25",
+    "src/app/F4LocalCombat.d.mts": "033e9fd47b3e7c4cc3e3520c02cafd9bf122c85f"
+  },
+  "replay": 35,
+  "files": 27,
+  "nativeBuild": "NOT_RUN"
+}
