@@ -1,0 +1,70 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -70,1 +70,2 @@
+-import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
++import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
++import {F4PatrolNavigation,type PatrolCandidate,type PatrolInk} from '../ai/F4PatrolNavigation.mjs';
+@@ -620,1 +621,2 @@
+- private readonly f4WholeDirections=new Map<string,number>();
++ private readonly f4WholeDirections=new Map<string,number>();
++ private readonly f4PatrolNavigation=new F4PatrolNavigation();
+@@ -1894,2 +1896,4 @@
+-  this.f4WholeGoals.delete(id);
+-  const request=(point:Vec3,local:boolean)=>{
++  if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
++  this.f4WholeGoals.delete(id);
++  const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
++  const request=(point:Vec3,local:boolean)=>{
+@@ -1905,3 +1909,3 @@
+-   if(point){
+-    return request(point,false);
+-   }
++   if(point&&!avoids(point)){
++    return request(point,false);
++   }
+@@ -1925,1 +1929,1 @@
+-   if(point)return request(point,false);
++   if(point&&!avoids(point))return request(point,false);
+@@ -1937,1 +1941,1 @@
+-   if(point)return request(point,false);
++   if(point&&!avoids(point))return request(point,false);
+@@ -1951,2 +1955,2 @@
+-   if(!point)continue;
+-   return request(point,false);
++   if(!point||avoids(point))continue;
++   return request(point,false);
+@@ -1957,2 +1961,2 @@
+-  const first=reached?
+-   0:this.f4WholeDirections.get(id)??0;
++  const first=this.f4WholeDirections.get(id)??0;
++  const localCandidates:PatrolCandidate<Vec3>[]=[];
+@@ -1965,5 +1969,14 @@
+-   if(!projection.success||!goal||!this.sourceNativeCharacterFootHit(goal)||
+-      Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
+-      Math.abs(goal.y-foot.y)>.7)continue;
+-   const point=this.f4WholeWalkTarget(foot,new Vec3(goal.x,goal.y,goal.z));
+-   if(!point)continue;
++   if(!projection.success||!goal||
++      Math.hypot(goal.x-candidate.x,goal.z-candidate.z)>.28||
++      Math.abs(goal.y-foot.y)>.7)continue;
++   const floor=this.sourceNativeCharacterFootHit(goal);
++   if(!floor)continue;
++   const sample=this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++   const ink:PatrolInk=!sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
++   localCandidates.push({point:new Vec3(goal.x,goal.y,goal.z),ink,order:i,index});
++  }
++  const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
++   a.mobilityState==='GROUND'&&(a.hp??0)>0).map(a=>a.position);
++  for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,localCandidates,allies)){
++   const point=this.f4WholeWalkTarget(foot,candidate.point);
++   if(!point||avoids(point))continue;
+@@ -1972,1 +1985,1 @@
+-   this.f4WholeDirections.set(id,(index+1)%directions.length);
++   this.f4WholeDirections.set(id,(candidate.index+1)%directions.length);
+@@ -4213,2 +4226,3 @@
+-   this.f4WholeDirections.delete(id);
+-   this.f4LastSeenOpponent.delete(id);
++   this.f4WholeDirections.delete(id);
++   this.f4PatrolNavigation.clear(id);
++   this.f4LastSeenOpponent.delete(id);
