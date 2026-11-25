@@ -1,0 +1,21 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -248,14 +248,15 @@
+     for (let y = minY; y <= maxY; y += 1) {
+       const cellV = (y + 0.5) * surface.cellSize;
+       const dy = cellV - event.centerV;
++      const dySin = dy * s, dyCos = dy * c;
+       let startX = -1;
+       for (let x = minX; x <= maxX; x += 1) {
+         testedCells += 1;
+         const cellU = (x + 0.5) * surface.cellSize;
+         const dx = cellU - event.centerU;
+ 
+-        const ellipseU = dx * c + dy * s;
+-        const ellipseV = -dx * s + dy * c;
++        const ellipseU = dx * c + dySin;
++        const ellipseV = -dx * s + dyCos;
+         const normalized = ellipseU * ellipseU * invRadiusUSq + ellipseV * ellipseV * invRadiusVSq;
+         const index = surface.index(x, y);
+         const eligible = Number.isFinite(normalized) && normalized <= 1 &&

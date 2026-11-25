@@ -1,0 +1,57 @@
+diff --git a/src/ink/F4ProvisionalTurf.mjs b/src/ink/F4ProvisionalTurf.mjs
+--- a/src/ink/F4ProvisionalTurf.mjs
++++ b/src/ink/F4ProvisionalTurf.mjs
+@@ -9,21 +9,28 @@
+       !Number.isFinite(s.normal.y)||Math.abs(s.normal.y)<.1)continue;
+    const n=s.widthCells*s.heightCells;
+    if(!Number.isSafeInteger(n)||n<=0||s.ownerGrid.length!==n||s.flagsGrid.length!==n)throw Error('invalid provisional raster');
+-   const weights=new Float64Array(n);weights.fill(-1);
+-   const row={s,weights};this.#rows.set(s,row);this.#queue.push(row);this.#count+=n;
++   // 0 = unvisited, 1 = zero weight, 2 = positive weight. Dimensions
++   // and normal are immutable for the registered PaintSurface lifetime.
++   // One byte per cell, plus separable exact axis extents.
++   const state=new Uint8Array(n);
++   const u=new Float64Array(s.widthCells),v=new Float64Array(s.heightCells);
++   for(let x=0;x<u.length;x++)u[x]=Math.max(0,Math.min(s.cellSize,s.widthMeters-x*s.cellSize));
++   for(let y=0;y<v.length;y++)v[y]=Math.max(0,Math.min(s.cellSize,s.heightMeters-y*s.cellSize));
++   const row={s,state,u,v,normalY:Math.abs(s.normal.y)};this.#rows.set(s,row);this.#queue.push(row);this.#count+=n;
+   }
+  }
+  #visit(row,index){
+-  const {s,weights}=row;if(weights[index]>=0)return weights[index];
++  const {s,state,u,v,normalY}=row;
++  const status=state[index];
++  if(status===1)return 0;
+   const x=index%s.widthCells,y=Math.floor(index/s.widthCells);
++  if(status===2)return u[x]*v[y]*normalY;
+   let w=0;
+   if((s.flagsGrid[index]&PAINT)&&!(s.flagsGrid[index]&WALL)&&s.isCellActive(x,y)&&this.#backed(s,x,y,index)){
+-   const du=Math.max(0,Math.min(s.cellSize,s.widthMeters-x*s.cellSize));
+-   const dv=Math.max(0,Math.min(s.cellSize,s.heightMeters-y*s.cellSize));
+-   w=du*dv*Math.abs(s.normal.y);
++   w=u[x]*v[y]*normalY;
+    if(!Number.isFinite(w)||w<0)throw Error('invalid projected weight');
+   }
+-  weights[index]=w;this.#scanned++;this.#total+=w;
++  state[index]=w>0?2:1;this.#scanned++;this.#total+=w;
+   if(s.ownerGrid[index]===1)this.#a+=w;else if(s.ownerGrid[index]===-1)this.#b+=w;
+   return w
+  }
+@@ -31,14 +38,14 @@
+   if(this.#final||!Number.isSafeInteger(limit)||limit<=0)return;
+   for(let i=0;i<limit&&this.#row<this.#queue.length&&keepGoing();i++){
+    const row=this.#queue[this.#row];this.#visit(row,this.#cursor++);
+-   if(this.#cursor===row.weights.length){this.#row++;this.#cursor=0}
++   if(this.#cursor===row.state.length){this.#row++;this.#cursor=0}
+   }
+  }
+  // Called immediately before the actual raster writes ownerGrid[index].
+  beforeChange(surface,index,oldOwner,newOwner){
+   if(this.#final||oldOwner===newOwner||surface.ownerGrid[index]!==oldOwner||
+-     ![0,1,-1].includes(oldOwner)||![1,-1].includes(newOwner))return 0;
+-  const row=this.#rows.get(surface);if(!row||!Number.isSafeInteger(index)||index<0||index>=row.weights.length)return 0;
++     (oldOwner!==0&&oldOwner!==1&&oldOwner!==-1)||(newOwner!==1&&newOwner!==-1))return 0;
++  const row=this.#rows.get(surface);if(!row||!Number.isSafeInteger(index)||index<0||index>=row.state.length)return 0;
+   const w=this.#visit(row,index);
+   if(oldOwner===1)this.#a-=w;else if(oldOwner===-1)this.#b-=w;
+   if(newOwner===1)this.#a+=w;else this.#b+=w;

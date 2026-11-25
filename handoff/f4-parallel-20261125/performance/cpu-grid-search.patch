@@ -1,0 +1,72 @@
+diff --git a/src/ai/B216OriginalSourceBackfillInk.ts b/src/ai/B216OriginalSourceBackfillInk.ts
+--- a/src/ai/B216OriginalSourceBackfillInk.ts
++++ b/src/ai/B216OriginalSourceBackfillInk.ts
+@@ -167,6 +167,9 @@
+     weaponRangeMeters<1.3||minimumTargetMeters<1||
+     minimumTargetMeters>weaponRangeMeters)return [];
+  const radius=Math.min(12,weaponRangeMeters);
++ const minimumSq=minimumTargetMeters*minimumTargetMeters, radiusSq=radius*radius;
++ const footPoint=new Vec3(foot.x,foot.y,foot.z), pointScratch=new Vec3();
++ const projectionScratch={u:0,v:0,signedPlaneDistance:0,planeDistance:0,inside:false};
+  // Bound actual original-cell candidates to at most TWO per angular
+  // sector and near/far band. A blocked closest cell must not mask a
+  // different already-registered unpainted cell in that same sector.
+@@ -186,8 +189,7 @@
+      (surface.baseFlags&SurfaceFlags.Paintable)===0||
+      (surface.baseFlags&SurfaceFlags.Floor)===0||
+      (surface.baseFlags&SurfaceFlags.Wall)!==0)continue;
+-  const projected=surface.projectWorldPoint(
+-   new Vec3(foot.x,foot.y,foot.z));
++  const projected=surface.projectWorldPoint(footPoint,projectionScratch);
+   // Basis projection is used ONLY to limit the iteration region.
+   // It grants no floor/support. Leave room for true sloped surfaces.
+   // Never skip odd raster cells: the earlier 0.5m stride skipped a
+@@ -211,31 +213,36 @@
+      continue;
+     const point=surface.localToWorld(
+      Math.min(surface.widthMeters,(x+.5)*surface.cellSize),
+-     Math.min(surface.heightMeters,(y+.5)*surface.cellSize));
+-    if(!surface.projectWorldPoint(point).inside||
+-       Math.abs(point.y-foot.y)>2)continue;
++     Math.min(surface.heightMeters,(y+.5)*surface.cellSize),pointScratch);
++    if(Math.abs(point.y-foot.y)>2)continue;
+     const dx=point.x-foot.x,dz=point.z-foot.z;
+     const distanceSq=dx*dx+dz*dz;
+     // Filter actual weapon throw-range BEFORE the nearest-in-sector
+     // reduction. Otherwise 1.0m neutral ink hides a real reachable
+     // 3.0m target in the same direction; SUB is >=2.6m by design.
+-    if(distanceSq<minimumTargetMeters*minimumTargetMeters||
+-       distanceSq>radius*radius)continue;
++    if(distanceSq<minimumSq||distanceSq>radiusSq||
++       !surface.projectWorldPoint(point,projectionScratch).inside)continue;
+     const angle=(Math.atan2(dz,dx)+Math.PI)/(2*Math.PI);
+     const sector=Math.min(15,Math.floor(angle*16));
+     const key=sector+(distanceSq>25?16:0);
+-    const current={distanceSq,point,angle};
+     const previous=picked.get(key);
++    // Most cells do not replace a bucket extreme. Allocate a retained
++    // independent point only when the exact existing comparisons select it.
+     if(!previous){
++     const current={distanceSq,point:point.clone(),angle};
+      picked.set(key,{nearest:current,farthest:current,
+       left:current,right:current});
+     }else{
+-     if(distanceSq<previous.nearest.distanceSq)
+-      previous.nearest=current;
+-     if(distanceSq>previous.farthest.distanceSq)
+-      previous.farthest=current;
+-     if(angle<previous.left.angle)previous.left=current;
+-     if(angle>previous.right.angle)previous.right=current;
++     const nearest=distanceSq<previous.nearest.distanceSq;
++     const farthest=distanceSq>previous.farthest.distanceSq;
++     const left=angle<previous.left.angle;
++     const right=angle>previous.right.angle;
++     if(!nearest&&!farthest&&!left&&!right)continue;
++     const current={distanceSq,point:point.clone(),angle};
++     if(nearest)previous.nearest=current;
++     if(farthest)previous.farthest=current;
++     if(left)previous.left=current;
++     if(right)previous.right=current;
+     }
+    }
+   }
