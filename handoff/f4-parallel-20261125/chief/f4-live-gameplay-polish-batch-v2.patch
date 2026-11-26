@@ -1,0 +1,533 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1466,9 +1466,15 @@
+    this.humanSub.enableF4Bombs(this.projectiles);
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
+     const launchLife=(id:string):string|null=>{
+-     if(id==='human')return this.resources.currentHp>0?String(this.f4SpecialLife):null;
+-     const actor=this.cpu.f4NaturalActor(id);
+-     return actor?.alive?actor.lifeId:null;
++     const special=this.f4Special;
++     if(!special)return null;
++     if(id==='human'){
++      const lifeId=String(this.f4SpecialLife);
++      return this.resources.currentHp>0&&!this.player.f4ZipNaturalActive&&
++       !special.naturalPaintBlocked(id,lifeId,this.clock.tick)?lifeId:null;
++     }
++     const actor=this.cpu.f4NaturalActor(id);
++     return actor?.alive&&!special.naturalPaintBlocked(id,actor.lifeId,this.clock.tick)?actor.lifeId:null;
+     };
+     this.humanSub.useF4GaugeLaunchLife(launchLife);
+     this.projectiles.useF4GaugeLaunchLife(launchLife);
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -81,9 +81,13 @@
+   }
+   setNaturalOpen(open:boolean):void {this.naturalOpen=open;}
+   syncNaturalActor(actor:Actor,alive:boolean):void {this.naturalGauge.sync(actor,alive);}
+-  creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
+-    return this.naturalGauge.credit(actor,alive,area,this.ownsWeaponInput(actor.actorId,this.frame)||this.cpuZipLives.get(actor.actorId)===actor.lifeId);
+-  }
++  /** Capture special paint exclusion both at launch and at raster credit. */
++  naturalPaintBlocked(actorId:string,lifeId:string,tick:number):boolean {
++    return this.ownsWeaponInput(actorId,tick)||this.cpuZipLives.get(actorId)===lifeId;
++  }
++  creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
++    return this.naturalGauge.credit(actor,alive,area,this.naturalPaintBlocked(actor.actorId,actor.lifeId,this.frame));
++  }
+   naturalReady(actorId:string,tick:number):boolean {
+     const state=this.naturalGauge.state(actorId);
+     return tick>=0&&tick<10800&&this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -10,7 +10,8 @@
+  */
+ import {Vec3} from 'playcanvas';
+ import {F4PatrolNavigation,localPatrolProgress,localPatrolCanContinue,type PatrolCandidate,type PatrolInk,type PatrolPoint} from '../ai/F4PatrolNavigation.mjs';
+-import {recoveringInk} from '../ai/F4CpuRecoveryPolicy.mjs';
++import {recoveringInk} from '../ai/F4CpuRecoveryPolicy.mjs';
++import {chooseF4PhysicalSight} from '../ai/F4CpuAttackPolicy.mjs';
+ import {F4PatrolSurvey} from '../ai/F4PatrolSurvey.mjs';
+ import type {CrowdAgent} from 'recast-navigation';
+ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+@@ -1633,10 +1634,16 @@
+   const lastHit=bot.b213ActualHitTick??-1;
+   const attacker=lookBeyondWeapon&&lastHit>=0&&Math.abs(this.b137NativeTick-lastHit)<=72?
+    bot.b213ActualAttackerId??null:null;
+-  return chooseB181OriginalSourceSight(
+-   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
+-    new Vec3(from.x,from.y,from.z),
+-    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
++  // Whole F4 navigation and paid main fire share the same 3D sight
++  // selector. The older photo-route research keeps its original optics.
++  if(this.f4WholeSupport)return chooseF4PhysicalSight(
++   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
++    new Vec3(from.x,from.y,from.z),
++    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
++  return chooseB181OriginalSourceSight(
++   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
++    new Vec3(from.x,from.y,from.z),
++    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
+  }
+ 
+  /** Sight can inform a Crowd intention outside weapon range; only the paid
+@@ -1656,15 +1663,22 @@
+    });
+   }
+   const seen=this.f4LastSeenOpponent.get(bot.id);
+-  if(!seen||this.b137NativeTick-seen.tick>72||
+-     (seen.id==='HUMAN'?!this.f4LiveHuman:!this.physicallyRejoined.has(seen.id))){
++  // Rejoin membership alone can lag a genuine splat until observe().
++  // Never pursue a dead actor or another life's stale sight position.
++  const seenCpu=seen&&seen.id!=='HUMAN'?this.bots.find(b=>b.id===seen.id):null;
++  if(!seen||this.b137NativeTick-seen.tick>72||
++     (seen.id==='HUMAN'?this.f4LiveHuman?.tick!==this.b137NativeTick:
++      !seenCpu||!sourceNativeLiveRejoinedCpu(seenCpu,this.physicallyRejoined))){
+    this.f4LastSeenOpponent.delete(bot.id);
+    return null;
+   }
+   const target=seen.point;
+-  const dx=target.x-foot.x,dz=target.z-foot.z;
+-  const distance=Math.hypot(dx,dz);
+-  if(distance<.2)return null;
++  const dx=target.x-foot.x,dz=target.z-foot.z;
++  const horizontal=Math.hypot(dx,dz);
++  if(horizontal<.2)return null;
++  // Steering remains planar, but the firing envelope is measured from
++  // the real muzzle to the same physical body sample used by sight.
++  const distance=Math.hypot(dx,target.y-foot.y-GAME_CONFIG.cpu.muzzleHeightMeters,dz);
+   const recovering=(bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
+    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
+    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+@@ -1677,7 +1691,7 @@
+      foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+      this.b137NativeTick-previous.advanced<30)return result(previous.point);
+ 
+-  const forwardX=dx/distance,forwardZ=dz/distance;
++  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+   const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
+   if(!spacingPlan)return null;
+   const advance=spacingPlan.advance;
+@@ -1699,7 +1713,7 @@
+    const covered=!!this.physics.castStageSegment(muzzle,target,'ink-projectile');
+    // Healthy CPUs keep or regain a real firing lane. Wounded CPUs favor
+    // existing cover and owned ink, even if that puts their own gun offline.
+-   const spacing=Math.hypot(p.x-target.x,p.z-target.z);
++   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
+    const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
+     covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit});
+    candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
+@@ -4342,10 +4356,17 @@
+   if(this.f4WholeSupport){
+    this.f4WholeGoals.delete(id);
+    this.f4WholeDirections.delete(id);
+-   this.f4PatrolNavigation.clear(id);
+-   this.f4PatrolSurvey.clear(id);
+-   this.f4LastSeenOpponent.delete(id);
+-   return;
++   this.f4PatrolNavigation.clear(id);
++   this.f4PatrolSurvey.clear(id);
++   this.f4LastSeenOpponent.delete(id);
++   // A respawn starts a new life: invalidate other actors' old sightings.
++   // Their next native thought may reacquire through actual current sight.
++   for(const [observer,seen] of this.f4LastSeenOpponent){
++    if(seen.id!==id)continue;
++    this.f4LastSeenOpponent.delete(observer);
++    if(this.f4WholeGoals.get(observer)?.opponent===id)this.f4WholeGoals.delete(observer);
++   }
++   return;
+   }
+   this.f4OriginalPatrol?.delete(id);
+   this.f4GuideProgress?.delete(id);
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -4027,7 +4027,23 @@
+     if(!aim||aim.weaponId!==bot.weaponId||
+        bot.lifeState!=='ACTIVE'||bot.hp<=0||
+-       bot.mobilityState!=='GROUND'||!bot.agent||
+-       !this.b216SourceStageAimValidated||
+-       !this.sampleRegisteredSourceFoot(bot))return null;
++       bot.mobilityState!=='GROUND'||!bot.agent)return null;
++    if(this.f4WholeNavigation){
++      // Whole F4 has no legacy B216 floor-sight opt-in. Revalidate a
++      // committed floor aim using its actual support, paint surface and ray.
++      const ray=this.f4ResearchCombatStageRay;
++      const support=this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position);
++      const paint=this.gameplayInk.sampleWorld(aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++      if(!ray||!support||Math.abs(support.point.y-bot.position.y)>.25||
++         !paint||paint.surface.isScoreable||!this.cpuTargetInRange(bot,aim.target,profile))return null;
++      const muzzle=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++      const delta=aim.target.clone().sub(muzzle);
++      const distance=delta.length();
++      if(!Number.isFinite(distance)||distance<=.12)return null;
++      // The aim ends on the floor itself. Check the open segment before
++      // contact; actual projectile collision remains authoritative.
++      const end=muzzle.clone().add(delta.mulScalar((distance-.08)/distance));
++      return ray(muzzle,end)?null:aim.target;
++    }
++    if(!this.b216SourceStageAimValidated||!this.sampleRegisteredSourceFoot(bot))return null;
+     const paint=this.gameplayInk.sampleWorld(
+       aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+@@ -4220,10 +4236,8 @@
+     }
+     // A STRINGER or SPLATANA needs several true 60Hz ticks to charge.
+-    // User-selected SOURCE only: retain and independently revalidate its
+-    // REAL source floor aim through changing/no new raster proposals.
+-    // No enemy target, phantom shot, extra ink or unapproved path is held.
+-    // Charger/Splatling and all other game modes keep their old policy.
+-    const selectedSourceChargeWeapon=this.b215SelectedBattlePaintPacing&&
+-      (profile.weaponClass==='STRINGER'||profile.weaponClass==='SPLATANA');
++    // Retain a real floor aim through charge/burst only in the opted-in
++    // SOURCE paths or whole F4. Never retain a hidden enemy aim here.
++    const selectedSourceChargeWeapon=(this.b215SelectedBattlePaintPacing||this.f4WholeNavigation)&&
++      (profile.weaponClass==='STRINGER'||profile.weaponClass==='SPLATANA');
+     const chargedSourceWeapon=canTurfPaint&&
+       (profile.weaponClass==='CHARGER'||
+@@ -4237,15 +4251,17 @@
+       // found lateral patch mid-shot. Keep the previous aim only while
+       // current ownerGrid, range, original foot and stage ray still pass.
+-      if(selectedSourceChargeWeapon&&continuingCharge){
+-        const retained=this.revalidateSourceCommittedPaintAim(bot,profile);
+-        if(retained)turfTarget=retained;
+-      }
+-      if(turfTarget){
+-        this.sourceCommittedPaintAims.set(bot.id,{
+-          weaponId:bot.weaponId,target:turfTarget.clone()
+-        });
+-      }else if(continuingCharge){
+-        turfTarget=this.revalidateSourceCommittedPaintAim(bot,profile);
+-        if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
++      const preferRetained=continuingCharge&&(selectedSourceChargeWeapon||this.f4WholeNavigation);
++      if(preferRetained){
++        const retained=this.revalidateSourceCommittedPaintAim(bot,profile);
++        if(retained)turfTarget=retained;
++      }
++      if(turfTarget){
++        this.sourceCommittedPaintAims.set(bot.id,{
++          weaponId:bot.weaponId,target:turfTarget.clone()
++        });
++      }else if(continuingCharge){
++        // Do not repeat the same physical query if already rejected above.
++        turfTarget=preferRetained?null:this.revalidateSourceCommittedPaintAim(bot,profile);
++        if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
+       }else{
+         this.sourceCommittedPaintAims.delete(bot.id);
+diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
+--- a/src/input/PlayerInput.ts
++++ b/src/input/PlayerInput.ts
+@@ -37,7 +37,9 @@
+     this.primaryPressedQueued=false;this.secondaryPressedQueued=false;
+     this.jumpQueued=false;this.sourceSquidTapQueued=false;
+     this.sourceMovementTapCodes.clear();this.subPressedQueued=false;
+-    this.specialPressedQueued=false;this.jumpRequiresRelease=!this.combatInputActive;
++    // Focus loss discards all held keys; a fresh non-repeat press can
++    // rearm jump, while an OS repeat is still rejected by keydown.
++    this.specialPressedQueued=false;this.jumpRequiresRelease=false;
+   }
+ 
+   // Mouse move may be the first event after a missed pointerup. Reconcile
+@@ -138,8 +140,12 @@
+       }
+       // Space is one physical jump/charge intent. A held key across death
+       // must be released before a new life can arm jump or wall surge.
+-      if(event.code==='Space' &&
+-         (!this.combatInputActive||this.jumpRequiresRelease)){
++      // A real Space press during a splat must be released before respawn.
++      // Do not arm the latch for a death in which Space was never held.
++      if(this.f4ProvisionalControls&&event.code==='Space'&&!this.combatInputActive)
++        this.jumpRequiresRelease=true;
++      if(event.code==='Space' &&
++         (!this.combatInputActive||this.jumpRequiresRelease)){
+         event.preventDefault();
+         return;
+       }
+@@ -205,7 +211,7 @@
+       this.sourceMovementTapCodes.clear();
+       this.subPressedQueued = false;
+       this.specialPressedQueued = false;
+-      this.jumpRequiresRelease = !this.combatInputActive;
++      this.jumpRequiresRelease = !this.f4ProvisionalControls&&!this.combatInputActive;
+     };
+ 
+     window.addEventListener('blur', clearGameplayState);
+@@ -300,8 +306,10 @@
+   /** Only the actual native human HP=0 and 150-tick life recovery call this.
+    * Preserve user movement, mouse lock and actual Rapier pose. */
+   public setCombatInputActive(active:boolean):void {
+-    if(this.combatInputActive===active)return;
+-    this.combatInputActive=active;
++    if(this.combatInputActive===active)return;
++    // Capture the real held state before clearing the old life's inputs.
++    const spaceWasHeld=this.keys.has('Space');
++    this.combatInputActive=active;
+     this.fire=false;
+     this.primaryPressedQueued=false;
+     this.secondary=false;
+@@ -321,9 +329,10 @@
+       this.keys.delete('KeyF');
+       this.keys.delete('KeyG');
+     }
+-    // A physical Space keyup (not an automatic key repeat) rearms jump
+-    // after death; no modification to Rapier, movement, CPU or ink.
+-    if(!active)this.jumpRequiresRelease=true;
++    // Only an actual held Space requires release in whole F4.
++    // Older SOURCE/T20 retain their original unconditional death latch.
++    if(!active)this.jumpRequiresRelease=!this.f4ProvisionalControls||
++      this.jumpRequiresRelease||spaceWasHeld;
+     // On native respawn, preserve the release latch until a genuine keyup.
+     // Otherwise an OS repeat from Space held through death could rearm it.
+   }
+diff --git a/src/app/F4ActorArt.mjs b/src/app/F4ActorArt.mjs
+--- a/src/app/F4ActorArt.mjs
++++ b/src/app/F4ActorArt.mjs
+@@ -152,8 +152,13 @@
+   if(disposed||!Number.isFinite(swing)||swing===lastStride)return;
+   lastStride=swing;
+-  nodes.get("left-leg").setLocalEulerAngles(swing,0,0);
+-  nodes.get("right-leg").setLocalEulerAngles(-swing,0,0);
+-  nodes.get("left-boot").setLocalEulerAngles(swing*.6,0,0);
+-  nodes.get("right-boot").setLocalEulerAngles(-swing*.6,0,0);
++  // Rotate about the hips without inheriting nonuniform mesh scales.
++  for(const [side,x,angle] of [["left",-.19,swing],["right",.19,-swing]]){
++   const a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
++   const leg=nodes.get(side+"-leg"),boot=nodes.get(side+"-boot");
++   leg.setLocalPosition(x,-.30-.27*c,-.27*s);
++   leg.setLocalEulerAngles(angle,0,0);
++   boot.setLocalPosition(x,-.30-.55*c+.10*s,-.55*s-.10*c);
++   boot.setLocalEulerAngles(angle,0,0);
++  }
+   nodes.get("left-arm").setLocalEulerAngles(weaponId==="twin-comets"?-25:-swing*.45,0,-10);
+  }
+@@ -166,5 +171,6 @@
+   const swing=['metro-roller','dash-brush','wave-slosher','ink-saber'].includes(weaponId);
+   weaponRoot.setLocalPosition(0,0,(swing ? .025 : .085)*amount);
+-  weaponRoot.setLocalEulerAngles((swing ? -18 : -5)*amount,0,0);
++  weaponRoot.setLocalEulerAngles((swing ? -18 : -5)*amount,0,0);
++  nodes.get("right-arm").setLocalEulerAngles(-25-(swing?16:5)*amount,0,12);
+  }
+  return {root,setWeapon,setStride,setInk,setRecoil,destroy(){if(!disposed){disposed=true;root.destroy();}}};
+diff --git a/src/feedback/F4AudioBus.mjs b/src/feedback/F4AudioBus.mjs
+--- a/src/feedback/F4AudioBus.mjs
++++ b/src/feedback/F4AudioBus.mjs
+@@ -1,4 +1,4 @@
+ // F4 presentation only: one shared context and bounded wet audio voices per canvas.
+-export function priorityFor(cue){return ['SPLAT','RESPAWN','CPU_SPLAT','TIME_UP'].includes(cue)?3:['CPU_HIT','HURT','EXPLODE'].includes(cue)?2:0;}
++export function priorityFor(cue){return ['SPLAT','RESPAWN','CPU_SPLAT','TIME_UP'].includes(cue)?3:['CPU_HIT','HURT','EXPLODE'].includes(cue)?2:['SHOT','DRY','THROW'].includes(cue)?1:0;}
+ 
+ export function weaponTexture(kind){
+@@ -8,5 +8,6 @@
+ }
+ 
+-export function voiceAdmission(active,priority){return Number.isInteger(active)&&active>=0&&active<(priority>=3?12:priority>=2?10:8);}
++// Reserve one voice for local controls without consuming damage reserves.
++export function voiceAdmission(active,priority){return Number.isInteger(active)&&active>=0&&active<(priority>=3?12:priority>=2?10:priority>=1?9:8);}
+ function finishVoice(record,stop=false){if(record.finished)return;record.finished=true;for(const source of record.sources){source.onended=null;if(stop)try{source.stop(record.ctx.currentTime);}catch{}}for(const node of record.nodes)try{node.disconnect();}catch{}if(record.bus.live.delete(record))record.bus.active=record.bus.live.size;}
+ function resetVoices(bus){for(const voice of [...bus.live])finishVoice(voice,true);bus.last.clear();}
+diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
+--- a/src/feedback/GameFeedback.ts
++++ b/src/feedback/GameFeedback.ts
+@@ -2,7 +2,7 @@
+ import { GAME_CONFIG } from '../config/game/gameConfig';
+ import { Team } from '../ink/types';
+ import type { WeaponClass, WeaponProfile } from '../weapons/WeaponCatalog';
+-import {chooseSlot,droplet,pose} from './F4FeedbackMotion.mjs';
++import {chooseSlot,droplet,pose,particleBudget} from './F4FeedbackMotion.mjs';
+ import {spatial,eventTone} from './F4SpatialAudio.mjs';
+ import {sourceShotTone,type SourceCue} from '../audio/SourcePracticeAudio';
+ import {f4AudioBus,weaponTexture,type F4Texture} from './F4AudioBus.mjs';
+@@ -226,7 +226,7 @@
+     this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
+     if(this.f4Presentation){
+       const tone=sourceShotTone(profile.id);
+-      if(this.playTone(245*profile.audioPitch,(localPlayer?.025:.014)*tone.volume,.065*tone.length,tone.wave,130/245,0,localPlayer?undefined:position,weaponTexture(profile.weaponClass),localPlayer?'local-shot':'remote-shot')&&localPlayer)this.handledCues.add('SHOT');
++      if(this.playTone(245*profile.audioPitch,(localPlayer?.025:.014)*tone.volume,.065*tone.length,tone.wave,130/245,localPlayer?1:0,localPlayer?undefined:position,weaponTexture(profile.weaponClass),localPlayer?'local-shot':'remote-shot')&&localPlayer)this.handledCues.add('SHOT');
+       return;
+     }
+     if(this.playTone(
+@@ -588,8 +588,14 @@
+ 
+   private spray(team:Team.A|Team.B,at:Vec3,count:number,size:number,speed:number,up:number,ttl:number,priority:number):void {
+     if(!this.f4Presentation||![at.x,at.y,at.z,size,speed,up,ttl].every(Number.isFinite))return;
+-    this.phase=(this.phase+2.399963229728653)%(2*Math.PI);
+-    for(let i=0;i<count;i++){
++    if(this.listener){
++      const [x,y,z]=this.listener;
++      const dx=at.x-x,dy=at.y-y,dz=at.z-z;
++      count=particleBudget(count,dx*dx+dy*dy+dz*dz);
++    }
++    if(count<=0)return;
++    this.phase=(this.phase+2.399963229728653)%(2*Math.PI);
++    for(let i=0;i<count;i++){
+       const [vx,vy,vz]=droplet(i,count,this.phase,speed,up);
+       const slot=this.spawnFx(team,at,size,ttl,'DROP',priority);
+       if(!slot)break;
+diff --git a/src/app/F4MatchFlowExtras.mjs b/src/app/F4MatchFlowExtras.mjs
+--- a/src/app/F4MatchFlowExtras.mjs
++++ b/src/app/F4MatchFlowExtras.mjs
+@@ -95,5 +95,6 @@
+   for(const [key,tile] of statNodes)if(!data.some(x=>x.label===key))hide(tile.box,true);
+  };
+- return {render(frame){if(disposed)return;current=frame;prior.render(frame);sync();renderStats(frame)},
++ // The wrapper owns the validated result tiles; suppress the duplicate.
++ return {render(frame){if(disposed)return;current=frame;prior.render({...frame,matchSummary:null});sync();renderStats(frame)},
+   dispose(){if(disposed)return;disposed=true;current=null;select?.removeEventListener('change',sync);grid.remove();stats.remove();style.remove();prior.dispose()}};
+ }
+diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
+--- a/src/ink/InkSurfaceMaterial.ts
++++ b/src/ink/InkSurfaceMaterial.ts
+@@ -61,10 +61,14 @@
+   float wetness = clamp(ink.b, 0.0, 1.0) * coverage;
+   vec3 teamColor = mix(uTeamBColor, uTeamAColor, step(0.5, ink.r));
+   vec3 color = mix(uNeutralColor, teamColor, coverage);
+-  float worldPattern = 0.965 + 0.035 * sin(vWorldPos.x * 1.6 + vWorldPos.z * 1.2);
+-  color *= worldPattern;
+-  color += vec3(0.10, 0.12, 0.14) * wetness;
+-  if (uSourceWetInkStyle > 0.5 && !(uF4VisualPolish > 0.5 && uInkOnly > 0.5)) {
++  bool f4Film = uF4VisualPolish > 0.5 && uInkOnly > 0.5;
++  float worldPattern = 1.0;
++  if (!f4Film) {
++    worldPattern = 0.965 + 0.035 * sin(vWorldPos.x * 1.6 + vWorldPos.z * 1.2);
++    color *= worldPattern;
++    color += vec3(0.10, 0.12, 0.14) * wetness;
++  }
++  if (uSourceWetInkStyle > 0.5 && !f4Film) {
+     // A deliberately SOURCE-only, authored visual treatment. The existing
+     // atlas coverage and original footprint STILL determine every ink pixel.
+     // Pigment and wet highlights disappear exactly when coverage is zero.
+@@ -76,8 +80,8 @@
+     color += vec3(0.19, 0.22, 0.25) * wetGlint;
+   }
+   // F4 visual-only wet film: one existing atlas sample, unchanged mask.
+-  if (uF4VisualPolish > 0.5 && uInkOnly > 0.5) {
+-    vec3 n = normalize(uF4PaintPlane.xyz);
++  if (f4Film) {
++    vec3 n = normalize(uF4PaintPlane.xyz);
+     vec3 vRaw = view_position - vWorldPos;
+     float distanceToEye = max(length(vRaw), 0.001);
+     vec3 v = vRaw / distanceToEye;
+@@ -86,12 +90,21 @@
+     vec3 hRaw = lightDir + v;
+     vec3 h = hRaw / max(length(hRaw), 0.001);
+     vec2 p = local;
+-    float detail = 1.0 - smoothstep(8.0, 30.0, distanceToEye);
+-    float ripple = sin(p.x * 8.0 + p.y * 5.0) * sin(p.y * 7.0 - p.x * 3.0);
+-    float pigment = 0.97 + 0.035 * ripple * detail;
+-    float facing = clamp(dot(n, v), 0.0, 1.0);
+-    float fresnel = pow(1.0 - facing, 4.0);
+-    float sheen = pow(max(dot(n, h), 0.0), 12.0);
++    float detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
++    float pigment = 0.97;
++    // Fade fine pigment before it becomes subpixel; skip far-away waves.
++    if (detail > 0.0) {
++      float ripple = sin(p.x * 8.0 + p.y * 5.0) * sin(p.y * 7.0 - p.x * 3.0);
++      pigment += 0.035 * ripple * detail;
++    }
++    float facing = clamp(dot(n, v), 0.0, 1.0);
++    float edge = 1.0 - facing;
++    float edge2 = edge * edge;
++    float fresnel = edge2 * edge2;
++    float nh = clamp(dot(n, h), 0.0, 1.0);
++    float nh2 = nh * nh;
++    float nh4 = nh2 * nh2;
++    float sheen = nh4 * nh4 * nh4;
+     float lit = max(dot(n, lightDir), 0.0);
+     float glint = (0.035 * fresnel + 0.13 * sheen * lit) * (0.28 * coverage + 0.72 * wetness);
+     color = mix(uNeutralColor, teamColor * pigment, coverage);
+@@ -159,9 +172,13 @@
+   let wetness = clamp(ink.b, 0.0, 1.0) * coverage;
+   let teamColor = mix(uniform.uTeamBColor, uniform.uTeamAColor, step(0.5, ink.r));
+   var color = mix(uniform.uNeutralColor, teamColor, coverage);
+-  let worldPattern = 0.965 + 0.035 * sin(input.vWorldPos.x * 1.6 + input.vWorldPos.z * 1.2);
+-  color = color * worldPattern + vec3f(0.10, 0.12, 0.14) * wetness;
+-  if (uniform.uSourceWetInkStyle > 0.5 && !(uniform.uF4VisualPolish > 0.5 && uniform.uInkOnly > 0.5)) {
++  let f4Film = uniform.uF4VisualPolish > 0.5 && uniform.uInkOnly > 0.5;
++  var worldPattern = 1.0;
++  if (!f4Film) {
++    worldPattern = 0.965 + 0.035 * sin(input.vWorldPos.x * 1.6 + input.vWorldPos.z * 1.2);
++    color = color * worldPattern + vec3f(0.10, 0.12, 0.14) * wetness;
++  }
++  if (uniform.uSourceWetInkStyle > 0.5 && !f4Film) {
+     let stipple = sin(input.vWorldPos.x * 12.5 +
+       sin(input.vWorldPos.z * 7.4) * 0.8);
+     let flow = sin(input.vWorldPos.z * 8.1 - input.vWorldPos.x * 3.7);
+@@ -171,8 +188,8 @@
+       worldPattern + vec3f(0.19, 0.22, 0.25) * wetGlint;
+   }
+   // Same F4 wet-film expression as GLSL; ownership and coverage untouched.
+-  if (uniform.uF4VisualPolish > 0.5 && uniform.uInkOnly > 0.5) {
+-    var n = normalize(uniform.uF4PaintPlane.xyz);
++  if (f4Film) {
++    var n = normalize(uniform.uF4PaintPlane.xyz);
+     let vRaw = uniform.view_position - input.vWorldPos;
+     let distanceToEye = max(length(vRaw), 0.001);
+     let v = vRaw / distanceToEye;
+@@ -181,12 +198,20 @@
+     let hRaw = lightDir + v;
+     let h = hRaw / max(length(hRaw), 0.001);
+     let p = local;
+-    let detail = 1.0 - smoothstep(8.0, 30.0, distanceToEye);
+-    let ripple = sin(p.x * 8.0 + p.y * 5.0) * sin(p.y * 7.0 - p.x * 3.0);
+-    let pigment = 0.97 + 0.035 * ripple * detail;
+-    let facing = clamp(dot(n, v), 0.0, 1.0);
+-    let fresnel = pow(1.0 - facing, 4.0);
+-    let sheen = pow(max(dot(n, h), 0.0), 12.0);
++    let detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
++    var pigment = 0.97;
++    if (detail > 0.0) {
++      let ripple = sin(p.x * 8.0 + p.y * 5.0) * sin(p.y * 7.0 - p.x * 3.0);
++      pigment += 0.035 * ripple * detail;
++    }
++    let facing = clamp(dot(n, v), 0.0, 1.0);
++    let edge = 1.0 - facing;
++    let edge2 = edge * edge;
++    let fresnel = edge2 * edge2;
++    let nh = clamp(dot(n, h), 0.0, 1.0);
++    let nh2 = nh * nh;
++    let nh4 = nh2 * nh2;
++    let sheen = nh4 * nh4 * nh4;
+     let lit = max(dot(n, lightDir), 0.0);
+     let glint = (0.035 * fresnel + 0.13 * sheen * lit) * (0.28 * coverage + 0.72 * wetness);
+     color = mix(uniform.uNeutralColor, teamColor * pigment, coverage);
+diff --git a/src/feedback/F4FeedbackMotion.mjs b/src/feedback/F4FeedbackMotion.mjs
+--- a/src/feedback/F4FeedbackMotion.mjs
++++ b/src/feedback/F4FeedbackMotion.mjs
+@@ -2,9 +2,24 @@
+ export function chooseSlot(slots,priority){
+  let free=0,first=-1,weak=-1;
+  for(let i=0;i<slots.length;i++){const s=slots[i];if(s.ttl<=0){free++;if(first<0)first=i;}else if(s.mode!=='FUSE'&&(s.priority??0)<priority&&(weak<0||(s.priority??0)<(slots[weak].priority??0)||((s.priority??0)===(slots[weak].priority??0)&&s.ttl<slots[weak].ttl)))weak=i;}
+- return first>=0&&(priority>=2||free>10)?first:priority>=2?weak:-1;
++ // Keep two free slots for real local HP/lifecycle cues (priority 4).
++ // Ordinary impact/fuse reserves and protection of existing fuses remain.
++ const reserve=priority>=4?0:priority>=2?2:10;
++ return first>=0&&free>reserve?first:priority>=2?weak:-1;
+ }
+ 
+ export function droplet(index,count,phase,speed,up){const a=phase+index*2*Math.PI/count;return [Math.cos(a)*speed,up*(.8+.2*(index%3)),Math.sin(a)*speed];}
+ 
+-export function pose(x,y,z,vx,vy,vz,t,duration,size){return [x+vx*t,y+vy*t-3.2*t*t,z+vz*t,size*(.35+.65*Math.max(0,1-t/duration))];}
++// Distance LOD affects only extra decorative droplets, never the central cue.
++export function particleBudget(count,distanceSq){
++ if(!Number.isSafeInteger(count)||count<=0)return 0;
++ if(!Number.isFinite(distanceSq)||distanceSq<0)return count;
++ if(distanceSq<=144)return count;
++ if(distanceSq<=576)return Math.max(1,Math.ceil(count*.5));
++ if(distanceSq<=1764)return Math.min(2,count);
++ return 0;
++}
++export function pose(x,y,z,vx,vy,vz,t,duration,size){
++ const remaining=Math.max(0,Math.min(1,1-t/duration));
++ return [x+vx*t,y+vy*t-3.2*t*t,z+vz*t,size*remaining*(1.35-.35*remaining)];
++}
+diff --git a/src/feedback/F4FeedbackMotion.d.mts b/src/feedback/F4FeedbackMotion.d.mts
+--- a/src/feedback/F4FeedbackMotion.d.mts
++++ b/src/feedback/F4FeedbackMotion.d.mts
+@@ -1,3 +1,4 @@
+ export function chooseSlot(slots:readonly {ttl:number;priority?:number;mode?:string}[],priority:number):number;
+-export function droplet(index:number,count:number,phase:number,speed:number,up:number):[number,number,number];
++export function particleBudget(count:number,distanceSq:number):number;
++export function droplet(index:number,count:number,phase:number,speed:number,up:number):[number,number,number];
+ export function pose(x:number,y:number,z:number,vx:number,vy:number,vz:number,t:number,duration:number,size:number):[number,number,number,number];
