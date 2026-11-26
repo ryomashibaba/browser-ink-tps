@@ -218,7 +218,17 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        grounded:bot.mobilityState==='GROUND'});
      if(result.activated){bot.ink=GAME_CONFIG.inkEconomy.capacity;bot.inkRecoveryLockSeconds=0;bot.f4SubRecoverySeconds=0;this.stats.cpuSpecialActivations++;}
      return result.owns;
-@@ -4026,9 +4030,25 @@
+@@ -3209,7 +3213,8 @@
+           this.b181CachedCombat.delete(bot.id);
+           if(this.f4WholeNavigation){
+             this.b181CachedCombat.delete(bot.id+':main');
+-            this.b181CachedCombat.delete(bot.id+':kit');
++            this.b181CachedCombat.delete(bot.id+':kit');
++            this.b181CachedCombat.delete(bot.id+':special');
+             bot.thinkRemaining=0;
+           }
+           this.b213RealAttackerDamageEvents++;
+@@ -4026,9 +4031,25 @@
      const aim=this.sourceCommittedPaintAims.get(bot.id);
      if(!aim||aim.weaponId!==bot.weaponId||
         bot.lifeState!=='ACTIVE'||bot.hp<=0||
@@ -247,7 +257,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      const paint=this.gameplayInk.sampleWorld(
        aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
      if(!paint||paint.surface.isScoreable)return null;
-@@ -4219,12 +4239,10 @@
+@@ -4219,12 +4240,10 @@
        }
      }
      // A STRINGER or SPLATANA needs several true 60Hz ticks to charge.
@@ -264,7 +274,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      const chargedSourceWeapon=canTurfPaint&&
        (profile.weaponClass==='CHARGER'||
         profile.weaponClass==='SPLATLING'||selectedSourceChargeWeapon);
-@@ -4236,17 +4254,19 @@
+@@ -4236,17 +4255,19 @@
        // Genuine charged STRINGER/SPLATANA should not turn towards a newly
        // found lateral patch mid-shot. Keep the previous aim only while
        // current ownerGrid, range, original foot and stage ray still pass.
@@ -295,7 +305,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        }else{
          this.sourceCommittedPaintAims.delete(bot.id);
        }
-@@ -4267,7 +4287,7 @@
+@@ -4267,7 +4288,7 @@
      if (target) this.updateCpuWeaponFacing(bot, target);
      if (profile.contactWeapon) {
        bot.weaponGuarding = false;
@@ -304,7 +314,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        return;
      }
  
-@@ -4289,15 +4309,15 @@
+@@ -4289,15 +4310,15 @@
          this.updateCpuBrush(bot, profile, target);
          return;
        case 'BRELLA':
@@ -323,7 +333,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
          return;
        default:
          bot.weaponGuarding = false;
-@@ -4322,17 +4342,19 @@
+@@ -4322,17 +4343,19 @@
  
    private updateCpuContactWeapon(
      bot: CpuBot, profile: ReturnType<typeof weaponProfile>, target: Vec3 | null,
@@ -348,7 +358,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        const turf = !hasCombatInRange && (!target || bot.fireRemaining > 0) && bot.ink > 16
          ? this.gameplayInk.sampleWorld(motion.to, 0.10, SurfaceFlags.Paintable, SurfaceFlags.Wall)
          : null;
-@@ -4340,14 +4362,15 @@
+@@ -4340,14 +4363,15 @@
          this.pendingShots.push({
            sourceId: bot.id, team: bot.team, origin: bot.position.clone(),
            bodyPosition: bot.position.clone(), target: (target ?? motion.to).clone(), weaponId: profile.id,
@@ -366,7 +376,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        bot.fireRemaining = profile.fireIntervalSeconds;
      }
    }
-@@ -4355,8 +4378,9 @@
+@@ -4355,8 +4379,9 @@
    public tryConsumeF4ContactInk(request: CpuFireRequest, cost: number, recovery: number): boolean {
      const bot = this.bots.find(candidate => candidate.id === request.sourceId);
      if (!this.f4WholeNavigation || !bot || bot.team !== request.team ||
@@ -378,7 +388,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      if (!Number.isFinite(bot.ink)||!Number.isFinite(cost)||cost<0||
          nextLock===null||bot.ink + 1e-6 < cost) {
        bot.contactMovingFrames = 0;
-@@ -4433,17 +4457,22 @@
+@@ -4433,17 +4458,22 @@
      bot: CpuBot,
      profile: ReturnType<typeof weaponProfile>,
      target: Vec3 | null,
@@ -410,7 +420,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        }
        return;
      }
-@@ -4473,21 +4502,35 @@
+@@ -4473,21 +4503,35 @@
      }
    }
  
@@ -455,7 +465,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
  
      bot.weaponChargeSeconds = Math.min(
        targetChargeSeconds,
-@@ -4501,9 +4544,9 @@
+@@ -4501,9 +4545,9 @@
          bot,
          target,
          charge,
@@ -468,7 +478,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        bot.fireRemaining = profile.fireIntervalSeconds;
      } else {
        bot.fireRemaining = GAME_CONFIG.inkEconomy.dryFireRetrySeconds;
-@@ -4511,12 +4554,12 @@
+@@ -4511,12 +4555,12 @@
      bot.weaponChargeSeconds = 0;
    }
  
@@ -487,7 +497,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      if (!target || !this.cpuTargetInRange(bot, target, profile)) {
        bot.weaponChargeSeconds = 0;
        return;
-@@ -4530,9 +4573,18 @@
+@@ -4530,9 +4574,18 @@
      }
      if (bot.fireRemaining > 0) return;
  
@@ -509,7 +519,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        targetChargeSeconds,
        bot.weaponChargeSeconds + dt
      );
-@@ -4544,9 +4596,9 @@
+@@ -4544,9 +4597,9 @@
          bot,
          target,
          charge,
@@ -522,7 +532,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        bot.fireRemaining = this.f4WholeNavigation
          ? F4_SABER_TIMING[charge >= 1 ? 'charged' : 'horizontal'].cooldown
          : profile.fireIntervalSeconds;
-@@ -4647,18 +4699,26 @@
+@@ -4647,18 +4700,26 @@
  
      if (bot.fireRemaining > 0) return;
  
@@ -557,7 +567,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      bot.weaponBurstCooldown = profile.shooter ? profile.burstIntervalSeconds : 0;
      bot.weaponChargeSeconds = 0;
      bot.fireRemaining = profile.fireIntervalSeconds;
-@@ -5233,9 +5293,10 @@
+@@ -5233,9 +5294,10 @@
      humanTeam: Team.A | Team.B,
      humanPosition: Vec3,
      humanActive: boolean,
@@ -571,7 +581,7 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
      // Registered original-stage visibility from actual live actor bodies.
      // Use the SAME native muzzle (not a higher optical proxy) as the actual
      // CPU projectile origin. Original Rapier cover still owns every ray.
-@@ -5287,8 +5348,10 @@
+@@ -5287,8 +5349,10 @@
        // B383: the main weapon must not lock on a visible enemy it
        // cannot actually fire at. Kit targeting remains independent:
        // specials/subs retain their previous B181 visibility semantics.
@@ -584,6 +594,18 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
        const hitAttacker=b213RealAttackerPreference({
          enabled:this.b213SourceCounterfireEnabled,
          tick:this.b181NativeFrame,hitTick:bot.b213ActualHitTick,
+@@ -5318,8 +5382,9 @@
+       const preferredRange=this.f4WholeNavigation&&hitAttacker?maxMainRange:12;
+       const preferredVisibleEnemy=this.f4WholeNavigation?
+         reachablePreference(origin,candidates,preferred,Math.min(maxMainRange,preferredRange)):preferred;
+-      // Keep long-range kit sight from overwriting a valid main-gun lock.
+-      const cacheKey=this.f4WholeNavigation?bot.id+(nativeMainWeaponOnly?':main':':kit'):bot.id;
++      // Keep each real sight envelope independent. Natural special sight
++      // must not inherit or overwrite the generic long-range sub/kit lock.
++      const cacheKey=this.f4WholeNavigation?bot.id+(nativeMainWeaponOnly?':main':f4SightLimit!==undefined?':special':':kit'):bot.id;
+       const old=this.b181CachedCombat.get(cacheKey);
+       if(old&&this.b181NativeFrame-old.frame<8&&
+          (!preferredVisibleEnemy||old.actorId===preferredVisibleEnemy)){
 diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
 --- a/src/input/PlayerInput.ts
 +++ b/src/input/PlayerInput.ts
