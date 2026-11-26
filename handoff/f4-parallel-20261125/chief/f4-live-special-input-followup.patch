@@ -1,0 +1,25 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -6407,11 +6407,18 @@
+        releaseThrow:this.player.canShoot&&!secondary&&this.f4SpecialSecondaryHeld,
+        airborne:!this.stats.playerGrounded
+       },specialOpen,this.f4SpecialProbe&&f4SpecialPressed&&this.player.canShoot,
+        naturalSpecial&&f4SpecialPressed&&this.player.canShoot);
+-      if(naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural)this.resources.refillF4SpecialInk();
+-      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
+-      this.f4SpecialSecondaryHeld=secondary;
++      const naturalActivated=naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural;
++      if(naturalActivated)this.resources.refillF4SpecialInk();
++      // Pre-KCC ownership predicts a possible G activation to prevent a paid
++      // dodge on the same tick. Actual placement/admission can still reject it.
++      // A rejected natural G must not cancel a paid burst or unreleased charge.
++      // The executor's return (including cooldown ownership) is authoritative.
++      f4SpecialOwnsInput=naturalSpecial?
++       zipBlocksWeapon||specialAcceptedOrActive||naturalActivated:
++       f4SpecialOwnsInput||specialAcceptedOrActive;
++      this.f4SpecialSecondaryHeld=secondary;
+      }
+      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
+       this.muzzle,this.target,this.aim);
