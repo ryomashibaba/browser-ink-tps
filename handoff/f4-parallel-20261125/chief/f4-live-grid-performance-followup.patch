@@ -1,0 +1,100 @@
+diff --git a/src/ink/PaintSurface.ts b/src/ink/PaintSurface.ts
+--- a/src/ink/PaintSurface.ts
++++ b/src/ink/PaintSurface.ts
+@@ -221,7 +221,30 @@
+     return ty * this.tilesX + tx;
+   }
+ 
+-  public isCellActive(x: number, y: number): boolean {
++  // F4 presentation sampler: footprint is immutable after construction.
++  // Owner values are always read live; no ownership or tile-revision cache.
++  private f4ActiveCellCount?:number;
++  public readF4OwnerGridCounts():{a:number;b:number;n:number;reason:'INK_OUTSIDE_ORIGINAL_FOOTPRINT'|'UNRECOGNIZED_ORIGINAL_OWNER'|null} {
++    const owners=this.ownerGrid,mask=this.activeCellMask;
++    if(this.f4ActiveCellCount===undefined){
++      let count=owners.length;
++      if(mask){count=0;for(let i=0;i<owners.length;i++)if(mask[i]!==0)count++;}
++      this.f4ActiveCellCount=count;
++    }
++    let a=0,b=0;
++    for(let i=0;i<owners.length;i++){
++      const owner=owners[i];
++      // Neutral is valid both inside and outside the original footprint.
++      if(owner===0)continue;
++      if(mask&&mask[i]===0)return {a:0,b:0,n:0,reason:'INK_OUTSIDE_ORIGINAL_FOOTPRINT'};
++      if(owner===1)a++;
++      else if(owner===-1)b++;
++      else return {a:0,b:0,n:0,reason:'UNRECOGNIZED_ORIGINAL_OWNER'};
++    }
++    return {a,b,n:this.f4ActiveCellCount-a-b,reason:null};
++  }
++
++  public isCellActive(x: number, y: number): boolean {
+     if (x < 0 || y < 0 || x >= this.widthCells || y >= this.heightCells) return false;
+     if (!this.activeCellMask) return true;
+     return this.activeCellMask[this.index(x, y)] !== 0;
+diff --git a/src/app/B401NativeLiveSourceInkOwnership.ts b/src/app/B401NativeLiveSourceInkOwnership.ts
+--- a/src/app/B401NativeLiveSourceInkOwnership.ts
++++ b/src/app/B401NativeLiveSourceInkOwnership.ts
+@@ -1,6 +1,7 @@
+ /** B401 SOURCE only: bounded native-tick sampling of 17 real owner grids.
+  * No actor, paint, geometry, Turf score or simulation writes. */
+-import type {B400SourceGrid} from './B400RealOriginalSourceGridRecap';
++import type {B400SourceGrid} from './B400RealOriginalSourceGridRecap';
++import type {PaintSurface} from '../ink/PaintSurface';
+ export type B401LiveState=Readonly<{
+  status:'WAITING'|'LIVE_REGISTERED_SOURCE_ONLY'|'HOLD';reason:string;
+  sampleNativeTick:number;registeredSurfaces:number;
+@@ -27,7 +28,7 @@
+  private current:B401LiveState=make('WAITING','NO_NATIVE_SOURCE_TICK');
+  get(){return this.current;}
+  observe(grids:readonly B400SourceGrid[],stage:readonly number[],
+-  tick:number,phase:string,full180s:boolean):B401LiveState{
++  tick:number,phase:string,full180s:boolean,f4FastRead=false):B401LiveState{
+   if(!full180s||!['STAGING','PLAYING','TIME_UP'].includes(phase)||
+      !Number.isSafeInteger(tick)||tick<1)return this.current;
+   // Only a complete 180s native timeline can produce the final screen.
+@@ -48,8 +49,16 @@
+       g.widthCells<1||g.heightCells<1||
+       g.ownerGrid.length!==g.widthCells*g.heightCells)
+     return this.current=make('HOLD','INVALID_OR_SCOREABLE_GRID',tick,grids.length);
+-   ids.add(g.id);
+-   for(let y=0;y<g.heightCells;y++)for(let x=0;x<g.widthCells;x++){
++   ids.add(g.id);
++   // Only the provisional game opts in; original QA retains its literal traversal.
++   const native=g as B400SourceGrid&Partial<Pick<PaintSurface,'readF4OwnerGridCounts'>>;
++   if(f4FastRead&&typeof native.readF4OwnerGridCounts==='function'){
++    const sample=native.readF4OwnerGridCounts();
++    if(sample.reason!==null)return this.current=make('HOLD',sample.reason,tick,17);
++    a+=sample.a;b+=sample.b;n+=sample.n;
++    continue;
++   }
++   for(let y=0;y<g.heightCells;y++)for(let x=0;x<g.widthCells;x++){
+     const owner=g.ownerGrid[y*g.widthCells+x];
+     if(!g.isCellActive(x,y)){
+      if(owner!==0)return this.current=make('HOLD','INK_OUTSIDE_ORIGINAL_FOOTPRINT',tick,17);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -7193,8 +7193,8 @@
+   const next=this.b401LiveSourceInk.observe(this.b45SourceSurfaces,[
+    this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,0
+-  ],this.clock.tick,this.matchState,true);
+-  if(next===before)return;
++  ],this.clock.tick,this.matchState,true,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
++  if(next===before)return;
+   this.sourcePracticeInkBalance.render(next,[
+    this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+@@ -9969,8 +9969,8 @@
+     this.b45SourceSurfaces,[
+      state.originalSourceSolids,state.originalPaintSurfaces,
+      state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions
+-    ],state.tick,state.matchState,this.b203FullRound);
+-   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
++    ],state.tick,state.matchState,this.b203FullRound,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
++   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
+    this.b205RoundClock.dataset.t21B401SampleNativeTick=String(b401.sampleNativeTick);
+    this.b205RoundClock.dataset.t21B401RegisteredCells=String(b401.totalActiveCells);
+    this.b205RoundClock.dataset.t21B401TeamACells=String(b401.teamA);
