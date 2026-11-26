@@ -1,0 +1,127 @@
+diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
+--- a/src/feedback/GameFeedback.ts
++++ b/src/feedback/GameFeedback.ts
+@@ -252,11 +252,13 @@
+   public confirmedHumanCpuDamage(
+     team:Team.A|Team.B,at:Vec3,profile:WeaponProfile
+   ):void {
+-    this.spawnFx(team,at,0.18*profile.fxScale,0.19);
+-    this.spawnFx(team,at.clone().add(new Vec3(0,0.19,0)),
+-      0.085*profile.fxScale,0.13);
++    // Confirmed HP loss outranks decorative particles. Keep the central cue
++    // visible even when a preceding explosion filled the shared FX pool.
++    this.spawnFx(team,at,0.18*profile.fxScale,0.19,'BURST',4);
++    this.spawnFx(team,at.clone().add(new Vec3(0,0.19,0)),
++      0.085*profile.fxScale,0.13,'BURST',2);
+     this.spray(team,at,4,.075,1.7,1.3,.23,2);
+-    if(this.playTone(660*profile.audioPitch,0.024,0.06,'sine',1.05,2,at)&&this.f4Presentation)this.handledCues.add('CPU_HIT');
++    if(this.playTone(660*profile.audioPitch,0.024,0.06,'sine',1.05,2,this.f4Presentation?undefined:at,undefined,'local-hit')&&this.f4Presentation)this.handledCues.add('CPU_HIT');
+   }
+ 
+   /** SOURCE: physical enemy hit response only, no fake damage or HUD.
+@@ -266,9 +268,9 @@
+   ):void{
+     if(!Number.isFinite(actualHpLoss)||actualHpLoss<=0)return;
+     const intensity=Math.min(1,actualHpLoss/65);
+-    this.spawnFx(attacker,contact,0.15+intensity*0.09,0.18);
+-    this.spawnFx(attacker,contact.clone().add(new Vec3(0,0.26,0)),
+-      0.07+intensity*0.06,0.13);
++    this.spawnFx(attacker,contact,0.15+intensity*0.09,0.18,'BURST',4);
++    this.spawnFx(attacker,contact.clone().add(new Vec3(0,0.26,0)),
++      0.07+intensity*0.06,0.13,'BURST',2);
+     if(this.playTone(260-intensity*75,0.024,0.075,'triangle',0.88,2,this.f4Presentation?undefined:contact,undefined,'local-hurt')&&this.f4Presentation)this.handledCues.add('HURT');
+   }
+ 
+@@ -316,7 +318,7 @@
+     radius: number
+   ): void {
+     const base = Math.max(0.30, radius * 0.22);
+-    this.spawnFx(team, position, base, 0.32);
++    this.spawnFx(team, position, base, 0.32,'BURST',3);
+     for (let i = 0; i < 4; i += 1) {
+       const angle = i * Math.PI * 0.5;
+       this.spawnFx(
+@@ -339,7 +341,7 @@
+     position: Vec3,
+     radius: number
+   ): void {
+-    this.spawnFx(team, position, Math.max(0.42, radius * 0.20), 0.38);
++    this.spawnFx(team, position, Math.max(0.42, radius * 0.20), 0.38,'BURST',3);
+     for (let i = 0; i < 8; i += 1) {
+       const angle = i * Math.PI * 2 / 8;
+       this.spawnFx(
+@@ -349,7 +351,7 @@
+         0.30
+       );
+     }
+-    this.spray(team,position,9,.16,Math.min(5,radius*2.4),3,.40,3);
++    this.spray(team,position,9,.16,Math.min(5,radius*2.4),3,.40,2);
+     this.playTone(118, 0.055, 0.18, 'sawtooth', 1.72,2,position,{volume:.055,lowpassHz:600},'special-blast');
+   }
+ 
+@@ -374,14 +376,14 @@
+   }
+ 
+   public splat(team: Team.A | Team.B, position: Vec3,local=false): void {
+-    this.spawnFx(team, position, 0.36, 0.32,'BURST',3);
+-    this.spray(team,position,10,.14,3.4,2.7,.42,3);
++    this.spawnFx(team, position, 0.36, 0.32,'BURST',local?4:3);
++    this.spray(team,position,10,.14,3.4,2.7,.42,2);
+     if(this.playTone(82, 0.055, 0.16, 'sawtooth', 0.42,local?3:2,local?undefined:position,{volume:.04,lowpassHz:820},local?'local-splat':'remote-splat')&&this.f4Presentation&&local)this.handledCues.add('SPLAT');
+   }
+ 
+   public respawn(team: Team.A | Team.B, position: Vec3,local=false): void {
+-    this.spawnFx(team, position, 0.22, 0.24,'BURST',3);
+-    this.spray(team,position,6,.10,.7,3.1,.40,3);
++    this.spawnFx(team, position, 0.22, 0.24,'BURST',local?4:3);
++    this.spray(team,position,6,.10,.7,3.1,.40,2);
+     if(this.playTone(430, 0.035, 0.11, 'sine', 1.35,local?3:2,local?undefined:position,undefined,local?'local-respawn':'remote-respawn')&&this.f4Presentation&&local)this.handledCues.add('RESPAWN');
+   }
+ 
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -1968,8 +1968,8 @@
+       profile.visualDiameterMeters, profile.damage, profile.paintRadiusMeters,
+       0, 0, 0, 0, 0, 0, 0, actor === 'human' ? 'HUMAN' : 'CPU', actor, qaSourceAim, true);
+     if (aim.grounded) this.enqueueShooterFoot(profile.shooter!, aim.body, team, actor);
+-    this.noteF4VisualShot(actor,profile);
+-    this.feedback.shot(team, shot.origin, profile, false);
++    this.noteF4VisualShot(actor,profile);
++    this.feedback.shot(team, shot.origin, profile, actor==='human');
+     return true;
+   }
+ 
+@@ -2194,8 +2194,8 @@
+     }
+     if (brush) (this.brushSwings ??= new Map()).set(actor, ordinal);
+     if (phase.foot) this.enqueueF4Foot(body, team, actor, 0.34);
+-    this.noteF4VisualShot(actor,profile);
+-    this.feedback.shot(team, origin, profile, true);
++    this.noteF4VisualShot(actor,profile);
++    this.feedback.shot(team, origin, profile, actor==='human');
+     return true;
+   }
+ 
+@@ -2441,8 +2441,8 @@
+       slot.slosherFlight = { droplet, resolvedTargets: swing.resolvedTargets, launchY: launch.y, age: 0, distance: 0 };
+       if (swing.next++ === 0) {
+         if (grounded) this.enqueueF4Foot(body, swing.team, swing.actor, 0.43);
+-        this.noteF4VisualShot(swing.actor,swing.profile);
+-        this.feedback.shot(swing.team, launch, swing.profile, true);
++        this.noteF4VisualShot(swing.actor,swing.profile);
++        this.feedback.shot(swing.team, launch, swing.profile, !request);
+         if (request) this.noteActualSourceCpuPhysicalGrant(request, 1);
+       }
+       if (swing.next === swing.reserved.length) this.pendingSloshes?.delete(swing.actor);
+@@ -2646,8 +2646,8 @@
+         slot.canopyPellet = { index, frame: 0, free: false, distance: 0, acceptedDamage };
+       }
+       if (request || this.stats.playerGrounded) this.enqueueF4Foot(actorBody,team,actor,0.50);
+-      this.noteF4VisualShot(actor,profile);
+-      this.feedback.shot(team,origin,profile,true);
++      this.noteF4VisualShot(actor,profile);
++      this.feedback.shot(team,origin,profile,!request);
+       if (request) this.noteActualSourceCpuPhysicalGrant(request,CANOPY_PELLETS.length);
+       else this.stats.playerWeaponAction = 'BRELLA_BURST';
+       const system = this.canopySystem();
