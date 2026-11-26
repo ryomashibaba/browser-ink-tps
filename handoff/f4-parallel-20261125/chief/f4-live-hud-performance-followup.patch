@@ -1,0 +1,137 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -8973,8 +8973,13 @@
+    pathPoints:native.pointCount,stepSolid:supported.solidId,
+    stepGap,goalGap};
+  }
+- public snapshot(){
+-  const pos=this.player.getPosition(this.p);
++ public snapshot(){
++  // The external QA API still returns a complete, eagerly materialized plain object.
++  return {...this.readPresentationSnapshot()};
++ }
++ private readPresentationSnapshot(){
++  const app=this;
++  const pos=this.player.getPosition(this.p);
+   const b129Edge=this.originalEdgeGuidance(this.clock.tick);
+   const progress=this.traffic.snapshot();
+   // B146: read real grounded original KCC foot against the frozen B130
+@@ -9060,7 +9065,7 @@
+    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
+    radarVisible:this.radarVisible,
+    b402NativeOriginalInkRadar:this.radar.sourceInkSnapshot(),
+-   b234RealCpuGapReadiness:this.cpu.b234OriginalGapReadinessSnapshot(),
++   get b234RealCpuGapReadiness(){return app.cpu.b234OriginalGapReadinessSnapshot();},
+    originalSourceSolids:this.rawStage.solids.length,
+    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
+    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
+@@ -9316,9 +9321,9 @@
+     autonomousEncounterVerified:false,
+     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
+    cpuContinuity:this.cpu.qaContinuitySnapshot(),
+-   blockedSourceActionEvidence:this.cpu.blockedSourceActionSnapshot(),
++   get blockedSourceActionEvidence(){return app.cpu.blockedSourceActionSnapshot();},
+    // Real 60Hz Recast proposals versus Rapier KCC decisions, read-only.
+-   cpuSourceNativeGroundMotion:this.cpu.sourceGroundStepEvidenceSnapshot(),
++   get cpuSourceNativeGroundMotion(){return app.cpu.sourceGroundStepEvidenceSnapshot();},
+    cpuPaintRequests:this.stats.cpuPaintRequests,
+    cpuCombatHits:this.stats.cpuCombatHits,
+    humanCpuDirectHits:this.stats.humanCpuDirectHits,
+@@ -9371,19 +9376,19 @@
+       this.b203FullRound&&
+       this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
+-   b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
++   get b346NativeShooterWitness(){return app.projectiles.b346NativeShooterWitnessSnapshot();},
+    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
+    b351ActualHitCue:this.projectiles.b351ActualHitCueSnapshot(),
+-   b367RealCpuLifecycleEvidence:{
+-    ...this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
+-    ...(!this.f4ResearchMode&&!this.w10b14&&this.nativeLiveSourcePrestart?{
+-     roundOrigin:performance.timeOrigin,
+-     lifeTransitions:this.b367Timeline.nativeLifeTransitions()
+-    }:{}),
+-    ...(this.f4WholeCpuConnected?{
+-     f4LifeTransitions:this.b367Timeline.nativeF4LifeTransitions()
+-    }:{})
+-   },
++   get b367RealCpuLifecycleEvidence(){return {
++    ...app.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
++    ...(!app.f4ResearchMode&&!app.w10b14&&app.nativeLiveSourcePrestart?{
++     roundOrigin:performance.timeOrigin,
++     lifeTransitions:app.b367Timeline.nativeLifeTransitions()
++    }:{}),
++    ...(app.f4WholeCpuConnected?{
++     f4LifeTransitions:app.b367Timeline.nativeF4LifeTransitions()
++    }:{})
++   };},
+    // B474: actual native Crowd submit/suppress counts, never an AI route
+    // permit or a replacement for the original Rapier physical foot.
+    b474NativeSteeringEvidence:this.canvas.dataset.t21B474NativeSteering===
+@@ -9391,10 +9396,10 @@
+     this.cpu.b35NativeSourceRetargetSnapshot():null,
+    b349ActualKccGrounded:this.stats.playerGrounded,
+     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+-   b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
++   get b178SourceInkRecovery(){return app.cpu.b178SourceInkResourceSnapshot();},
+    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
+-   b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
++   get b215RealBattleAimPacing(){return app.cpu.b215RealSourceBattlePaintPacingSnapshot();},
+-   b216RealNativePaintBackfill:this.cpu.b216OriginalSourceBackfillSnapshot(),
++   get b216RealNativePaintBackfill(){return app.cpu.b216OriginalSourceBackfillSnapshot();},
+    b217ActualLivePaintTempo:this.b217NativePaintTempo.snapshot(),
+    b214SustainedBattleInk:{
+     enabled:this.canvas.dataset.t21B214NativeBattleInk===
+@@ -9485,8 +9490,16 @@
+   // A paused, unlocked or failed source session still updates the practice
+   // card immediately instead of leaving stale RUNNING text on screen.
+   this.refreshB25PaintRun();
+-  const state=this.snapshot();
+-  // The legacy research guide runs real path/ray audits; keep it available
++  const livePlayerPresentation=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
++   document.pointerLockElement===this.canvas&&
++   this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
++   this.panel.parentElement?.dataset.t21B245Inspect!=='true'&&
++   this.canvas.dataset.t21B262QaFocus!=='ON';
++  // Lazy diagnostic fields are read only if a synchronous presentation consumer needs them.
++  // Never retain this internal view or return it through the public snapshot API.
++  const state=livePlayerPresentation?this.readPresentationSnapshot():this.snapshot();
++  // The legacy research guide runs real path/ray audits; keep it available
+   // in Inspect, not over the provisional player's regular battle HUD.
+   const f4PlayerView=this.f4ProvisionalTurfEnabled&&
+    this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
+@@ -10104,7 +10117,7 @@
+    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
+   this.practiceHud.root.style.display=
+    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
+-  this.status.textContent=[
++  if(!livePlayerPresentation||!this.panel.hidden)this.status.textContent=[
+    'HUMAN · '+state.player.mode+
+     '  HP '+Math.round(state.player.hp)+
+     '  INK '+Math.round(state.player.ink),
+diff --git a/src/app/UndertowF3PlayableHud.ts b/src/app/UndertowF3PlayableHud.ts
+--- a/src/app/UndertowF3PlayableHud.ts
++++ b/src/app/UndertowF3PlayableHud.ts
+@@ -805,8 +805,18 @@
+   }
+   // B76 is truthful native player feedback, NEVER shot hit-rate or
+   // source Turf score; no player health/ink or projectile is modified.
+-  const human=humanCoach.observe({...value,
+-   player:{mode:value.player.mode??'UNVERIFIED',ink:value.player.ink}});
++  // B76 consumes only these real fields. Spreading the full app snapshot would
++  // also materialize unrelated diagnostic histories on every HUD refresh.
++  const human=humanCoach.observe({
++   tick:value.tick,matchState:value.matchState,paused:value.paused,stopReason:value.stopReason,
++   player:{mode:value.player.mode??'UNVERIFIED',ink:value.player.ink},
++   shotsFired:value.shotsFired,b23HumanInkFeedback:value.b23HumanInkFeedback,
++   playerInkRecoveryState:value.playerInkRecoveryState,inkDryFireAttempts:value.inkDryFireAttempts,
++   originalSourceSolids:value.originalSourceSolids,originalPaintSurfaces:value.originalPaintSurfaces,
++   originalSourceNavigationLinks:value.originalSourceNavigationLinks,
++   sourceScoreablePromotions:value.sourceScoreablePromotions,productionAuthorized:value.productionAuthorized,
++   unrestricted4v4Certified:value.unrestricted4v4Certified
++  });
+   const authorized=!!human&&human.state!=='HOLD';
+   humanBox.hidden=!authorized;
+   root.dataset.t21B76PlayerSourceTruth=
