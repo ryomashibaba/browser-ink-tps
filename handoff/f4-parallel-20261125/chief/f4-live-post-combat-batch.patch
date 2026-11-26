@@ -618,20 +618,6 @@ diff --git a/src/ink/types.ts b/src/ink/types.ts
    team: Team.A | Team.B;
    surfaceId: string;
    /** local surface coordinate in meters from the lower-left U edge */
-diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
---- a/src/ink/PaintCoordinator.ts
-+++ b/src/ink/PaintCoordinator.ts
-@@ -9,7 +9,9 @@
-   actorId?: string;
-   /** B152 informational only; forwarded to the immutable PaintEvent. */
-   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
--  gaugeEligible?: boolean;
-+  gaugeEligible?: boolean;
-+  /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
-+  f4GaugeLaunchLife?: string|null;
-   team: Team.A | Team.B;
-   surfaceId: string;
-   centerU: number;
 diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
 --- a/src/subweapon/SubWeaponSystem.ts
 +++ b/src/subweapon/SubWeaponSystem.ts
@@ -1078,250 +1064,6 @@ diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
         document.pointerLockElement===this.canvas);
    }
  
-diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
---- a/src/app/UndertowF3PlayablePreviewApp.ts
-+++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -898,7 +898,9 @@
-       actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,
-       weapon:this.projectiles.currentPlayerWeapon.id,alive:this.resources.currentHp>0
-      }:event.source===PaintSource.Cpu&&event.actorId?this.cpu.f4NaturalActor(event.actorId):null;
--     if(actor&&actor.team===event.team&&!(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
-+     if(actor&&actor.team===event.team&&
-+        (event.f4GaugeLaunchLife===undefined||event.f4GaugeLaunchLife===actor.lifeId)&&
-+        !(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
-       this.f4Special.creditNaturalPaint(actor,actor.alive,raster.f4ProvisionalProjectedAreaM2Changed??0);
-     }
-     // B154: real rasterized changes from ALL seven native original CPUs.
-@@ -1460,7 +1462,16 @@
-   }
-   if(this.f4ResearchMode)this.humanSub.useF4CanopyCover(this.projectiles);
-   if(this.f4SharedBombsEnabled){
--   this.humanSub.enableF4Bombs(this.projectiles);
-+   this.humanSub.enableF4Bombs(this.projectiles);
-+   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
-+    const launchLife=(id:string):string|null=>{
-+     if(id==='human')return this.resources.currentHp>0?String(this.f4SpecialLife):null;
-+     const actor=this.cpu.f4NaturalActor(id);
-+     return actor?.alive?actor.lifeId:null;
-+    };
-+    this.humanSub.useF4GaugeLaunchLife(launchLife);
-+    this.projectiles.useF4GaugeLaunchLife(launchLife);
-+   }
-    this.cpu.enableF4SharedBombs();
-    this.cpu.enableF4FlightLead();
-   }
-@@ -2897,7 +2908,8 @@
-   });
-   // The radar is an original 25-solid visual reference, never movement
-   // authority: F4's true 51-solid collision/Recast worlds stay separate.
--  this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces);
-+  this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces,
-+   ()=>this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled);
-   // B245 player view preserves all QA nodes, snapshots, physics and controls.
-   installB245SourcePresentation(ui,()=>{
-    // The existing B441 SOURCE browser runner is a real 7-CPU human mode
-@@ -3470,7 +3482,8 @@
-      this.app.scene.ambientLight=new Color(.62,.68,.74);
-      visualKey.light.intensity=1.65;
-      visualKey.light.color=new Color(1,.97,.91);
--     this.canvas.dataset.t21F4VisualPolish='ON';
-+     this.canvas.dataset.t21F4VisualPolish='ON';
-+     this.cpu.enableF4CombatVisualFacing();
-     }
-    }
-    // Preserve the same separately verified source background as the
-@@ -6396,9 +6409,16 @@
-        airborne:!this.stats.playerGrounded
-       },specialOpen,this.f4SpecialProbe&&f4SpecialPressed&&this.player.canShoot,
-        naturalSpecial&&f4SpecialPressed&&this.player.canShoot);
--      if(naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural)this.resources.refillF4SpecialInk();
--      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
--      this.f4SpecialSecondaryHeld=secondary;
-+      const naturalActivated=naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural;
-+      if(naturalActivated)this.resources.refillF4SpecialInk();
-+      // Pre-KCC ownership predicts a possible G activation to prevent a paid
-+      // dodge on the same tick. Actual placement/admission can still reject it.
-+      // A rejected natural G must not cancel a paid burst or unreleased charge.
-+      // The executor's return (including cooldown ownership) is authoritative.
-+      f4SpecialOwnsInput=naturalSpecial?
-+       zipBlocksWeapon||specialAcceptedOrActive||naturalActivated:
-+       f4SpecialOwnsInput||specialAcceptedOrActive;
-+      this.f4SpecialSecondaryHeld=secondary;
-      }
-      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
-      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
-@@ -7181,8 +7201,8 @@
-   const next=this.b401LiveSourceInk.observe(this.b45SourceSurfaces,[
-    this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
-    this.rawStage.navigationLinks?.length??0,0
--  ],this.clock.tick,this.matchState,true);
--  if(next===before)return;
-+  ],this.clock.tick,this.matchState,true,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
-+  if(next===before)return;
-   this.sourcePracticeInkBalance.render(next,[
-    this.rawStage.solids.length,this.b45SourceSurfaces.length,
-    this.rawStage.navigationLinks?.length??0,
-@@ -7206,12 +7226,14 @@
-      this.canvas.dataset.t21F4ActorArt==='ERROR'||this.stopReason)return;
-   try{
-    const human=this.app.root.findByName('Player');
--   let applied=human instanceof Entity&&b248SetF4ActorArt(human,this.projectiles.currentPlayerWeapon.id,
--    this.stats.playerInk)?1:0;
--   const native=(this.cpu as unknown as {bots:readonly {
--    entity:Entity;weaponId:import('../weapons/WeaponCatalog').WeaponId
--   }[]}).bots;
--   for(const bot of native)if(b248SetF4ActorArt(bot.entity,bot.weaponId))applied++;
-+   const weapon=this.projectiles.currentPlayerWeapon.id;
-+   let applied=human instanceof Entity&&b248SetF4ActorArt(human,weapon,
-+    this.stats.playerInk,this.resources.currentHp>0?this.projectiles.readF4VisualRecoil('human',weapon):0)?1:0;
-+   const native=(this.cpu as unknown as {bots:readonly {
-+    id:string;hp:number;entity:Entity;weaponId:import('../weapons/WeaponCatalog').WeaponId
-+   }[]}).bots;
-+   for(const bot of native)if(b248SetF4ActorArt(bot.entity,bot.weaponId,undefined,
-+    bot.hp>0?this.projectiles.readF4VisualRecoil(bot.id,bot.weaponId):0))applied++;
-    const artState=applied===native.length+1?'ON':'PARTIAL';
-    if(this.canvas.dataset.t21F4ActorArt!==artState)this.canvas.dataset.t21F4ActorArt=artState;
-   }catch(error){
-@@ -7230,8 +7252,16 @@
-   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
-    this.paused=true;
-   // A generic QA/UI pause toggle cannot consume the player's ready time.
--  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
--  if(this.paused||this.stopReason){
-+  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
-+  // Close the gap before the asynchronous blur/pointerlockchange events.
-+  // No fixed clock advance, implicit charge release or CPU ticks unfocused.
-+  if(!this.paused&&!this.stopReason&&this.matchState!=='TIME_UP'&&
-+     this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
-+     this.b203EverLockedRealPointer&&this.input.f4LiveFocusLost){
-+   this.input.cancelF4FocusInput();
-+   this.pauseSourceRoundOnFocusLoss();
-+  }
-+  if(this.paused||this.stopReason){
-    this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
-    this.b399UpdateCameraAimClearance();
-    this.refreshF4CombatReticle();
-@@ -8961,8 +8991,13 @@
-    pathPoints:native.pointCount,stepSolid:supported.solidId,
-    stepGap,goalGap};
-  }
-- public snapshot(){
--  const pos=this.player.getPosition(this.p);
-+ public snapshot(){
-+  // The external QA API still returns a complete, eagerly materialized plain object.
-+  return {...this.readPresentationSnapshot()};
-+ }
-+ private readPresentationSnapshot(){
-+  const app=this;
-+  const pos=this.player.getPosition(this.p);
-   const b129Edge=this.originalEdgeGuidance(this.clock.tick);
-   const progress=this.traffic.snapshot();
-   // B146: read real grounded original KCC foot against the frozen B130
-@@ -9048,7 +9083,7 @@
-    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
-    radarVisible:this.radarVisible,
-    b402NativeOriginalInkRadar:this.radar.sourceInkSnapshot(),
--   b234RealCpuGapReadiness:this.cpu.b234OriginalGapReadinessSnapshot(),
-+   get b234RealCpuGapReadiness(){return app.cpu.b234OriginalGapReadinessSnapshot();},
-    originalSourceSolids:this.rawStage.solids.length,
-    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
-    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
-@@ -9304,9 +9339,9 @@
-     autonomousEncounterVerified:false,
-     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
-    cpuContinuity:this.cpu.qaContinuitySnapshot(),
--   blockedSourceActionEvidence:this.cpu.blockedSourceActionSnapshot(),
-+   get blockedSourceActionEvidence(){return app.cpu.blockedSourceActionSnapshot();},
-    // Real 60Hz Recast proposals versus Rapier KCC decisions, read-only.
--   cpuSourceNativeGroundMotion:this.cpu.sourceGroundStepEvidenceSnapshot(),
-+   get cpuSourceNativeGroundMotion(){return app.cpu.sourceGroundStepEvidenceSnapshot();},
-    cpuPaintRequests:this.stats.cpuPaintRequests,
-    cpuCombatHits:this.stats.cpuCombatHits,
-    humanCpuDirectHits:this.stats.humanCpuDirectHits,
-@@ -9359,19 +9394,19 @@
-       this.b203FullRound&&
-       this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
-    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
--   b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
-+   get b346NativeShooterWitness(){return app.projectiles.b346NativeShooterWitnessSnapshot();},
-    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
-    b351ActualHitCue:this.projectiles.b351ActualHitCueSnapshot(),
--   b367RealCpuLifecycleEvidence:{
--    ...this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
--    ...(!this.f4ResearchMode&&!this.w10b14&&this.nativeLiveSourcePrestart?{
--     roundOrigin:performance.timeOrigin,
--     lifeTransitions:this.b367Timeline.nativeLifeTransitions()
--    }:{}),
--    ...(this.f4WholeCpuConnected?{
--     f4LifeTransitions:this.b367Timeline.nativeF4LifeTransitions()
--    }:{})
--   },
-+   get b367RealCpuLifecycleEvidence(){return {
-+    ...app.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
-+    ...(!app.f4ResearchMode&&!app.w10b14&&app.nativeLiveSourcePrestart?{
-+     roundOrigin:performance.timeOrigin,
-+     lifeTransitions:app.b367Timeline.nativeLifeTransitions()
-+    }:{}),
-+    ...(app.f4WholeCpuConnected?{
-+     f4LifeTransitions:app.b367Timeline.nativeF4LifeTransitions()
-+    }:{})
-+   };},
-    // B474: actual native Crowd submit/suppress counts, never an AI route
-    // permit or a replacement for the original Rapier physical foot.
-    b474NativeSteeringEvidence:this.canvas.dataset.t21B474NativeSteering===
-@@ -9379,10 +9414,10 @@
-     this.cpu.b35NativeSourceRetargetSnapshot():null,
-    b349ActualKccGrounded:this.stats.playerGrounded,
-     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
--   b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
-+   get b178SourceInkRecovery(){return app.cpu.b178SourceInkResourceSnapshot();},
-    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
--   b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
--   b216RealNativePaintBackfill:this.cpu.b216OriginalSourceBackfillSnapshot(),
-+   get b215RealBattleAimPacing(){return app.cpu.b215RealSourceBattlePaintPacingSnapshot();},
-+   get b216RealNativePaintBackfill(){return app.cpu.b216OriginalSourceBackfillSnapshot();},
-    b217ActualLivePaintTempo:this.b217NativePaintTempo.snapshot(),
-    b214SustainedBattleInk:{
-     enabled:this.canvas.dataset.t21B214NativeBattleInk===
-@@ -9473,8 +9508,16 @@
-   // A paused, unlocked or failed source session still updates the practice
-   // card immediately instead of leaving stale RUNNING text on screen.
-   this.refreshB25PaintRun();
--  const state=this.snapshot();
--  // The legacy research guide runs real path/ray audits; keep it available
-+  const livePlayerPresentation=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
-+   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
-+   document.pointerLockElement===this.canvas&&
-+   this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
-+   this.panel.parentElement?.dataset.t21B245Inspect!=='true'&&
-+   this.canvas.dataset.t21B262QaFocus!=='ON';
-+  // Lazy diagnostic fields are read only if a synchronous presentation consumer needs them.
-+  // Never retain this internal view or return it through the public snapshot API.
-+  const state=livePlayerPresentation?this.readPresentationSnapshot():this.snapshot();
-+  // The legacy research guide runs real path/ray audits; keep it available
-   // in Inspect, not over the provisional player's regular battle HUD.
-   const f4PlayerView=this.f4ProvisionalTurfEnabled&&
-    this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
-@@ -9957,8 +10000,8 @@
-     this.b45SourceSurfaces,[
-      state.originalSourceSolids,state.originalPaintSurfaces,
-      state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions
--    ],state.tick,state.matchState,this.b203FullRound);
--   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
-+    ],state.tick,state.matchState,this.b203FullRound,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
-+   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
-    this.b205RoundClock.dataset.t21B401SampleNativeTick=String(b401.sampleNativeTick);
-    this.b205RoundClock.dataset.t21B401RegisteredCells=String(b401.totalActiveCells);
-    this.b205RoundClock.dataset.t21B401TeamACells=String(b401.teamA);
-@@ -10092,7 +10135,7 @@
-    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
-   this.practiceHud.root.style.display=
-    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
--  this.status.textContent=[
-+  if(!livePlayerPresentation||!this.panel.hidden)this.status.textContent=[
-    'HUMAN · '+state.player.mode+
-     '  HP '+Math.round(state.player.hp)+
-     '  INK '+Math.round(state.player.ink),
 diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
 --- a/src/ink/GameplayInkSystem.ts
 +++ b/src/ink/GameplayInkSystem.ts
@@ -1366,3 +1108,449 @@ diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
          if (!eligible) {
            if (startX >= 0) {
              paintableRuns.push({ row: y, startX, endXExclusive: x });
+diff --git a/src/ink/GpuInkAtlas.ts b/src/ink/GpuInkAtlas.ts
+--- a/src/ink/GpuInkAtlas.ts
++++ b/src/ink/GpuInkAtlas.ts
+@@ -113,7 +113,21 @@
+   paintableRuns: readonly PaintRasterRun[];
+ }
+ 
+-export class GpuInkAtlas {
++/** Identical adjacent raster overwrites have the same shader input and pixels.
++ * Never reorder different brushes, even when they belong to the same team. */
++function sameF4QueuedOverwrite(a:PendingInkEvent,b:PaintEvent,runs:readonly PaintRasterRun[]):boolean {
++  const p=a.event;
++  if(p.surfaceId!==b.surfaceId||p.team!==b.team||p.centerU!==b.centerU||p.centerV!==b.centerV||
++     p.radiusU!==b.radiusU||p.radiusV!==b.radiusV||p.angle!==b.angle||p.strength!==b.strength||
++     a.paintableRuns.length!==runs.length)return false;
++  for(let i=0;i<runs.length;i++){
++    const x=a.paintableRuns[i]!,y=runs[i]!;
++    if(x.row!==y.row||x.startX!==y.startX||x.endXExclusive!==y.endXExclusive)return false;
++  }
++  return true;
++}
++
++export class GpuInkAtlas {
+   public readonly texture: Texture;
+   public readonly atlasSize: number;
+   public readonly layer: Layer;
+@@ -128,7 +142,9 @@
+   private readonly mesh: Mesh;
+   private primed = false;
+   private clearPending = false;
+-  private paintedThisFrame = false;
++  private paintedThisFrame = false;
++  private f4QueueOptimized=false;
++  public enableF4QueueOptimization():void {this.f4QueueOptimized=true;}
+   // W10-B20: default OFF for every other game route / production stage.
+   // A primed, persistent atlas needs no idle render-target submission.
+   private sourceIdlePostRenderFrames = 0;
+@@ -261,8 +277,12 @@
+    * unconditional full-ellipse fallback for events lacking run authority.
+    */
+   public queue(event: PaintEvent, paintableRuns: readonly PaintRasterRun[] = []): void {
+-    if (paintableRuns.length === 0) return;
+-    this.pending.push({ event, paintableRuns });
++    if (paintableRuns.length === 0) return;
++    // Only the still-pending tail can be coalesced. A previously rendered
++    // stamp or an intervening opposite-team overwrite is never skipped.
++    const tail=this.pending[this.pending.length-1];
++    if(this.f4QueueOptimized&&tail&&sameF4QueuedOverwrite(tail,event,paintableRuns))return;
++    this.pending.push({ event, paintableRuns });
+   }
+ 
+   public get backlog(): number {
+@@ -270,8 +290,9 @@
+   }
+ 
+   public flush(maxEvents: number): { events: number; buildMs: number } {
+-    if (!this.primed || this.clearPending || this.pending.length === 0 ||
+-        !Number.isFinite(maxEvents) || maxEvents < 1)
++    if (!this.primed || this.clearPending || this.pending.length === 0 ||
++        (this.f4QueueOptimized&&this.paintedThisFrame)||
++        !Number.isFinite(maxEvents) || maxEvents < 1)
+       return { events: 0, buildMs: 0 };
+ 
+     const started = performance.now();
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -9,7 +9,9 @@
+   actorId?: string;
+   /** B152 informational only; forwarded to the immutable PaintEvent. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+-  gaugeEligible?: boolean;
++  gaugeEligible?: boolean;
++  /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
++  f4GaugeLaunchLife?: string|null;
+   team: Team.A | Team.B;
+   surfaceId: string;
+   centerU: number;
+@@ -61,7 +63,9 @@
+   private f4WallAtlas:GpuInkAtlas|null=null;
+   public attachF4WallAtlas(atlas:GpuInkAtlas):void{
+     if(this.f4WallAtlas)throw Error('F4_WALL_ATLAS_ALREADY_ATTACHED');
+-    this.f4WallAtlas=atlas;
++    this.f4WallAtlas=atlas;
++    // The wall atlas exists only in the provisional native F4 world.
++    atlas.enableF4QueueOptimization();
+   }
+   public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
+   public detachF4WallAtlas(atlas:GpuInkAtlas):void{
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -834,8 +834,9 @@
+   if(atlasSize<2048)throw Error('T21_F3_GPU_MIN_ATLAS_2048');
+   // Only the nonproduction F3 preview skips no-op idle atlas-camera
+   // render-target passes. The production/default GpuInkAtlas remains unchanged.
+-  this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
+-   GAME_CONFIG.ink.atlasGutterPixels,true);
++  this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
++   GAME_CONFIG.ink.atlasGutterPixels,true);
++  if(this.f4ProvisionalTurfEnabled)this.atlas.enableF4QueueOptimization();
+   // Only actual human-operated 180s SOURCE rounds get pigment depth/wet
+   // glints on the EXISTING 17 registered paint surfaces. The standalone
+   // production renderer and every SOURCE QA baseline retain old shading.
+@@ -898,7 +899,9 @@
+       actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,
+       weapon:this.projectiles.currentPlayerWeapon.id,alive:this.resources.currentHp>0
+      }:event.source===PaintSource.Cpu&&event.actorId?this.cpu.f4NaturalActor(event.actorId):null;
+-     if(actor&&actor.team===event.team&&!(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
++     if(actor&&actor.team===event.team&&
++        (event.f4GaugeLaunchLife===undefined||event.f4GaugeLaunchLife===actor.lifeId)&&
++        !(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
+       this.f4Special.creditNaturalPaint(actor,actor.alive,raster.f4ProvisionalProjectedAreaM2Changed??0);
+     }
+     // B154: real rasterized changes from ALL seven native original CPUs.
+@@ -1460,7 +1463,16 @@
+   }
+   if(this.f4ResearchMode)this.humanSub.useF4CanopyCover(this.projectiles);
+   if(this.f4SharedBombsEnabled){
+-   this.humanSub.enableF4Bombs(this.projectiles);
++   this.humanSub.enableF4Bombs(this.projectiles);
++   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++    const launchLife=(id:string):string|null=>{
++     if(id==='human')return this.resources.currentHp>0?String(this.f4SpecialLife):null;
++     const actor=this.cpu.f4NaturalActor(id);
++     return actor?.alive?actor.lifeId:null;
++    };
++    this.humanSub.useF4GaugeLaunchLife(launchLife);
++    this.projectiles.useF4GaugeLaunchLife(launchLife);
++   }
+    this.cpu.enableF4SharedBombs();
+    this.cpu.enableF4FlightLead();
+   }
+@@ -2897,7 +2909,8 @@
+   });
+   // The radar is an original 25-solid visual reference, never movement
+   // authority: F4's true 51-solid collision/Recast worlds stay separate.
+-  this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces);
++  this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces,
++   ()=>this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled);
+   // B245 player view preserves all QA nodes, snapshots, physics and controls.
+   installB245SourcePresentation(ui,()=>{
+    // The existing B441 SOURCE browser runner is a real 7-CPU human mode
+@@ -3470,7 +3483,8 @@
+      this.app.scene.ambientLight=new Color(.62,.68,.74);
+      visualKey.light.intensity=1.65;
+      visualKey.light.color=new Color(1,.97,.91);
+-     this.canvas.dataset.t21F4VisualPolish='ON';
++     this.canvas.dataset.t21F4VisualPolish='ON';
++     this.cpu.enableF4CombatVisualFacing();
+     }
+    }
+    // Preserve the same separately verified source background as the
+@@ -6396,9 +6410,16 @@
+        airborne:!this.stats.playerGrounded
+       },specialOpen,this.f4SpecialProbe&&f4SpecialPressed&&this.player.canShoot,
+        naturalSpecial&&f4SpecialPressed&&this.player.canShoot);
+-      if(naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural)this.resources.refillF4SpecialInk();
+-      f4SpecialOwnsInput=f4SpecialOwnsInput||specialAcceptedOrActive;
+-      this.f4SpecialSecondaryHeld=secondary;
++      const naturalActivated=naturalSpecial&&this.f4Special.naturalActivations('human')>beforeNatural;
++      if(naturalActivated)this.resources.refillF4SpecialInk();
++      // Pre-KCC ownership predicts a possible G activation to prevent a paid
++      // dodge on the same tick. Actual placement/admission can still reject it.
++      // A rejected natural G must not cancel a paid burst or unreleased charge.
++      // The executor's return (including cooldown ownership) is authoritative.
++      f4SpecialOwnsInput=naturalSpecial?
++       zipBlocksWeapon||specialAcceptedOrActive||naturalActivated:
++       f4SpecialOwnsInput||specialAcceptedOrActive;
++      this.f4SpecialSecondaryHeld=secondary;
+      }
+      this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+      if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
+@@ -7181,8 +7202,8 @@
+   const next=this.b401LiveSourceInk.observe(this.b45SourceSurfaces,[
+    this.rawStage.solids.length,this.rawStage.paintSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,0
+-  ],this.clock.tick,this.matchState,true);
+-  if(next===before)return;
++  ],this.clock.tick,this.matchState,true,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
++  if(next===before)return;
+   this.sourcePracticeInkBalance.render(next,[
+    this.rawStage.solids.length,this.b45SourceSurfaces.length,
+    this.rawStage.navigationLinks?.length??0,
+@@ -7206,12 +7227,14 @@
+      this.canvas.dataset.t21F4ActorArt==='ERROR'||this.stopReason)return;
+   try{
+    const human=this.app.root.findByName('Player');
+-   let applied=human instanceof Entity&&b248SetF4ActorArt(human,this.projectiles.currentPlayerWeapon.id,
+-    this.stats.playerInk)?1:0;
+-   const native=(this.cpu as unknown as {bots:readonly {
+-    entity:Entity;weaponId:import('../weapons/WeaponCatalog').WeaponId
+-   }[]}).bots;
+-   for(const bot of native)if(b248SetF4ActorArt(bot.entity,bot.weaponId))applied++;
++   const weapon=this.projectiles.currentPlayerWeapon.id;
++   let applied=human instanceof Entity&&b248SetF4ActorArt(human,weapon,
++    this.stats.playerInk,this.resources.currentHp>0?this.projectiles.readF4VisualRecoil('human',weapon):0)?1:0;
++   const native=(this.cpu as unknown as {bots:readonly {
++    id:string;hp:number;entity:Entity;weaponId:import('../weapons/WeaponCatalog').WeaponId
++   }[]}).bots;
++   for(const bot of native)if(b248SetF4ActorArt(bot.entity,bot.weaponId,undefined,
++    bot.hp>0?this.projectiles.readF4VisualRecoil(bot.id,bot.weaponId):0))applied++;
+    const artState=applied===native.length+1?'ON':'PARTIAL';
+    if(this.canvas.dataset.t21F4ActorArt!==artState)this.canvas.dataset.t21F4ActorArt=artState;
+   }catch(error){
+@@ -7220,8 +7243,9 @@
+    console.warn('F4_ACTOR_ART_FALLBACK',error);
+   }
+  }
+- private update(dt:number){
+-  this.updateW10B22OwnerTrial();
++ private update(dt:number){
++  try{
++  this.updateW10B22OwnerTrial();
+   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+    const deadline=performance.now()+3;
+    this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
+@@ -7230,17 +7254,30 @@
+   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
+    this.paused=true;
+   // A generic QA/UI pause toggle cannot consume the player's ready time.
+-  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
+-  if(this.paused||this.stopReason){
+-   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
++  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
++  // Close the gap before the asynchronous blur/pointerlockchange events.
++  // No fixed clock advance, implicit charge release or CPU ticks unfocused.
++  if(!this.paused&&!this.stopReason&&this.matchState!=='TIME_UP'&&
++     this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++     this.b203EverLockedRealPointer&&this.input.f4LiveFocusLost){
++   this.input.cancelF4FocusInput();
++   this.pauseSourceRoundOnFocusLoss();
++  }
++  if(this.paused||this.stopReason){
++   // Drain only already accepted render work, including the last native
++   // tick. No physics, paint raster, gauge or score advances while paused.
++   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason){
++    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
++    this.coordinator.flushF4WallAtlas(16);
++   }
++   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
+    this.b399UpdateCameraAimClearance();
+    this.refreshF4CombatReticle();
+    this.lastSourceFrameAtMs=Number.NaN;
+    if(this.b27KineticEnabled)this.resetW10B27KineticLens();
+-   return;
+-  }
+-  try{
+-   const now=performance.now();
++   return;
++  }
++   const now=performance.now();
+    if(Number.isFinite(this.lastSourceFrameAtMs)){
+     const interval=now-this.lastSourceFrameAtMs;
+     // Slow genuine SwiftShader frames must NOT vanish from p95/p99.
+@@ -7714,43 +7751,49 @@
+   const ink=this.stats.playerInk,rec=this.stats.playerInkRecoveryState;
+   const mode=this.player.currentMode;
+   const show=live&&Number.isFinite(ink)&&ink>=0&&ink<=100;
+-  gauge.hidden=!show;
+-  gauge.style.display=show?'block':'none';
+-  gauge.dataset.t21B414RealNativeSource=String(show);
+-  gauge.dataset.t21B414RenderTick=String(this.clock.tick);
++  // Native values and diagnostics remain identical; avoid DOM mutations
++  // when a high-FPS render has no new fixed tick or input change.
++  const setHidden=(node:HTMLElement,value:boolean)=>{if(node.hidden!==value)node.hidden=value;};
++  const setDisplay=(node:HTMLElement,value:string)=>{if(node.style.display!==value)node.style.display=value;};
++  const setData=(node:HTMLElement,key:string,value:string)=>{if(node.dataset[key]!==value)node.dataset[key]=value;};
++  const setText=(node:HTMLElement,value:string)=>{if(node.textContent!==value)node.textContent=value;};
++  setHidden(gauge,!show);setDisplay(gauge,show?'block':'none');
++  setData(gauge,'t21B414RealNativeSource',String(show));
++  setData(gauge,'t21B414RenderTick',String(this.clock.tick));
+   // DOM display errors must never modify the physical SOURCE world.
+   if(!show){
+-   contest.hidden=true;contest.style.display='none';
+-   this.b417LastDrawnSampleTick=null;
++   setHidden(contest,true);setDisplay(contest,'none');
++   this.b417LastDrawnSampleTick=null;
+    this.b417LastDrawnTotals=null;
+    return;
+   }
+-  gauge.dataset.t21B414ActualInk=String(ink);
+-  gauge.dataset.t21B414Recovery=String(rec);
+-  gauge.dataset.t21B414Mode=String(mode);
++  setData(gauge,'t21B414ActualInk',String(ink));
++  setData(gauge,'t21B414Recovery',String(rec));
++  setData(gauge,'t21B414Mode',String(mode));
+   const state=ink>=99.95?'FULL':
+    rec==='SQUID_OWN'?'OWN INK · REFILLING':
+    rec==='LOCKED'?'RECOVERY LOCKED':
+    rec==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
+-  inkText.textContent=
+-   'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state;
+-  fill.style.width=ink.toFixed(2)+'%';
+-  fill.style.background=rec==='SQUID_OWN'?'#72edc3':
+-   rec==='LOCKED'?'#ffcf81':'#70dce8';
++  setText(inkText,'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state);
++  const width=String(Number(ink.toFixed(2)))+'%';if(fill.style.width!==width)fill.style.width=width;
++  // CSSOM normalizes hex colors to rgb(); compare the canonical form.
++  const background=rec==='SQUID_OWN'?'rgb(114, 237, 195)':
++   rec==='LOCKED'?'rgb(255, 207, 129)':'rgb(112, 220, 232)';
++  if(fill.style.background!==background)fill.style.background=background;
+   // B415 progression is counted on true 60Hz ticks, not in the DOM.
+   const stage=this.b415InkLoop?.stage??'HOLD';
+-  loop.textContent=b415ReadableInstruction(stage);
+-  loop.dataset.t21B415PracticeStage=stage;
+-  loop.dataset.t21B415SourceOnly='true';
+-  loop.dataset.t21B415OfficialTurfResult='false';
++  setText(loop,b415ReadableInstruction(stage));
++  setData(loop,'t21B415PracticeStage',stage);
++  setData(loop,'t21B415SourceOnly','true');
++  setData(loop,'t21B415OfficialTurfResult','false');
+   const owned=b417RealSourcePaintedCellView(
+    this.b401LiveSourceInk.get(),this.clock.tick,[
+     this.rawStage.solids.length,this.b45SourceSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,
+     this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+    ],live);
+-  contest.hidden=owned===null;
+-  contest.style.display=owned?'block':'none';
++  setHidden(contest,owned===null);
++  setDisplay(contest,owned?'block':'none');
+   if(!owned){
+    this.b417LastDrawnSampleTick=null;
+    this.b417LastDrawnTotals=null;
+@@ -8961,8 +9004,13 @@
+    pathPoints:native.pointCount,stepSolid:supported.solidId,
+    stepGap,goalGap};
+  }
+- public snapshot(){
+-  const pos=this.player.getPosition(this.p);
++ public snapshot(){
++  // The external QA API still returns a complete, eagerly materialized plain object.
++  return {...this.readPresentationSnapshot()};
++ }
++ private readPresentationSnapshot(){
++  const app=this;
++  const pos=this.player.getPosition(this.p);
+   const b129Edge=this.originalEdgeGuidance(this.clock.tick);
+   const progress=this.traffic.snapshot();
+   // B146: read real grounded original KCC foot against the frozen B130
+@@ -9048,7 +9096,7 @@
+    sourceGpuAtlasStatus:this.atlas.sourceIdleCameraStatus(),
+    radarVisible:this.radarVisible,
+    b402NativeOriginalInkRadar:this.radar.sourceInkSnapshot(),
+-   b234RealCpuGapReadiness:this.cpu.b234OriginalGapReadinessSnapshot(),
++   get b234RealCpuGapReadiness(){return app.cpu.b234OriginalGapReadinessSnapshot();},
+    originalSourceSolids:this.rawStage.solids.length,
+    originalPaintSurfaces:this.rawStage.paintSurfaces.length,
+    originalSourceNavigationLinks:this.rawStage.navigationLinks?.length,
+@@ -9304,9 +9352,9 @@
+     autonomousEncounterVerified:false,
+     sourceOnly:true,scoreablePromotions:0,normalPlaySpecialsCertified:false},
+    cpuContinuity:this.cpu.qaContinuitySnapshot(),
+-   blockedSourceActionEvidence:this.cpu.blockedSourceActionSnapshot(),
++   get blockedSourceActionEvidence(){return app.cpu.blockedSourceActionSnapshot();},
+    // Real 60Hz Recast proposals versus Rapier KCC decisions, read-only.
+-   cpuSourceNativeGroundMotion:this.cpu.sourceGroundStepEvidenceSnapshot(),
++   get cpuSourceNativeGroundMotion(){return app.cpu.sourceGroundStepEvidenceSnapshot();},
+    cpuPaintRequests:this.stats.cpuPaintRequests,
+    cpuCombatHits:this.stats.cpuCombatHits,
+    humanCpuDirectHits:this.stats.humanCpuDirectHits,
+@@ -9359,19 +9407,19 @@
+       this.b203FullRound&&
+       this.canvas.dataset.t21B192HumanCombat==='REAL_SOURCE_ONLY',
+    b345SourceShooterOpening:this.projectiles.b345SourceShooterOpeningSnapshot(),
+-   b346NativeShooterWitness:this.projectiles.b346NativeShooterWitnessSnapshot(),
++   get b346NativeShooterWitness(){return app.projectiles.b346NativeShooterWitnessSnapshot();},
+    b348SourceShooterAccuracy:this.projectiles.b348SourceShooterAccuracySnapshot(),
+    b351ActualHitCue:this.projectiles.b351ActualHitCueSnapshot(),
+-   b367RealCpuLifecycleEvidence:{
+-    ...this.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
+-    ...(!this.f4ResearchMode&&!this.w10b14&&this.nativeLiveSourcePrestart?{
+-     roundOrigin:performance.timeOrigin,
+-     lifeTransitions:this.b367Timeline.nativeLifeTransitions()
+-    }:{}),
+-    ...(this.f4WholeCpuConnected?{
+-     f4LifeTransitions:this.b367Timeline.nativeF4LifeTransitions()
+-    }:{})
+-   },
++   get b367RealCpuLifecycleEvidence(){return {
++    ...app.projectiles.b367RealCpuLifecycleEvidenceSnapshot(),
++    ...(!app.f4ResearchMode&&!app.w10b14&&app.nativeLiveSourcePrestart?{
++     roundOrigin:performance.timeOrigin,
++     lifeTransitions:app.b367Timeline.nativeLifeTransitions()
++    }:{}),
++    ...(app.f4WholeCpuConnected?{
++     f4LifeTransitions:app.b367Timeline.nativeF4LifeTransitions()
++    }:{})
++   };},
+    // B474: actual native Crowd submit/suppress counts, never an AI route
+    // permit or a replacement for the original Rapier physical foot.
+    b474NativeSteeringEvidence:this.canvas.dataset.t21B474NativeSteering===
+@@ -9379,10 +9427,10 @@
+     this.cpu.b35NativeSourceRetargetSnapshot():null,
+    b349ActualKccGrounded:this.stats.playerGrounded,
+     b64SourceInkSweep:this.cpu.b64NativeSourceInkSweepSnapshot(),
+-   b178SourceInkRecovery:this.cpu.b178SourceInkResourceSnapshot(),
++   get b178SourceInkRecovery(){return app.cpu.b178SourceInkResourceSnapshot();},
+    b180OriginalPatchAim:this.cpu.b180OriginalPatchAimSnapshot(),
+-   b215RealBattleAimPacing:this.cpu.b215RealSourceBattlePaintPacingSnapshot(),
+-   b216RealNativePaintBackfill:this.cpu.b216OriginalSourceBackfillSnapshot(),
++   get b215RealBattleAimPacing(){return app.cpu.b215RealSourceBattlePaintPacingSnapshot();},
++   get b216RealNativePaintBackfill(){return app.cpu.b216OriginalSourceBackfillSnapshot();},
+    b217ActualLivePaintTempo:this.b217NativePaintTempo.snapshot(),
+    b214SustainedBattleInk:{
+     enabled:this.canvas.dataset.t21B214NativeBattleInk===
+@@ -9473,8 +9521,16 @@
+   // A paused, unlocked or failed source session still updates the practice
+   // card immediately instead of leaving stale RUNNING text on screen.
+   this.refreshB25PaintRun();
+-  const state=this.snapshot();
+-  // The legacy research guide runs real path/ray audits; keep it available
++  const livePlayerPresentation=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++   this.matchState==='PLAYING'&&!this.paused&&!this.stopReason&&
++   document.pointerLockElement===this.canvas&&
++   this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
++   this.panel.parentElement?.dataset.t21B245Inspect!=='true'&&
++   this.canvas.dataset.t21B262QaFocus!=='ON';
++  // Lazy diagnostic fields are read only if a synchronous presentation consumer needs them.
++  // Never retain this internal view or return it through the public snapshot API.
++  const state=livePlayerPresentation?this.readPresentationSnapshot():this.snapshot();
++  // The legacy research guide runs real path/ray audits; keep it available
+   // in Inspect, not over the provisional player's regular battle HUD.
+   const f4PlayerView=this.f4ProvisionalTurfEnabled&&
+    this.panel.parentElement?.dataset.t21B245Presentation==='PLAYER'&&
+@@ -9957,8 +10013,8 @@
+     this.b45SourceSurfaces,[
+      state.originalSourceSolids,state.originalPaintSurfaces,
+      state.originalSourceNavigationLinks??-1,state.sourceScoreablePromotions
+-    ],state.tick,state.matchState,this.b203FullRound);
+-   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
++    ],state.tick,state.matchState,this.b203FullRound,this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe);
++   this.b205RoundClock.dataset.t21B401SourceStatus=b401.status;
+    this.b205RoundClock.dataset.t21B401SampleNativeTick=String(b401.sampleNativeTick);
+    this.b205RoundClock.dataset.t21B401RegisteredCells=String(b401.totalActiveCells);
+    this.b205RoundClock.dataset.t21B401TeamACells=String(b401.teamA);
+@@ -10092,7 +10148,7 @@
+    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
+   this.practiceHud.root.style.display=
+    this.survey.snapshot().active||this.galleryIndex>=0?'none':'';
+-  this.status.textContent=[
++  if(!livePlayerPresentation||!this.panel.hidden)this.status.textContent=[
+    'HUMAN · '+state.player.mode+
+     '  HP '+Math.round(state.player.hp)+
+     '  INK '+Math.round(state.player.ink),

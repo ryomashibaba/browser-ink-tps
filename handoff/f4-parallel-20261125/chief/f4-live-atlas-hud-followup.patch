@@ -1,0 +1,203 @@
+diff --git a/src/ink/GpuInkAtlas.ts b/src/ink/GpuInkAtlas.ts
+--- a/src/ink/GpuInkAtlas.ts
++++ b/src/ink/GpuInkAtlas.ts
+@@ -113,7 +113,21 @@
+   paintableRuns: readonly PaintRasterRun[];
+ }
+ 
+-export class GpuInkAtlas {
++/** Identical adjacent raster overwrites have the same shader input and pixels.
++ * Never reorder different brushes, even when they belong to the same team. */
++function sameF4QueuedOverwrite(a:PendingInkEvent,b:PaintEvent,runs:readonly PaintRasterRun[]):boolean {
++  const p=a.event;
++  if(p.surfaceId!==b.surfaceId||p.team!==b.team||p.centerU!==b.centerU||p.centerV!==b.centerV||
++     p.radiusU!==b.radiusU||p.radiusV!==b.radiusV||p.angle!==b.angle||p.strength!==b.strength||
++     a.paintableRuns.length!==runs.length)return false;
++  for(let i=0;i<runs.length;i++){
++    const x=a.paintableRuns[i]!,y=runs[i]!;
++    if(x.row!==y.row||x.startX!==y.startX||x.endXExclusive!==y.endXExclusive)return false;
++  }
++  return true;
++}
++
++export class GpuInkAtlas {
+   public readonly texture: Texture;
+   public readonly atlasSize: number;
+   public readonly layer: Layer;
+@@ -128,7 +142,9 @@
+   private readonly mesh: Mesh;
+   private primed = false;
+   private clearPending = false;
+-  private paintedThisFrame = false;
++  private paintedThisFrame = false;
++  private f4QueueOptimized=false;
++  public enableF4QueueOptimization():void {this.f4QueueOptimized=true;}
+   // W10-B20: default OFF for every other game route / production stage.
+   // A primed, persistent atlas needs no idle render-target submission.
+   private sourceIdlePostRenderFrames = 0;
+@@ -261,8 +277,12 @@
+    * unconditional full-ellipse fallback for events lacking run authority.
+    */
+   public queue(event: PaintEvent, paintableRuns: readonly PaintRasterRun[] = []): void {
+-    if (paintableRuns.length === 0) return;
+-    this.pending.push({ event, paintableRuns });
++    if (paintableRuns.length === 0) return;
++    // Only the still-pending tail can be coalesced. A previously rendered
++    // stamp or an intervening opposite-team overwrite is never skipped.
++    const tail=this.pending[this.pending.length-1];
++    if(this.f4QueueOptimized&&tail&&sameF4QueuedOverwrite(tail,event,paintableRuns))return;
++    this.pending.push({ event, paintableRuns });
+   }
+ 
+   public get backlog(): number {
+@@ -270,8 +290,9 @@
+   }
+ 
+   public flush(maxEvents: number): { events: number; buildMs: number } {
+-    if (!this.primed || this.clearPending || this.pending.length === 0 ||
+-        !Number.isFinite(maxEvents) || maxEvents < 1)
++    if (!this.primed || this.clearPending || this.pending.length === 0 ||
++        (this.f4QueueOptimized&&this.paintedThisFrame)||
++        !Number.isFinite(maxEvents) || maxEvents < 1)
+       return { events: 0, buildMs: 0 };
+ 
+     const started = performance.now();
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -63,7 +63,9 @@
+   private f4WallAtlas:GpuInkAtlas|null=null;
+   public attachF4WallAtlas(atlas:GpuInkAtlas):void{
+     if(this.f4WallAtlas)throw Error('F4_WALL_ATLAS_ALREADY_ATTACHED');
+-    this.f4WallAtlas=atlas;
++    this.f4WallAtlas=atlas;
++    // The wall atlas exists only in the provisional native F4 world.
++    atlas.enableF4QueueOptimization();
+   }
+   public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
+   public detachF4WallAtlas(atlas:GpuInkAtlas):void{
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -834,8 +834,9 @@
+   if(atlasSize<2048)throw Error('T21_F3_GPU_MIN_ATLAS_2048');
+   // Only the nonproduction F3 preview skips no-op idle atlas-camera
+   // render-target passes. The production/default GpuInkAtlas remains unchanged.
+-  this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
+-   GAME_CONFIG.ink.atlasGutterPixels,true);
++  this.atlas=new GpuInkAtlas(app,surfaces,atlasSize,64,
++   GAME_CONFIG.ink.atlasGutterPixels,true);
++  if(this.f4ProvisionalTurfEnabled)this.atlas.enableF4QueueOptimization();
+   // Only actual human-operated 180s SOURCE rounds get pigment depth/wet
+   // glints on the EXISTING 17 registered paint surfaces. The standalone
+   // production renderer and every SOURCE QA baseline retain old shading.
+@@ -7242,8 +7243,9 @@
+    console.warn('F4_ACTOR_ART_FALLBACK',error);
+   }
+  }
+- private update(dt:number){
+-  this.updateW10B22OwnerTrial();
++ private update(dt:number){
++  try{
++  this.updateW10B22OwnerTrial();
+   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+    const deadline=performance.now()+3;
+    this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
+@@ -7261,16 +7263,21 @@
+    this.input.cancelF4FocusInput();
+    this.pauseSourceRoundOnFocusLoss();
+   }
+-  if(this.paused||this.stopReason){
+-   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
++  if(this.paused||this.stopReason){
++   // Drain only already accepted render work, including the last native
++   // tick. No physics, paint raster, gauge or score advances while paused.
++   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason){
++    this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
++    this.coordinator.flushF4WallAtlas(16);
++   }
++   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
+    this.b399UpdateCameraAimClearance();
+    this.refreshF4CombatReticle();
+    this.lastSourceFrameAtMs=Number.NaN;
+    if(this.b27KineticEnabled)this.resetW10B27KineticLens();
+-   return;
+-  }
+-  try{
+-   const now=performance.now();
++   return;
++  }
++   const now=performance.now();
+    if(Number.isFinite(this.lastSourceFrameAtMs)){
+     const interval=now-this.lastSourceFrameAtMs;
+     // Slow genuine SwiftShader frames must NOT vanish from p95/p99.
+@@ -7744,43 +7751,49 @@
+   const ink=this.stats.playerInk,rec=this.stats.playerInkRecoveryState;
+   const mode=this.player.currentMode;
+   const show=live&&Number.isFinite(ink)&&ink>=0&&ink<=100;
+-  gauge.hidden=!show;
+-  gauge.style.display=show?'block':'none';
+-  gauge.dataset.t21B414RealNativeSource=String(show);
+-  gauge.dataset.t21B414RenderTick=String(this.clock.tick);
++  // Native values and diagnostics remain identical; avoid DOM mutations
++  // when a high-FPS render has no new fixed tick or input change.
++  const setHidden=(node:HTMLElement,value:boolean)=>{if(node.hidden!==value)node.hidden=value;};
++  const setDisplay=(node:HTMLElement,value:string)=>{if(node.style.display!==value)node.style.display=value;};
++  const setData=(node:HTMLElement,key:string,value:string)=>{if(node.dataset[key]!==value)node.dataset[key]=value;};
++  const setText=(node:HTMLElement,value:string)=>{if(node.textContent!==value)node.textContent=value;};
++  setHidden(gauge,!show);setDisplay(gauge,show?'block':'none');
++  setData(gauge,'t21B414RealNativeSource',String(show));
++  setData(gauge,'t21B414RenderTick',String(this.clock.tick));
+   // DOM display errors must never modify the physical SOURCE world.
+   if(!show){
+-   contest.hidden=true;contest.style.display='none';
+-   this.b417LastDrawnSampleTick=null;
++   setHidden(contest,true);setDisplay(contest,'none');
++   this.b417LastDrawnSampleTick=null;
+    this.b417LastDrawnTotals=null;
+    return;
+   }
+-  gauge.dataset.t21B414ActualInk=String(ink);
+-  gauge.dataset.t21B414Recovery=String(rec);
+-  gauge.dataset.t21B414Mode=String(mode);
++  setData(gauge,'t21B414ActualInk',String(ink));
++  setData(gauge,'t21B414Recovery',String(rec));
++  setData(gauge,'t21B414Mode',String(mode));
+   const state=ink>=99.95?'FULL':
+    rec==='SQUID_OWN'?'OWN INK · REFILLING':
+    rec==='LOCKED'?'RECOVERY LOCKED':
+    rec==='HUMAN'?'HUMAN RECOVERY':'NO OWN REFILL';
+-  inkText.textContent=
+-   'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state;
+-  fill.style.width=ink.toFixed(2)+'%';
+-  fill.style.background=rec==='SQUID_OWN'?'#72edc3':
+-   rec==='LOCKED'?'#ffcf81':'#70dce8';
++  setText(inkText,'LIVE INK '+Math.round(ink)+'/100 · '+String(mode)+' · '+state);
++  const width=String(Number(ink.toFixed(2)))+'%';if(fill.style.width!==width)fill.style.width=width;
++  // CSSOM normalizes hex colors to rgb(); compare the canonical form.
++  const background=rec==='SQUID_OWN'?'rgb(114, 237, 195)':
++   rec==='LOCKED'?'rgb(255, 207, 129)':'rgb(112, 220, 232)';
++  if(fill.style.background!==background)fill.style.background=background;
+   // B415 progression is counted on true 60Hz ticks, not in the DOM.
+   const stage=this.b415InkLoop?.stage??'HOLD';
+-  loop.textContent=b415ReadableInstruction(stage);
+-  loop.dataset.t21B415PracticeStage=stage;
+-  loop.dataset.t21B415SourceOnly='true';
+-  loop.dataset.t21B415OfficialTurfResult='false';
++  setText(loop,b415ReadableInstruction(stage));
++  setData(loop,'t21B415PracticeStage',stage);
++  setData(loop,'t21B415SourceOnly','true');
++  setData(loop,'t21B415OfficialTurfResult','false');
+   const owned=b417RealSourcePaintedCellView(
+    this.b401LiveSourceInk.get(),this.clock.tick,[
+     this.rawStage.solids.length,this.b45SourceSurfaces.length,
+     this.rawStage.navigationLinks?.length??0,
+     this.b45SourceSurfaces.filter(s=>s.isScoreable).length
+    ],live);
+-  contest.hidden=owned===null;
+-  contest.style.display=owned?'block':'none';
++  setHidden(contest,owned===null);
++  setDisplay(contest,owned?'block':'none');
+   if(!owned){
+    this.b417LastDrawnSampleTick=null;
+    this.b417LastDrawnTotals=null;
