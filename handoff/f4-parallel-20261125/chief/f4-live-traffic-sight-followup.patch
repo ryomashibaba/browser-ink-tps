@@ -1,0 +1,68 @@
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -10,7 +10,8 @@
+  */
+ import {Vec3} from 'playcanvas';
+ import {F4PatrolNavigation,localPatrolProgress,localPatrolCanContinue,type PatrolCandidate,type PatrolInk,type PatrolPoint} from '../ai/F4PatrolNavigation.mjs';
+-import {recoveringInk} from '../ai/F4CpuRecoveryPolicy.mjs';
++import {recoveringInk} from '../ai/F4CpuRecoveryPolicy.mjs';
++import {chooseF4PhysicalSight} from '../ai/F4CpuAttackPolicy.mjs';
+ import {F4PatrolSurvey} from '../ai/F4PatrolSurvey.mjs';
+ import type {CrowdAgent} from 'recast-navigation';
+ import type {RecastStageNavigation} from '../navigation/RecastStageNavigation';
+@@ -1633,10 +1634,16 @@
+   const lastHit=bot.b213ActualHitTick??-1;
+   const attacker=lookBeyondWeapon&&lastHit>=0&&Math.abs(this.b137NativeTick-lastHit)<=72?
+    bot.b213ActualAttackerId??null:null;
+-  return chooseB181OriginalSourceSight(
+-   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
+-    new Vec3(from.x,from.y,from.z),
+-    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
++  // Whole F4 navigation and paid main fire share the same 3D sight
++  // selector. The older photo-route research keeps its original optics.
++  if(this.f4WholeSupport)return chooseF4PhysicalSight(
++   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
++    new Vec3(from.x,from.y,from.z),
++    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
++  return chooseB181OriginalSourceSight(
++   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
++    new Vec3(from.x,from.y,from.z),
++    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
+  }
+ 
+  /** Sight can inform a Crowd intention outside weapon range; only the paid
+@@ -1662,9 +1669,12 @@
+    return null;
+   }
+   const target=seen.point;
+-  const dx=target.x-foot.x,dz=target.z-foot.z;
+-  const distance=Math.hypot(dx,dz);
+-  if(distance<.2)return null;
++  const dx=target.x-foot.x,dz=target.z-foot.z;
++  const horizontal=Math.hypot(dx,dz);
++  if(horizontal<.2)return null;
++  // Steering remains planar, but the firing envelope is measured from
++  // the real muzzle to the same physical body sample used by sight.
++  const distance=Math.hypot(dx,target.y-foot.y-GAME_CONFIG.cpu.muzzleHeightMeters,dz);
+   const recovering=(bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
+    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
+    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+@@ -1677,7 +1687,7 @@
+      foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+      this.b137NativeTick-previous.advanced<30)return result(previous.point);
+ 
+-  const forwardX=dx/distance,forwardZ=dz/distance;
++  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+   const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
+   if(!spacingPlan)return null;
+   const advance=spacingPlan.advance;
+@@ -1699,7 +1709,7 @@
+    const covered=!!this.physics.castStageSegment(muzzle,target,'ink-projectile');
+    // Healthy CPUs keep or regain a real firing lane. Wounded CPUs favor
+    // existing cover and owned ink, even if that puts their own gun offline.
+-   const spacing=Math.hypot(p.x-target.x,p.z-target.z);
++   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
+    const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
+     covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit});
+    candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
