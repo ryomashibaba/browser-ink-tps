@@ -1,0 +1,60 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -3692,7 +3692,7 @@
+         const minCharge=profile.charger?profile.minChargeSeconds/Math.max(1e-6,profile.chargeSeconds):0;
+         const mode=recoveryAction({recovering:true,committed,ink:bot.ink,
+           minCost:cpuWeaponInkCost(profile,action,minCharge),range:cpuWeaponRangeMeters(profile),
+-          visible:target!==null,distance:target?Math.sqrt(horizontalDistanceSq(bot.position,target)):Infinity});
++          visible:target!==null,distance:target?this.f4CombatMuzzleDistance(bot,target):Infinity});
+         if(mode==='RECOVER'){
+           this.advanceCpuWeaponTimers(bot,dt,Boolean(profile.shooter||profile.blaster||
+             profile.contactWeapon||profile.slosher||profile.canopy));
+@@ -3740,9 +3740,9 @@
+        !['pulse-bomb','snap-bomb','anchor-bomb','torpedo'].includes(subId))return false;
+     const target=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0);
+     if(!target)return false;
+-    const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId,true));
+-    const distance=Math.sqrt(horizontalDistanceSq(bot.position,target));
+-    if(distance<=range)return false;
++    const range=cpuWeaponRangeMeters(weaponProfile(bot.weaponId,true));
++    const distance=this.f4CombatMuzzleDistance(bot,target);
++    if(distance<=range)return false;
+     const main=this.chooseCombatTarget(bot,humanTeam,humanPosition,humanActive,0,true);
+     if(!shouldThrowCombatSub({subId,visible:true,mainTargetVisible:main!==null,
+       committed:false,recovering:bot.f4RecoveringInk===true,ink:bot.ink,cost,capacity,distance,
+@@ -3920,8 +3920,13 @@
+       return;
+     }
+ 
+-    this.queueCpuPaidSub(bot,kit.sub,target,direction,
+-      !!actualSourceSubPaintAim&&!combatTarget);
++    // F4 offensive enemy bombs are admitted only by tryF4CombatSubBeforeMain.
++    // The legacy kit fallback must not bypass its actual main-range/sight and
++    // reserve-ink checks. Keep utility subs and genuine floor-paint throws.
++    if(this.f4WholeNavigation&&combatTarget&&
++       ['pulse-bomb','snap-bomb','anchor-bomb','torpedo'].includes(kit.sub))return;
++    this.queueCpuPaidSub(bot,kit.sub,target,direction,
++      !!actualSourceSubPaintAim&&!combatTarget);
+   }
+ 
+   private rollbackRejectedKitRequest(
+@@ -5082,8 +5087,16 @@
+     return true;
+   }
+ 
+-  private cpuTargetInRange(
+-    bot: CpuBot,
++  // F4 combat only: same physical muzzle and 3D envelope as live sight.
++  // Preserve historical horizontal floor-paint and T20 range checks.
++  private f4CombatMuzzleDistance(bot:CpuBot,target:Vec3):number {
++    return Math.hypot(target.x-bot.position.x,
++      target.y-bot.position.y-GAME_CONFIG.cpu.muzzleHeightMeters,
++      target.z-bot.position.z);
++  }
++
++  private cpuTargetInRange(
++    bot: CpuBot,
+     target: Vec3,
+     profile: ReturnType<typeof weaponProfile>
+   ): boolean {
