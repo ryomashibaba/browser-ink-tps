@@ -1,0 +1,87 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -527,7 +527,11 @@
+   private readonly samplePoint = new Vec3();
+   private readonly targetPoint = new Vec3();
+   private activeLastTick = false;
+-  private f4WholeNavigation = false;
++  private f4WholeNavigation = false;
++  private f4CombatVisualFacing=false;
++  private readonly f4VisualAimTick=new Map<string,{tick:number;life:number}>();
++  /** Render-only opt-in from the existing local visual-polish gate. */
++  public enableF4CombatVisualFacing():void {this.f4CombatVisualFacing=true;}
+   private f4PhysicalSpecialProbe?: {
+     actorId:string;
+     step(input:{foot:Vec3;aim:Vec3;team:Team.A|Team.B;weapon:WeaponId;
+@@ -1249,7 +1253,8 @@
+     this.b180OwnedCenterSourcePatchAims=0;
+     this.b216OwnedCenterSourceBackfillAims=0;
+     this.b181CachedCombat.clear();
+-    this.b181NativeFrame=0;
++    this.b181NativeFrame=0;
++    this.f4VisualAimTick.clear();
+     this.b213RealAttackerDamageEvents=0;
+     this.b213VisibleRetaliationSelections=0;
+     this.b215RealWeaponCooldownPaintScansDeferred=0;
+@@ -2576,7 +2581,15 @@
+         0.58 * (1 + squash)
+       );
+       bot.entity.setLocalEulerAngles(0, 0, 0);
+-      this.b248VisualByActor.get(bot.id)?.setPose(dx,dz,moving,phase*1.8);
++      // Stride follows actual movement; weapon/body yaw follows recent actual
++      // aim instead. Never alter the physical foot, weapon ray or hit volume.
++      const aim=this.f4VisualAimTick.get(bot.id);
++      const useAim=this.f4CombatVisualFacing&&this.f4WholeNavigation&&
++        bot.mobilityState==='GROUND'&&bot.hp>0&&aim!==undefined&&
++        aim.life===bot.f4LifeSerial&&this.b181NativeFrame>=aim.tick&&
++        this.b181NativeFrame-aim.tick<=12;
++      this.b248VisualByActor.get(bot.id)?.setPose(
++        useAim?bot.weaponFacing.x:dx,useAim?bot.weaponFacing.z:dz,moving,phase*1.8);
+       this.renderCpuGuard(bot, x, y, z);
+     }
+   }
+@@ -4551,12 +4564,14 @@
+     );
+     if (bot.weaponFacing.lengthSq() <= 1e-8) {
+       bot.weaponFacing.set(0, 0, bot.team === Team.A ? -1 : 1);
+-    } else {
+-      bot.weaponFacing.normalize();
+-    }
+-  }
+-
+-  private updateCpuCharger(
++    } else {
++      bot.weaponFacing.normalize();
++      if(this.f4CombatVisualFacing&&this.f4WholeNavigation)
++        this.f4VisualAimTick.set(bot.id,{tick:this.b181NativeFrame,life:bot.f4LifeSerial});
++    }
++  }
++
++  private updateCpuCharger(
+     bot: CpuBot,
+     profile: ReturnType<typeof weaponProfile>,
+     target: Vec3 | null,
+@@ -5972,7 +5987,8 @@
+     bot.guardEntity.enabled = false;
+     bot.respawnRemainingSeconds = 0;
+     bot.lifeState = 'ACTIVE';
+-    bot.f4LifeSerial += 1;
++    bot.f4LifeSerial += 1;
++    this.f4VisualAimTick.delete(bot.id);
+     bot.mobilityState = 'GROUND';
+     bot.jumpMarker.enabled = false;
+     bot.jumpTargetId = '-';
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3482,7 +3482,8 @@
+      this.app.scene.ambientLight=new Color(.62,.68,.74);
+      visualKey.light.intensity=1.65;
+      visualKey.light.color=new Color(1,.97,.91);
+-     this.canvas.dataset.t21F4VisualPolish='ON';
++     this.canvas.dataset.t21F4VisualPolish='ON';
++     this.cpu.enableF4CombatVisualFacing();
+     }
+    }
+    // Preserve the same separately verified source background as the
