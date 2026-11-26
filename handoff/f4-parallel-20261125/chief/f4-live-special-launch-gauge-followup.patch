@@ -1,0 +1,42 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1466,9 +1466,15 @@
+    this.humanSub.enableF4Bombs(this.projectiles);
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
+     const launchLife=(id:string):string|null=>{
+-     if(id==='human')return this.resources.currentHp>0?String(this.f4SpecialLife):null;
+-     const actor=this.cpu.f4NaturalActor(id);
+-     return actor?.alive?actor.lifeId:null;
++     const special=this.f4Special;
++     if(!special)return null;
++     if(id==='human'){
++      const lifeId=String(this.f4SpecialLife);
++      return this.resources.currentHp>0&&!this.player.f4ZipNaturalActive&&
++       !special.naturalPaintBlocked(id,lifeId,this.clock.tick)?lifeId:null;
++     }
++     const actor=this.cpu.f4NaturalActor(id);
++     return actor?.alive&&!special.naturalPaintBlocked(id,actor.lifeId,this.clock.tick)?actor.lifeId:null;
+     };
+     this.humanSub.useF4GaugeLaunchLife(launchLife);
+     this.projectiles.useF4GaugeLaunchLife(launchLife);
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -81,9 +81,13 @@
+   }
+   setNaturalOpen(open:boolean):void {this.naturalOpen=open;}
+   syncNaturalActor(actor:Actor,alive:boolean):void {this.naturalGauge.sync(actor,alive);}
+-  creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
+-    return this.naturalGauge.credit(actor,alive,area,this.ownsWeaponInput(actor.actorId,this.frame)||this.cpuZipLives.get(actor.actorId)===actor.lifeId);
+-  }
++  /** Capture special paint exclusion both at launch and at raster credit. */
++  naturalPaintBlocked(actorId:string,lifeId:string,tick:number):boolean {
++    return this.ownsWeaponInput(actorId,tick)||this.cpuZipLives.get(actorId)===lifeId;
++  }
++  creditNaturalPaint(actor:Actor,alive:boolean,area:number):number {
++    return this.naturalGauge.credit(actor,alive,area,this.naturalPaintBlocked(actor.actorId,actor.lifeId,this.frame));
++  }
+   naturalReady(actorId:string,tick:number):boolean {
+     const state=this.naturalGauge.state(actorId);
+     return tick>=0&&tick<10800&&this.naturalOpen&&!!state?.ready&&KIT720[state.weapon].special!=='superHook'&&!this.ownsWeaponInput(actorId,tick);
