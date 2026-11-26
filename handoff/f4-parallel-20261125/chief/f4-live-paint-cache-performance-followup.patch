@@ -1,0 +1,44 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -174,8 +174,11 @@
+         const limit=radiusMeters+maxPlaneDistance;
+         if (dx*dx+dy*dy+dz*dz>limit*limit) continue;
+       }
+-      const projected = surface.projectWorldPoint(point, this.sampleProjection);
+-      if (projected.planeDistance > maxPlaneDistance || !projected.inside) continue;
++      const projected = surface.projectWorldPoint(point, this.sampleProjection);
++      if (projected.planeDistance > maxPlaneDistance || !projected.inside) continue;
++      // A farther (or tied, later) surface cannot replace the existing best.
++      // F4 only: avoid unnecessary backing queries, keep registration order.
++      if(this.f4ProvisionalTurf&&bestSurface&&projected.planeDistance>=bestDistance)continue;
+ 
+       const u = Math.min(surface.widthMeters, Math.max(0, projected.u));
+       const v = Math.min(surface.heightMeters, Math.max(0, projected.v));
+@@ -261,8 +264,12 @@
+     let rasterAlreadyTeamOwnedCells = 0;
+     let testedCells = 0;
+     let scoreableAreaMeters2Changed = 0;
+-    const provisional=this.f4ProvisionalTurf;
+-    let provisionalDelta=0;
++    const provisional=this.f4ProvisionalTurf;
++    // Cache entries describe immutable physical backing, never paint ownership.
++    // The same synchronous brush visits one registered surface; reuse its
++    // existing cache rather than looking it up again for every covered cell.
++    const brushBacking=provisional&&this.backedCell?this.backingCache.get(surface.id):undefined;
++    let provisionalDelta=0;
+     const touchedTiles = this.touchedTilesScratch;
+     touchedTiles.clear();
+     const paintableRuns: PaintRasterRun[] = [];
+@@ -283,8 +290,9 @@
+         const index = surface.index(x, y);
+         const eligible = Number.isFinite(normalized) && normalized <= 1 &&
+           surface.isCellActive(x, y) &&
+-          (surface.flagsGrid[index]! & SurfaceFlags.Paintable) !== 0 &&
+-          this.isPhysicallyBacked(surface,x,y,index);
++          (surface.flagsGrid[index]! & SurfaceFlags.Paintable) !== 0 &&
++          (brushBacking?.[index]===1||
++           (brushBacking?.[index]!==2&&this.isPhysicallyBacked(surface,x,y,index)));
+         if (!eligible) {
+           if (startX >= 0) {
+             paintableRuns.push({ row: y, startX, endXExclusive: x });
