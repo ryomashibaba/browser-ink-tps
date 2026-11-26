@@ -1,0 +1,376 @@
+diff --git a/src/ink/types.ts b/src/ink/types.ts
+--- a/src/ink/types.ts
++++ b/src/ink/types.ts
+@@ -40,7 +40,9 @@
+   /** B152 original A1 ally-aim projectile provenance, diagnostics only. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+   /** false prevents this paint from contributing to the source actor's Special gauge. */
+-  gaugeEligible?: boolean;
++  gaugeEligible?: boolean;
++  /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
++  f4GaugeLaunchLife?: string|null;
+   team: Team.A | Team.B;
+   surfaceId: string;
+   /** local surface coordinate in meters from the lower-left U edge */
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -9,7 +9,9 @@
+   actorId?: string;
+   /** B152 informational only; forwarded to the immutable PaintEvent. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+-  gaugeEligible?: boolean;
++  gaugeEligible?: boolean;
++  /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
++  f4GaugeLaunchLife?: string|null;
+   team: Team.A | Team.B;
+   surfaceId: string;
+   centerU: number;
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -45,7 +45,7 @@
+  originalGameCollisionCertified:false;
+ }>;
+ interface BombSlot {
+-  f4?: { actor?: string; elapsed: number; attached: boolean };
++  f4?: { actor?: string; elapsed: number; attached: boolean; gaugeLaunchLife?: string|null };
+   curling?: { plan: ReturnType<typeof curlingPlan>; lastContact: Map<string,number>; trail: number };
+   device?: { normal: Vec3; hp: number; age: number; emitted: number };
+   mist?: { age:number };
+@@ -74,7 +74,9 @@
+ }
+ 
+ export class SubWeaponSystem {
+-  private f4Runtime?: ProjectileSystem;
++  private f4Runtime?: ProjectileSystem;
++  private f4GaugeLifeAtLaunch?: (actorId:string)=>string|null;
++  public useF4GaugeLaunchLife(query:(actorId:string)=>string|null):void {this.f4GaugeLifeAtLaunch=query;}
+   private f4HumanRepeat = 0;
+   private mistTick = 0;
+   private mistMaterial?: StandardMaterial;
+@@ -217,7 +219,8 @@
+     if (!cpuActor && !(f4 ? this.resources.tryConsumeF4SubInk(profile.inkCost,curling?.recovery??f4SubRecovery(subId))
+       : this.resources.tryConsumeSubInk(profile.inkCost))) return false;
+     if (f4 && !cpuActor) this.f4HumanRepeat = F4_SUB_REPEAT;
+-    slot.f4 = f4 ? { actor: cpuActor, elapsed: 0, attached: false } : undefined;
++    slot.f4 = f4 ? { actor: cpuActor, elapsed: 0, attached: false,
++      gaugeLaunchLife:this.f4GaugeLifeAtLaunch?.(cpuActor??'human') } : undefined;
+     slot.curling = curling ? {plan:curling,lastContact:new Map(),trail:0} : undefined;
+     slot.device = undefined;
+     slot.mist = undefined;
+@@ -475,7 +478,8 @@
+     const hit = this.physics.f4PaintAtStageHit(stage,this.surfaces);
+     if (!hit || !(hit.surface.baseFlags&SurfaceFlags.Paintable)) return;
+     const actor = slot.f4?.actor;
+-    this.coordinator.enqueue({source:actor?PaintSource.Cpu:PaintSource.Human,actorId:actor,
++    this.coordinator.enqueue({source:actor?PaintSource.Cpu:PaintSource.Human,actorId:actor,
++      ...(slot.f4?.gaugeLaunchLife!==undefined?{f4GaugeLaunchLife:slot.f4.gaugeLaunchLife}:{}),
+       team:slot.team,surfaceId:hit.surface.id,centerU:hit.u,centerV:hit.v,
+       radiusU:radius,radiusV:radius,angle:0,strength:1,type});
+   }
+@@ -767,7 +771,8 @@
+       if (!hit || (hit.surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
+       const radius = profile.paintRadiusMeters * (i === 0 ? .42 : .23);
+       this.coordinator.enqueue({ source: actor ? PaintSource.Cpu : PaintSource.Human,
+-        actorId:actor, team:slot.team, surfaceId:hit.surface.id, centerU:hit.u,centerV:hit.v,
++        actorId:actor, team:slot.team, surfaceId:hit.surface.id, centerU:hit.u,centerV:hit.v,
++        ...(slot.f4?.gaugeLaunchLife!==undefined?{f4GaugeLaunchLife:slot.f4.gaugeLaunchLife}:{}),
+         radiusU:radius,radiusV:radius,angle:a,strength:1,type:PaintEventType.Bomb });
+     }
+     this.feedback.subBurst(slot.team,origin,profile.paintRadiusMeters);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -898,7 +898,9 @@
+       actorId:'human',lifeId:String(this.f4SpecialLife),team:Team.A as const,
+       weapon:this.projectiles.currentPlayerWeapon.id,alive:this.resources.currentHp>0
+      }:event.source===PaintSource.Cpu&&event.actorId?this.cpu.f4NaturalActor(event.actorId):null;
+-     if(actor&&actor.team===event.team&&!(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
++     if(actor&&actor.team===event.team&&
++        (event.f4GaugeLaunchLife===undefined||event.f4GaugeLaunchLife===actor.lifeId)&&
++        !(actor.actorId==='human'&&this.player.f4ZipNaturalActive))
+       this.f4Special.creditNaturalPaint(actor,actor.alive,raster.f4ProvisionalProjectedAreaM2Changed??0);
+     }
+     // B154: real rasterized changes from ALL seven native original CPUs.
+@@ -1460,7 +1462,16 @@
+   }
+   if(this.f4ResearchMode)this.humanSub.useF4CanopyCover(this.projectiles);
+   if(this.f4SharedBombsEnabled){
+-   this.humanSub.enableF4Bombs(this.projectiles);
++   this.humanSub.enableF4Bombs(this.projectiles);
++   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++    const launchLife=(id:string):string|null=>{
++     if(id==='human')return this.resources.currentHp>0?String(this.f4SpecialLife):null;
++     const actor=this.cpu.f4NaturalActor(id);
++     return actor?.alive?actor.lifeId:null;
++    };
++    this.humanSub.useF4GaugeLaunchLife(launchLife);
++    this.projectiles.useF4GaugeLaunchLife(launchLife);
++   }
+    this.cpu.enableF4SharedBombs();
+    this.cpu.enableF4FlightLead();
+   }
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -108,8 +108,9 @@
+   ttl: number;
+   team: Team.A | Team.B;
+   entity: Entity;
+-  sourceKind: 'HUMAN' | 'CPU';
+-  sourceId: string;
++  sourceKind: 'HUMAN' | 'CPU';
++  sourceId: string;
++  f4GaugeLaunchLife?: string|null;
+   /** B152 read-only QA provenance, not a collision/rasterization rule. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+   weaponId: WeaponId;
+@@ -153,8 +154,9 @@
+   b346LaunchId?:number;
+ }
+ 
+-interface DelayedBurst {
+-  source: PaintSource;
++interface DelayedBurst {
++  source: PaintSource;
++  f4GaugeLaunchLife?: string|null;
+   actorId?: string;
+   team: Team.A | Team.B;
+   point: Vec3;
+@@ -206,7 +208,9 @@
+   request?: CpuFireRequest;
+ }
+ 
+-export class ProjectileSystem {
++export class ProjectileSystem {
++  private f4GaugeLifeAtLaunch?: (actorId:string)=>string|null;
++  public useF4GaugeLaunchLife(query:(actorId:string)=>string|null):void {this.f4GaugeLifeAtLaunch=query;}
+   private shooterCadence?: Map<string, {
+     weaponId: WeaponId;
+     shots: number;
+@@ -1552,7 +1556,7 @@
+             slot.trailPaintRadius*0.62,slot.velocity,1.7,
+             PaintEventType.MidDroplet,
+             slot.sourceKind==='HUMAN'?PaintSource.Human:PaintSource.Cpu,
+-            slot.sourceKind==='CPU'?slot.sourceId:undefined
++            slot.sourceKind==='CPU'?slot.sourceId:undefined,undefined,slot.f4GaugeLaunchLife
+           );
+           slot.trailPaintCooldown=0.085;
+         }
+@@ -1678,8 +1682,8 @@
+           slosher ? slosherPaintBrush(slosher.droplet, paintHit, slot.velocity,
+             slosher.distance + paintHit.distance, slosher.launchY - paintHit.worldPoint.y) :
+           shooterFlight && shooterImpactBrush(
+-            paintHit, slot.velocity, shooterFlight.distance + paintHit.distance, shooterFlight.profile
+-          )
++            paintHit, slot.velocity, shooterFlight.distance + paintHit.distance, shooterFlight.profile
++          ),slot.f4GaugeLaunchLife
+         );
+         if (slosher) this.enqueueSlosherWallRunoff(slot, paintHit);
+         this.finishProjectile(slot, paintHit.worldPoint, paintHit, 'ORIGINAL_PAINTABLE');
+@@ -2437,10 +2441,10 @@
+     const point = pointOnSegment(from, to, at);
+     const hit = this.castF4Paint(point, point.clone().add(new Vec3(0, -1.05, 0)));
+     if (hit && (hit.surface.baseFlags & SurfaceFlags.Wall) === 0) {
+-      this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet, {
+-        radiusU: 0.37, radiusV: 0.21,
+-        angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis))
+-      });
++      this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet, {
++        radiusU: 0.37, radiusV: 0.21,
++        angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis))
++      },slot.f4GaugeLaunchLife);
+     }
+   }
+ 
+@@ -2453,7 +2457,7 @@
+     const hit = this.castF4Paint(exposed, exposed.clone().add(new Vec3(0, -0.95, 0)));
+     if (hit && (hit.surface.baseFlags & SurfaceFlags.Wall) === 0) {
+       this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet,
+-        { radiusU: 0.23, radiusV: 0.19, angle: 0 });
++        { radiusU: 0.23, radiusV: 0.19, angle: 0 },slot.f4GaugeLaunchLife);
+     }
+   }
+ 
+@@ -2747,9 +2751,9 @@
+     if (!hit || (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0) return;
+     const width = sample.group === 0 ? 0.31 : 0.19;
+     this.enqueueF4Stamp(hit,slot.team,slot.sourceId,PaintEventType.MidDroplet,{
+-      radiusU:width*1.65,radiusV:width,
+-      angle:Math.atan2(slot.velocity.dot(hit.surface.vAxis),slot.velocity.dot(hit.surface.uAxis))
+-    });
++      radiusU:width*1.65,radiusV:width,
++      angle:Math.atan2(slot.velocity.dot(hit.surface.vAxis),slot.velocity.dot(hit.surface.uAxis))
++    },slot.f4GaugeLaunchLife);
+   }
+ 
+   private canopyPelletBrush(index: number, hit: SurfaceRayHit, velocity: Vec3) {
+@@ -4037,7 +4041,8 @@
+     slot.ttl = life;
+     slot.team = team;
+     slot.sourceKind = sourceKind;
+-    slot.sourceId = sourceId;
++    slot.sourceId = sourceId;
++    slot.f4GaugeLaunchLife=this.f4GaugeLifeAtLaunch?.(sourceId);
+     if(this.physics.hasF4WholeResearchTrimesh&&sourceKind==='CPU'&&team!==this.currentHumanTeam)
+       this.f4EnemyProjectileEvidence.spawned++;
+     slot.qaSourceAim=sourceKind==='CPU'&&sourceId==='A1'?
+@@ -4154,7 +4159,7 @@
+         this.applyAreaDamage(center, slot.blastRadius * scale, slot.blastDamage * scale,
+           slot.team, undefined, false, slot.sourceKind === 'HUMAN' ? slot.weaponId : undefined);
+         this.enqueueF4BurstPaint(center, slot.team, slot.sourceId,
+-          terrain ? 1.25 : 2.15, terrain ? 0.66 : 0.88, true);
++          terrain ? 1.25 : 2.15, terrain ? 0.66 : 0.88, true,PaintEventType.Bomb,slot.f4GaugeLaunchLife);
+         if(this.physics.hasF4WholeResearchTrimesh)this.feedback.subBurst(slot.team,center,slot.blastRadius*scale);
+       }
+     } else if (slot.blastRadius > 0 && slot.blastDamage > 0) {
+@@ -4170,7 +4175,7 @@
+         1.2,
+         PaintEventType.Bomb,
+         paintSource,
+-        slot.sourceKind === 'CPU' ? slot.sourceId : undefined
++        slot.sourceKind === 'CPU' ? slot.sourceId : undefined,undefined,slot.f4GaugeLaunchLife
+       );
+     }
+ 
+@@ -4187,8 +4192,9 @@
+         slot.delayedBurstSeconds
+       );
+       this.delayedBursts.push({
+-        source: paintSource,
+-        actorId: slot.sourceKind === 'CPU' ? slot.sourceId : undefined,
++        source: paintSource,
++        f4GaugeLaunchLife:slot.f4GaugeLaunchLife,
++        actorId: slot.sourceKind === 'CPU' ? slot.sourceId : undefined,
+         team: slot.team,
+         point: point.clone(),
+         seconds: slot.delayedBurstSeconds,
+@@ -4239,7 +4245,7 @@
+         burst.source===PaintSource.Human?burst.weaponId:undefined);
+       if (burst.contactNormal) {
+         this.enqueueF4BurstPaint(center, burst.team, burst.actorId ?? 'human',
+-          0.85, burst.paintRadius, false);
++          0.85, burst.paintRadius, false,PaintEventType.Bomb,burst.f4GaugeLaunchLife);
+       } else this.paintWorldStamp(
+         burst.team,
+         burst.point,
+@@ -4248,8 +4254,8 @@
+         new Vec3(1, 0, 0),
+         1.0,
+         PaintEventType.Bomb,
+-        burst.source,
+-        burst.actorId
++        burst.source,
++        burst.actorId,undefined,burst.f4GaugeLaunchLife
+       );
+       this.feedback.stringerBurst(
+         burst.team,
+@@ -4488,8 +4494,9 @@
+     type: PaintEventType,
+     source: PaintSource = PaintSource.Human,
+     actorId?: string,
+-    originalMeleeSourceFoot?: Vec3
+-  ): boolean {
++    originalMeleeSourceFoot?: Vec3,
++    f4GaugeLaunchLife?:string|null
++  ): boolean {
+     let best:
+       | {
+           surface: PaintSurface;
+@@ -4564,11 +4571,12 @@
+     const du = dir.dot(best.surface.uAxis);
+     const dv = dir.dot(best.surface.vAxis);
+ 
+-    this.coordinator.enqueue({
+-      source,
+-      actorId,
+-      team,
+-      surfaceId: best.surface.id,
++    this.coordinator.enqueue({
++      source,
++      actorId,
++      ...(f4GaugeLaunchLife!==undefined?{f4GaugeLaunchLife}:{}),
++      team,
++      surfaceId: best.surface.id,
+       centerU: best.u,
+       centerV: best.v,
+       radiusU,
+@@ -4721,15 +4729,17 @@
+     source: PaintSource,
+     actorId?: string,
+     qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK',
+-    brush?: Pick<PaintRequest, 'centerU' | 'centerV' | 'radiusU' | 'radiusV' | 'angle'>
++    brush?: Pick<PaintRequest, 'centerU' | 'centerV' | 'radiusU' | 'radiusV' | 'angle'>,
++    f4GaugeLaunchLife?:string|null
+   ): void {
+     const isWall = (hit.surface.baseFlags & SurfaceFlags.Wall) !== 0;
+     const request: PaintRequest = {
+       source,
+       actorId,
+-      qaSourceAim,
+-      team,
+-      surfaceId: hit.surface.id,
++      qaSourceAim,
++      ...(f4GaugeLaunchLife!==undefined?{f4GaugeLaunchLife}:{}),
++      team,
++      surfaceId: hit.surface.id,
+       centerU: hit.u,
+       centerV: hit.v,
+       radiusU: paintRadius * 1.12,
+@@ -4790,20 +4800,22 @@
+       const hit = this.castF4Paint(point, landing);
+       if (hit) {
+         this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet,
+-          shooterSplashBrush(hit, point, forward, flight.profile));
++          shooterSplashBrush(hit, point, forward, flight.profile),slot.f4GaugeLaunchLife);
+       }
+     }
+   }
+ 
+   private enqueueF4Stamp(
+     hit: SurfaceRayHit, team: Team.A | Team.B, actor: string, type: PaintEventType,
+-    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle'>
++    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle'>,
++    f4GaugeLaunchLife?:string|null
+   ): void {
+     this.coordinator.enqueue({
+       source: type === PaintEventType.Special ? PaintSource.Special :
+         actor === 'human' ? PaintSource.Human : PaintSource.Cpu,
+       actorId: type === PaintEventType.Special || actor !== 'human' ? actor : undefined,
+-      ...(type === PaintEventType.Special ? {gaugeEligible:false} : {}),
++      ...(type === PaintEventType.Special ? {gaugeEligible:false} : {}),
++      ...(f4GaugeLaunchLife!==undefined?{f4GaugeLaunchLife}:{}),
+       team, surfaceId: hit.surface.id, centerU: hit.u, centerV: hit.v,
+       ...brush, type, strength: 1
+     });
+@@ -4818,7 +4830,7 @@
+       const hit = this.castF4Paint(point, point.clone().add(new Vec3(0, -1.05, 0)));
+       if (hit) this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet,
+         { radiusU: blade.paintWidth * 0.48, radiusV: blade.paintWidth * 0.30,
+-          angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis)) });
++          angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis)) },slot.f4GaugeLaunchLife);
+       blade.splashesLeft--;
+       blade.nextSplashDistance += blade.splashSpacing;
+     }
+@@ -4833,7 +4845,8 @@
+ 
+   private enqueueF4BurstPaint(
+     center: Vec3, team: Team.A | Team.B, actor: string,
+-    reach: number, radius: number, spray: boolean, type = PaintEventType.Bomb
++    reach: number, radius: number, spray: boolean, type = PaintEventType.Bomb,
++    f4GaugeLaunchLife?:string|null
+   ): void {
+     for (const surface of this.surfaces) {
+       if (!(surface.baseFlags & SurfaceFlags.Paintable)) continue;
+@@ -4858,8 +4871,8 @@
+         if (!hit || hit.surface !== surface || hit.distance > reach) continue;
+         const size = i === 0 ? radius : radius * 0.58;
+         this.enqueueF4Stamp(hit, team, actor, type, {
+-          radiusU: size, radiusV: size, angle: 0
+-        });
++          radiusU: size, radiusV: size, angle: 0
++        },f4GaugeLaunchLife);
+       }
+     }
+   }
