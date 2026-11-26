@@ -1,7 +1,7 @@
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -1466,9 +1466,15 @@
+@@ -1466,9 +1466,18 @@
     this.humanSub.enableF4Bombs(this.projectiles);
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
      const launchLife=(id:string):string|null=>{
@@ -10,13 +10,16 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 -     return actor?.alive?actor.lifeId:null;
 +     const special=this.f4Special;
 +     if(!special)return null;
++     // The native clock includes pre-round CPU staging; special ownership
++     // is keyed to the actual 180-second battle clock at physical launch.
++     const roundTick=Math.round((180-this.remainingSeconds)*60);
 +     if(id==='human'){
 +      const lifeId=String(this.f4SpecialLife);
 +      return this.resources.currentHp>0&&!this.player.f4ZipNaturalActive&&
-+       !special.naturalPaintBlocked(id,lifeId,this.clock.tick)?lifeId:null;
++       !special.naturalPaintBlocked(id,lifeId,roundTick)?lifeId:null;
 +     }
 +     const actor=this.cpu.f4NaturalActor(id);
-+     return actor?.alive&&!special.naturalPaintBlocked(id,actor.lifeId,this.clock.tick)?actor.lifeId:null;
++     return actor?.alive&&!special.naturalPaintBlocked(id,actor.lifeId,roundTick)?actor.lifeId:null;
      };
      this.humanSub.useF4GaugeLaunchLife(launchLife);
      this.projectiles.useF4GaugeLaunchLife(launchLife);
