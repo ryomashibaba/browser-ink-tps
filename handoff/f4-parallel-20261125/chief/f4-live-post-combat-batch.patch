@@ -1167,3 +1167,79 @@ diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
      if(this.playTone(430, 0.035, 0.11, 'sine', 1.35,local?3:2,local?undefined:position,undefined,local?'local-respawn':'remote-respawn')&&this.f4Presentation&&local)this.handledCues.add('RESPAWN');
    }
  
+diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
+--- a/src/app/F4PlayerPresentation.mjs
++++ b/src/app/F4PlayerPresentation.mjs
+@@ -19,7 +19,12 @@
+  if(score.status!=='LIVE'||phase!=='PLAYING')return unavailable('暫定得点準備','試合中の集計待ち');
+  return {kind:'LIVE',title:'暫定ナワバリ',detail:'実塗装面積 · 未塗装面を含む',a,b,neutral};
+ }
+-export function f4Urgency(seconds) {
++// Actual recorded events, not total kills or official Turf points.
++export function f4MatchSummary(summary){
++ if(!summary||!['directHits','directSplats','deaths','respawns','changedCells'].every(k=>Number.isSafeInteger(summary[k])&&summary[k]>=0))return null;
++ return [['直接命中',summary.directHits],['直接撃破',summary.directSplats],['やられた回数',summary.deaths],['復活',summary.respawns],['塗り変更セル',summary.changedCells]];
++}
++export function f4Urgency(seconds) {
+  return typeof seconds==='number'&&Number.isFinite(seconds)&&seconds>=0&&seconds<=180?(seconds<=10?'critical':seconds<=30?'soon':'normal'):'unknown';
+ }
+ export function f4RosterView(roster){
+@@ -71,7 +76,20 @@
+  const stats=finish.querySelector('#t21-f3-b59-scroll-stats');
+  const compact=root.querySelector('.f4-compact-hud');
+  if(compact)compact.insertBefore(live.box,compact.querySelector('.f4-bars'));
+- if(stats)stats.prepend(result.box);
++ if(stats)stats.prepend(result.box);
++ const summaryBox=make('section','f4-ui-match-summary');summaryBox.hidden=true;
++ summaryBox.setAttribute('aria-label','実際のプレイ記録');
++ summaryBox.style.cssText='margin-top:14px;border-top:1px solid #a6c3d45c;padding-top:12px;display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px';
++ const summaryTitle=make('strong','f4-ui-title');summaryTitle.textContent='プレイ記録';
++ summaryTitle.style.cssText='grid-column:1/-1;font-size:15px';summaryBox.append(summaryTitle);
++ const summaryNodes=[];
++ for(let i=0;i<5;i++){
++  const cell=make('div','');cell.style.cssText='background:#ffffff0d;border-radius:6px;padding:7px 9px;min-width:0';
++  const label=make('div','f4-ui-detail'),value=make('strong','');value.style.cssText='font-size:20px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere';
++  cell.append(label,value);summaryBox.append(cell);summaryNodes.push({label,value});
++ }
++ const summaryNote=make('div','f4-ui-detail');summaryNote.textContent='直接命中・撃破のみ。塗り変更セルは累積記録であり、得点・面積ではありません。';summaryNote.style.gridColumn='1/-1';summaryBox.append(summaryNote);
++ result.box.append(summaryBox);
+  const rosterBox=make('section','f4-ui-roster');rosterBox.hidden=true;
+  rosterBox.setAttribute('aria-label','実際の4対4生存状態');
+  const pips=[];
+@@ -116,7 +134,7 @@
+  };
+  let disposed=false;
+  return {
+-  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null}){
++  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null}){
+    if(disposed)return;
+    const active=playerView===true;
+    data(root,'f4UiSkin',String(active));data(ui,'f4UiSkin',String(active));
+@@ -150,7 +168,12 @@
+    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
+    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));
+    const resultView=finished?f4TurfPresentation(score,matchState,stopped):null;
+-   if(resultView)paint(result,resultView);
++   if(resultView)paint(result,resultView);
++   const summary=finished?f4MatchSummary(matchSummary):null;
++   hidden(summaryBox,!summary);summaryBox.style.display=summary?'grid':'none';
++   if(summary)summary.forEach(([label,value],i)=>{
++    str(summaryNodes[i].label,label);str(summaryNodes[i].value,String(value));
++   });
+    data(finish,'f4UiResult',String(resultView?.kind==='FINAL'));
+   },
+   dispose(){if(disposed)return;disposed=true;style.remove();live.box.remove();result.box.remove();hint.remove();replay.remove();rosterBox.remove();kitPreview.remove();
+diff --git a/src/app/F4PlayerPresentation.d.mts b/src/app/F4PlayerPresentation.d.mts
+--- a/src/app/F4PlayerPresentation.d.mts
++++ b/src/app/F4PlayerPresentation.d.mts
+@@ -2,7 +2,9 @@
+ type ScoreView={kind:'HOLD'|'BUILDING'|'LIVE'|'FINAL';title:string;detail:string;a:number|null;b:number|null;neutral:number|null};
+ export function f4TurfPresentation(score:F4ProvisionalScore|null,phase:string,stopped?:boolean):ScoreView;
+ export function f4Urgency(seconds:number):'normal'|'soon'|'critical'|'unknown';
+-export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null}):void;dispose():void};
++export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null;matchSummary?:F4MatchSummary|null}):void;dispose():void};
++export type F4MatchSummary={directHits:number;directSplats:number;deaths:number;respawns:number;changedCells:number};
++export function f4MatchSummary(summary:F4MatchSummary|null):[string,number][]|null;
+ 
+ type F4Roster={sourceScoreable:number;officialWinner:string;naturalEnemyEncounterCertified:boolean;humanHp:number;rows:readonly {id:string;team:string;status:string;hp:number|null}[]};
+ type F4Kit={weapon:string;classLabel:string;sub:string;special:string;subCost?:number};
