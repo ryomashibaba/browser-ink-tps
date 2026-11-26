@@ -802,3 +802,53 @@ diff --git a/src/feedback/F4FeedbackMotion.d.mts b/src/feedback/F4FeedbackMotion
 +export function particleBudget(count:number,distanceSq:number):number;
 +export function droplet(index:number,count:number,phase:number,speed:number,up:number):[number,number,number];
  export function pose(x:number,y:number,z:number,vx:number,vy:number,vz:number,t:number,duration:number,size:number):[number,number,number,number];
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -921,6 +921,14 @@
+   }
+ 
+-  /** A real released charge may wait briefly for existing recovery; never adds charge. */
+-  private f4ResolveChargeRelease(released: boolean): 'WAIT' | 'READY' | 'NONE' {
++  /** Check actual free projectile slots, without allocating or charging ink. */
++  private f4ReleaseSlotsAvailable(required: number): boolean {
++    if(required<=0)return true;
++    let free=0;
++    for(const slot of this.slots)if(isFreeProjectileSlot(slot)&&++free>=required)return true;
++    return false;
++  }
++
++  /** A real released charge may wait briefly for existing recovery/pool; never adds charge. */
++  private f4ResolveChargeRelease(released: boolean, requiredSlots=0): 'WAIT' | 'READY' | 'NONE' {
+     if (released) this.f4ChargeReleaseUntil = this.b367NativeFrame + 6;
+     if (this.b367NativeFrame > this.f4ChargeReleaseUntil) {
+@@ -928,6 +936,6 @@
+       return 'NONE';
+     }
+-    if (this.fireCooldown > 1e-8) return 'WAIT';
+-    this.f4ChargeReleaseUntil = -1;
++    if (this.fireCooldown > 1e-8||!this.f4ReleaseSlotsAvailable(requiredSlots)) return 'WAIT';
++    this.f4ChargeReleaseUntil = -1;
+     return 'READY';
+   }
+@@ -2816,6 +2824,8 @@
+     }
+ 
+-    if (f4 && (fallingFire || this.f4ChargeReleaseUntil >= 0)) {
+-      const release = this.f4ResolveChargeRelease(fallingFire);
++    if (f4 && (fallingFire || this.f4ChargeReleaseUntil >= 0)) {
++      // An actual three-arrow volley is atomic. Preserve the existing
++      // six-tick release window when real slots are temporarily occupied.
++      const release = this.f4ResolveChargeRelease(fallingFire,3);
+       if (release === 'WAIT') {
+         this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+@@ -2882,6 +2892,7 @@
+         this.f4SaberReleaseCharged = this.chargeSeconds + 1e-8 >= profile.chargeSeconds;
+       }
+-      if (this.b367NativeFrame <= this.f4SaberReleaseUntil && this.fireCooldown <= 1e-8 &&
+-          !this.pendingSaberSwings?.has('human')) {
++      if(this.b367NativeFrame>this.f4SaberReleaseUntil)this.f4SaberReleaseUntil=-1;
++      if (this.b367NativeFrame <= this.f4SaberReleaseUntil && this.fireCooldown <= 1e-8 &&
++          !this.pendingSaberSwings?.has('human')&&this.f4ReleaseSlotsAvailable(2)) {
+         const charged = this.f4SaberReleaseCharged;
+         this.f4SaberReleaseUntil = -1;
