@@ -1,0 +1,65 @@
+diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
+--- a/src/input/PlayerInput.ts
++++ b/src/input/PlayerInput.ts
+@@ -37,7 +37,9 @@
+     this.primaryPressedQueued=false;this.secondaryPressedQueued=false;
+     this.jumpQueued=false;this.sourceSquidTapQueued=false;
+     this.sourceMovementTapCodes.clear();this.subPressedQueued=false;
+-    this.specialPressedQueued=false;this.jumpRequiresRelease=!this.combatInputActive;
++    // Focus loss discards all held keys; a fresh non-repeat press can
++    // rearm jump, while an OS repeat is still rejected by keydown.
++    this.specialPressedQueued=false;this.jumpRequiresRelease=false;
+   }
+ 
+   // Mouse move may be the first event after a missed pointerup. Reconcile
+@@ -138,8 +140,12 @@
+       }
+       // Space is one physical jump/charge intent. A held key across death
+       // must be released before a new life can arm jump or wall surge.
+-      if(event.code==='Space' &&
+-         (!this.combatInputActive||this.jumpRequiresRelease)){
++      // A real Space press during a splat must be released before respawn.
++      // Do not arm the latch for a death in which Space was never held.
++      if(this.f4ProvisionalControls&&event.code==='Space'&&!this.combatInputActive)
++        this.jumpRequiresRelease=true;
++      if(event.code==='Space' &&
++         (!this.combatInputActive||this.jumpRequiresRelease)){
+         event.preventDefault();
+         return;
+       }
+@@ -205,7 +211,7 @@
+       this.sourceMovementTapCodes.clear();
+       this.subPressedQueued = false;
+       this.specialPressedQueued = false;
+-      this.jumpRequiresRelease = !this.combatInputActive;
++      this.jumpRequiresRelease = !this.f4ProvisionalControls&&!this.combatInputActive;
+     };
+ 
+     window.addEventListener('blur', clearGameplayState);
+@@ -300,8 +306,10 @@
+   /** Only the actual native human HP=0 and 150-tick life recovery call this.
+    * Preserve user movement, mouse lock and actual Rapier pose. */
+   public setCombatInputActive(active:boolean):void {
+-    if(this.combatInputActive===active)return;
+-    this.combatInputActive=active;
++    if(this.combatInputActive===active)return;
++    // Capture the real held state before clearing the old life's inputs.
++    const spaceWasHeld=this.keys.has('Space');
++    this.combatInputActive=active;
+     this.fire=false;
+     this.primaryPressedQueued=false;
+     this.secondary=false;
+@@ -321,9 +329,10 @@
+       this.keys.delete('KeyF');
+       this.keys.delete('KeyG');
+     }
+-    // A physical Space keyup (not an automatic key repeat) rearms jump
+-    // after death; no modification to Rapier, movement, CPU or ink.
+-    if(!active)this.jumpRequiresRelease=true;
++    // Only an actual held Space requires release in whole F4.
++    // Older SOURCE/T20 retain their original unconditional death latch.
++    if(!active)this.jumpRequiresRelease=!this.f4ProvisionalControls||
++      this.jumpRequiresRelease||spaceWasHeld;
+     // On native respawn, preserve the release latch until a genuine keyup.
+     // Otherwise an OS repeat from Space held through death could rearm it.
+   }
