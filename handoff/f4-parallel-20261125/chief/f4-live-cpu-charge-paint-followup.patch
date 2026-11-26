@@ -1,0 +1,74 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -4027,7 +4027,23 @@
+     if(!aim||aim.weaponId!==bot.weaponId||
+        bot.lifeState!=='ACTIVE'||bot.hp<=0||
+-       bot.mobilityState!=='GROUND'||!bot.agent||
+-       !this.b216SourceStageAimValidated||
+-       !this.sampleRegisteredSourceFoot(bot))return null;
++       bot.mobilityState!=='GROUND'||!bot.agent)return null;
++    if(this.f4WholeNavigation){
++      // Whole F4 has no legacy B216 floor-sight opt-in. Revalidate a
++      // committed floor aim using its actual support, paint surface and ray.
++      const ray=this.f4ResearchCombatStageRay;
++      const support=this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position);
++      const paint=this.gameplayInk.sampleWorld(aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++      if(!ray||!support||Math.abs(support.point.y-bot.position.y)>.25||
++         !paint||paint.surface.isScoreable||!this.cpuTargetInRange(bot,aim.target,profile))return null;
++      const muzzle=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++      const delta=aim.target.clone().sub(muzzle);
++      const distance=delta.length();
++      if(!Number.isFinite(distance)||distance<=.12)return null;
++      // The aim ends on the floor itself. Check the open segment before
++      // contact; actual projectile collision remains authoritative.
++      const end=muzzle.clone().add(delta.mulScalar((distance-.08)/distance));
++      return ray(muzzle,end)?null:aim.target;
++    }
++    if(!this.b216SourceStageAimValidated||!this.sampleRegisteredSourceFoot(bot))return null;
+     const paint=this.gameplayInk.sampleWorld(
+       aim.target,.12,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+@@ -4220,10 +4236,8 @@
+     }
+     // A STRINGER or SPLATANA needs several true 60Hz ticks to charge.
+-    // User-selected SOURCE only: retain and independently revalidate its
+-    // REAL source floor aim through changing/no new raster proposals.
+-    // No enemy target, phantom shot, extra ink or unapproved path is held.
+-    // Charger/Splatling and all other game modes keep their old policy.
+-    const selectedSourceChargeWeapon=this.b215SelectedBattlePaintPacing&&
+-      (profile.weaponClass==='STRINGER'||profile.weaponClass==='SPLATANA');
++    // Retain a real floor aim through charge/burst only in the opted-in
++    // SOURCE paths or whole F4. Never retain a hidden enemy aim here.
++    const selectedSourceChargeWeapon=(this.b215SelectedBattlePaintPacing||this.f4WholeNavigation)&&
++      (profile.weaponClass==='STRINGER'||profile.weaponClass==='SPLATANA');
+     const chargedSourceWeapon=canTurfPaint&&
+       (profile.weaponClass==='CHARGER'||
+@@ -4237,15 +4251,17 @@
+       // found lateral patch mid-shot. Keep the previous aim only while
+       // current ownerGrid, range, original foot and stage ray still pass.
+-      if(selectedSourceChargeWeapon&&continuingCharge){
+-        const retained=this.revalidateSourceCommittedPaintAim(bot,profile);
+-        if(retained)turfTarget=retained;
+-      }
+-      if(turfTarget){
+-        this.sourceCommittedPaintAims.set(bot.id,{
+-          weaponId:bot.weaponId,target:turfTarget.clone()
+-        });
+-      }else if(continuingCharge){
+-        turfTarget=this.revalidateSourceCommittedPaintAim(bot,profile);
+-        if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
++      const preferRetained=continuingCharge&&(selectedSourceChargeWeapon||this.f4WholeNavigation);
++      if(preferRetained){
++        const retained=this.revalidateSourceCommittedPaintAim(bot,profile);
++        if(retained)turfTarget=retained;
++      }
++      if(turfTarget){
++        this.sourceCommittedPaintAims.set(bot.id,{
++          weaponId:bot.weaponId,target:turfTarget.clone()
++        });
++      }else if(continuingCharge){
++        // Do not repeat the same physical query if already rejected above.
++        turfTarget=preferRetained?null:this.revalidateSourceCommittedPaintAim(bot,profile);
++        if(!turfTarget)this.sourceCommittedPaintAims.delete(bot.id);
+       }else{
+         this.sourceCommittedPaintAims.delete(bot.id);
