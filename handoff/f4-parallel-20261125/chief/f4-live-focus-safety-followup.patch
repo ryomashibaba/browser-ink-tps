@@ -1,0 +1,82 @@
+diff --git a/src/input/PlayerInput.ts b/src/input/PlayerInput.ts
+--- a/src/input/PlayerInput.ts
++++ b/src/input/PlayerInput.ts
+@@ -21,9 +21,24 @@
+     this.f4CombatCancellation=0;
+     return value;
+   }
+-  public enableF4ProvisionalControls():void{
+-    if(!this.deterministicQaEnabled)this.f4ProvisionalControls=true;
+-  }
++  public enableF4ProvisionalControls():void{
++    if(!this.deterministicQaEnabled)this.f4ProvisionalControls=true;
++  }
++  /** Browser state is authoritative even before blur/lock events arrive. */
++  public get f4LiveFocusLost():boolean{
++    return this.f4ProvisionalControls&&(document.hidden||!document.hasFocus()||
++      document.pointerLockElement!==this.canvas);
++  }
++  public cancelF4FocusInput():void{
++    if(!this.f4ProvisionalControls)return;
++    this.markF4CombatCancellation(true);
++    this.keys.clear();this.sourcePrestartHeldKeys.clear();
++    this.fire=false;this.secondary=false;
++    this.primaryPressedQueued=false;this.secondaryPressedQueued=false;
++    this.jumpQueued=false;this.sourceSquidTapQueued=false;
++    this.sourceMovementTapCodes.clear();this.subPressedQueued=false;
++    this.specialPressedQueued=false;this.jumpRequiresRelease=!this.combatInputActive;
++  }
+ 
+   // Mouse move may be the first event after a missed pointerup. Reconcile
+   // releases only; never synthesize a press or discard a real queued tap.
+@@ -95,7 +110,7 @@
+   ) {
+     this.sourceLiveInputGuardsEnabled = sourceLiveRound && !deterministicQaEnabled;
+     window.addEventListener('keydown', (event) => {
+-      if (document.pointerLockElement !== this.canvas) return;
++      if (document.pointerLockElement !== this.canvas||this.f4LiveFocusLost) return;
+       // SOURCE gameplay must not interpret browser/system modifier shortcuts
+       // as WASD, squid, Space or weapon intent. T20 stays unchanged.
+       if(this.sourceLiveInputGuardsEnabled &&
+@@ -203,7 +218,7 @@
+ 
+     const pressFire = (event: PointerEvent): void => {
+       this.reconcileF4MouseReleases(event);
+-      if(this.sourcePrestartBlocked)return;
++      if(this.sourcePrestartBlocked||this.f4LiveFocusLost)return;
+       // Genuine SOURCE mouse shortcuts are not weapon inputs. Keyboard
+       // shortcut-modified WASD/F/G is already ignored above, but modified
+       // left/right clicks must likewise never fire, dodge or raise a shield.
+@@ -330,8 +345,8 @@
+    * lock loss and the browser's asynchronous pointerlockchange notification.
+    * Frozen T20 and deterministic QA are unaffected. */
+   public get sourceLiveInputAvailable():boolean{
+-    return !this.sourcePrestartBlocked&&
+-      (!this.sourceLiveInputGuardsEnabled||
++    return !this.sourcePrestartBlocked&&!this.f4LiveFocusLost&&
++      (!this.sourceLiveInputGuardsEnabled||
+        document.pointerLockElement===this.canvas);
+   }
+ 
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -7252,8 +7252,16 @@
+   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
+    this.paused=true;
+   // A generic QA/UI pause toggle cannot consume the player's ready time.
+-  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
+-  if(this.paused||this.stopReason){
++  if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
++  // Close the gap before the asynchronous blur/pointerlockchange events.
++  // No fixed clock advance, implicit charge release or CPU ticks unfocused.
++  if(!this.paused&&!this.stopReason&&this.matchState!=='TIME_UP'&&
++     this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++     this.b203EverLockedRealPointer&&this.input.f4LiveFocusLost){
++   this.input.cancelF4FocusInput();
++   this.pauseSourceRoundOnFocusLoss();
++  }
++  if(this.paused||this.stopReason){
+    this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
+    this.b399UpdateCameraAimClearance();
+    this.refreshF4CombatReticle();
