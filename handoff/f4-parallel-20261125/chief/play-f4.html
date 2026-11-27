@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Ink TPS — 暫定ナワバリ</title>
+<style>
+html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10202d;color:#e5f5f8;font:16px/1.65 system-ui,sans-serif}main{width:min(90vw,480px);padding:28px;box-sizing:border-box}h1{font-size:24px;line-height:1.3;margin:0 0 12px}p{color:#bdd1db}small{color:#a4bcc8}
+</style>
+</head>
+<body>
+<main>
+<h1>暫定ナワバリバトル</h1>
+<p id="status" role="status">ゲームの準備をしています…</p>
+<small>Windows ローカル研究版 · 正式原作勝敗は未認証</small>
+<noscript>JavaScriptを有効にしてください。</noscript>
+</main>
+<script type="module">
+function openF4LocalPlay(location, storage, status, dev) {
+ const fail = message => { status.textContent = message; return false; };
+ if (!dev || location.protocol !== 'http:' || location.port !== '4176' ||
+     !['127.0.0.1','localhost','[::1]'].includes(location.hostname) ||
+     location.pathname !== '/play-f4.html' || location.search || location.hash) {
+  return fail('ローカル開発サーバーの専用入口から開いてください。');
+ }
+ const target = new URL('/', location.origin);
+ const params = {
+  t21Play:'preview', t21QaDrive:'source', t21W10B183:'firstDropPlay',
+  t21W10B192:'humanCombat', t21W10B203:'fullRound',
+  t21W10B441:'sourceFrontline', t21W10B448:'realA3Front',
+  t21F4Central:'research', t21F4Terrain:'original', t21F4Trimesh:'full'
+ };
+ for (const [key,value] of Object.entries(params)) target.searchParams.set(key,value);
+ try {
+  // Explicit entry to a normal match, not the isolated physical special probe.
+  const tab = storage();
+  tab.setItem('t21F4ProvisionalTurf','on');
+  if (tab.getItem('t21F4SpecialProbe') === 'physical') tab.removeItem('t21F4SpecialProbe');
+  if (tab.getItem('t21F4ProvisionalTurf') !== 'on' ||
+      tab.getItem('t21F4SpecialProbe') === 'physical') {
+   return fail('試合モードを設定できませんでした。');
+  }
+ } catch {
+  return fail('ブラウザのセッション保存が利用できません。');
+ }
+ status.textContent = '試合画面を開いています…';
+ location.replace(target.href);
+ return true;
+}
+openF4LocalPlay(window.location,()=>window.sessionStorage,document.getElementById('status'),import.meta.env?.DEV===true);
+</script>
+</body>
+</html>
