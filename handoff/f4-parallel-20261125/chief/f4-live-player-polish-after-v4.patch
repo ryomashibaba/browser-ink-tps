@@ -1,0 +1,206 @@
+diff --git a/src/app/F4MatchFlowExtras.mjs b/src/app/F4MatchFlowExtras.mjs
+--- a/src/app/F4MatchFlowExtras.mjs
++++ b/src/app/F4MatchFlowExtras.mjs
+@@ -24,8 +24,43 @@
+  if(valid(changedCells))rows.push({label:'自分の実塗装変更セル',value:changedCells});
+  return rows;
+ }
+-const F4_MATCH_FLOW_CSS="\n.f4-flow-picker[hidden],.f4-flow-stats[hidden],.f4-flow-tile[hidden]{display:none!important}\n.f4-flow-picker{pointer-events:auto;margin:8px 0 14px;text-align:left}\n.f4-flow-heading{font:750 11px/1.4 system-ui;color:#d8e6ed;margin:0 0 6px}\n.f4-flow-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}\n.f4-flow-weapon{pointer-events:auto;min-width:0;min-height:48px;box-sizing:border-box;padding:5px 6px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;border:1px solid #7298aa66;border-radius:7px;background:#102c3b;color:#f3f9fc;text-align:left;cursor:pointer;font:650 11px/1.2 system-ui;overflow-wrap:anywhere}\n.f4-flow-class{color:#b6ceda;font-size:9px}\n.f4-flow-weapon[aria-pressed=\"true\"]{border-color:#9df3ff;background:#215468;box-shadow:inset 0 0 0 1px #9df3ff}\n.f4-flow-weapon[aria-pressed=\"true\"] .f4-flow-class{color:#d7ffff}\n.f4-flow-weapon:focus-visible{outline:3px solid #ffd269;outline-offset:1px}\n.f4-flow-weapon:disabled{cursor:default;opacity:.6}\n.f4-flow-stats{margin:14px 0 8px;padding:14px;border:1px solid #79a5b755;border-radius:10px;background:#102635;color:#eaf4f9;font:650 12px/1.4 system-ui}\n.f4-flow-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}\n.f4-flow-tile{display:flex;flex-direction:column;gap:5px;padding:9px;border-radius:6px;background:#071c29}\n.f4-flow-tile strong{font-size:24px;font-weight:850;font-variant-numeric:tabular-nums}\n.f4-flow-tile span,.f4-flow-note{color:#bed0da;font-size:11px}\n.f4-flow-note{margin-top:9px}\n@media(max-width:380px){.f4-flow-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}\n";
+-export function installF4MatchFlowExtras(root,finish,ui){
++const F4_MATCH_FLOW_CSS="\n.f4-flow-picker[hidden],.f4-flow-stats[hidden],.f4-flow-tile[hidden]{display:none!important}\n.f4-flow-picker{pointer-events:auto;margin:8px 0 14px;text-align:left}\n.f4-flow-heading{font:750 11px/1.4 system-ui;color:#d8e6ed;margin:0 0 6px}\n.f4-flow-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}\n.f4-flow-weapon{pointer-events:auto;min-width:0;min-height:48px;box-sizing:border-box;padding:5px 6px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;border:1px solid #7298aa66;border-radius:7px;background:#102c3b;color:#f3f9fc;text-align:left;cursor:pointer;font:650 11px/1.2 system-ui;overflow-wrap:anywhere}\n.f4-flow-class{color:#b6ceda;font-size:9px}\n.f4-flow-weapon[aria-pressed=\"true\"]{border-color:#9df3ff;background:#215468;box-shadow:inset 0 0 0 1px #9df3ff}\n.f4-flow-weapon[aria-pressed=\"true\"] .f4-flow-class{color:#d7ffff}\n.f4-flow-weapon:focus-visible{outline:3px solid #ffd269;outline-offset:1px}\n.f4-flow-weapon:disabled{cursor:default;opacity:.6}\n.f4-flow-stats{margin:14px 0 8px;padding:14px;border:1px solid #79a5b755;border-radius:10px;background:#102635;color:#eaf4f9;font:650 12px/1.4 system-ui}\n.f4-flow-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}\n.f4-flow-tile{display:flex;flex-direction:column;gap:5px;padding:9px;border-radius:6px;background:#071c29}\n.f4-flow-tile strong{font-size:24px;font-weight:850;font-variant-numeric:tabular-nums}\n.f4-flow-tile span,.f4-flow-note{color:#bed0da;font-size:11px}\n.f4-flow-note{margin-top:9px}\n@media(max-width:380px){.f4-flow-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}\n\n.f4-flow-weapon[hidden],.f4-flow-note[hidden],.f4-flow-controls[hidden]{display:none!important}\n.f4-flow-icon{display:block;width:100%;height:28px;color:#a8dbe6;flex:none}\n.f4-flow-weapon[aria-pressed=\"true\"] .f4-flow-icon{color:#e3fbff}\n.f4-flow-controls{margin:8px 0;padding:9px 10px;border:1px solid #779cac55;border-radius:8px;color:#e4f1f6;background:#0b2330;font:600 11px/1.55 system-ui}\n.f4-flow-controls strong{display:block;font-size:12px;margin-bottom:3px}\n.f4-flow-controls span{display:block}\n.f4-flow-export{width:100%;margin:8px 0;align-items:center;text-align:center;min-height:40px}\n";
++// Player-controlled export; never advances or certifies a match.
++// Compact authored silhouettes: weapon identity only, never range or damage.
++const WEAPON_ICON=Object.freeze({
++ 'pulse-sprayer':'M4 7H30V10H46V16H30V19H17L12 26H7L10 18H4Z',
++ 'needle-smg':'M5 8H30V11H50V14H30V17H23L20 27H13L15 17H5Z',
++ 'twin-comets':'M3 3H23V6H33V10H20L16 16H11L13 10H3Z M19 16H39V19H49V23H36L32 29H27L29 23H19Z',
++ 'rail-charger':'M2 12H15V9H35V12H54V16H26L20 24H15L16 17H2Z M20 5H29V9H20Z',
++ 'arc-blaster':'M4 6H28L34 9H49V18H34L28 21H19L15 28H9L11 20H4Z',
++ 'metro-roller':'M6 4H18V25H6Z M18 12H32V9H37V13H52V18H37V22H32V16H18Z',
++ 'dash-brush':'M3 7H14L21 12V18L14 25H3Z M21 13H52V17H21Z',
++ 'wave-slosher':'M9 9H36L32 27H13Z M6 5H39V9H6Z M37 10H48V20H36V16H44V14H37Z',
++ 'rotor-splatling':'M3 9H24V6H34V8H52V12H34V14H52V18H34V20H52V24H24V21H15L10 27H5L7 20H3Z',
++ 'canopy-guard':'M2 15L15 3H24L34 12V18L24 28H15Z M34 13H48V17H34Z M48 13H53V23H45V20H49Z',
++ 'chord-stringer':'M10 2H17L31 10V22L17 30H10L24 21V11Z M10 2H13V30H10Z M17 14H52V17H17Z',
++ 'ink-saber':'M2 12H14V7H18V12H49L55 15L49 19H18V24H14V19H2Z'
++});
++function weaponIcon(doc,id){
++ if(!Object.hasOwn(WEAPON_ICON,id))return null;
++ const ns='http://www.w3.org/2000/svg',svg=doc.createElementNS(ns,'svg'),p=doc.createElementNS(ns,'path');
++ svg.setAttribute('viewBox','0 0 56 32');svg.setAttribute('class','f4-flow-icon');
++ svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
++ p.setAttribute('d',WEAPON_ICON[id]);p.setAttribute('fill','currentColor');
++ svg.append(p);return svg;
++}
++export function f4EvidenceAllowed(frame){
++ return frame?.playerView===true&&(frame.matchState==='TIME_UP'||frame.matchState==='PLAYING'&&frame.paused===true);
++}
++export function f4EvidenceJson(frame,read){
++ if(!f4EvidenceAllowed(frame)||typeof read!=='function')return null;
++ const data=read();
++ if(!data||!Number.isSafeInteger(data.nativeTick)||data.nativeTick<0||
++    !Number.isFinite(data.remainingSeconds)||data.remainingSeconds<0||data.remainingSeconds>180||
++    data.matchState!==frame.matchState)return null;
++ return JSON.stringify({schema:'F4_PROVISIONAL_MATCH_V1',officialCertification:false,data},null,2);
++}
++export function installF4MatchFlowExtras(root,finish,ui,readEvidence){
+  const prior=installF4PlayerPresentation(root,finish,ui);
+  const doc=root.ownerDocument,style=doc.createElement('style');
+  style.textContent=F4_MATCH_FLOW_CSS;doc.head.append(style);
+@@ -34,14 +69,53 @@
+  const grid=make('section','f4-flow-picker');grid.hidden=true;grid.setAttribute('aria-label','使用ブキの直接選択');
+  const heading=make('div','f4-flow-heading');heading.textContent='ブキ一覧 · クリックで選択';
+  const buttons=make('div','f4-flow-choices');grid.append(heading,buttons);
+- const rows=f4PickerOptions(select?.options);
++ const rows=f4PickerOptions(select?.options);
++ const controls=make('section','f4-flow-controls');controls.hidden=true;
++ const controlsTitle=make('strong','');controlsTitle.textContent='操作ガイド';
++ controls.append(controlsTitle);
++ for(const line of ['WASD 移動 ／ マウス 照準','左クリック メイン ／ F サブ ／ G スペシャル','Shift イカ ／ Space ジャンプ ／ Q 肩切替','Esc / P 一時停止 ／ M マップ']){
++  const row=make('span','');row.textContent=line;controls.append(row);
++ }
++ if(pause)pause.append(controls);
+  const stats=make('section','f4-flow-stats');stats.hidden=true;stats.setAttribute('aria-label','自分の実戦績');
+  const statTitle=make('strong','');statTitle.textContent='今回の実戦績';
+  const statNote=make('div','f4-flow-note');statNote.textContent='直撃と塗装の実測値。サブ・スペシャルを含む総撃破数や個人得点ではありません。';
+  const tiles=make('div','f4-flow-tiles');stats.append(statTitle,tiles,statNote);
+  const scroll=finish.querySelector('#t21-f3-b59-scroll-stats');
+  if(scroll)scroll.insertBefore(stats,scroll.querySelector('#t21-f3-b59-final-stats'));
+- let current=null,disposed=false;
++ let current=null,disposed=false;
++ const evidenceButtons=[];
++ const addEvidenceButton=(host,phase)=>{
++  if(!host||typeof readEvidence!=='function')return;
++  const button=make('button','f4-flow-weapon f4-flow-export');button.type='button';button.hidden=true;
++  button.textContent='実戦記録を保存（JSON）';
++  const status=make('div','f4-flow-note');status.hidden=true;status.setAttribute('role','status');
++  host.append(button,status);
++  button.addEventListener('click',event=>{
++   event.preventDefault();event.stopPropagation();
++   if(disposed||!f4EvidenceAllowed(current)||current.matchState!==phase||button.hidden||doc.pointerLockElement)return;
++   let url=null,link=null;
++   try{
++    const json=f4EvidenceJson(current,readEvidence);
++    if(!json)throw Error('NO_CURRENT_MATCH_DATA');
++    const win=doc.defaultView;
++    if(!win||!win.URL?.createObjectURL)throw Error('DOWNLOAD_UNAVAILABLE');
++    url=win.URL.createObjectURL(new win.Blob([json],{type:'application/json'}));
++    link=doc.createElement('a');link.href=url;
++    link.download='f4-provisional-match-'+(phase==='TIME_UP'?'final':'paused')+'.json';
++    doc.body.append(link);link.click();
++    status.textContent='記録のダウンロードを開始しました。';
++   }catch{status.textContent='記録を保存できませんでした。';}
++   finally{
++    link?.remove();
++    if(url){const saved=url;doc.defaultView.setTimeout(()=>doc.defaultView.URL.revokeObjectURL(saved),1000);}
++    status.hidden=false;
++   }
++  });
++  evidenceButtons.push({button,status,phase});
++ };
++ addEvidenceButton(pause,'PLAYING');
++ addEvidenceButton(scroll,'TIME_UP');
+  const entries=[],statNodes=new Map();
+  const set=(n,s)=>{if(n.textContent!==s)n.textContent=s};
+  const hide=(n,h)=>{if(n.hidden!==h)n.hidden=h};
+@@ -51,7 +125,9 @@
+   pointerLocked:!!doc.pointerLockElement});
+  const sync=()=>{
+   const can=!!rows&&f4CanPick(current,gate());
+-  hide(grid,!can);
++  hide(grid,!can);
++  hide(controls,!(current?.playerView===true&&current.paused===true&&!current.stopped&&
++   (gate().menuState==='READY_TO_START'||gate().menuState==='NATIVE_PAUSED')&&!doc.pointerLockElement));
+   for(const {id,button} of entries){
+    if(button.disabled===can)button.disabled=!can;
+    const pressed=String(select.value===id);
+@@ -64,7 +140,8 @@
+    button.setAttribute('aria-pressed','false');
+    const category=make('span','f4-flow-class');category.textContent=row.category;
+    const name=make('strong','');name.textContent=row.name;
+-   button.append(category,name);
++   const icon=weaponIcon(doc,row.id);if(icon)button.append(icon);
++   button.append(category,name);
+    button.addEventListener('click',event=>{
+     if(disposed||!f4CanPick(current,gate())||button.disabled||!Array.from(select.options).some(o=>o.value===row.id&&!o.disabled))return;
+     event.preventDefault();event.stopPropagation();
+@@ -95,6 +172,13 @@
+   for(const [key,tile] of statNodes)if(!data.some(x=>x.label===key))hide(tile.box,true);
+  };
+  // The wrapper owns the validated result tiles; suppress the duplicate.
+- return {render(frame){if(disposed)return;current=frame;prior.render({...frame,matchSummary:null});sync();renderStats(frame)},
+-  dispose(){if(disposed)return;disposed=true;current=null;select?.removeEventListener('change',sync);grid.remove();stats.remove();style.remove();prior.dispose()}};
++ return {render(frame){if(disposed)return;current=frame;prior.render({...frame,matchSummary:null});sync();renderStats(frame);
++   for(const {button,status,phase} of evidenceButtons){
++    const show=f4EvidenceAllowed(frame)&&frame.matchState===phase&&!doc.pointerLockElement;
++    hide(button,!show);if(!show)hide(status,true);
++   }
++  },
++  dispose(){if(disposed)return;disposed=true;current=null;select?.removeEventListener('change',sync);
++   for(const {button,status} of evidenceButtons){button.remove();status.remove();}
++   grid.remove();controls.remove();stats.remove();style.remove();prior.dispose()}};
+ }
+diff --git a/src/app/F4MatchFlowExtras.d.mts b/src/app/F4MatchFlowExtras.d.mts
+--- a/src/app/F4MatchFlowExtras.d.mts
++++ b/src/app/F4MatchFlowExtras.d.mts
+@@ -6,3 +6,7 @@
+ export function f4CanPick(frame:Pick<Frame,'playerView'|'matchState'|'paused'|'stopped'>|null,gate:{menuState?:string;menuVisible:boolean;selectEnabled:boolean;pointerLocked:boolean}):boolean;
+ export function f4MatchStats(summary:Summary|null|undefined):{label:string;value:number}[];
+-export function installF4MatchFlowExtras(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:Frame&{matchSummary?:Summary|null}):void;dispose():void};
++type EvidenceFrame=Pick<Frame,'playerView'|'matchState'|'paused'>;
++type EvidenceData={nativeTick:number;remainingSeconds:number;matchState:string};
++export function f4EvidenceAllowed(frame:EvidenceFrame|null):boolean;
++export function f4EvidenceJson(frame:EvidenceFrame|null,read:()=>EvidenceData|null):string|null;
++export function installF4MatchFlowExtras(root:HTMLElement,finish:HTMLElement,ui:HTMLElement,readEvidence?:()=>EvidenceData|null):{render(frame:Frame&{matchSummary?:Summary|null}):void;dispose():void};
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -9930,5 +9930,16 @@
+   if(this.f4ProvisionalTurfEnabled&&f4UiRoot&&this.compactF4Hud){
+    this.f4PlayerPresentation??=installF4PlayerPresentation(
+-    this.practiceHud.root,this.b58SessionBoard.finish,f4UiRoot);
++    this.practiceHud.root,this.b58SessionBoard.finish,f4UiRoot,()=>{
++     if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeCpuConnected||
++        !(this.matchState==='TIME_UP'||this.matchState==='PLAYING'&&this.paused))return null;
++     return {nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
++      stopped:!!this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
++      human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
++       directHits:this.stats.humanCpuDirectHits,deathCount:this.humanSplats,respawnCount:this.humanRespawns,
++       lifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick},
++      traffic:this.traffic.f4WholeMotionEvidence(),
++      projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),aim:this.cpu.f4AimEvidenceSnapshot(),
++      score:this.ink.readF4ProvisionalTurf()};
++    });
+    const f4Weapon=this.projectiles.currentPlayerWeapon;
+    const f4Sub=subWeaponProfile(this.sourceWeaponKit(f4Weapon.id).sub);
+diff --git a/src/app/F4ActorArt.mjs b/src/app/F4ActorArt.mjs
+--- a/src/app/F4ActorArt.mjs
++++ b/src/app/F4ActorArt.mjs
+@@ -160,7 +160,9 @@
+    boot.setLocalPosition(x,-.30-.55*c+.10*s,-.55*s-.10*c);
+    boot.setLocalEulerAngles(angle,0,0);
+   }
+-  nodes.get("left-arm").setLocalEulerAngles(weaponId==="twin-comets"?-25:-swing*.45,0,-10);
++  const twoHanded=['twin-comets','rail-charger','metro-roller','rotor-splatling','chord-stringer','ink-saber'].includes(weaponId);
++  // Long/two-handed weapons keep the support arm steadier while walking.
++  nodes.get("left-arm").setLocalEulerAngles(twoHanded?-25-swing*.10:-swing*.45,0,-10);
+  }
+  // Render-only response, using the already created weapon hierarchy.
+  function setRecoil(value){
+@@ -169,8 +171,14 @@
+   if(amount===lastRecoil)return;
+   lastRecoil=amount;
+   const swing=['metro-roller','dash-brush','wave-slosher','ink-saber'].includes(weaponId);
+-  weaponRoot.setLocalPosition(0,0,(swing ? .025 : .085)*amount);
+-  weaponRoot.setLocalEulerAngles((swing ? -18 : -5)*amount,0,0);
++  // Rotate around the authored grip rather than the actor origin.
++  // The root translation cancels the rotation of that local pivot.
++  const grip=WEAPONS[weaponId].find(p=>p.name==='grip'||p.name==='handle'||p.name==='shaft');
++  const py=grip?.pos[1]??-.28,pz=grip?.pos[2]??-.20;
++  const angle=(swing?-18:-5)*amount,a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
++  const kick=(swing?.025:.085)*amount;
++  weaponRoot.setLocalPosition(0,py-(py*c-pz*s),pz-(py*s+pz*c)+kick);
++  weaponRoot.setLocalEulerAngles(angle,0,0);
+   nodes.get("right-arm").setLocalEulerAngles(-25-(swing?16:5)*amount,0,12);
+  }
+  return {root,setWeapon,setStride,setInk,setRecoil,destroy(){if(!disposed){disposed=true;root.destroy();}}};
