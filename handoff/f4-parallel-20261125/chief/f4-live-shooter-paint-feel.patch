@@ -1,0 +1,77 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -208,8 +208,32 @@
+   request?: CpuFireRequest;
+ }
+ 
+-export class ProjectileSystem {
+-  private f4GaugeLifeAtLaunch?: (actorId:string)=>string|null;
++// The real brush still requires an actual stage contact and backed raster.
++// Radius multipliers are provisional player-feel tuning, not source proof.
++function f4PlayableShooterPaint(profile:ShooterProfile):ShooterProfile{
++ return {...profile,
++  impactNear:[profile.impactNear[0],profile.impactNear[1]*1.22],
++  impactMiddle:[profile.impactMiddle[0],profile.impactMiddle[1]*1.22],
++  impactFar:[profile.impactFar[0],profile.impactFar[1]*1.22],
++  splashRadius:profile.splashRadius*1.35,
++  splashSpacing:profile.splashSpacing*.78,
++  footRadius:profile.footRadius*1.10
++ };
++}
++
++export class ProjectileSystem {
++  // Playable F4 only: modestly restore the earlier reduced raster widths.
++  // Cache derived profiles; do not change weapon damage, flight or cadence.
++  private f4PlayablePaintOn=false;
++  private readonly f4PlayablePaintProfiles=new WeakMap<ShooterProfile,ShooterProfile>();
++  public enableF4PlayableShooterPaint():void{this.f4PlayablePaintOn=true;}
++  private f4PlayablePaintProfile(profile:ShooterProfile):ShooterProfile{
++    if(!this.f4PlayablePaintOn||!this.physics.hasF4WholeResearchTrimesh)return profile;
++    const cached=this.f4PlayablePaintProfiles.get(profile);if(cached)return cached;
++    const tuned=f4PlayableShooterPaint(profile);
++    this.f4PlayablePaintProfiles.set(profile,tuned);return tuned;
++  }
++  private f4GaugeLifeAtLaunch?: (actorId:string)=>string|null;
+   public useF4GaugeLaunchLife(query:(actorId:string)=>string|null):void {this.f4GaugeLifeAtLaunch=query;}
+   private shooterCadence?: Map<string, {
+     weaponId: WeaponId;
+@@ -4137,9 +4161,10 @@
+         airborne ? 0.4 : bias, sourceId, shots
+       );
+       if (!explicitShooterAim) slot.velocity.copy(rotateYaw(direction, yaw)).mulScalar(speed);
+-      const pattern = shooterPaintPattern(shooter, shots);
+-      slot.shooterFlight = {
+-        profile: shooter, frame: 0, free: false, distance: 0,
++      const paintProfile=f4Special?shooter:this.f4PlayablePaintProfile(shooter);
++      const pattern = shooterPaintPattern(paintProfile, shots);
++      slot.shooterFlight = {
++        profile: paintProfile, frame: 0, free: false, distance: 0,
+         nextSplash: pattern.firstDistance, splashesRemaining: pattern.count
+       };
+     }
+@@ -4807,7 +4832,7 @@
+   ): void {
+     const cadence = this.shooterCadence?.get(actor);
+     if (!cadence || !shooterPaintPattern(profile, cadence.shots).foot) return;
+-    this.enqueueF4Foot(body, team, actor, profile.footRadius);
++    this.enqueueF4Foot(body, team, actor, this.f4PlayablePaintProfile(profile).footRadius);
+   }
+ 
+   private enqueueF4Foot(body: Vec3, team: Team.A | Team.B, actor: string, radius: number): void {
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1294,8 +1294,10 @@
+    this.cpu.enableB35SourceNativeRetargetSuppression();
+   this.projectiles=new ProjectileSystem(app,surfaces,this.physics,
+    this.coordinator,this.resources,combatTargets,this.cpu,
+-   this.feedback,this.stats);
+-  this.f4Special=this.f4ResearchMode&&this.b203FullRound&&this.f4WholeTrimeshRequested?
++   this.feedback,this.stats);
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)
++   this.projectiles.enableF4PlayableShooterPaint();
++  this.f4Special=this.f4ResearchMode&&this.b203FullRound&&this.f4WholeTrimeshRequested?
+    new F4SpecialRuntime(app,this.physics,this.projectiles):null;
+   if(this.f4Special&&import.meta.env.DEV&&b31Params.get('t21QaInput')!=='deterministic'){
+    this.feedback.enableF4Presentation();
