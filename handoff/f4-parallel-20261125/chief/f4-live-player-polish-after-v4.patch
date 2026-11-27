@@ -155,7 +155,78 @@ diff --git a/src/app/F4MatchFlowExtras.d.mts b/src/app/F4MatchFlowExtras.d.mts
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -9930,5 +9930,23 @@
+@@ -2179,9 +2179,10 @@
+     return;
+    }
+-   if(!this.stopReason&&this.matchState!=='TIME_UP'&&
+-      !this.survey.snapshot().active&&this.galleryIndex<0&&
+-      (this.b203FullRound||
+-       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
+-    void this.canvas.requestPointerLock();
++   if(!this.stopReason&&this.matchState!=='TIME_UP'&&
++      !this.f4LiveWorldPending()&&
++      !this.survey.snapshot().active&&this.galleryIndex<0&&
++      (this.b203FullRound||
++       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
++    void this.canvas.requestPointerLock();
+   });
+   // B378: Existing physical weapon profiles become playable in source
+@@ -2890,6 +2891,11 @@
+      document.exitPointerLock();return;
+     }
+-    this.b203EverLockedRealPointer=true;
+-    if(this.f4WholeTrimeshRequested){
++    // A premature canvas click must not latch START or discard the selected kit.
++    // Require another genuine lock after real collision and CPU connection.
++    if(this.f4LiveWorldPending()){
++     this.paused=true;document.exitPointerLock();return;
++    }
++    this.b203EverLockedRealPointer=true;
++    if(this.f4WholeTrimeshRequested){
+      if(!this.f4WholeTrimeshInstalled){this.paused=true;return;}
+      // A second genuine mouse lock after asynchronous loading must resume.
+@@ -3444,6 +3450,6 @@
+    // this is an atomic visible switch from the existing registered stage.
+    if(!this.stopReason)this.setNativeVerifiedOpticalScene(true);
+-   if(this.f4WholeTrimeshInstalled&&
+-      document.pointerLockElement===this.canvas&&document.hasFocus()&&
++   if(this.f4WholeTrimeshInstalled&&!this.f4LiveWorldPending()&&
++      document.pointerLockElement===this.canvas&&document.hasFocus()&&
+       !document.hidden&&!this.stopReason){
+     this.paused=false;
+@@ -5615,5 +5621,9 @@
+   this.refresh();
+  }
+- private pauseSourceRoundOnFocusLoss(){
++ private f4LiveWorldPending():boolean{
++  return this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
++   (!this.f4WholeTrimeshInstalled||!this.f4WholeCpuConnected);
++ }
++ private pauseSourceRoundOnFocusLoss(){
+   if(this.stopReason||this.matchState==='TIME_UP'||
+      !(this.b203FullRound&&this.b203EverLockedRealPointer||
+@@ -7261,6 +7271,6 @@
+   }
+   // No player/CPU physics ticks with old colliders while F3L verifies.
+-  if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled)
+-   this.paused=true;
++  if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled||this.f4LiveWorldPending())
++   this.paused=true;
+   // A generic QA/UI pause toggle cannot consume the player's ready time.
+   if(this.b203FullRound&&!this.b203EverLockedRealPointer)this.paused=true;
+@@ -8032,6 +8042,9 @@
+   const stopResume=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+    '#t21-f3-b202-resume')!;
+-  stopResume.disabled=stoppedMenuOnly;
+-  stopResume.textContent=sourceFallRecovery?
++  const f4Pending=ready&&this.f4LiveWorldPending();
++  stopResume.disabled=stoppedMenuOnly||f4Pending;
++  stopResume.textContent=f4Pending?
++   (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
++   sourceFallRecovery?
+    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
+@@ -9994,5 +10007,23 @@
    if(this.f4ProvisionalTurfEnabled&&f4UiRoot&&this.compactF4Hud){
     this.f4PlayerPresentation??=installF4PlayerPresentation(
 -    this.practiceHud.root,this.b58SessionBoard.finish,f4UiRoot);
@@ -427,6 +498,13 @@ diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
   };
   let disposed=false;
   return {
+@@ -159,5 +169,5 @@
+    if(preview){str(kitName,preview.category+' · '+preview.name);str(kitSub,preview.sub);str(kitSpecial,preview.special)}
+    const pauseState=pause?.dataset.t21B202NativeState;
+-   const canLocalize=active&&!stopped&&!!pause&&!pause.hidden&&!!pauseTitle&&!!resume&&
++   const canLocalize=active&&!stopped&&!!pause&&!pause.hidden&&!!pauseTitle&&!!resume&&!resume.disabled&&
+     (pauseState==='READY_TO_START'||pauseState==='NATIVE_PAUSED');
+    if(canLocalize){
 diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
 --- a/src/projectile/ProjectileSystem.ts
 +++ b/src/projectile/ProjectileSystem.ts
