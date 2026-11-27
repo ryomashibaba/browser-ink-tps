@@ -411,6 +411,9 @@ export async function loadF3lTexturedSource(
    const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
    const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
    const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
+   const floorGroups=f4ResearchPositionGroups.filter((_,i)=>
+    /^Fld_Temple01_Floor(?:Concrete0[0-3]|Slope00)$/.test(manifest.materials[i]?.name??''));
+   const floorConcreteWorld=toWorld(floorGroups,floorGroups.reduce((n,g)=>n+g.length,0));
    const {center,ingress,walkable}=f4RetainedSeedModelVertices;
    const retainedSeed=toWorld([center,ingress],center.length+ingress.length);
    // Keep the diagnostic count for the former material-selected input.
@@ -422,7 +425,7 @@ export async function loadF3lTexturedSource(
    wholeNavWorld.set(originalStatic);
    wholeNavWorld.set(retainedSeed,originalStatic.length);
    f4ResearchPositionGroups.length=0;
-   return {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld};
+   return {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld,floorConcreteWorld};
   },
   getReadabilityMode:()=>visualMode,
   setReadabilityMode(mode:F3lStageReadabilityMode){

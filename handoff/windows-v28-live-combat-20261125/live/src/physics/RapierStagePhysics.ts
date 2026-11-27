@@ -85,8 +85,10 @@ export class RapierStagePhysics {
       {x:nx*-1,y:ny*-1,z:nz*-1});
     const hit=this.world.castRayAndGetNormal(ray,2*length,false,
       undefined,undefined,undefined,undefined,this.paintBackingCollider);
-    return !!hit&&Math.abs(hit.normal.x*nx+hit.normal.y*ny+
-      hit.normal.z*nz)>=F4_PAINT_NORMAL_ALIGNMENT;
+    if(!hit)return false;
+    const aligned=hit.normal.x*nx+hit.normal.y*ny+hit.normal.z*nz;
+    // New floor tiles must be supported from their exposed upper side.
+    return (surface.id.startsWith('F4ProvisionalFloor:')?aligned:Math.abs(aligned))>=F4_PAINT_NORMAL_ALIGNMENT;
   }
 
   public f4PaintAtStageHit(

@@ -15,6 +15,7 @@ import {
 import {CpuAgentSystem} from '../ai/CpuAgentSystem';
 import {f4BelowInstalledGeometry} from '../stage/F4PhysicalStageSafety.mjs';
 import {prepareF4ProvisionalWalls} from '../stage/F4ProvisionalWalls';
+import {prepareF4ProvisionalFloors} from '../stage/F4ProvisionalFloors';
 import {CpuKitSystem,nativeSourceSubBallisticAim} from '../ai/CpuKitSystem';
 import {CombatTargetSystem} from '../combat/CombatTargetSystem';
 import {PlayerResources} from '../combat/PlayerResources';
@@ -3360,13 +3361,24 @@ export class UndertowF3PlayablePreviewApp{
    sessionStorage.getItem('t21F4VisualPolish')!=='off'&&
    new URL(location.href).searchParams.get('t21QaInput')!=='deterministic';
   let f4WallVertices:Float32Array|null=null;
+  let floorInstallation:ReturnType<typeof prepareF4ProvisionalFloors>=null;
+  const rollbackFloors=()=>{
+   const floors=floorInstallation;if(!floors)return;floorInstallation=null;
+   for(const page of floors.pages)this.coordinator.detachF4FloorAtlas(page.atlas);
+   for(const surface of floors.surfaces){
+    this.ink.unregisterF4ProvisionalSurface(surface);
+    const index=this.f4PhysicalPaintSurfaces.indexOf(surface);
+    if(index>=0)this.f4PhysicalPaintSurfaces.splice(index,1);
+   }
+   floors.root.destroy();for(const page of floors.pages)page.atlas.destroy();
+  };
   let wallInstallation:ReturnType<typeof prepareF4ProvisionalWalls>=null;
   const rollbackWalls=()=>{
    const walls=wallInstallation;if(!walls)return;
    wallInstallation=null;
    this.coordinator.detachF4WallAtlas(walls.atlas);
    for(const surface of walls.surfaces){
-    this.ink.unregisterF4ProvisionalWall(surface);
+    this.ink.unregisterF4ProvisionalSurface(surface);
     const index=this.f4PhysicalPaintSurfaces.indexOf(surface);
     if(index>=0)this.f4PhysicalPaintSurfaces.splice(index,1);
    }
@@ -3402,7 +3414,7 @@ export class UndertowF3PlayablePreviewApp{
     const stageRoot=this.app.root.findByName('StageRoot');
     if(!(stageRoot instanceof Entity))
      throw Error('T21_F4_RESEARCH_STAGE_ROOT_MISSING');
-    const {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld}=
+    const {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld,floorConcreteWorld}=
      installed.takeWholeF4ResearchWorldVertices();
     f4WallVertices=wallConcreteWorld;
     // Keep F4 paused unless Recast accepts the exact world geometry
@@ -3420,6 +3432,18 @@ export class UndertowF3PlayablePreviewApp{
     // render over it without the old opaque neutral paint planes.
     this.ink.setPhysicalPaintBacking((surface,u,v)=>
      this.physics.hasF4PaintBacking(surface,u,v));
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
+     try{
+      const floors=floorInstallation=prepareF4ProvisionalFloors(this.app,this.ink,floorConcreteWorld,
+       f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined);
+      if(floors){
+       for(const surface of floors.surfaces)if(this.ink.getSurface(surface.id))throw Error('F4_DUPLICATE_FLOOR');
+       for(const page of floors.pages)this.coordinator.attachF4FloorAtlas(page.atlas,page.surfaces);
+       for(const surface of floors.surfaces){this.ink.registerSurface(surface);this.f4PhysicalPaintSurfaces.push(surface);}
+       this.canvas.dataset.t21F4ProvisionalFloors=String(floors.surfaces.length);
+      }else this.canvas.dataset.t21F4ProvisionalFloors='HOLD_NO_ADDITIONAL_FLOOR';
+     }catch(error){rollbackFloors();this.canvas.dataset.t21F4ProvisionalFloors='HOLD '+String(error).slice(0,180);}
+    }
     // Defer score admission until all provisional wall surfaces are registered.
     restoreF4InkGeometry=installF4InkGeometry(this.app,stageRoot,
      this.b45SourceSurfaces,wholeNavWorld,f4VisualPolish,
@@ -3527,7 +3551,7 @@ export class UndertowF3PlayablePreviewApp{
     }
    }
   }catch(error){
-   rollbackWalls();
+   rollbackWalls();rollbackFloors();
    this.f4WholeStudyNav?.destroy();
    this.f4WholeStudyNav=null;
    if(this.f4WholeTrimeshInstalled){

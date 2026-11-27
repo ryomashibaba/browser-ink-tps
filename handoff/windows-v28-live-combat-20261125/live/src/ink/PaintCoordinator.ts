@@ -2,7 +2,8 @@ import { PerformanceStats } from '../core/PerformanceStats';
 import {f4WallContinuationBrushes} from '../stage/F4WallContinuationBrushes.mjs';
 import { GameplayInkSystem, type PaintApplyResult, type PaintRasterRun } from './GameplayInkSystem';
 import { GpuInkAtlas } from './GpuInkAtlas';
-import { PaintEventType, PaintSource, Team, type PaintEvent } from './types';
+import { PaintEventType, PaintSource, SurfaceFlags, Team, type PaintEvent } from './types';
+import type {PaintSurface} from './PaintSurface';
 
 export interface PaintRequest {
   source?: PaintSource;
@@ -67,7 +68,21 @@ export class PaintCoordinator {
     // The wall atlas exists only in the provisional native F4 world.
     atlas.enableF4QueueOptimization();
   }
-  public flushF4WallAtlas(maxEvents:number):void{this.f4WallAtlas?.flush(maxEvents);}
+  private readonly f4FloorAtlasBySurface=new Map<string,GpuInkAtlas>();
+  private readonly f4FloorAtlases=new Set<GpuInkAtlas>();
+  public attachF4FloorAtlas(atlas:GpuInkAtlas,surfaces:readonly PaintSurface[]):void{
+    if(surfaces.some(s=>!s.id.startsWith('F4ProvisionalFloor:')||this.f4FloorAtlasBySurface.has(s.id)))throw Error('F4_FLOOR_ATLAS_DUPLICATE');
+    atlas.enableF4QueueOptimization();this.f4FloorAtlases.add(atlas);
+    for(const s of surfaces)this.f4FloorAtlasBySurface.set(s.id,atlas);
+  }
+  public detachF4FloorAtlas(atlas:GpuInkAtlas):void{
+    this.f4FloorAtlases.delete(atlas);
+    for(const [id,a] of this.f4FloorAtlasBySurface)if(a===atlas)this.f4FloorAtlasBySurface.delete(id);
+  }
+  public flushF4WallAtlas(maxEvents:number):void{
+    this.f4WallAtlas?.flush(maxEvents);
+    for(const atlas of this.f4FloorAtlases)atlas.flush(maxEvents);
+  }
   public detachF4WallAtlas(atlas:GpuInkAtlas):void{
     if(this.f4WallAtlas!==atlas)return;
     this.f4WallAtlas=null;
@@ -145,6 +160,28 @@ export class PaintCoordinator {
           }
         }
       }
+      // One genuine floor brush can straddle a new tile or the old SOURCE
+      // boundary. Reproject onto neighboring coplanar registered surfaces;
+      // each continuation still passes the same live raster/backing authority.
+      if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
+         (source===PaintSource.Human||source===PaintSource.Cpu)&&
+         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||event.type===PaintEventType.MidDroplet)){
+        const from=this.gameplay.getSurface(event.surfaceId);
+        if(from&&!(from.baseFlags&SurfaceFlags.Wall)){
+          const center=from.localToWorld(event.centerU,event.centerV);
+          const axis=from.uAxis.clone().mulScalar(Math.cos(event.angle)).add(from.vAxis.clone().mulScalar(Math.sin(event.angle)));
+          const radius=Math.max(event.radiusU,event.radiusV),extra:Readonly<PaintRequest>[]=[];
+          for(const to of this.gameplay.getSurfaces()){
+            if(to===from||(!(to.id.startsWith('F4ProvisionalFloor:'))&&!from.id.startsWith('F4ProvisionalFloor:'))||
+               !(to.baseFlags&SurfaceFlags.Paintable)||(to.baseFlags&SurfaceFlags.Wall)||Math.abs(to.normal.dot(from.normal))<.999)continue;
+            const p=to.projectWorldPoint(center);
+            if(p.planeDistance>.025||p.u < -radius||p.v < -radius||p.u>to.widthMeters+radius||p.v>to.heightMeters+radius)continue;
+            extra.push(Object.freeze({...request,surfaceId:to.id,centerU:p.u,centerV:p.v,
+             angle:Math.atan2(axis.dot(to.vAxis),axis.dot(to.uAxis))}));
+          }
+          if(extra.length){continuations??=new Set();for(const item of extra)continuations.add(item);batch.splice(requestIndex+1,0,...extra);}
+        }
+      }
       // Existing QA uses the raster observation to distinguish denied
       // attempts from repaint. Preserve that diagnostic contract; the
       // actual GPU queue and last-accepted UI telemetry remain gated below.
@@ -178,7 +215,8 @@ export class PaintCoordinator {
           lastQueuedBrush.event, lastQueuedBrush.runs,
           event, result.paintableRuns
         )) {
-          const atlas=event.surfaceId.startsWith('F4ProvisionalWall:')?this.f4WallAtlas:this.gpu;
+          const atlas=event.surfaceId.startsWith('F4ProvisionalWall:')?this.f4WallAtlas:
+            this.f4FloorAtlasBySurface.get(event.surfaceId)??this.gpu;
           atlas?.queue(event, result.paintableRuns);
           lastQueuedBrush = { event, runs: result.paintableRuns };
         }
@@ -209,6 +247,7 @@ export class PaintCoordinator {
     this.gameplay.reset();
     this.gpu.clear();
     this.f4WallAtlas?.clear();
+    for(const atlas of this.f4FloorAtlases)atlas.clear();
     this.lastEvent = null;
     this.stats.cpuInkCellsChanged = 0;
     this.stats.cpuImpactInkCellsChanged = 0;

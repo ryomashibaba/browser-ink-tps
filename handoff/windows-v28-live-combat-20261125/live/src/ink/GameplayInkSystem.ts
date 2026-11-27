@@ -61,7 +61,7 @@ export class GameplayInkSystem {
 
   private isPhysicallyBacked(surface:PaintSurface,x:number,y:number,index:number):boolean{
     // A provisional wall has no paint/ink authority without live mesh backing.
-    if(!this.backedCell)return !surface.id.startsWith('F4ProvisionalWall:');
+    if(!this.backedCell)return !surface.id.startsWith('F4ProvisionalWall:')&&!surface.id.startsWith('F4ProvisionalFloor:');
     let cache=this.backingCache.get(surface.id);
     if(!cache){
       cache=new Uint8Array(surface.widthCells*surface.heightCells);
@@ -124,8 +124,8 @@ export class GameplayInkSystem {
   }
 
   /** Boot rollback only; never remove the frozen SOURCE registration. */
-  public unregisterF4ProvisionalWall(surface:PaintSurface):void{
-    if(!surface.id.startsWith('F4ProvisionalWall:')||surface.isScoreable||
+  public unregisterF4ProvisionalSurface(surface:PaintSurface):void{
+    if((!surface.id.startsWith('F4ProvisionalWall:')&&!surface.id.startsWith('F4ProvisionalFloor:'))||surface.isScoreable||
        this.surfaces.get(surface.id)!==surface)return;
     this.surfaces.delete(surface.id);
     this.backingCache.delete(surface.id);
