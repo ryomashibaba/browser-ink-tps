@@ -49,7 +49,7 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
 +  requestedGoal:Readonly<{x:number;y:number;z:number}>):void{
 +  const bot=this.bots.find(b=>b.id===id),goal=this.f4WholeGoals.get(id);
 +  if(!this.f4WholeSupport||!bot?.agent||!goal||goal.patrolVeto||
-+     bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||!(bot.hp>0)||
++     bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||!Number.isFinite(bot.hp)||(bot.hp??0)<=0||
 +     ![actualFoot.x,actualFoot.y,actualFoot.z,requestedGoal.x,requestedGoal.y,requestedGoal.z].every(Number.isFinite)||
 +     bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))>.01||
 +     goal.point.distance(new Vec3(requestedGoal.x,requestedGoal.y,requestedGoal.z))>.35||
@@ -72,7 +72,28 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
        bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&(bot.hp??0)>0&&
        [actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)&&
        bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))<=.01&&
-@@ -1972,7 +1986,8 @@
+@@ -1636,10 +1650,16 @@
+    bot.b213ActualAttackerId??null:null;
+   // Whole F4 navigation and paid main fire share the same 3D sight
+   // selector. The older photo-route research keeps its original optics.
+-  if(this.f4WholeSupport)return chooseF4PhysicalSight(
+-   muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
+-    new Vec3(from.x,from.y,from.z),
+-    new Vec3(to.x,to.y,to.z),'ink-projectile'),attacker,sightRange,sightRange);
++  if(this.f4WholeSupport){
++   const blocked=(from:Readonly<{x:number;y:number;z:number}>,to:Readonly<{x:number;y:number;z:number}>)=>
++    !!this.physics!.castStageSegment(new Vec3(from.x,from.y,from.z),
++     new Vec3(to.x,to.y,to.z),'ink-projectile');
++   const main=chooseF4PhysicalSight(muzzle,candidates,blocked,attacker,range,range);
++   // A distant attacker must not pull a CPU away from a real firing lane.
++   // Only search beyond main range if no physically visible main target exists.
++   if(!lookBeyondWeapon||main.target||sightRange<=range)return main;
++   return chooseF4PhysicalSight(muzzle,candidates,blocked,attacker,sightRange,sightRange);
++  }
+   return chooseB181OriginalSourceSight(
+    muzzle,candidates,(from,to)=>!!this.physics!.castStageSegment(
+     new Vec3(from.x,from.y,from.z),
+@@ -1972,7 +1992,8 @@
     this.f4PatrolNavigation.newGoal(id);
     this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
      advanced:this.b137NativeTick,bestDistance:foot.distance(point),
