@@ -235,3 +235,73 @@ diff --git a/src/core/InkBrushRasterStream.ts b/src/core/InkBrushRasterStream.ts
  
        // Same exact [BL, BR, TR, TL] order as canonical INK quads, but no
        // transient InkBrushVertex/InkBrushQuad instances or geometry list.
+diff --git a/src/app/F4ActorArt.mjs b/src/app/F4ActorArt.mjs
+--- a/src/app/F4ActorArt.mjs
++++ b/src/app/F4ActorArt.mjs
+@@ -1,13 +1,13 @@
+ // F4 provisional render-only artwork. No actor transform, collider, gameplay or asset authority.
+ const BODY = [
+  {"name":"jacket","type":"capsule","tint":"SUIT","pos":[0,-0.06,0],"size":[0.7,0.7,0.49],"angle":[0,0,0]},
+- {"name":"chest","type":"sphere","tint":"TEAM","pos":[0,0.065,-0.25],"size":[0.51,0.36,0.15],"angle":[0,0,0]},
+- {"name":"head","type":"sphere","tint":"TEAM","pos":[0,0.55,0],"size":[0.66,0.56,0.6],"angle":[0,0,0]},
+- {"name":"cap","type":"sphere","tint":"GEAR","pos":[0,0.77,0.055],"size":[0.65,0.18,0.56],"angle":[0,0,0]},
+- {"name":"visor","type":"sphere","tint":"DARK","pos":[0,0.54,-0.28],"size":[0.53,0.22,0.17],"angle":[0,0,0]},
+- {"name":"visor-glint","type":"sphere","tint":"VISOR","pos":[0,0.59,-0.355],"size":[0.39,0.048,0.045],"angle":[0,0,0]},
+- {"name":"left-arm","type":"capsule","tint":"SUIT","pos":[-0.43,-0.13,-0.03],"size":[0.22,0.58,0.24],"angle":[0,0,-10]},
+- {"name":"right-arm","type":"capsule","tint":"SUIT","pos":[0.44,-0.12,-0.1],"size":[0.22,0.52,0.25],"angle":[-25,0,12]},
++ {"name":"chest","type":"sphere","tint":"TEAM","pos":[0,0.065,-0.25],"size":[0.57,0.39,0.15],"angle":[0,0,0]},
++ {"name":"head","type":"sphere","tint":"TEAM","pos":[0,0.55,0],"size":[0.66,0.56,0.6],"angle":[0,0,0]},
++ {"name":"cap","type":"sphere","tint":"GEAR","pos":[0,0.77,0.055],"size":[0.65,0.18,0.56],"angle":[0,0,0]},
++ {"name":"visor","type":"sphere","tint":"DARK","pos":[0,0.54,-0.28],"size":[0.53,0.22,0.17],"angle":[0,0,0]},
++ {"name":"visor-glint","type":"sphere","tint":"VISOR","pos":[0,0.59,-0.355],"size":[0.39,0.048,0.045],"angle":[0,0,0]},
++ {"name":"left-arm","type":"capsule","tint":"TEAM","pos":[-0.43,-0.13,-0.03],"size":[0.22,0.58,0.24],"angle":[0,0,-10]},
++ {"name":"right-arm","type":"capsule","tint":"TEAM","pos":[0.44,-0.12,-0.1],"size":[0.22,0.52,0.25],"angle":[-25,0,12]},
+  {"name":"left-leg","type":"capsule","tint":"DARK","pos":[-0.19,-0.57,0],"size":[0.27,0.55,0.29],"angle":[0,0,0]},
+  {"name":"right-leg","type":"capsule","tint":"DARK","pos":[0.19,-0.57,0],"size":[0.27,0.55,0.29],"angle":[0,0,0]},
+  {"name":"left-boot","type":"sphere","tint":"GEAR","pos":[-0.19,-0.85,-0.1],"size":[0.32,0.23,0.46],"angle":[0,0,0]},
+diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
+--- a/src/feedback/GameFeedback.ts
++++ b/src/feedback/GameFeedback.ts
+@@ -256,7 +256,7 @@
+     // visible even when a preceding explosion filled the shared FX pool.
+     this.spawnFx(team,at,0.18*profile.fxScale,0.19,'BURST',4);
+     this.spawnFx(team,at.clone().add(new Vec3(0,0.19,0)),
+-      0.085*profile.fxScale,0.13,'BURST',2);
++      0.085*profile.fxScale,0.13,'BURST',2,true);
+     this.spray(team,at,4,.075,1.7,1.3,.23,2);
+     if(this.playTone(660*profile.audioPitch,0.024,0.06,'sine',1.05,2,this.f4Presentation?undefined:at,undefined,'local-hit')&&this.f4Presentation)this.handledCues.add('CPU_HIT');
+   }
+@@ -270,7 +270,7 @@
+     const intensity=Math.min(1,actualHpLoss/65);
+     this.spawnFx(attacker,contact,0.15+intensity*0.09,0.18,'BURST',4);
+     this.spawnFx(attacker,contact.clone().add(new Vec3(0,0.26,0)),
+-      0.07+intensity*0.06,0.13,'BURST',2);
++      0.07+intensity*0.06,0.13,'BURST',2,true);
+     if(this.playTone(260-intensity*75,0.024,0.075,'triangle',0.88,2,this.f4Presentation?undefined:contact,undefined,'local-hurt')&&this.f4Presentation)this.handledCues.add('HURT');
+   }
+ 
+@@ -608,14 +608,16 @@
+     position: Vec3,
+     baseScale: number,
+     duration: number,
+-    mode: FxMode = 'BURST',priority=0
+-  ): FxSlot|undefined {
+-    const slot = this.f4Presentation?this.fx[chooseSlot(this.fx,mode==='FUSE'?2:priority)]:this.fx.find((candidate) => candidate.ttl <= 0);
+-    if (!slot) return;
+-
+-    const meshInstance = slot.entity.render?.meshInstances[0];
+-    if (meshInstance) {
+-      meshInstance.material = team === Team.A ? this.materialA : this.materialB;
++    mode: FxMode = 'BURST',priority=0,confirmedAccent=false
++  ): FxSlot|undefined {
++    const slot = this.f4Presentation?this.fx[chooseSlot(this.fx,mode==='FUSE'?2:priority)]:this.fx.find((candidate) => candidate.ttl <= 0);
++    if (!slot) return;
++
++    const meshInstance = slot.entity.render?.meshInstances[0];
++    if (meshInstance) {
++      // Only genuine HP-loss cues use the neutral accent; reused slots reset.
++      meshInstance.material = this.f4Presentation&&confirmedAccent?this.neutralMaterial:
++        team === Team.A ? this.materialA : this.materialB;
+     }
+ 
+     slot.ttl = duration;
