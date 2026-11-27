@@ -427,3 +427,68 @@ diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
   };
   let disposed=false;
   return {
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -485,13 +485,17 @@
+     if (paint > 0 && radius > 0) this.enqueueF4BurstPaint(point,team,actor,radius,paint,true,PaintEventType.Special);
+   }
+ 
+-  public launchF4SprinklerDrop(origin: Vec3,velocity: Vec3,team: Team.A|Team.B,actor?: string, damage=20,paintRadius=.24): boolean {
+-    const slot = this.slots.find(isFreeProjectileSlot);
+-    if (!slot || !this.physics.hasF4WholeResearchTrimesh) return false;
+-    this.spawnProjectile(slot,weaponProfile('rotor-splatling'),origin,velocity,team,
+-      velocity.length(),20,.75,.075,damage,paintRadius,0,0,0,0,0,0,0,actor?'CPU':'HUMAN',actor??'human');
+-    return true;
+-  }
++  public launchF4SprinklerDrop(origin: Vec3,velocity: Vec3,team: Team.A|Team.B,actor?: string, damage=20,paintRadius=.24,
++    parentGaugeLife?:string|null): boolean {
++    const slot = this.slots.find(isFreeProjectileSlot);
++    if (!slot || !this.physics.hasF4WholeResearchTrimesh) return false;
++    this.spawnProjectile(slot,weaponProfile('rotor-splatling'),origin,velocity,team,
++      velocity.length(),20,.75,.075,damage,paintRadius,0,0,0,0,0,0,0,actor?'CPU':'HUMAN',actor??'human');
++    // Secondary drops are a continuation of the paid sub, not a new
++    // activation by the current life. Explicit null must remain excluded.
++    if(parentGaugeLife!==undefined)slot.f4GaugeLaunchLife=parentGaugeLife;
++    return true;
++  }
+ 
+   private currentHumanTeam: Team.A | Team.B = Team.A;
+   private currentHumanDamageable = false;
+@@ -4253,10 +4257,10 @@
+         slot.paintRadius * 0.9,
+         slot.paintRadius * 0.7,
+         slot.velocity,
+-        0.52,
+-        PaintEventType.Impact,
+-        paintSource
+-      );
++        0.52,
++        PaintEventType.Impact,
++        paintSource,undefined,undefined,slot.f4GaugeLaunchLife
++      );
+     }
+ 
+     // Empty-air expiry is not physical contact.
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -469,7 +469,8 @@
+     const speed = device.age<480 ? 5.8 : device.age<900 ? 4.9 : 3.8;
+     const velocity = side.mulScalar(Math.cos(angle)*speed).add(around.mulScalar(Math.sin(angle)*speed))
+       .add(axis.clone().mulScalar(4.8));
+-    if (this.f4Runtime!.launchF4SprinklerDrop(slot.position,velocity,slot.team,slot.f4?.actor))
++    if (this.f4Runtime!.launchF4SprinklerDrop(slot.position,velocity,slot.team,slot.f4?.actor,
++      undefined,undefined,slot.f4?.gaugeLaunchLife))
+       device.emitted++;
+   }
+ 
+@@ -654,7 +655,7 @@
+     if (chase) for (let i=0;i<8;i++) {
+       const angle=i*Math.PI/4;
+       const velocity=new Vec3(Math.cos(angle)*5,4.2,Math.sin(angle)*5);
+-      this.f4Runtime!.launchF4SprinklerDrop(origin,velocity,slot.team,actor,12,.35);
++      this.f4Runtime!.launchF4SprinklerDrop(origin,velocity,slot.team,actor,12,.35,slot.f4?.gaugeLaunchLife);
+     }
+     this.feedback.subBurst(slot.team,origin,profile.paintRadiusMeters);
+     if (actor) this.stats.cpuSubExplosions++;
