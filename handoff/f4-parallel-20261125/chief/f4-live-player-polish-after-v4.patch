@@ -327,3 +327,103 @@ diff --git a/src/app/F4StageMaterialLook.mjs b/src/app/F4StageMaterialLook.mjs
 +  return Number.isFinite(maximum)&&maximum>=8?4:
 +   Number.isFinite(maximum)&&maximum>=2?2:1;
 + }
+diff --git a/src/ai/F4CpuAttackPolicy.mjs b/src/ai/F4CpuAttackPolicy.mjs
+--- a/src/ai/F4CpuAttackPolicy.mjs
++++ b/src/ai/F4CpuAttackPolicy.mjs
+@@ -58,5 +58,27 @@
+    return {actorId:c.id,target:p,rays,coverRejects};
+   }
+  }
+- return {actorId:null,target:null,rays,coverRejects};
+-}
++ return {actorId:null,target:null,rays,coverRejects};
++}
++
++// F4 cache uses the same 3D envelope as fresh sight. The caller MUST
++// reray the returned current physical point; cached visibility is not authority.
++export function reuseF4PhysicalSight(cached,frame,origin,candidates,range){
++ const valid=p=>!!p&&[p.x,p.y,p.z].every(Number.isFinite);
++ const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
++ if(!cached?.actorId||!Number.isSafeInteger(cached.frame)||!Number.isSafeInteger(frame)||
++    frame<cached.frame||frame-cached.frame>=8||!valid(origin)||!valid(cached.origin)||
++    !valid(cached.target)||!Array.isArray(candidates)||!Number.isFinite(range)||range<=0||
++    distance(origin,cached.origin)>.20)return null;
++ const actor=candidates.find(c=>c?.id===cached.actorId);
++ if(!valid(actor?.body))return null;
++ const reach=Math.min(32,range);
++ let best=null,bestDelta=Infinity;
++ for(const [i,p] of [actor.body,...(actor.alternateHitPoints??[])].entries()){
++  if(!valid(p)||(i>0&&(p.x!==actor.body.x||p.z!==actor.body.z||Math.abs(p.y-actor.body.y)>.4)))continue;
++  const d=distance(origin,p),delta=distance(cached.target,p);
++  if(d<.2||d>reach||delta>.20||delta>=bestDelta)continue;
++  best=p;bestDelta=delta;
++ }
++ return best;
++}
+diff --git a/src/ai/F4CpuAttackPolicy.d.mts b/src/ai/F4CpuAttackPolicy.d.mts
+--- a/src/ai/F4CpuAttackPolicy.d.mts
++++ b/src/ai/F4CpuAttackPolicy.d.mts
+@@ -1,4 +1,5 @@
+ type Point=Readonly<{x:number;y:number;z:number}>;
+ export function chooseRailRelease(state:{heldSeconds:number;dt:number;fullSeconds:number;minSeconds:number;distance:number;ink:number;recentlyHit:boolean},rail:(fraction:number)=>{range:number;inkCost:number}):{heldSeconds:number;releaseFraction:number|null};
+ export function reachablePreference(origin:Point,candidates:ReadonlyArray<{id:string;body:Point}>,preferred:string|null,range:number):string|null;
+-export function chooseF4PhysicalSight(origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,blocked:(from:Point,to:Point)=>boolean,preferred?:string|null,range?:number,preferenceRange?:number):{actorId:string|null;target:Point|null;rays:number;coverRejects:number};
++export function chooseF4PhysicalSight(origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,blocked:(from:Point,to:Point)=>boolean,preferred?:string|null,range?:number,preferenceRange?:number):{actorId:string|null;target:Point|null;rays:number;coverRejects:number};
++export function reuseF4PhysicalSight(cached:Readonly<{frame:number;actorId:string|null;origin:Point;target:Point|null}>,frame:number,origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,range:number):Point|null;
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -49,7 +49,7 @@
+ import { restoreRejectedCpuSpecial, type CpuSpecialResourceState } from './CpuSpecialRejection';
+ import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
+ import { predictF4Lead } from './F4FlightLead';
+-import { chooseRailRelease, reachablePreference, chooseF4PhysicalSight } from './F4CpuAttackPolicy.mjs';
++import { chooseRailRelease, reachablePreference, chooseF4PhysicalSight, reuseF4PhysicalSight } from './F4CpuAttackPolicy.mjs';
+ import { sameCpuFireLife, unemittedCpuMainDisposition } from './F4CpuCommitment.mjs';
+ import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
+ import { recoveringInk, recoveryAction, shouldThrowCombatSub, mergedRecovery } from './F4CpuRecoveryPolicy.mjs';
+@@ -5390,9 +5390,10 @@
+          (!preferredVisibleEnemy||old.actorId===preferredVisibleEnemy)){
+         if(old.actorId!==null){
+           // Current candidates require real living grounded native actors.
+-          const fresh=b182ReuseNativeSight(old,this.b181NativeFrame,
+-            origin,candidates,maxMainRange);
+-          if(fresh&&(!this.f4WholeNavigation||Math.hypot(fresh.x-origin.x,fresh.y-origin.y,fresh.z-origin.z)<=Math.min(32,maxMainRange))){
++          const fresh=this.f4WholeNavigation?
++            reuseF4PhysicalSight(old,this.b181NativeFrame,origin,candidates,maxMainRange):
++            b182ReuseNativeSight(old,this.b181NativeFrame,origin,candidates,maxMainRange);
++          if(fresh){
+             // The actor and muzzle can each move less than B182's cache
+             // tolerance while a THIN original collider comes between them.
+             // Recheck registered Rapier cover BEFORE authorizing a real CPU
+diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
+--- a/src/app/F4PlayerPresentation.mjs
++++ b/src/app/F4PlayerPresentation.mjs
+@@ -24,7 +24,13 @@
+  if(!summary||!['directHits','directSplats','deaths','respawns','changedCells'].every(k=>Number.isSafeInteger(summary[k])&&summary[k]>=0))return null;
+  return [['直接命中',summary.directHits],['直接撃破',summary.directSplats],['やられた回数',summary.deaths],['復活',summary.respawns],['塗り変更セル',summary.changedCells]];
+ }
+-export function f4Urgency(seconds) {
++// Preserve the real winner when a close finish rounds to equal percentages.
++function f4ScoreDigits(v){
++ if(v.kind!=='FINAL'||v.title==='引き分け'||v.a===null||v.b===null)return 1;
++ for(let n=1;n<6;n++)if(v.a.toFixed(n)!==v.b.toFixed(n))return n;
++ return 6;
++}
++export function f4Urgency(seconds) {
+  return typeof seconds==='number'&&Number.isFinite(seconds)&&seconds>=0&&seconds<=180?(seconds<=10?'critical':seconds<=30?'soon':'normal'):'unknown';
+ }
+ export function f4RosterView(roster){
+@@ -130,7 +136,11 @@
+   data(p.box,'kind',v.kind);str(p.title,v.title);str(p.detail,v.detail);
+   const known=v.a!==null&&v.b!==null;
+   hidden(p.numbers,!known);hidden(p.track,!known);hidden(p.neutral,!known||v.neutral===null);
+-  if(known){str(p.a,`自チーム A ${v.a.toFixed(1)}%`);str(p.b,`敵チーム B ${v.b.toFixed(1)}%`);width(p.fillA,v.a);width(p.fillB,v.b);if(v.neutral!==null)str(p.neutral,`未塗装 ${v.neutral.toFixed(1)}%`)}
++  if(known){const digits=f4ScoreDigits(v);
++   str(p.a,`自チーム A ${v.a.toFixed(digits)}%`);str(p.b,`敵チーム B ${v.b.toFixed(digits)}%`);
++   width(p.fillA,v.a);width(p.fillB,v.b);if(v.neutral!==null)str(p.neutral,`未塗装 ${v.neutral.toFixed(digits)}%`);
++   if(v.kind==='FINAL'&&v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits))str(p.detail,v.detail+' · 表示桁未満の実面積差');
++  }
+  };
+  let disposed=false;
+  return {
