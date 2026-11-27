@@ -1,0 +1,78 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3779,10 +3779,17 @@
+   if(!report)return;
+   // Owner-click only. Include final B400 counts, never original map mesh,
+   // grid cell raster, world coordinates, score, or private source records.
+-  const evidence={...report,
+-   originalSourceGridReadOnly:b400SourceGridDownloadRecap(
+-    this.b400FinalOriginalGrid)};
+-  const bytes=new Blob([JSON.stringify(evidence,null,2)+'\\n'],
++  const evidence={...report,
++   originalSourceGridReadOnly:b400SourceGridDownloadRecap(
++    this.b400FinalOriginalGrid),
++   // F4 only: retain the privacy-limited SOURCE summary, but distinguish
++   // actual provisional ownership from the permanently unscored official grid.
++   ...(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe?{
++    provisionalMatch:{mode:'F4_PROVISIONAL_TURF',officialCertification:false,
++     nativeTick:this.clock.tick,roundTick:Math.round((180-this.remainingSeconds)*60),
++     score:this.ink.readF4ProvisionalTurf()}
++   }:{})};
++  const bytes=new Blob([JSON.stringify(evidence,null,2)+'\n'],
+    {type:'application/json'});
+   const url=URL.createObjectURL(bytes);
+   const a=document.createElement('a');
+@@ -10010,7 +10017,7 @@
+      if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeCpuConnected||
+         !(this.matchState==='TIME_UP'||this.matchState==='PLAYING'&&this.paused))return null;
+      return {nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
+-      roundTick:Math.round((180-this.remainingSeconds)*60),stopped:!!this.stopReason,
++      mode:'F4_PROVISIONAL_TURF',roundTick:Math.round((180-this.remainingSeconds)*60),stopped:!!this.stopReason,
+       stopReason:this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
+       human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
+        directHits:this.stats.humanCpuDirectHits,directSplats:this.stats.humanCpuDirectSplats,
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -1703,9 +1703,14 @@
+    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
+    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+   const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
+-  const ownsInk=(point:Vec3)=>this.sourceInk?.sampleWorld(
+-   point,.10,SurfaceFlags.Paintable,SurfaceFlags.Scoreable|SurfaceFlags.Wall)?.owner===bot.team;
+-  if(!visible&&recovering&&ownsInk(foot))return result(null);
++  // Match the actual CPU resource recovery authority: a supported,
++  // swimmable own-ink floor, not merely any paintable surface at the foot.
++  const ownsInk=(point:Vec3)=>{
++   const floor=this.sourceNativeCharacterFootHit(point);
++   return !!floor&&this.sourceInk?.sampleWorld(
++    floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team;
++  };
++  if(!visible&&recovering&&ownsInk(foot))return result(null);
+   // Combat waypoints used to expire without registering the same lack of
+   // real progress as patrol goals. Avoid repeatedly selecting that blocked
+   // lane; ordinary Recast/Rapier/KCC admission remains unchanged.
+@@ -1958,8 +1963,8 @@
+     this.f4PatrolNavigation.newGoal(id);
+     this.f4WholeGoals.set(id,{point:combat.point,local:true,
+      issued:this.b137NativeTick,advanced:this.b137NativeTick,
+-     bestDistance:foot.distance(combat.point),opponent:combat.opponent,
+-     recovering:combat.recovering});
++     bestDistance:foot.distance(combat.point),opponent:combat.opponent,
++     recovering:combat.recovering,patrolTrail:[{x:foot.x,y:foot.y,z:foot.z}]});
+     this.realGoalRequests++;
+    }
+    out.copy(combat.point);
+diff --git a/src/app/F4MatchFlowExtras.mjs b/src/app/F4MatchFlowExtras.mjs
+--- a/src/app/F4MatchFlowExtras.mjs
++++ b/src/app/F4MatchFlowExtras.mjs
+@@ -88,7 +88,7 @@
+  const addEvidenceButton=(host,phase)=>{
+   if(!host||typeof readEvidence!=='function')return;
+   const button=make('button','f4-flow-weapon f4-flow-export');button.type='button';button.hidden=true;
+-  button.textContent='実戦記録を保存（JSON）';
++  button.textContent='暫定ナワバリ実戦記録（HP・得点・移動）を保存';
+   const status=make('section','f4-flow-note');status.hidden=true;status.setAttribute('role','status');
+   host.append(button,status);
+   button.addEventListener('click',event=>{
