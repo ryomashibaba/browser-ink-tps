@@ -1,0 +1,73 @@
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -235,9 +235,15 @@
+   private readonly sourceFloorInkPoint=new Vec3();
+   private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
+     this.sourceSupportedSolidId!==null&&
+-    (this.physics.hasF4WholeResearchTrimesh?
+-      this.sourcePaintBackingById?.has(surface.id)===true:
+-      this.sourcePaintBackingById?.get(surface.id)===this.sourceSupportedSolidId);
++    (this.physics.hasF4WholeResearchTrimesh?
++      (this.sourcePaintBackingById?.has(surface.id)===true||
++       (this.f4ProvisionalControls&&
++        this.sourceSupportedSolidId==='T21_F4_LOCAL_F3L_RESEARCH'&&
++        surface.id.startsWith('F4ProvisionalFloor:')&&
++        (surface.baseFlags&SurfaceFlags.Swimmable)!==0&&
++        (surface.baseFlags&(SurfaceFlags.Floor|SurfaceFlags.Ramp))!==0&&
++        (surface.baseFlags&SurfaceFlags.Wall)===0)):
++      this.sourcePaintBackingById?.get(surface.id)===this.sourceSupportedSolidId);
+ 
+   private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
+   private static readonly humanHalfHeight = PLAYER_CHARACTER_PHYSICS.humanHalfHeightMeters;
+@@ -627,8 +633,15 @@
+    * This never changes ink, stage, player, or actual native KCC state. */
+   public sourceNativeFloorInkWitness(){
+     const surfaceId=this.stats.playerSampleSurface;
+-    const paintBacking=this.sourcePaintBackingById?.get(surfaceId)??null;
+-    const footGap=this.sourceFootGapMeters;
++    const paintBacking=this.sourcePaintBackingById?.get(surfaceId)??null;
++    const footGap=this.sourceFootGapMeters;
++    // Keep the original 25-solid witness separate from provisional F4.
++    // sampleFootInk already required the live backed cell at actual KCC support.
++    const f4FloorContact=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++      this.grounded&&this.sourceSupportedSolidId==='T21_F4_LOCAL_F3L_RESEARCH'&&
++      footGap!==null&&Number.isFinite(footGap)&&Math.abs(footGap)<=.12&&
++      surfaceId.startsWith('F4ProvisionalFloor:')&&
++      this.currentInkRelation!=='NONE';
+     const verified=this.nativeSourceGroundInkGuard&&this.grounded&&
+       paintBacking!==null&&paintBacking===this.sourceSupportedSolidId&&
+       footGap!==null&&Number.isFinite(footGap)&&Math.abs(footGap)<=.12;
+@@ -642,8 +655,9 @@
+       actualRapierFootGapMeters:footGap,
+       sampledPaintSurfaceId:surfaceId,
+       sampledBackingSolidId:paintBacking,
+-      floorContactVerified:verified,
+-      floorRuleApplicable,
++      floorContactVerified:verified,
++      provisionalF4FloorContact:f4FloorContact,
++      floorRuleApplicable,
+       inkRelation:this.currentInkRelation,
+       locomotionState:this.locomotionState,
+       originalGeometryWrites:0 as const,
+diff --git a/src/app/UndertowF3LTexturedSourcePreview.ts b/src/app/UndertowF3LTexturedSourcePreview.ts
+--- a/src/app/UndertowF3LTexturedSourcePreview.ts
++++ b/src/app/UndertowF3LTexturedSourcePreview.ts
+@@ -411,8 +411,15 @@
+    const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
+    const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
+    const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
+-   const floorGroups=f4ResearchPositionGroups.filter((_,i)=>
+-    /^Fld_Temple01_Floor(?:Concrete0[0-3]|Slope00)$/.test(manifest.materials[i]?.name??''));
++   // Whole F4 physically installs the verified FloorLine faces too.
++   // Admit their actual walkable triangles to the provisional raster, not
++   // the old 25-solid SOURCE authority. Concrete first preserves its
++   // ownership at coplanar markings; the existing raster/backing gate
++   // still denies unsupported cells. Do not admit Fence/BridgeMetal.
++   const floorGroups=f4ResearchPositionGroups.filter((_,i)=>
++    /^Fld_Temple01_Floor(?:Concrete[0-9]{2}|Slope[0-9]{2})$/.test(manifest.materials[i]?.name??''));
++   floorGroups.push(...f4ResearchPositionGroups.filter((_,i)=>
++    /^Fld_Temple01_FloorLine[0-9]{2}$/.test(manifest.materials[i]?.name??'')));
+    const floorConcreteWorld=toWorld(floorGroups,floorGroups.reduce((n,g)=>n+g.length,0));
+    const {center,ingress,walkable}=f4RetainedSeedModelVertices;
+    const retainedSeed=toWorld([center,ingress],center.length+ingress.length);
