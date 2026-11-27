@@ -1,0 +1,30 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -1727,10 +1727,23 @@
+                 this.b35DuplicateNativeRequestsSuppressed++;
+                }
+               }
+-              if(submit){
+-               bot.agent.requestMoveTarget(goal);
+-               if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
++              if(submit){
++               const accepted=bot.agent.requestMoveTarget(goal);
++               // A valid audited path is not proof that Detour accepted its
++               // command. Never deduplicate a rejected F4 target as live.
++               if(this.f4WholeNavigation&&accepted===false){
++                bot.agent.resetMoveTarget();
++                this.sourceLiveNativeMotionGoal.delete(bot.id);
++                this.sourceLastAdmittedRouteGoal.delete(bot.id);
++                this.b35LastNativeTarget.delete(bot.id);
++                this.qaMotionGoals.delete(bot.id);
++                // Retry at the usual tactical cadence, not every render.
++                // The second loop still owns physical KCC and combat.
++                bot.thinkRemaining=GAME_CONFIG.cpu.tacticalThinkSeconds;
++                continue;
++               }
++               if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
+                   projectedApprovedSourceGoal)
+                 this.sourceLiveNativeMotionGoal.set(bot.id,{
+                   agent:bot.agent,
+                   goal:new Vec3(goal.x,goal.y,goal.z)
