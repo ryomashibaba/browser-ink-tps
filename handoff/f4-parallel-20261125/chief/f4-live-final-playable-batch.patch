@@ -233,6 +233,15 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     const tick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
     this.cpu.useF4NaturalSpecial({
      tick,
+@@ -2093,7 +2097,7 @@
+      return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
+       subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
+       special:f4SpecialName(weapon.id),probe:this.f4SpecialProbe,
+-      turfLabel:this.f4ProvisionalTurfEnabled?f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'',
++      turfLabel:this.f4ProvisionalTurfEnabled?this.f4FloorRegistrationNotice()||f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'',
+       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
+        (this.f4ZipResearchEnabled&&weapon.id==='arc-blaster'?
+         (this.player.f4ZipResearchStatus==='RETURNED'?' · 接地帰還完了':
 @@ -2120,6 +2124,7 @@
         return {...view,active,executorReady:this.f4WholeTrimeshInstalled&&this.ink.readF4ProvisionalTurf()?.status==='LIVE',
          ready:!active&&this.player.canShoot&&this.remainingSeconds>750/60&&
@@ -251,7 +260,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
    // B245 player view preserves all QA nodes, snapshots, physics and controls.
    installB245SourcePresentation(ui,()=>{
     // The existing B441 SOURCE browser runner is a real 7-CPU human mode
-@@ -3805,8 +3811,15 @@
+@@ -3805,8 +3811,16 @@
    // grid cell raster, world coordinates, score, or private source records.
    const evidence={...report,
     originalSourceGridReadOnly:b400SourceGridDownloadRecap(
@@ -262,6 +271,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +   // actual provisional ownership from the permanently unscored official grid.
 +   ...(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe?{
 +    provisionalMatch:{mode:'F4_PROVISIONAL_TURF',officialCertification:false,
++     floorRegistration:this.canvas.dataset.t21F4ProvisionalFloors??'NOT_REGISTERED',
 +     nativeTick:this.clock.tick,roundTick:Math.round((180-this.remainingSeconds)*60),
 +     score:this.ink.readF4ProvisionalTurf()}
 +   }:{})};
@@ -269,7 +279,21 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
     {type:'application/json'});
    const url=URL.createObjectURL(bytes);
    const a=document.createElement('a');
-@@ -6464,9 +6477,9 @@
+@@ -5644,7 +5658,12 @@
+    :'SURVEY STAGE (V) · next viewpoint';
+   this.refresh();
+  }
+- private f4LiveWorldPending():boolean{
++ private f4FloorRegistrationNotice():string{
++  if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeTrimeshInstalled)return '';
++  const count=this.canvas.dataset.t21F4ProvisionalFloors;
++  return count&&/^\d+$/.test(count)&&Number(count)>0?'':'追加床の塗装準備失敗 · 制限付き試合';
++ }
++ private f4LiveWorldPending():boolean{
+   return this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
+    (!this.f4WholeTrimeshInstalled||!this.f4WholeCpuConnected);
+  }
+@@ -6464,9 +6483,9 @@
         f4SpecialOwnsInput||specialAcceptedOrActive;
        this.f4SpecialSecondaryHeld=secondary;
       }
@@ -282,7 +306,29 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
       // Only the provisional natural round: lock loss cannot masquerade as
       // a charge release or allow a buffered shot before pause notification.
       // An admissible physical F press (or already-held curling charge)
-@@ -8409,13 +8422,19 @@
+@@ -8067,12 +8086,15 @@
+    '#t21-f3-b202-resume')!;
+   const f4Pending=ready&&this.f4LiveWorldPending();
+   stopResume.disabled=stoppedMenuOnly||f4Pending;
+-  stopResume.textContent=f4Pending?
+-   (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
+-   sourceFallRecovery?
+-   'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+-   stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
+-   ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
++  const floorWarning=ready?this.f4FloorRegistrationNotice():'';
++  stopResume.textContent=f4Pending?
++   (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
++   sourceFallRecovery?
++   'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
++   stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
++   ready?(floorWarning?'制限付き試合を開始（追加床未準備）':'START 180s ROUND'):'RESUME THIS ROUND · SAME REAL WORLD';
++  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
++  else stopResume.removeAttribute('title');
+   const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+    '#t21-f3-source-mode-menu-ready');
+   if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
+@@ -8409,13 +8431,19 @@
    if(!active)this.b167CombatNotice.hidden=true;
    if(!active)return;
  
@@ -309,7 +355,7 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
   }
   private refreshTwinCometsReticles(active:boolean):void{
    const phase=this.player.twinCometsPhase;
-@@ -10034,7 +10053,7 @@
+@@ -10034,7 +10062,7 @@
       if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeCpuConnected||
          !(this.matchState==='TIME_UP'||this.matchState==='PLAYING'&&this.paused))return null;
       return {nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
@@ -318,10 +364,11 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
        stopReason:this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
        human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
         directHits:this.stats.humanCpuDirectHits,directSplats:this.stats.humanCpuDirectSplats,
-@@ -10047,6 +10066,8 @@
+@@ -10047,6 +10075,9 @@
        combatTotals:{cpuShots:this.stats.cpuShots,cpuCombatHits:this.stats.cpuCombatHits,
         humanShots:this.stats.shotsFired},
        projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),aim:this.cpu.f4AimEvidenceSnapshot(),
++      floorRegistration:this.canvas.dataset.t21F4ProvisionalFloors??'NOT_REGISTERED',
 +      floorPaint:f4FloorPaintEvidence(this.f4PhysicalPaintSurfaces),
 +      floorContact:this.player.sourceNativeFloorInkWitness(),
        score:this.ink.readF4ProvisionalTurf()};
