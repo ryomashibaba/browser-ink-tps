@@ -103,3 +103,60 @@ diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffi
     out.copy(point);
     this.realGoalRequests++;
     return true;
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -1307,7 +1307,8 @@
+       const requested = f4 ? f4HumanAllowed && this.b367NativeFrame <= this.f4PressBufferedUntil
+         : playerWeaponEnabled && playerDamageable && (risingFire || primaryPressed) && fireHeld;
+       if (requested && this.fireCooldown <= 1e-8 && !open &&
+-          (!f4 || !this.pendingCanopyVolleys?.has('human'))) {
++          (!f4 || !this.pendingCanopyVolleys?.has('human')&&
++            this.f4ReleaseSlotsAvailable(CANOPY_PELLETS.length))) {
+         if (f4) this.f4PressBufferedUntil = -1;
+         if (this.reserveCanopyVolley(profile, team, 'human', undefined,
+           () => this.resources.tryConsumeShotInk(profile.inkCost, profile.canopy!.recoveryLockSeconds))) {
+@@ -2051,8 +2052,8 @@
+   ): void {
+     const f4Rail = profile.charger === true && this.physics.hasF4WholeResearchTrimesh;
+     if (fireHeld) {
+-      this.f4RailTapPending = false;
+-      if (this.f4ChargeReleaseUntil >= 0) this.chargeSeconds = 0;
++      if (f4Rail && (this.f4RailTapPending || this.f4ChargeReleaseUntil >= 0)) this.chargeSeconds = 0;
++      this.f4RailTapPending = false;
+       this.f4ChargeReleaseUntil = -1;
+       this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+       this.stats.playerWeaponChargePercent = chargeFraction(profile, this.chargeSeconds) * 100;
+@@ -2142,10 +2143,17 @@
+     if (!fireHeld && !requested) return;
+     const contact = profile.contactWeapon!;
+     if (fireHeld) this.contactHeldFrames++;
+-    if (requested && this.fireCooldown <= 1e-8) {
+-      if (f4) this.f4PressBufferedUntil = -1;
+-      const vertical = !!contact.vertical && !this.stats.playerGrounded;
+-      const recovery = vertical ? contact.verticalRecovery! : contact.swingRecovery;
++    const vertical = !!contact.vertical && !this.stats.playerGrounded;
++    if (requested && this.fireCooldown <= 1e-8) {
++      // Keep one real click within its existing six-tick window if the
++      // atomic swing cannot reserve all its actual projectile slots yet.
++      const groups = vertical ? contact.vertical! : contact.horizontal;
++      if (f4 && !this.f4ReleaseSlotsAvailable(groups.reduce((sum,group)=>sum+group.count,0))) {
++        this.contactMovingFrames = 0;
++        return;
++      }
++      if (f4) this.f4PressBufferedUntil = -1;
++      const recovery = vertical ? contact.verticalRecovery! : contact.swingRecovery;
+       if (this.launchContactSwing(profile, muzzle, body, aim, team, 'human', vertical,
+         () => this.resources.tryConsumeShotInk(profile.inkCost, recovery))) {
+         this.fireCooldown = vertical ? contact.verticalInterval! : profile.fireIntervalSeconds;
+@@ -2804,8 +2812,8 @@
+   ): void {
+     const f4 = this.physics.hasF4WholeResearchTrimesh;
+     if (fireHeld) {
+-      this.f4StringerTapPending = false;
+-      if (this.f4ChargeReleaseUntil >= 0) this.chargeSeconds = 0;
++      if (f4 && (this.f4StringerTapPending || this.f4ChargeReleaseUntil >= 0)) this.chargeSeconds = 0;
++      this.f4StringerTapPending = false;
+       this.f4ChargeReleaseUntil = -1;
+       this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
+       const stage = chargeStageProgress(profile, this.chargeSeconds);
