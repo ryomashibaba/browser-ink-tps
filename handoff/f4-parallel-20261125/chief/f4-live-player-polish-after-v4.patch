@@ -73,7 +73,7 @@ diff --git a/src/app/F4MatchFlowExtras.mjs b/src/app/F4MatchFlowExtras.mjs
 +  if(!host||typeof readEvidence!=='function')return;
 +  const button=make('button','f4-flow-weapon f4-flow-export');button.type='button';button.hidden=true;
 +  button.textContent='実戦記録を保存（JSON）';
-+  const status=make('div','f4-flow-note');status.hidden=true;status.setAttribute('role','status');
++  const status=make('section','f4-flow-note');status.hidden=true;status.setAttribute('role','status');
 +  host.append(button,status);
 +  button.addEventListener('click',event=>{
 +   event.preventDefault();event.stopPropagation();
@@ -155,7 +155,7 @@ diff --git a/src/app/F4MatchFlowExtras.d.mts b/src/app/F4MatchFlowExtras.d.mts
 diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
 --- a/src/app/UndertowF3PlayablePreviewApp.ts
 +++ b/src/app/UndertowF3PlayablePreviewApp.ts
-@@ -9930,5 +9930,16 @@
+@@ -9930,5 +9930,23 @@
    if(this.f4ProvisionalTurfEnabled&&f4UiRoot&&this.compactF4Hud){
     this.f4PlayerPresentation??=installF4PlayerPresentation(
 -    this.practiceHud.root,this.b58SessionBoard.finish,f4UiRoot);
@@ -163,11 +163,18 @@ diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3Playabl
 +     if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeCpuConnected||
 +        !(this.matchState==='TIME_UP'||this.matchState==='PLAYING'&&this.paused))return null;
 +     return {nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
-+      stopped:!!this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
++      roundTick:Math.round((180-this.remainingSeconds)*60),stopped:!!this.stopReason,
++      stopReason:this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
 +      human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
-+       directHits:this.stats.humanCpuDirectHits,deathCount:this.humanSplats,respawnCount:this.humanRespawns,
++       directHits:this.stats.humanCpuDirectHits,directSplats:this.stats.humanCpuDirectSplats,
++       deathCount:this.humanSplats,respawnCount:this.humanRespawns,
 +       lifePairs:this.f4HumanLifePairs.map(p=>({...p})),pendingDeathTick:this.f4HumanDeathTick},
 +      traffic:this.traffic.f4WholeMotionEvidence(),
++      cpuLifecycle:{actors:this.traffic.nativeCpuLifecycleFrames(),
++       splats:this.stats.cpuSplats,respawns:this.stats.cpuRespawns,
++       transitions:this.b367Timeline.nativeF4LifeTransitions()},
++      combatTotals:{cpuShots:this.stats.cpuShots,cpuCombatHits:this.stats.cpuCombatHits,
++       humanShots:this.stats.shotsFired},
 +      projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),aim:this.cpu.f4AimEvidenceSnapshot(),
 +      score:this.ink.readF4ProvisionalTurf()};
 +    });
