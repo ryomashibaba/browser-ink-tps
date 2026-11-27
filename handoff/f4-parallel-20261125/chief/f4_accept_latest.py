@@ -8,15 +8,13 @@ import sys
 REPO = 'ryomashibaba/browser-ink-tps'
 BRANCH = 'research/t21-integrated-a1-c-patrol-four-mode-20261105'
 WINDOWS = 'handoff/windows-v28-live-combat-20261125'
-COMMIT = '0e4b23e251b50fb0b278ad322c4b4db08335dd73'
-BLOB = 'a249416227bb31639a01a532f20cf1d83e10cfc4'
-PATCH = 'handoff/f4-parallel-20261125/chief/f4-live-player-polish-after-v4.patch'
-TARGETS = {'src/app/F4MatchFlowExtras.mjs', 'src/app/F4MatchFlowExtras.d.mts',
- 'src/app/UndertowF3PlayablePreviewApp.ts', 'src/app/F4ActorArt.mjs',
- 'src/app/F4StageMaterialLook.mjs', 'src/ai/F4CpuAttackPolicy.mjs',
- 'src/ai/F4CpuAttackPolicy.d.mts', 'src/ai/CpuAgentSystem.ts',
- 'src/app/F4PlayerPresentation.mjs', 'src/projectile/ProjectileSystem.ts',
- 'src/subweapon/SubWeaponSystem.ts'}
+COMMIT = 'c9ddfe6daf89bf7a1ae126005be094b1755d06b1'
+BLOB = '67453ce3fff9d8935e686fa51636f2f11251e69a'
+PATCH = 'handoff/f4-parallel-20261125/chief/f4-live-crowd-request-rejection.patch'
+TARGETS = {'src/ai/CpuAgentSystem.ts', 'src/app/UndertowF3SourceTraffic.ts',
+ 'src/projectile/ProjectileSystem.ts', 'src/ink/GameplayInkSystem.ts',
+ 'src/core/InkBrushRasterStream.ts', 'src/app/F4ActorArt.mjs',
+ 'src/feedback/GameFeedback.ts'}
 
 
 def git(root, *args, data=None, check=True):
