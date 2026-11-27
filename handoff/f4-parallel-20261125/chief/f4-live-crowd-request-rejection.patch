@@ -1,7 +1,18 @@
 diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 --- a/src/ai/CpuAgentSystem.ts
 +++ b/src/ai/CpuAgentSystem.ts
-@@ -1727,10 +1727,23 @@
+@@ -213,7 +213,9 @@
+   noteRealSourceKccRejectedStep?(
+      id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
+      realKccOwners?:readonly string[],realKccCause?:string):void;
+-  noteRealSourceKccApprovedStep?(
++  /** Detour explicitly rejected a requested F4 target, not a KCC collision. */
++  noteF4NativeGoalRejected?(id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,requestedGoal:Readonly<{x:number;y:number;z:number}>):void;
++  noteRealSourceKccApprovedStep?(
+     id:string,previousFoot:Readonly<{x:number;y:number;z:number}>,
+     acceptedFoot:Readonly<{x:number;y:number;z:number}>):void;
+   /** P2 SOURCE ONLY: actual weapon-ready decisions with no verified
+@@ -1727,9 +1729,21 @@
                  this.b35DuplicateNativeRequestsSuppressed++;
                 }
                }
@@ -10,16 +21,15 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
 -               if(this.f3dSourceGoals&&this.phase14qF2RecoverableSteps&&
 +              if(submit){
 +               const accepted=bot.agent.requestMoveTarget(goal);
-+               // A valid audited path is not proof that Detour accepted its
-+               // command. Never deduplicate a rejected F4 target as live.
 +               if(this.f4WholeNavigation&&accepted===false){
 +                bot.agent.resetMoveTarget();
 +                this.sourceLiveNativeMotionGoal.delete(bot.id);
 +                this.sourceLastAdmittedRouteGoal.delete(bot.id);
 +                this.b35LastNativeTarget.delete(bot.id);
 +                this.qaMotionGoals.delete(bot.id);
-+                // Retry at the usual tactical cadence, not every render.
-+                // The second loop still owns physical KCC and combat.
++                this.f3dSourceGoals?.noteF4NativeGoalRejected?.(bot.id,bot.position,goal);
++                // Retry at the normal think cadence. The second loop still
++                // owns real physical KCC and combat, not this steering proxy.
 +                bot.thinkRemaining=GAME_CONFIG.cpu.tacticalThinkSeconds;
 +                continue;
 +               }
@@ -27,4 +37,48 @@ diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
                    projectedApprovedSourceGoal)
                  this.sourceLiveNativeMotionGoal.set(bot.id,{
                    agent:bot.agent,
-                   goal:new Vec3(goal.x,goal.y,goal.z)
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -1408,7 +1408,21 @@
+    misses:consecutiveNoAimDecisions
+   });
+  }
+- /** Actual KCC rejected this original CPU's grounded 60Hz motion.
++ noteF4NativeGoalRejected(id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
++  requestedGoal:Readonly<{x:number;y:number;z:number}>):void{
++  const bot=this.bots.find(b=>b.id===id),goal=this.f4WholeGoals.get(id);
++  if(!this.f4WholeSupport||!bot?.agent||!goal||goal.patrolVeto||
++     bot.lifeState!=='ACTIVE'||bot.mobilityState!=='GROUND'||!(bot.hp>0)||
++     ![actualFoot.x,actualFoot.y,actualFoot.z,requestedGoal.x,requestedGoal.y,requestedGoal.z].every(Number.isFinite)||
++     bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))>.01||
++     goal.point.distance(new Vec3(requestedGoal.x,requestedGoal.y,requestedGoal.z))>.35||
++     !this.f4WholeSupport(id,bot.position))return;
++  // Only the rejected proposal is avoided; no fake KCC rejection or motion.
++  this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,actualFoot,goal.point);
++  goal.patrolVeto=true;
++  goal.advanced=Math.min(goal.advanced,this.b137NativeTick-48);
++ }
++ /** Actual KCC rejected this original CPU's grounded 60Hz motion.
+   * No guessed collision or teleported Crowd result can enter this count. */
+  noteRealSourceKccRejectedStep(
+   id:string,actualFoot:Readonly<{x:number;y:number;z:number}>,
+@@ -1417,7 +1431,7 @@
+   const bot=this.bots.find(b=>b.id===id);
+   if(this.f4WholeSupport){
+    const goal=this.f4WholeGoals.get(id);
+-   if(realKccCause==='UNSUPPORTED_OR_BLOCKED_F4_GROUND'&&bot?.agent&&goal?.local&&!goal.patrolVeto&&
++   if(realKccCause==='UNSUPPORTED_OR_BLOCKED_F4_GROUND'&&bot?.agent&&goal&&!goal.patrolVeto&&
+       bot.lifeState==='ACTIVE'&&bot.mobilityState==='GROUND'&&(bot.hp??0)>0&&
+       [actualFoot.x,actualFoot.y,actualFoot.z].every(Number.isFinite)&&
+       bot.position.distance(new Vec3(actualFoot.x,actualFoot.y,actualFoot.z))<=.01&&
+@@ -1972,7 +1986,8 @@
+    this.f4PatrolNavigation.newGoal(id);
+    this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
+     advanced:this.b137NativeTick,bestDistance:foot.distance(point),
+-    patrolTrail:local?[{x:foot.x,y:foot.y,z:foot.z}]:undefined});
++    // Real horizontal progress around bends also counts on ingress routes.
++    patrolTrail:[{x:foot.x,y:foot.y,z:foot.z}]});
+    out.copy(point);
+    this.realGoalRequests++;
+    return true;
