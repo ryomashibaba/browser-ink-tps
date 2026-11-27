@@ -160,3 +160,78 @@ diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSyste
        this.f4ChargeReleaseUntil = -1;
        this.chargeSeconds = Math.min(profile.chargeSeconds, this.chargeSeconds + dt);
        const stage = chargeStageProgress(profile, this.chargeSeconds);
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -278,8 +278,12 @@
+       const cellV = (y + 0.5) * surface.cellSize;
+       const dy = cellV - event.centerV;
+       const dySin = dy * s, dyCos = dy * c;
+-      let startX = -1;
+-      for (let x = minX; x <= maxX; x += 1) {
++      let startX = -1;
++      // F4: each row is monotonic in X. The first changed cell in a tile
++      // already inserts that tile in the same Set order; further changed
++      // cells in its horizontal interval need no duplicate lookup/add.
++      let nextDirtyTileX = -1;
++      for (let x = minX; x <= maxX; x += 1) {
+         testedCells += 1;
+         const cellU = (x + 0.5) * surface.cellSize;
+         const dx = cellU - event.centerU;
+@@ -313,7 +317,11 @@
+         if(provisional)provisionalDelta+=provisional.beforeChange(surface,index,oldOwner,event.team);
+         surface.ownerGrid[index] = event.team;
+         changedCells += 1;
+-        touchedTiles.add(surface.tileIndexForCell(x, y));
++        if (!provisional || x >= nextDirtyTileX) {
++          touchedTiles.add(surface.tileIndexForCell(x, y));
++          const size=surface.tileSizeCells;
++          nextDirtyTileX=Number.isInteger(size)&&size>0? (Math.floor(x/size)+1)*size : x+1;
++        }
+ 
+         if (surface.isScoreable) {
+           const area = (surface.scoreWeightGrid[index] ?? 0) * surface.cellSize * surface.cellSize;
+diff --git a/src/core/InkBrushRasterStream.ts b/src/core/InkBrushRasterStream.ts
+--- a/src/core/InkBrushRasterStream.ts
++++ b/src/core/InkBrushRasterStream.ts
+@@ -151,7 +151,12 @@
+     const radiusY = event.radiusV * atlas.pixelsPerMeter / atlas.atlasSize;
+     const diameterX = 2 * radiusX;
+     const diameterY = 2 * radiusY;
+-    const scale = atlas.pixelsPerMeter / atlas.atlasSize;
++    const scale = atlas.pixelsPerMeter / atlas.atlasSize;
++    // These exact divisions and brush bounds are identical for every run.
++    const atlasLeft=atlas.x / atlas.atlasSize;
++    const atlasBottom=(atlas.y + atlas.height) / atlas.atlasSize;
++    const brushMinU=event.centerU-boundU,brushMaxU=event.centerU+boundU;
++    const brushMinV=event.centerV-boundV,brushMaxV=event.centerV+boundV;
+     if (!(radiusX > 0 && radiusY > 0) ||
+         !Number.isFinite(boundU) || !Number.isFinite(boundV) ||
+         !Number.isFinite(centerX) || !Number.isFinite(centerY)) continue;
+@@ -167,16 +172,16 @@
+           run.startX < 0 || run.endXExclusive > surface.widthCells ||
+           run.startX >= run.endXExclusive) continue;
+ 
+-      const minU = Math.max(0, run.startX * surface.cellSize, event.centerU - boundU);
+-      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, event.centerU + boundU);
+-      const minV = Math.max(0, run.row * surface.cellSize, event.centerV - boundV);
+-      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, event.centerV + boundV);
+-      if (minU >= maxU || minV >= maxV) continue;
+-
+-      const x0 = (atlas.x / atlas.atlasSize) + minU * scale;
+-      const x1 = (atlas.x / atlas.atlasSize) + maxU * scale;
+-      const y0 = (atlas.y + atlas.height) / atlas.atlasSize - maxV * scale;
+-      const y1 = (atlas.y + atlas.height) / atlas.atlasSize - minV * scale;
++      const minU = Math.max(0, run.startX * surface.cellSize, brushMinU);
++      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, brushMaxU);
++      const minV = Math.max(0, run.row * surface.cellSize, brushMinV);
++      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, brushMaxV);
++      if (minU >= maxU || minV >= maxV) continue;
++
++      const x0 = atlasLeft + minU * scale;
++      const x1 = atlasLeft + maxU * scale;
++      const y0 = atlasBottom - maxV * scale;
++      const y1 = atlasBottom - minV * scale;
+ 
+       // Same exact [BL, BR, TR, TL] order as canonical INK quads, but no
+       // transient InkBrushVertex/InkBrushQuad instances or geometry list.
