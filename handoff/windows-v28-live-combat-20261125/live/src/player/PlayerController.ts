@@ -236,7 +236,13 @@ export class PlayerController {
   private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
     this.sourceSupportedSolidId!==null&&
     (this.physics.hasF4WholeResearchTrimesh?
-      this.sourcePaintBackingById?.has(surface.id)===true:
+      (this.sourcePaintBackingById?.has(surface.id)===true||
+       (this.f4ProvisionalControls&&
+        this.sourceSupportedSolidId==='T21_F4_LOCAL_F3L_RESEARCH'&&
+        surface.id.startsWith('F4ProvisionalFloor:')&&
+        (surface.baseFlags&SurfaceFlags.Swimmable)!==0&&
+        (surface.baseFlags&(SurfaceFlags.Floor|SurfaceFlags.Ramp))!==0&&
+        (surface.baseFlags&SurfaceFlags.Wall)===0)):
       this.sourcePaintBackingById?.get(surface.id)===this.sourceSupportedSolidId);
 
   private static readonly humanRadius = PLAYER_CHARACTER_PHYSICS.humanRadiusMeters;
@@ -629,6 +635,13 @@ export class PlayerController {
     const surfaceId=this.stats.playerSampleSurface;
     const paintBacking=this.sourcePaintBackingById?.get(surfaceId)??null;
     const footGap=this.sourceFootGapMeters;
+    // Keep the original 25-solid witness separate from provisional F4.
+    // sampleFootInk already required the live backed cell at actual KCC support.
+    const f4FloorContact=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
+      this.grounded&&this.sourceSupportedSolidId==='T21_F4_LOCAL_F3L_RESEARCH'&&
+      footGap!==null&&Number.isFinite(footGap)&&Math.abs(footGap)<=.12&&
+      surfaceId.startsWith('F4ProvisionalFloor:')&&
+      this.currentInkRelation!=='NONE';
     const verified=this.nativeSourceGroundInkGuard&&this.grounded&&
       paintBacking!==null&&paintBacking===this.sourceSupportedSolidId&&
       footGap!==null&&Number.isFinite(footGap)&&Math.abs(footGap)<=.12;
@@ -643,6 +656,7 @@ export class PlayerController {
       sampledPaintSurfaceId:surfaceId,
       sampledBackingSolidId:paintBacking,
       floorContactVerified:verified,
+      provisionalF4FloorContact:f4FloorContact,
       floorRuleApplicable,
       inkRelation:this.currentInkRelation,
       locomotionState:this.locomotionState,

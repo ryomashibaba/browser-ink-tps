@@ -411,8 +411,15 @@ export async function loadF3lTexturedSource(
    const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
    const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
    const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
+   // Whole F4 physically installs the verified FloorLine faces too.
+   // Admit their actual walkable triangles to the provisional raster, not
+   // the old 25-solid SOURCE authority. Concrete first preserves its
+   // ownership at coplanar markings; the existing raster/backing gate
+   // still denies unsupported cells. Do not admit Fence/BridgeMetal.
    const floorGroups=f4ResearchPositionGroups.filter((_,i)=>
-    /^Fld_Temple01_Floor(?:Concrete0[0-3]|Slope00)$/.test(manifest.materials[i]?.name??''));
+    /^Fld_Temple01_Floor(?:Concrete[0-9]{2}|Slope[0-9]{2})$/.test(manifest.materials[i]?.name??''));
+   floorGroups.push(...f4ResearchPositionGroups.filter((_,i)=>
+    /^Fld_Temple01_FloorLine[0-9]{2}$/.test(manifest.materials[i]?.name??'')));
    const floorConcreteWorld=toWorld(floorGroups,floorGroups.reduce((n,g)=>n+g.length,0));
    const {center,ingress,walkable}=f4RetainedSeedModelVertices;
    const retainedSeed=toWorld([center,ingress],center.length+ingress.length);
