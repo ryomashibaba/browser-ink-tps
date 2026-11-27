@@ -1,0 +1,769 @@
+import { Entity, Vec3 } from 'playcanvas';
+import {sourceNativeEditingHotkeyTarget,sourceNativePointerLockClickAllowed}
+ from '../app/SourceNativeInputProjection';
+import {UndertowF3SmartOcclusion} from './UndertowF3SmartOcclusion';
+import {f4StableCameraLookPoint} from './F4StableCameraAim.mjs';
+import {readSourceCameraPreferences,writeSourceCameraPreferences,
+ type SourceCameraPreferences} from './SourceCameraPreferences';
+import {b258Pose,type B258CameraProfile}
+ from '../app/B258OriginalCameraComposition';
+import { GAME_CONFIG } from '../config/game/gameConfig';
+import {sourceRegisteredPaintHitActive,
+ type PaintSurface,type SurfaceRayHit} from '../ink/PaintSurface';
+export {sourceRegisteredPaintHitActive} from '../ink/PaintSurface';
+import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+
+export interface DebugInkClick {
+  hit: SurfaceRayHit;
+  clientX: number;
+  clientY: number;
+}
+
+/** Read-only intersection with the same live hit volumes used by projectiles. */
+export type CombatAimQuery = (from: Vec3, to: Vec3) =>
+  { distance: number; point: Vec3; botId?:string; guarded?:boolean } | null;
+
+/** True SOURCE camera ray clearance: never place the eye beyond an actual
+ * registered Rapier blocker just to satisfy a visual minimum distance.
+ * This affects no collider, KCC, CPU, projectile or T20/default camera.
+ */
+export function sourceCameraPhysicalClearanceMeters(
+ desiredMeters:number,blockerMeters:number|null
+):number{
+ if(!Number.isFinite(desiredMeters)||desiredMeters<0)
+  throw Error('T21_SOURCE_BAD_CAMERA_DISTANCE');
+ if(blockerMeters===null)return desiredMeters;
+ // Invalid native ray distances fail closed rather than permitting clipping.
+ if(!Number.isFinite(blockerMeters)||blockerMeters<0)return 0;
+ return Math.max(0,Math.min(desiredMeters,
+  blockerMeters-GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters));
+}
+
+export class ThirdPersonCamera {
+  private yaw = 0;
+  private pitch = -12;
+  private distance = 6.4;
+  private shoulder = 0.72;
+  private currentCameraDistance = Number.NaN;
+  /** Gameplay options are opt-in for the T21 source practice preview only. */
+  private sourcePracticeControls = false;
+  private f4StableAimEnabled = false;
+  private readonly f4AimCueTarget=new Vec3();
+  /** Clear presentation history at the existing authoritative player spawn. */
+  public resetF4AimTracking():void{
+   if(!this.f4StableAimEnabled)return;
+   this.currentCameraDistance=Number.NaN;
+   this.previousF4ViewTarget.set(NaN,NaN,NaN);
+   this.currentShoulderOffset=this.shoulder;
+   this.sourceSmartOcclusion.resetCandidate();
+   this.sourceCombatAimContact=null;
+  }
+
+  /** Only the provisional native F4 full-round app may opt in. */
+  public enableF4StableAim():void {
+    if(!this.sourcePracticeControls)throw Error('SOURCE_PRACTICE_REQUIRED');
+    this.f4StableAimEnabled=true;
+  }
+  // B375: source-practice camera aim only; T20 stays at the original 1x.
+  private sourceAimSensitivityMultiplier = 1;
+  // Source practice player-only camera preference. Never affects T20,
+  // Rapier, Recast, real actors, projectile collision or Turf authority.
+  private sourceAimInvertVertical = false;
+  private sourcePreferencesEnabled = false;
+  private sourceControlToast:HTMLDivElement|null=null;
+  private sourceControlToastUntilMs=0;
+  // A rejected Pointer Lock toast must remain visible while unlocked;
+  // otherwise update() immediately hid the human-facing retry advice.
+  private sourceToastVisibleWhileUnlocked=false;
+  private sourceLockRequestPending=false;
+  // Ignore late Promise failures from a superseded/recovered mouse-lock
+  // request. A stale denial must not overwrite a successful camera recapture.
+  private sourceLockRequestToken=0;
+  // Pointer Lock recapture can deliver synthetic large relative deltas.
+  // Only the first two SOURCE events get a tighter cap.
+  private sourceRecaptureMouseEventsRemaining=0;
+  private sourceSmartOcclusionEnabled = false;
+  private readonly sourceSmartOcclusion=new UndertowF3SmartOcclusion();
+  private readonly alternateCameraPosition=new Vec3();
+  // B258: one opt-in paused, certified physics-clipped camera study.
+  private b258ResearchEnabled=false;
+  private b258ResearchProfile:B258CameraProfile='BASELINE';
+  private b258OriginalCamera:{
+   pitch:number;distance:number;shoulder:number;
+   offset:number;physicalDistance:number;side:'RIGHT'|'LEFT'
+  }|null=null;
+  private sourceShoulderSide: 'RIGHT' | 'LEFT' = 'RIGHT';
+  private currentShoulderOffset = 0.72;
+  private sourcePracticeCameraCasts = 0;
+  private sourcePracticeLastFrameClipped = false;
+  private sourcePracticeLastFrameDistance = 0;
+  private readonly target = new Vec3();
+  private readonly forward = new Vec3();
+  private readonly right = new Vec3();
+  private readonly desiredCameraPosition = new Vec3();
+  private readonly cameraDirection = new Vec3();
+  private readonly previousF4ViewTarget = new Vec3(NaN, NaN, NaN);
+  private readonly f4ViewMotion = new Vec3();
+  private readonly f4ProbeTarget = new Vec3();
+  private readonly f4ProbeEye = new Vec3();
+  // Reuse vector storage for the high-frequency source camera path.
+  // Equivalent world direction; removes transient per-tick clones.
+  private readonly lookAtPoint = new Vec3();
+  private readonly rayEnd = new Vec3();
+  private sourceCombatAimQuery: CombatAimQuery | null = null;
+  /** Only the last current center ray of an actual SOURCE camera; no
+   * target acquisition, damage, actor movement or new physics authority. */
+  private sourceCombatAimContact:{
+   id:string;guarded:boolean;distanceMeters:number
+  }|null=null;
+  /** Optional refresh for the rendered F4 reticle; legacy QA snapshots stay read-only. */
+  public sourceCombatAimSnapshot(refreshCurrentView=false){
+   if(refreshCurrentView&&this.f4StableAimEnabled&&
+      this.physics.hasF4WholeResearchTrimesh&&!this.b258ResearchEnabled&&
+      this.sourceCombatAimQuery){
+    this.getAimTarget(this.f4AimCueTarget);
+   }
+   return this.sourceCombatAimContact?{...this.sourceCombatAimContact}:null;
+  }
+
+  public enableSourceCombatAim(query: CombatAimQuery): void {
+    if (!this.sourcePracticeControls) throw Error('SOURCE_PRACTICE_REQUIRED');
+    this.sourceCombatAimQuery = query;
+  }
+
+  /** Never enabled by the normal T20 camera or other stages. */
+  public enableSourcePracticeControls(): void {
+    if(this.sourcePracticeControls)return;
+    this.sourcePracticeControls=true;
+    // Source-only local player options must NEVER leak into T20 or
+    // deterministic tests. Missing/blocked storage keeps original defaults.
+    try {
+      this.sourcePreferencesEnabled=
+        new URLSearchParams(window.location?.search??'')
+          .get('t21QaInput')!=='deterministic';
+      if(!this.sourcePreferencesEnabled)return;
+      const saved=readSourceCameraPreferences(window.localStorage);
+      if(!saved)return;
+      this.sourceAimSensitivityMultiplier=saved.sensitivity;
+      this.sourceAimInvertVertical=saved.invertY;
+      this.sourceShoulderSide=saved.shoulder;
+      this.shoulder=saved.shoulder==='RIGHT'?.72:-.72;
+      this.currentShoulderOffset=this.shoulder;
+      this.sourceSmartOcclusion.manual(saved.shoulder);
+    }catch{
+      this.sourcePreferencesEnabled=false;
+    }
+  }
+  private saveSourcePracticePreference():void{
+    if(!this.sourcePracticeControls||!this.sourcePreferencesEnabled)return;
+    const settings:SourceCameraPreferences={
+      version:1,sensitivity:this.sourceAimSensitivityMultiplier,
+      invertY:this.sourceAimInvertVertical,shoulder:this.sourceShoulderSide
+    };
+    try {writeSourceCameraPreferences(window.localStorage,settings);}
+    catch { /* private browser storage disabled: camera remains playable */ }
+  }
+
+  /** Only the explicitly source-only F3 preview may opt into auto
+   * shoulder recovery. Production/default camera stays fully unchanged. */
+  public enableSourcePracticeSmartOcclusion(){
+    if(!this.sourcePracticeControls)
+      throw Error('T21_B26_SOURCE_PRACTICE_REQUIRED');
+    this.sourceSmartOcclusionEnabled=true;
+  }
+  /** Called exclusively by verified SOURCE QA app after URL opt-in. */
+  public enableB258ResearchCamera():void{
+   if(!this.sourcePracticeControls)throw Error('B258_SOURCE_PRACTICE_REQUIRED');
+   this.b258ResearchEnabled=true;
+  }
+  /** Replace only camera geometry; retain original real stage clipping. */
+  public setB258ResearchCameraProfile(name:B258CameraProfile):void{
+   if(!this.b258ResearchEnabled)
+    throw Error('B258_NATIVE_SOURCE_CAMERA_UNAUTHORIZED');
+   // Each A/B/A cycle takes the ACTUAL current native baseline.
+   // The actor may have genuinely moved between frozen and post-ink studies;
+   // never restore a stale earlier camera distance onto the new scene.
+   if(!this.b258OriginalCamera||
+      (name!=='BASELINE'&&this.b258ResearchProfile==='BASELINE')){
+    this.b258OriginalCamera={
+     pitch:this.pitch,distance:this.distance,shoulder:this.shoulder,
+     offset:this.currentShoulderOffset,
+     physicalDistance:this.currentCameraDistance,side:this.sourceShoulderSide
+    };
+   }
+   const original=this.b258OriginalCamera;
+   if(name==='BASELINE'){
+    this.pitch=original.pitch;
+    this.distance=original.distance;
+    this.shoulder=original.shoulder;
+    this.currentShoulderOffset=original.offset;
+    this.currentCameraDistance=original.physicalDistance;
+    this.sourceShoulderSide=original.side;
+   }else{
+    const pose=b258Pose(name);
+    this.pitch=pose.pitchDegrees;
+    this.distance=pose.distanceMeters;
+    this.shoulder=pose.shoulderMeters;
+    this.currentShoulderOffset=pose.shoulderMeters;
+    // Each study pose uses the genuine source 25-solid Rapier cast.
+    this.currentCameraDistance=Number.NaN;
+    this.sourceShoulderSide='RIGHT';
+   }
+   this.b258ResearchProfile=name;
+  }
+  public sourcePracticeViewSnapshot(){
+    // Headless camera unit tests use intentionally partial camera stubs.
+    // Real PlayCanvas Entities provide getPosition(); unavailable mocks
+    // carry no physical eye authority and must not crash SOURCE controls.
+    const eye=typeof this.cameraEntity.getPosition==='function'?
+     this.cameraEntity.getPosition():null;
+    return {
+      // Real camera eye, read-only. Null on partial unit-test stubs.
+      actualEye:eye?[eye.x,eye.y,eye.z] as const:null,
+      sourcePracticeOnly:this.sourcePracticeControls,
+      sourceAimSensitivityMultiplier:this.sourcePracticeControls?
+       this.sourceAimSensitivityMultiplier:1,
+      sourceAimSensitivityAffectsPhysics:false,
+      sourceAimInvertVertical:this.sourcePracticeControls&&
+       this.sourceAimInvertVertical,
+      sourceCameraSettingsLocalOnly:true,
+      b258OriginalCameraResearch:{
+       enabled:this.b258ResearchEnabled,
+       profile:this.b258ResearchProfile,
+       baselineStored:!!this.b258OriginalCamera,
+       researchOnly:true,physicalStageUnchanged:true
+      },
+      b26AdaptiveVisibility:{
+       enabled:this.sourceSmartOcclusionEnabled,
+       ...this.sourceSmartOcclusion.snapshot()
+      },
+      shoulderSide:this.sourceShoulderSide,
+      shoulderOffsetMeters:this.currentShoulderOffset,
+      desiredShoulderOffsetMeters:this.shoulder,
+      zoomMeters:this.distance,
+      currentCameraDistanceMeters:this.currentCameraDistance,
+      yawDegrees:this.yaw,
+      pitchDegrees:this.pitch,
+      cameraRaycasts:this.sourcePracticeCameraCasts,
+      geometryClipped:this.sourcePracticeLastFrameClipped,
+      cameraDistanceMeters:this.sourcePracticeLastFrameDistance,
+      sourcePhysicsModified:false,
+      sourceNavigationModified:false
+    };
+  }
+
+  public onDebugInkClick: ((click: DebugInkClick) => void) | null = null;
+
+  public constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly cameraEntity: Entity,
+    private readonly surfaces: readonly PaintSurface[],
+    private readonly physics: RapierStagePhysics
+  ) {
+    this.bind();
+  }
+
+  private cameraBlockerDistance(to:Vec3,from=this.target):number|null {
+    const camera=this.cameraEntity.camera;
+    if(this.physics.hasF4WholeResearchTrimesh&&camera){
+      // Enclose the near-plane corners during the sweep along the camera arm.
+      const aspect=camera.aspectRatio;
+      const halfSide=camera.nearClip*Math.tan(camera.fov*Math.PI/360);
+      const halfWidth=camera.horizontalFov?halfSide:halfSide*aspect;
+      const halfHeight=camera.horizontalFov?halfSide/aspect:halfSide;
+      const radius=Math.hypot(camera.nearClip,halfWidth,halfHeight);
+      if(Number.isFinite(radius)&&radius>0)
+        return this.physics.castF4CameraClearance(from,to,radius);
+    }
+    return this.physics.castStageSegment(from,to,'camera')?.distance??null;
+  }
+
+  private anticipateF4CameraClearance(clearance:number,desired:number,dt:number):number {
+    if(!this.physics.hasF4WholeResearchTrimesh||dt<=0||!Number.isFinite(dt))
+      return clearance;
+    const motion=this.f4ViewMotion.copy(this.target).sub(this.previousF4ViewTarget);
+    this.previousF4ViewTarget.copy(this.target);
+    const moved=motion.length();
+    if(!Number.isFinite(moved)||moved<.001||moved>12*dt)return clearance;
+    // Earlier obstruction samples carry more weight. The live sweep still
+    // clamps the eye immediately if geometry has already closed the arm.
+    let anticipated=clearance;
+    for(const seconds of [.1,.2,.3]){
+      const scale=Math.min(seconds/dt,1.6/moved);
+      this.f4ProbeTarget.copy(motion).mulScalar(scale).add(this.target);
+      this.f4ProbeEye.copy(motion).mulScalar(scale).add(this.desiredCameraPosition);
+      const hit=this.cameraBlockerDistance(this.f4ProbeEye,this.f4ProbeTarget);
+      this.sourcePracticeCameraCasts++;
+      const future=sourceCameraPhysicalClearanceMeters(desired,hit);
+      anticipated=Math.min(anticipated,clearance+(future-clearance)*(1-seconds/.4));
+    }
+    return anticipated;
+  }
+
+  public update(playerPosition: Vec3, recoveryDtSeconds = 0): void {
+    if(this.sourceControlToast&&
+       (performance.now()>=this.sourceControlToastUntilMs||
+        (!this.sourceToastVisibleWhileUnlocked&&
+         document.pointerLockElement!==this.canvas)))
+      this.sourceControlToast.hidden=true;
+    const pitchRadians = this.pitch * Math.PI / 180;
+    const yawRadians = this.yaw * Math.PI / 180;
+    const cosPitch = Math.cos(pitchRadians);
+
+    this.forward.set(
+      Math.sin(yawRadians) * cosPitch,
+      Math.sin(pitchRadians),
+      -Math.cos(yawRadians) * cosPitch
+    ).normalize();
+
+    const flatLength = Math.hypot(this.forward.x, this.forward.z);
+    if (flatLength > 1e-6) {
+      this.right.set(-this.forward.z / flatLength, 0, this.forward.x / flatLength);
+    } else {
+      this.right.set(1, 0, 0);
+    }
+
+    this.target.set(playerPosition.x, playerPosition.y + 0.55, playerPosition.z);
+    if(this.sourcePracticeControls&&recoveryDtSeconds>0&&
+       Number.isFinite(recoveryDtSeconds)){
+      const dt=Math.min(recoveryDtSeconds,.10);
+      const blend=1-Math.exp(-14*dt);
+      this.currentShoulderOffset+=
+        (this.shoulder-this.currentShoulderOffset)*blend;
+    }else if(!this.sourcePracticeControls){
+      this.currentShoulderOffset=this.shoulder;
+    }
+    const offset=this.sourcePracticeControls?
+      this.currentShoulderOffset:this.shoulder;
+    this.desiredCameraPosition.set(
+      this.target.x-this.forward.x*this.distance+this.right.x*offset,
+      this.target.y-this.forward.y*this.distance+this.right.y*offset,
+      this.target.z-this.forward.z*this.distance+this.right.z*offset
+    );
+
+    this.cameraDirection.copy(this.desiredCameraPosition).sub(this.target);
+    const desiredDistance = this.cameraDirection.length();
+    if (desiredDistance <= 1e-8) {
+      this.cameraEntity.setPosition(this.target);
+      return;
+    }
+    this.cameraDirection.mulScalar(1 / desiredDistance);
+
+    const blocker = this.cameraBlockerDistance(this.desiredCameraPosition);
+    if(this.sourcePracticeControls)this.sourcePracticeCameraCasts++;
+    // On visual updates only, optionally check whether the ACTUAL
+    // opposite original-stage shoulder ray offers a clear view. Never
+    // cast through unverified optical meshes or move the real human.
+    if(this.sourceSmartOcclusionEnabled&&recoveryDtSeconds>0&&
+       document.pointerLockElement===this.canvas){
+      this.sourceSmartOcclusion.tick(recoveryDtSeconds);
+      if(blocker!==null&&
+         this.sourceSmartOcclusion.mayProbe(recoveryDtSeconds)){
+        const clearance=sourceCameraPhysicalClearanceMeters(
+         desiredDistance,blocker);
+        if(desiredDistance-clearance>=1){
+          // The far-side candidate is a CAMERA ONLY point; no player,
+          // actor, Recast foot or collision is relocated.
+          const altOffset=this.sourceShoulderSide==='RIGHT'?-.72:.72;
+          this.alternateCameraPosition.set(
+           this.target.x-this.forward.x*this.distance+this.right.x*altOffset,
+           this.target.y-this.forward.y*this.distance+this.right.y*altOffset,
+           this.target.z-this.forward.z*this.distance+this.right.z*altOffset);
+          const altBlocker=this.cameraBlockerDistance(this.alternateCameraPosition);
+          this.sourcePracticeCameraCasts++;
+          const altDistance=this.alternateCameraPosition.distance(this.target);
+          const altClearance=sourceCameraPhysicalClearanceMeters(
+           altDistance,altBlocker);
+          const selected=this.sourceSmartOcclusion.observe({
+            currentClearMeters:clearance,alternateClearMeters:altClearance,
+            desiredMeters:desiredDistance,realDeltaSeconds:recoveryDtSeconds
+          },this.sourceShoulderSide);
+          if(selected!==this.sourceShoulderSide){
+            this.sourceShoulderSide=selected;
+            this.shoulder=selected==='RIGHT'?.72:-.72;
+          }
+        }else this.sourceSmartOcclusion.resetCandidate();
+      }else this.sourceSmartOcclusion.resetCandidate();
+    }
+    // The legacy T20 camera distance stays frozen. For real T21 SOURCE
+    // play, the existing Rapier hit wins when a close registered wall/slope
+    // is nearer than the old visual camera minimum.
+    const liveClearance = this.sourcePracticeControls
+      ? sourceCameraPhysicalClearanceMeters(
+         desiredDistance,blocker)
+      : blocker!==null
+        ? Math.max(
+            GAME_CONFIG.worldInteraction.cameraMinDistanceMeters,
+            Math.min(
+              desiredDistance,
+              blocker - GAME_CONFIG.worldInteraction.cameraCollisionPaddingMeters
+            )
+          )
+        : desiredDistance;
+    const targetDistance = this.anticipateF4CameraClearance(
+      liveClearance,desiredDistance,recoveryDtSeconds);
+
+    if (!Number.isFinite(this.currentCameraDistance)) {
+      this.currentCameraDistance = targetDistance;
+    } else if (targetDistance < this.currentCameraDistance) {
+      // Retract immediately so the camera never spends a frame inside geometry.
+      this.currentCameraDistance = targetDistance;
+    } else if (recoveryDtSeconds > 0 && Number.isFinite(recoveryDtSeconds)) {
+      // Expansion is intentionally damped so leaving an obstruction does not snap.
+      const dt = Math.min(recoveryDtSeconds, GAME_CONFIG.simulation.maxFrameDeltaSeconds);
+      const blend = 1 - Math.exp(
+        -GAME_CONFIG.worldInteraction.cameraRecoverySharpness * dt
+      );
+      this.currentCameraDistance +=
+        (targetDistance - this.currentCameraDistance) * blend;
+    }
+
+    this.currentCameraDistance = Math.min(this.currentCameraDistance, targetDistance);
+    if(this.sourcePracticeControls){
+      this.sourcePracticeLastFrameClipped=blocker!==null;
+      this.sourcePracticeLastFrameDistance=this.currentCameraDistance;
+    }
+    this.cameraEntity.setPosition(
+      this.target.x + this.cameraDirection.x * this.currentCameraDistance,
+      this.target.y + this.cameraDirection.y * this.currentCameraDistance,
+      this.target.z + this.cameraDirection.z * this.currentCameraDistance
+    );
+    this.lookAtPoint.set(
+      this.target.x+this.forward.x*12,
+      this.target.y+this.forward.y*12,
+      this.target.z+this.forward.z*12
+    );
+    if(this.f4StableAimEnabled&&this.physics.hasF4WholeResearchTrimesh&&
+       !this.b258ResearchEnabled){
+      f4StableCameraLookPoint(this.lookAtPoint,this.cameraEntity.getPosition(),
+        this.desiredCameraPosition,this.lookAtPoint);
+    }
+    this.cameraEntity.lookAt(this.lookAtPoint);
+  }
+
+  public getAimDirection(out = new Vec3()): Vec3 {
+    const camera = this.cameraEntity.camera;
+    if (!camera) return out.copy(this.forward).normalize();
+
+    const rect = this.canvas.getBoundingClientRect();
+    const from = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.nearClip);
+    const to = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.farClip);
+    return out.copy(to).sub(from).normalize();
+  }
+
+  /** Natural Zip only: actual first stage contact under the live reticle. */
+  public getF4ZipReticleStagePoint(out:Vec3):boolean{
+    const camera=this.cameraEntity.camera;
+    if(!this.f4StableAimEnabled||!this.physics.hasF4WholeResearchTrimesh||
+       this.b258ResearchEnabled||!camera)return false;
+    const rect=this.canvas.getBoundingClientRect();
+    if(rect.width<=0||rect.height<=0)return false;
+    const from=camera.screenToWorld(rect.width*.5,rect.height*.5,camera.nearClip);
+    const direction=this.getAimDirection();
+    if(![from.x,from.y,from.z,direction.x,direction.y,direction.z].every(Number.isFinite)||
+       direction.lengthSq()<1e-8)return false;
+    // Up to 9.5m camera arm plus 18m actual muzzle range.
+    const end=this.rayEnd.copy(direction).mulScalar(30).add(from);
+    const hit=this.physics.castStageSegment(from,end,'ink-projectile');
+    if(!hit?.normal||!Number.isFinite(hit.distance)||hit.distance<=0||
+       ![hit.point.x,hit.point.y,hit.point.z].every(Number.isFinite))return false;
+    out.copy(hit.point);return true;
+  }
+
+  public getAimTarget(out = new Vec3(), fallbackDistance = 80): Vec3 {
+    this.sourceCombatAimContact=null;
+    const camera = this.cameraEntity.camera;
+    if (!camera) {
+      return out.copy(this.cameraEntity.getPosition()).add(this.forward.clone().mulScalar(fallbackDistance));
+    }
+
+    const rect = this.canvas.getBoundingClientRect();
+    const from = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.nearClip);
+    const to = camera.screenToWorld(rect.width * 0.5, rect.height * 0.5, camera.farClip);
+    const direction = to.clone().sub(from).normalize();
+
+    let best: SurfaceRayHit | null = null;
+    // In F4 the registered grids are UV coordinates on the real collider.
+    // An old plane slightly above the floor would end the shot line in air.
+    if (!this.physics.hasF4WholeResearchTrimesh) {
+      for (const surface of this.surfaces) {
+        const hit = surface.intersectRay(from, direction);
+        // SOURCE crosshair and actual original Rapier cover use the SAME
+        // finite ray. Frozen T20 keeps its previous unbounded paint pick.
+        if (hit && (!this.sourcePracticeControls ||
+            (Number.isFinite(hit.distance) && hit.distance <= fallbackDistance &&
+             sourceRegisteredPaintHitActive(surface,hit))) &&
+            (!best || hit.distance < best.distance)) best = hit;
+      }
+    }
+
+    const blockerEnd=this.rayEnd.set(
+      from.x+direction.x*fallbackDistance,
+      from.y+direction.y*fallbackDistance,
+      from.z+direction.z*fallbackDistance
+    );
+    const blocker = this.physics.castStageSegment(from, blockerEnd, 'ink-projectile');
+    // Genuine SOURCE combat uses the same nearest original Rapier cover
+    // as physical actor/projectile hit resolution. The legacy paint-plane
+    // priority tolerance remains unchanged outside SOURCE combat aiming.
+    const paintPriorityEpsilon = this.sourceCombatAimQuery === null
+      ? GAME_CONFIG.worldInteraction.paintSurfacePriorityEpsilonMeters : 0;
+    if (
+      best &&
+      (!blocker ||
+        best.distance <= blocker.distance + paintPriorityEpsilon)
+    ) {
+      out.copy(best.worldPoint);
+    } else if (blocker) {
+      out.copy(blocker.point);
+    } else {
+      out.copy(from).add(direction.mulScalar(fallbackDistance));
+    }
+    // Exact center-ray intersection only: no cone, sticky target, prediction,
+    // HP write or hit award. World cover wins ties just as for projectiles.
+    // Resolve distance at the actor rather than compensating parallax/gravity
+    // for a floor or fallback point far BEHIND the actor.
+    const actor = this.sourceCombatAimQuery?.(from, out);
+    if (actor && Number.isFinite(actor.distance) && actor.distance >= 0 &&
+        actor.distance + GAME_CONFIG.combat.hitPriorityEpsilonMeters < from.distance(out) &&
+        [actor.point.x, actor.point.y, actor.point.z].every(Number.isFinite)) {
+      out.copy(actor.point);
+      // The native CpuAgentSystem returns the ACTUAL physical hit-volume
+      // actor ID and guarded status. A generic QA callback has no ID.
+      if(this.sourcePracticeControls&&typeof actor.botId==='string'&&
+         typeof actor.guarded==='boolean'&&
+         Number.isFinite(actor.distance)&&actor.distance>0){
+       this.sourceCombatAimContact={
+        id:actor.botId,guarded:actor.guarded,
+        distanceMeters:actor.distance
+       };
+      }
+    }
+    return out;
+  }
+
+  public getFlatForward(out = new Vec3()): Vec3 {
+    if(this.sourcePracticeControls){
+      // Mousemove updates yaw immediately, while camera.update() may run
+      // only on the next render. SOURCE's real 60Hz player KCC must steer
+      // relative to the *latest* view intent rather than a one-frame-old
+      // forward vector. No actor/collision/nav writes or aim-assist.
+      const yawRadians=this.yaw*Math.PI/180;
+      return out.set(Math.sin(yawRadians),0,-Math.cos(yawRadians));
+    }
+    out.set(this.forward.x, 0, this.forward.z);
+    if (out.lengthSq() < 1e-8) return out.set(0, 0, -1);
+    return out.normalize();
+  }
+
+  /** Temporary in-game feedback for REAL user settings, not match events. */
+  private showSourceControlToast(
+    message:string,visibleWhileUnlocked=false
+  ):void{
+    if(!this.sourcePracticeControls)return;
+    this.sourceToastVisibleWhileUnlocked=visibleWhileUnlocked;
+    if(!this.sourceControlToast){
+      const toast=document.createElement('div');
+      toast.id='t21-f3-source-camera-controls';
+      toast.dataset.sourceOnly='true';
+      toast.dataset.gameplayWrites='0';
+      toast.dataset.productionAuthorized='false';
+      toast.setAttribute('role','status');
+      toast.setAttribute('aria-live','polite');
+      toast.style.cssText=
+       'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);'+
+       'z-index:40;max-width:calc(100vw - 32px);pointer-events:none;'+
+       'padding:8px 12px;border:1px solid #6dd9dc;border-radius:9px;'+
+       'background:rgba(4,29,43,.94);color:#ecfffc;'+
+       'font:700 11px/1.45 system-ui;text-align:center;'+
+       'box-shadow:0 8px 28px #0018';
+      document.body.appendChild(toast);
+      this.sourceControlToast=toast;
+    }
+    this.sourceControlToast.textContent=message;
+    this.sourceControlToast.hidden=false;
+    this.sourceControlToastUntilMs=performance.now()+2300;
+  }
+
+  private bind(): void {
+    document.addEventListener('pointerlockchange',()=>{
+      if(this.sourcePracticeControls&&
+         document.pointerLockElement===this.canvas){
+        this.sourceLockRequestPending=false;
+        this.sourceLockRequestToken++;
+        this.sourceRecaptureMouseEventsRemaining=2;
+        this.showSourceControlToast(
+         'CAMERA · [ / ] SPEED · I INVERT Y · \\ RESET · Q SHOULDER · SHIFT SQUID · SPACE JUMP');
+      }else{
+        this.sourceRecaptureMouseEventsRemaining=0;
+        if(this.sourceControlToast&&!this.sourceToastVisibleWhileUnlocked)
+          this.sourceControlToast.hidden=true;
+      }
+    });
+    document.addEventListener('pointerlockerror',()=>{
+      // Browsers with void-returning requestPointerLock signal denial as
+      // this event instead of a Promise rejection. Our request only.
+      if(this.sourcePracticeControls&&this.sourceLockRequestPending){
+        this.sourceLockRequestPending=false;
+        this.sourceLockRequestToken++;
+        this.showSourceControlToast(
+         'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+      }
+    });
+    // The Q shoulder button is a VIEW option, never a movement, aim-assist
+    // or collision bypass. It is disabled for all non-F3 routes.
+    window.addEventListener('keydown', event=>{
+      if(!this.sourcePracticeControls||
+         event.repeat||event.altKey||event.ctrlKey||event.metaKey||
+         sourceNativeEditingHotkeyTarget(event.target)||
+         document.pointerLockElement!==this.canvas)return;
+      // Source-player camera settings are bounded and kept in this browser.
+      if(event.code==='BracketLeft'||event.code==='BracketRight'){
+        const step=event.code==='BracketLeft'?-.25:.25;
+        this.sourceAimSensitivityMultiplier=Math.max(.5,
+         Math.min(1.75,this.sourceAimSensitivityMultiplier+step));
+        this.saveSourcePracticePreference();
+        this.showSourceControlToast('CAMERA SENSITIVITY · '+
+         this.sourceAimSensitivityMultiplier.toFixed(2)+'x · [ / ]');
+        event.preventDefault();return;
+      }
+      if(event.code==='KeyI'){
+        this.sourceAimInvertVertical=!this.sourceAimInvertVertical;
+        this.saveSourcePracticePreference();
+        this.showSourceControlToast('VERTICAL LOOK · '+
+         (this.sourceAimInvertVertical?'INVERTED':'NORMAL')+' · I');
+        event.preventDefault();return;
+      }
+      if(event.code==='Backslash'){
+        this.sourceAimSensitivityMultiplier=1;
+        this.sourceAimInvertVertical=false;
+        this.saveSourcePracticePreference();
+        this.showSourceControlToast('CAMERA RESET · 1.00x · NORMAL Y');
+        event.preventDefault();return;
+      }
+      if(event.code!=='KeyQ')return;
+      this.sourceShoulderSide=this.sourceShoulderSide==='RIGHT'?'LEFT':'RIGHT';
+      this.shoulder=this.sourceShoulderSide==='RIGHT'?.72:-.72;
+      this.sourceSmartOcclusion.manual(this.sourceShoulderSide);
+      this.saveSourcePracticePreference();
+      this.showSourceControlToast('CAMERA SHOULDER · '+
+       this.sourceShoulderSide+' · Q');
+      event.preventDefault();
+    });
+    this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+    // Standard browser-TPS mouse look:
+    // click the game view once to acquire pointer lock, then camera rotation follows
+    // raw mouse movement without requiring any button to remain held.
+    this.canvas.addEventListener('pointerdown', (event) => {
+      if (event.button === 0 && event.altKey) {
+        this.tryDebugPick(event.clientX, event.clientY);
+        event.preventDefault();
+        return;
+      }
+
+      if (document.pointerLockElement !== this.canvas &&
+          sourceNativePointerLockClickAllowed(this.sourcePracticeControls,event.button)) {
+        if(this.sourcePracticeControls){
+          // Some browsers still return void for requestPointerLock(), rather
+          // than a Promise. Calling .catch on void raised after the click and
+          // made SOURCE camera re-entry seem broken. Both APIs are supported.
+          const requestToken=++this.sourceLockRequestToken;
+          this.sourceLockRequestPending=true;
+          try{
+            const lock=this.canvas.requestPointerLock();
+            if(lock&&typeof lock.catch==='function')
+              void lock.catch(()=>{
+                if(requestToken!==this.sourceLockRequestToken||
+                   document.pointerLockElement===this.canvas)return;
+                this.sourceLockRequestPending=false;
+                this.sourceLockRequestToken++;
+                this.showSourceControlToast(
+                 'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+              });
+          }catch{
+            if(requestToken===this.sourceLockRequestToken){
+              this.sourceLockRequestPending=false;
+              this.sourceLockRequestToken++;
+              this.showSourceControlToast(
+               'MOUSE LOCK NOT GRANTED · CLICK THE GAME VIEW AGAIN',true);
+            }
+          }
+        }else{
+          // Frozen T20/default pointer-lock semantics stay unchanged.
+          void this.canvas.requestPointerLock().catch(() => {});
+        }
+      }
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (document.pointerLockElement !== this.canvas) return;
+      // Zero-motion mouse events must not consume recapture protection.
+      // During focus-loss event ordering, ignore untrusted view intent.
+      if(this.f4StableAimEnabled&&(document.hidden||!document.hasFocus()||
+         (event.movementX===0&&event.movementY===0)))return;
+      const sensitivity=this.sourcePracticeControls?
+       this.sourceAimSensitivityMultiplier:1;
+      // Invalid or pathological mouse deltas can follow Pointer Lock
+      // recapture. Keep genuine SOURCE aim usable without altering T20.
+      if(this.sourcePracticeControls&&
+         (!Number.isFinite(event.movementX)||
+          !Number.isFinite(event.movementY)))return;
+      const maxSourceDelta=this.sourceRecaptureMouseEventsRemaining>0
+        ? 180:600;
+      if(this.sourcePracticeControls&&
+         this.sourceRecaptureMouseEventsRemaining>0)
+        this.sourceRecaptureMouseEventsRemaining--;
+      const moveX=this.sourcePracticeControls
+        ? Math.max(-maxSourceDelta,Math.min(maxSourceDelta,event.movementX))
+        :event.movementX;
+      const moveY=this.sourcePracticeControls
+        ? Math.max(-maxSourceDelta,Math.min(maxSourceDelta,event.movementY))
+        :event.movementY;
+      this.yaw += moveX * 0.22 * sensitivity;
+      this.pitch = Math.max(-55, Math.min(28,
+       this.pitch - moveY * 0.18 * sensitivity *
+        (this.sourcePracticeControls&&this.sourceAimInvertVertical?-1:1)));
+    });
+
+    this.canvas.addEventListener('wheel', (event) => {
+      // In the SOURCE preview, a paused/unlocked game must not silently
+      // change the player's view or hijack scrolling the visible menu/page.
+      // The frozen default T20 camera retains its original wheel behavior.
+      if (this.sourcePracticeControls &&
+          (document.pointerLockElement !== this.canvas ||
+           !Number.isFinite(event.deltaY))) return;
+      event.preventDefault();
+      // Modern browsers deliver wheel deltas in pixels, lines or pages.
+      // Original SOURCE interpreted Firefox line units as pixels, making
+      // zoom feel unresponsive. Normalize only genuine SOURCE; keep T20
+      // wheel behavior untouched. Cap one giant event without blocking
+      // repeated user scroll or changing the real camera collision cast.
+      const nativeWheelScale=this.sourcePracticeControls
+        ? event.deltaMode===1?16:event.deltaMode===2?480:1 : 1;
+      const nativeDelta=event.deltaY*nativeWheelScale;
+      const deltaY=this.sourcePracticeControls
+        ? Math.max(-240,Math.min(240,nativeDelta)):event.deltaY;
+      this.distance = Math.max(3.6, Math.min(9.5, this.distance * Math.exp(deltaY * 0.001)));
+    }, { passive: false });
+  }
+
+  private tryDebugPick(clientX: number, clientY: number): void {
+    const camera = this.cameraEntity.camera;
+    if (!camera) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const locked = document.pointerLockElement === this.canvas;
+    const x = locked ? rect.width * 0.5 : Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const y = locked ? rect.height * 0.5 : Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const from = camera.screenToWorld(x, y, camera.nearClip);
+    const to = camera.screenToWorld(x, y, camera.farClip);
+    const direction = to.clone().sub(from).normalize();
+
+    let best: SurfaceRayHit | null = null;
+    for (const surface of this.surfaces) {
+      const hit = surface.intersectRay(from, direction);
+      if (hit && (!best || hit.distance < best.distance)) best = hit;
+    }
+    if (best) this.onDebugInkClick?.({ hit: best, clientX, clientY });
+  }
+}

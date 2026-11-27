@@ -1,0 +1,5 @@
+type Point=Readonly<{x:number;y:number;z:number}>;
+export function chooseRailRelease(state:{heldSeconds:number;dt:number;fullSeconds:number;minSeconds:number;distance:number;ink:number;recentlyHit:boolean},rail:(fraction:number)=>{range:number;inkCost:number}):{heldSeconds:number;releaseFraction:number|null};
+export function reachablePreference(origin:Point,candidates:ReadonlyArray<{id:string;body:Point}>,preferred:string|null,range:number):string|null;
+export function chooseF4PhysicalSight(origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,blocked:(from:Point,to:Point)=>boolean,preferred?:string|null,range?:number,preferenceRange?:number):{actorId:string|null;target:Point|null;rays:number;coverRejects:number};
+export function reuseF4PhysicalSight(cached:Readonly<{frame:number;actorId:string|null;origin:Point;target:Point|null}>,frame:number,origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,range:number):Point|null;

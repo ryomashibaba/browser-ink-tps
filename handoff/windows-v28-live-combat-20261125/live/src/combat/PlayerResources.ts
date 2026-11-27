@@ -1,0 +1,159 @@
+import { GAME_CONFIG } from '../config/game/gameConfig';
+import type { PerformanceStats } from '../core/PerformanceStats';
+import type { InkRelation, PlayerMode } from '../player/PlayerController';
+
+export class PlayerResources {
+  private ink: number = GAME_CONFIG.inkEconomy.capacity;
+  private hp: number = GAME_CONFIG.combat.playerMaxHp;
+  private inkRecoveryLockSeconds = 0;
+  private f4SubRecoverySeconds = 0;
+  private hpRecoveryDelaySeconds = 0;
+
+  public constructor(private readonly stats: PerformanceStats) {
+    this.syncStats('READY', 'READY');
+  }
+
+  public get currentHp(): number {
+    return this.hp;
+  }
+
+  public fixedUpdate(dt: number, mode: PlayerMode, relation: InkRelation,
+    mist?: { drain: number }): void {
+    if (mist) this.ink = Math.max(0,this.ink-mist.drain);
+    this.inkRecoveryLockSeconds = Math.max(0, this.inkRecoveryLockSeconds - dt);
+    this.f4SubRecoverySeconds = Math.max(0, this.f4SubRecoverySeconds - dt);
+    this.hpRecoveryDelaySeconds = Math.max(0, this.hpRecoveryDelaySeconds - dt);
+
+    let inkState = 'LOCKED';
+    if (!mist && this.inkRecoveryLockSeconds <= 0 && this.f4SubRecoverySeconds <= 0) {
+      let inkRate = 0;
+      if (mode === 'SQUID' && relation === 'OWN') {
+        inkRate = GAME_CONFIG.inkEconomy.squidOwnRecoveryPerSecond;
+        inkState = 'SQUID_OWN';
+      } else if (mode === 'HUMAN') {
+        inkRate = GAME_CONFIG.inkEconomy.humanRecoveryPerSecond;
+        inkState = 'HUMAN';
+      } else {
+        inkState = 'NONE';
+      }
+      this.ink = Math.min(
+        GAME_CONFIG.inkEconomy.capacity,
+        this.ink + inkRate * dt
+      );
+    }
+
+    let hpState = 'WAIT';
+    if (relation === 'ENEMY') {
+      // Enemy ink cannot itself splat the player, but reaching its HP floor
+      // must never enable passive healing while still standing in enemy ink.
+      // Recovery resumes through the existing delay gate after leaving it.
+      if (this.hp > GAME_CONFIG.combat.enemyInkMinimumHp) {
+        const damage = Math.min(
+          GAME_CONFIG.combat.enemyInkDamagePerSecond * dt,
+          this.hp - GAME_CONFIG.combat.enemyInkMinimumHp
+        );
+        if (damage > 0) {
+          this.hp -= damage;
+          this.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+          this.stats.playerDamageTaken += damage;
+        }
+      }
+      hpState = 'ENEMY_INK';
+    } else if (this.hp > 0 && this.hpRecoveryDelaySeconds <= 0) {
+      const recoveryRate =
+        mode === 'SQUID' && relation === 'OWN'
+          ? GAME_CONFIG.combat.squidOwnHpRecoveryPerSecond
+          : GAME_CONFIG.combat.humanHpRecoveryPerSecond;
+      this.hp = Math.min(
+        GAME_CONFIG.combat.playerMaxHp,
+        this.hp + recoveryRate * dt
+      );
+      hpState = recoveryRate > 0 ? (
+        mode === 'SQUID' && relation === 'OWN' ? 'SQUID_OWN' : 'HUMAN'
+      ) : 'NONE';
+    }
+
+    this.syncStats(inkState, hpState);
+  }
+
+  public tryConsumeShotInk(
+    cost: number = GAME_CONFIG.inkEconomy.inkPerShot,
+    lockSeconds: number = GAME_CONFIG.inkEconomy.recoveryLockSeconds
+  ): boolean {
+    if (!this.tryConsumeContactInk(cost, lockSeconds)) return false;
+    this.stats.shotsFired += 1;
+    return true;
+  }
+
+  public tryConsumeContactInk(cost: number, lockSeconds: number): boolean {
+    if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(lockSeconds) || lockSeconds < 0) return false;
+    if (this.ink + 1e-6 < cost) {
+      this.stats.inkDryFireAttempts += 1;
+      return false;
+    }
+
+    this.ink = Math.max(0, this.ink - cost);
+    this.inkRecoveryLockSeconds = this.f4SubRecoverySeconds > 0
+      ? Math.max(this.inkRecoveryLockSeconds,lockSeconds) : lockSeconds;
+    this.syncStats('LOCKED', this.stats.playerHpRecoveryState);
+    return true;
+  }
+
+  public tryConsumeF4SubInk(cost: number, lockSeconds: number): boolean {
+    const previousMainLock = this.inkRecoveryLockSeconds;
+    if (!this.tryConsumeContactInk(cost,lockSeconds)) return false;
+    // An overlapping sub must not shorten an already-paid recovery lock.
+    this.inkRecoveryLockSeconds = Math.max(previousMainLock,this.inkRecoveryLockSeconds);
+    this.f4SubRecoverySeconds = Math.max(this.f4SubRecoverySeconds,lockSeconds);
+    return true;
+  }
+
+  public tryConsumeSubInk(cost: number): boolean {
+    if (!Number.isFinite(cost) || cost <= 0) return false;
+    if (this.ink + 1e-6 < cost) {
+      this.stats.inkDryFireAttempts += 1;
+      return false;
+    }
+
+    this.ink = Math.max(0, this.ink - cost);
+    this.inkRecoveryLockSeconds = GAME_CONFIG.inkEconomy.recoveryLockSeconds;
+    this.syncStats('LOCKED', this.stats.playerHpRecoveryState);
+    return true;
+  }
+
+  public applyDamage(amount: number): number {
+    if (!Number.isFinite(amount) || amount <= 0 || this.hp <= 0) return 0;
+    const previous = this.hp;
+    this.hp = Math.max(0, this.hp - amount);
+    this.hpRecoveryDelaySeconds = GAME_CONFIG.combat.hpRecoveryDelaySeconds;
+    const applied = previous - this.hp;
+    this.stats.playerDamageTaken += applied;
+    this.syncStats(this.stats.playerInkRecoveryState, 'WAIT');
+    return applied;
+  }
+
+  /** A genuinely admitted provisional special restores ink, never HP. */
+  public refillF4SpecialInk():void {
+    if(this.hp<=0)return;
+    this.ink=GAME_CONFIG.inkEconomy.capacity;this.inkRecoveryLockSeconds=0;this.f4SubRecoverySeconds=0;
+    this.syncStats('READY',this.stats.playerHpRecoveryState);
+  }
+
+  public reset(): void {
+    this.ink = GAME_CONFIG.inkEconomy.capacity;
+    this.hp = GAME_CONFIG.combat.playerMaxHp;
+    this.inkRecoveryLockSeconds = 0;
+    this.f4SubRecoverySeconds = 0;
+    this.hpRecoveryDelaySeconds = 0;
+    this.syncStats('READY', 'READY');
+  }
+
+  private syncStats(inkState: string, hpState: string): void {
+    this.stats.playerInk = this.ink;
+    this.stats.playerInkPercent =
+      this.ink / GAME_CONFIG.inkEconomy.capacity * 100;
+    this.stats.playerHp = this.hp;
+    this.stats.playerInkRecoveryState = inkState;
+    this.stats.playerHpRecoveryState = hpState;
+  }
+}
