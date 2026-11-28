@@ -47,6 +47,10 @@ export class F4SpecialRuntime {
   private readonly completedProbeLives = new Set<string>();
   private readonly naturalGauge=new F4ProvisionalGauge(KIT720,10,.5);
   private naturalOpen=false;
+  private humanGaugeAnnouncedLife:string|null=null;
+  private humanActivationNotice:{lifeId:string;tick:number;text:string}|null=null;
+  private naturalReadyCue?:()=>void;
+  public useNaturalReadyCue(cue:()=>void):void {this.naturalReadyCue=cue;}
   private readonly cpuZipLives=new Map<string,string>();
   private readonly naturalCastLease=new F4NaturalCastLease();
   private readonly cpuTactics=new F4CpuSpecialTactics();
@@ -80,7 +84,17 @@ export class F4SpecialRuntime {
     return {owns,activated};
   }
   setNaturalOpen(open:boolean):void {this.naturalOpen=open;}
-  syncNaturalActor(actor:Actor,alive:boolean):void {this.naturalGauge.sync(actor,alive);}
+  syncNaturalActor(actor:Actor,alive:boolean):void {
+    this.naturalGauge.sync(actor,alive);
+    if(actor.actorId!==HUMAN)return;
+    const state=this.naturalGauge.state(HUMAN);
+    if(!alive||!state?.ready||state.lifeId!==actor.lifeId){this.humanGaugeAnnouncedLife=null;return;}
+    // Once per earned gauge, only after existing provisional gate opens.
+    if(this.naturalOpen&&this.humanGaugeAnnouncedLife!==actor.lifeId){
+      this.humanGaugeAnnouncedLife=actor.lifeId;
+      try{this.naturalReadyCue?.();}catch{/* presentation only */}
+    }
+  }
   /** Capture special paint exclusion both at launch and at raster credit. */
   naturalPaintBlocked(actorId:string,lifeId:string,tick:number):boolean {
     return this.ownsWeaponInput(actorId,tick)||this.cpuZipLives.get(actorId)===lifeId;
@@ -109,14 +123,19 @@ export class F4SpecialRuntime {
       !!state?.ready&&state.lifeId===actor.lifeId&&state.weapon===actor.weapon&&!this.ownsWeaponInput(actor.actorId,tick);
   }
   consumeNaturalZip(actor:Actor,tick:number):boolean {
-    return this.naturalZipReady(actor,tick)&&this.naturalGauge.consume(actor.actorId,actor.lifeId);
+    const accepted=this.naturalZipReady(actor,tick)&&this.naturalGauge.consume(actor.actorId,actor.lifeId);
+    if(accepted){this.humanGaugeAnnouncedLife=null;this.humanActivationNotice=null;}
+    return accepted;
   }
   naturalActivations(actorId:string):number {return this.naturalGauge.state(actorId)?.activations??0;}
   naturalPresentation(actor:Actor) {
     const view=this.actorPresentation(actor),state=this.naturalGauge.state(actor.actorId);
     const required=KIT720[actor.weapon].required;
+    const current=state?.lifeId===actor.lifeId&&state.weapon===actor.weapon&&state.team===actor.team;
+    const notice=this.humanActivationNotice;
     return {...view,provisional:true,authorityComplete:false,executorReady:this.naturalOpen&&KIT720[actor.weapon].special!=='superHook',
-      required,points:state?.weapon===actor.weapon?state.points:0,ready:this.naturalReady(actor.actorId,this.frame)};
+      required,points:current?state!.points:0,ready:current&&this.naturalReady(actor.actorId,this.frame),
+      activationNotice:actor.actorId===HUMAN&&notice?.lifeId===actor.lifeId&&this.frame>=notice.tick&&this.frame-notice.tick<120?notice.text:undefined};
   }
   private input: Input|null = null;
   private paintCells = 0;
@@ -180,6 +199,7 @@ export class F4SpecialRuntime {
     this.cpuTactics.reset();
     this.cpuDecisions=this.cpuAdmissions=this.cpuCannonCommands=this.cpuRollCommands=this.cpuThrowReleaseCommands=0;
     this.naturalOpen=false;
+    this.humanGaugeAnnouncedLife=null;this.humanActivationNotice=null;
     this.actorUnlock.clear();
     this.livePose.clear();
     this.launches=this.anchors=this.paintCells=this.sweptHpLoss=this.waves=this.absorbed=0;
@@ -278,16 +298,25 @@ export class F4SpecialRuntime {
          gauge.weapon===weapon&&gauge.team===team){
         const special=KIT720[weapon].special;
         const place=special==='greatBarrier'||special==='waveBreaker';
-        if((!place||this.placementForCast(input))&&
-           (!(input.cpuTactical&&special==='tripleTornado')||this.cpuGuideAim(input))&&
-           this.port.begin({...key,team,special,input:{weapon}})){
-          if(this.naturalGauge.consume(actorId,lifeId))this.naturalCastLease.admit(actorId,lifeId,tick);
-          else this.port.cancel({...key,reason:'natural-gauge-admission-rejected'});
+        const placementOk=!place||!!this.placementForCast(input);
+        const guideOk=placementOk&&(!(input.cpuTactical&&special==='tripleTornado')||!!this.cpuGuideAim(input));
+        if(placementOk&&guideOk&&this.port.begin({...key,team,special,input:{weapon}})){
+          if(this.naturalGauge.consume(actorId,lifeId)){
+            this.naturalCastLease.admit(actorId,lifeId,tick);
+            if(actorId===HUMAN){this.humanGaugeAnnouncedLife=null;this.humanActivationNotice=null;}
+            this.emitF4Presentation(special,team,input.origin,'activation');
+          }else this.port.cancel({...key,reason:'natural-gauge-admission-rejected'});
+        }else if(actorId===HUMAN){
+          const reason=this.lastPlacementReject;
+          const text=!placementOk?(reason==='AIRBORNE'?'接地して G':reason==='VERTICAL_AIM'?'床の方向を向いて G':reason==='OBSTRUCTED_FORWARD'?'前方に障害物 · 位置を変えて G':'平らな安全な床に移動して G'):'発動できません · もう一度 G';
+          this.humanActivationNotice={lifeId,tick,text};
         }
       }else if(isolatedRequest && !this.active.has(actorId) && !this.completedProbeLives.has(probeKey)){
         const special=KIT720[weapon].special;
-        if(this.port.begin({...key,team,special,input:{weapon}}))
+        if(this.port.begin({...key,team,special,input:{weapon}})){
           this.completedProbeLives.add(probeKey);
+          this.emitF4Presentation(special,team,input.origin,'activation');
+        }
       }
       if(!this.active.has(actorId))return this.ownsWeaponInput(actorId,tick);
       this.naturalCastLease.touch(actorId,lifeId,tick);
@@ -337,7 +366,7 @@ export class F4SpecialRuntime {
         this.active.set(actorId,lifeId);
         this.special=special;
         this.terminal=null;
-        this.emitF4Presentation(special,team,initial.origin,'activation');
+        // The caller emits activation FX only after successful admission.
         return true;
       },
       abort:()=>{this.active.delete(actorId);this.naturalCastLease.end(actorId,lifeId);},

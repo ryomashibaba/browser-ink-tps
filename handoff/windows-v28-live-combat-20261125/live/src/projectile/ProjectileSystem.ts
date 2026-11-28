@@ -208,7 +208,35 @@ interface CanopyVolley {
   request?: CpuFireRequest;
 }
 
+// Local playable tuning only. No combat, cadence or reference-weapon edits.
+function f4PlayableShooterPaint(profile:ShooterProfile):ShooterProfile{
+ return {...profile,
+  impactNear:[profile.impactNear[0],profile.impactNear[1]*1.22],
+  impactMiddle:[profile.impactMiddle[0],profile.impactMiddle[1]*1.22],
+  impactFar:[profile.impactFar[0],profile.impactFar[1]*1.22],
+  splashRadius:profile.splashRadius*1.35,
+  splashSpacing:profile.splashSpacing*.78,
+  footRadius:profile.footRadius*1.10
+ };
+}
+
+// A camera target behind a physical muzzle must not reverse the gun.
+function f4ForwardAimTarget(origin:Vec3,target:Vec3,forward:Vec3):boolean{
+ const x=target.x-origin.x,y=target.y-origin.y,z=target.z-origin.z;
+ const projection=x*forward.x+y*forward.y+z*forward.z;
+ return Number.isFinite(projection)&&projection>.015;
+}
+
 export class ProjectileSystem {
+  private f4PlayableShooterControls=false;
+  private readonly f4PlayablePaintProfiles=new WeakMap<ShooterProfile,ShooterProfile>();
+  public enableF4PlayableShooterControls():void{this.f4PlayableShooterControls=true;}
+  private f4PlayablePaintProfile(profile:ShooterProfile):ShooterProfile{
+    if(!this.f4PlayableShooterControls||!this.physics.hasF4WholeResearchTrimesh)return profile;
+    const cached=this.f4PlayablePaintProfiles.get(profile);if(cached)return cached;
+    const tuned=f4PlayableShooterPaint(profile);
+    this.f4PlayablePaintProfiles.set(profile,tuned);return tuned;
+  }
   private f4GaugeLifeAtLaunch?: (actorId:string)=>string|null;
   public useF4GaugeLaunchLife(query:(actorId:string)=>string|null):void {this.f4GaugeLifeAtLaunch=query;}
   private shooterCadence?: Map<string, {
@@ -915,7 +943,11 @@ export class ProjectileSystem {
       this.f4InstantPressUntil = -1;
       return allowed && held;
     }
-    if (held && pressed) this.f4InstantPressUntil = this.b367NativeFrame + 3;
+    // Preserve one real click through a normal 5–6 frame shooter recovery.
+    // Never queue more than one action; accepted/dry fire and cancellation
+    // retain their existing clearing rules.
+    if (held && pressed) this.f4InstantPressUntil = this.b367NativeFrame +
+      (this.f4PlayableShooterControls?6:3);
     return held || this.b367NativeFrame <= this.f4InstantPressUntil;
   }
 
@@ -968,14 +1000,39 @@ export class ProjectileSystem {
     return 1;
   }
 
-  public clipF4PlayerShooterMuzzle(body:Vec3,muzzle:Vec3):void {
-    if (!this.physics.hasF4WholeResearchTrimesh) return;
-    // Aim and launch must use the same near-side physical muzzle. Twin
-    // Comets and delayed/contact weapons retain their own origin solvers.
+  private f4MainMuzzleAnchor(body:Vec3,muzzle:Vec3,human=true):Vec3 {
+    // PlayerController.getMuzzlePosition uses the HUMAN body + .42m before
+    // adding the pitched .58m gun offset. Sweep that real 3D segment, not
+    // a horizontal segment at the already displaced muzzle height.
+    return new Vec3(body.x,human&&this.f4PlayableShooterControls&&
+      this.physics.hasF4WholeResearchTrimesh?body.y+.42:muzzle.y,body.z);
+  }
+
+  public clipF4PlayerShooterMuzzle(body:Vec3,muzzle:Vec3):Vec3|null {
+    if (!this.physics.hasF4WholeResearchTrimesh) return null;
     const kind = this.currentPlayerWeapon.weaponClass;
-    if (kind === 'SHOOTER' || kind === 'SPLATLING' || kind === 'BLASTER' ||
-        kind === 'CHARGER' || kind === 'STRINGER')
-      muzzle.copy(this.clipF4Muzzle(new Vec3(body.x,muzzle.y,body.z),muzzle));
+    if (kind !== 'SHOOTER' && kind !== 'SPLATLING' && kind !== 'BLASTER' &&
+        kind !== 'CHARGER' && kind !== 'STRINGER') return null;
+    const anchor=this.f4MainMuzzleAnchor(body,muzzle);
+    if(!this.f4PlayableShooterControls){muzzle.copy(this.clipF4Muzzle(anchor,muzzle));return null;}
+    const hit=this.physics.castStageSegment(anchor,muzzle,'ink-projectile');
+    if(!hit)return null;
+    muzzle.copy(pointOnSegment(anchor,muzzle,Math.max(0,hit.distance-.02)));
+    return hit.point;
+  }
+
+  public solveF4PlayerMainAim(origin:Vec3,target:Vec3,forward:Vec3,barrelContact:Vec3|null):Vec3 {
+    if(this.f4PlayableShooterControls&&this.physics.hasF4WholeResearchTrimesh){
+      // A near muzzle obstruction remains a physical obstruction. Aim at
+      // the measured contact instead of converging around it toward a
+      // farther camera target. Actual projectile collision still decides.
+      if(barrelContact){
+        if(origin.distance(barrelContact)>1e-5)forward.sub2(barrelContact,origin).normalize();
+        return forward;
+      }
+      if(!f4ForwardAimTarget(origin,target,forward))return forward;
+    }
+    return this.solvePlayerLaunchDirection(origin,target,forward);
   }
 
   /** Clips an experimental special throw to the same physical muzzle path as live shots. */
@@ -1871,7 +1928,7 @@ export class ProjectileSystem {
     if (profile.shooter) {
       // The muzzle can extend into cover when the character hugs a wall.
       // Start the sweep on the near side of that same Rapier contact.
-      const physicalOrigin = this.clipF4Muzzle(new Vec3(playerPosition.x, origin.y, playerPosition.z), origin);
+      const physicalOrigin = this.clipF4Muzzle(this.f4MainMuzzleAnchor(playerPosition,origin), origin);
       if (this.fireProjectiles(profile, physicalOrigin, direction, team, 1, 0, 0)) {
         if (this.stats.playerGrounded) {
           this.enqueueShooterFoot(profile.shooter, playerPosition, team, 'human');
@@ -1950,7 +2007,7 @@ export class ProjectileSystem {
     const forward = flattened(aim.forward);
     const right = new Vec3(-forward.z, 0, forward.x);
     const muzzle = aim.muzzle.clone().add(right.clone().mulScalar(aim.focused ? 0 : side * 0.27));
-    const anchor = new Vec3(aim.body.x, aim.muzzle.y, aim.body.z);
+    const anchor = this.f4MainMuzzleAnchor(aim.body,aim.muzzle,actor==='human');
     const block = this.physics.castStageSegment(anchor, muzzle, 'ink-projectile');
     if (block) {
       // The obstructed barrel fires into the real near-side contact.
@@ -1959,7 +2016,9 @@ export class ProjectileSystem {
         direction: muzzle.sub(anchor).normalize(), blockedPoint: block.point };
     }
     const target = aim.target.clone().add(right.mulScalar(aim.focused ? 0 : side * 0.24));
-    const direction = this.solveLaunchDirection(muzzle, target, new Vec3(), profile);
+    const direction = actor==='human'&&this.f4PlayableShooterControls&&
+      !f4ForwardAimTarget(muzzle,target,aim.forward)?aim.forward.clone().normalize():
+      this.solveLaunchDirection(muzzle, target, new Vec3(), profile);
     const spread = aim.focused ? 0 : aim.grounded ? profile.spreadDegrees : profile.shooter!.airSpreadDegrees;
     return { origin: muzzle, direction: rotateYaw(direction,
       shooterYawDegrees(spread, aim.grounded ? 0.5 : 0.62, actor, ordinal)), blockedPoint: null };
@@ -2090,7 +2149,7 @@ export class ProjectileSystem {
         this.fireCooldown <= (f4Rail ? 1e-8 : 0)) {
       const charge = chargeFraction(profile, this.chargeSeconds);
       const physicalOrigin = profile.charger
-        ? this.clipF4Muzzle(new Vec3(body.x, origin.y, body.z), origin) : origin;
+        ? this.clipF4Muzzle(this.f4MainMuzzleAnchor(body,origin), origin) : origin;
       if (this.fireChargerRay(profile, physicalOrigin, direction, team, charge)) {
         this.fireCooldown = profile.fireIntervalSeconds;
         this.stats.playerWeaponAction = charge >= 0.98 ? 'FULL_CHARGE_SHOT' : 'PARTIAL_CHARGE_SHOT';
@@ -2113,7 +2172,7 @@ export class ProjectileSystem {
     this.stats.playerWeaponChargePercent = 0;
     if (!fireHeld || this.fireCooldown > (profile.blaster ? 1e-8 : 0)) return;
     const physicalOrigin = profile.blaster
-      ? this.clipF4Muzzle(new Vec3(body.x, origin.y, body.z), origin) : origin;
+      ? this.clipF4Muzzle(this.f4MainMuzzleAnchor(body,origin), origin) : origin;
     if (this.fireProjectiles(profile, physicalOrigin, direction, team, 1, 0, 0)) {
       if (profile.blaster && this.stats.playerGrounded) {
         this.enqueueF4Foot(body, team, 'human', profile.blaster.footRadius);
@@ -2441,7 +2500,7 @@ export class ProjectileSystem {
         ? cpuFoot.clone().add(new Vec3(0, GAME_CONFIG.cpu.muzzleHeightMeters, 0)) : muzzle;
       const body = cpuFoot ? cpuFoot.clone().add(new Vec3(0, PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters, 0))
         : humanBody;
-      const anchor = new Vec3(body.x, origin.y, body.z);
+      const anchor = this.f4MainMuzzleAnchor(body,origin,!request);
       const launch = this.clipF4Muzzle(anchor, origin);
       const target = request && this.f4CpuLaunchTarget(request,swing.profile,launch);
       if (request && !target) {
@@ -2655,7 +2714,7 @@ export class ProjectileSystem {
       const desiredMuzzle = foot
         ? foot.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0)).add(cpuAim.clone().mulScalar(0.45))
         : muzzle;
-      const origin = this.clipF4Muzzle(new Vec3(actorBody.x,desiredMuzzle.y,actorBody.z), desiredMuzzle);
+      const origin = this.clipF4Muzzle(this.f4MainMuzzleAnchor(actorBody,desiredMuzzle,!request), desiredMuzzle);
       const acceptedDamage = new Map<string, number>();
       for (const [index, sample] of CANOPY_PELLETS.entries()) {
         const slot = volley.slots[index]!;
@@ -2853,7 +2912,7 @@ export class ProjectileSystem {
     ) {
       const charge = chargeFraction(profile, this.chargeSeconds);
       const shot = stringerVolley(profile, this.chargeSeconds, f4);
-      const physicalOrigin = f4 ? this.clipF4Muzzle(new Vec3(body.x, origin.y, body.z), origin) : origin;
+      const physicalOrigin = f4 ? this.clipF4Muzzle(this.f4MainMuzzleAnchor(body,origin), origin) : origin;
       if (this.fireProjectiles(profile, physicalOrigin, direction, team, 3, shot.spread, charge, {
         inkCost: shot.inkCost,
         damageMultiplier: shot.directDamage / profile.damage,
@@ -3022,7 +3081,7 @@ export class ProjectileSystem {
       const slash = frame === plan.slashStartF;
       const desired = foot ? foot.clone().add(new Vec3(0, GAME_CONFIG.cpu.muzzleHeightMeters, 0)) : muzzle;
       const body = foot ?? humanBody;
-      const origin = this.clipF4Muzzle(new Vec3(body.x, desired.y, body.z), desired);
+      const origin = this.clipF4Muzzle(this.f4MainMuzzleAnchor(body,desired,!request), desired);
       const profile = swing.profile;
       const slot = swing.slots[slash ? 0 : 1];
       this.spawnProjectile(slot, profile, origin, swing.aim, swing.team,
@@ -4137,9 +4196,10 @@ export class ProjectileSystem {
         airborne ? 0.4 : bias, sourceId, shots
       );
       if (!explicitShooterAim) slot.velocity.copy(rotateYaw(direction, yaw)).mulScalar(speed);
-      const pattern = shooterPaintPattern(shooter, shots);
+      const paintProfile=f4Special?shooter:this.f4PlayablePaintProfile(shooter);
+      const pattern = shooterPaintPattern(paintProfile, shots);
       slot.shooterFlight = {
-        profile: shooter, frame: 0, free: false, distance: 0,
+        profile: paintProfile, frame: 0, free: false, distance: 0,
         nextSplash: pattern.firstDistance, splashesRemaining: pattern.count
       };
     }
@@ -4807,7 +4867,7 @@ export class ProjectileSystem {
   ): void {
     const cadence = this.shooterCadence?.get(actor);
     if (!cadence || !shooterPaintPattern(profile, cadence.shots).foot) return;
-    this.enqueueF4Foot(body, team, actor, profile.footRadius);
+    this.enqueueF4Foot(body, team, actor, this.f4PlayablePaintProfile(profile).footRadius);
   }
 
   private enqueueF4Foot(body: Vec3, team: Team.A | Team.B, actor: string, radius: number): void {

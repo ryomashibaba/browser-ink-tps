@@ -333,7 +333,8 @@ export class GameFeedback {
   }
 
   public specialReady(): void {
-    this.playTone(760, 0.030, 0.10, 'sine', 1.50);
+    if(this.f4Presentation)this.playTone(760,.042,.15,'sine',1.50,3,undefined,undefined,'special-ready');
+    else this.playTone(760, 0.030, 0.10, 'sine', 1.50);
   }
 
   public specialBurst(

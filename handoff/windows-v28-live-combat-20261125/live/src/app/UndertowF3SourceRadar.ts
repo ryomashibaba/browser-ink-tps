@@ -5,6 +5,7 @@
  */
 import type {StageDefinition} from '../stage/StageDefinition';
 import type {PaintSurface} from '../ink/PaintSurface';
+import {f4FloorRadarSamples,type F4FloorRadarDot} from './F4FloorRadarSamples.mjs';
 import {b402OriginalSourceInkRadarSamples,b402NativeRadarProofIsFresh,
  type B402RadarProof} from './B402NativeSourceInkRadarSamples';
 import {b247ShouldCompactSourceRadar,
@@ -17,7 +18,8 @@ type View={player:{position:number[]};cpu:{cpu:readonly Actor[];
  sourcePatrol:{activeTargets:readonly {id:string;position:readonly number[]}[]}};matchState:string;tick:number};
 const WIDTH=300,HEIGHT=310,HALF=32,GRID=8;
 export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
- actualPaintGrids:readonly PaintSurface[]=[],f4AffineRadar:()=>boolean=()=>false){
+ actualPaintGrids:readonly PaintSurface[]=[],f4AffineRadar:()=>boolean=()=>false,
+ provisionalFloors:()=>readonly PaintSurface[]=()=>[]){
  if(stage.metadata.id!=='undertow-t21d-partial-connectivity-qa'||
     stage.solids.length!==25||stage.navigationLinks?.length!==26||
     stage.paintSurfaces.length!==17)
@@ -63,6 +65,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
  }));
  const font='11px ui-monospace,monospace';
  let ink:B402RadarProof|null=null;
+ let floorInk:{tick:number;position:number[];dots:F4FloorRadarDot[]}|null=null;
  let lastNativePhase:string|null=null;
  let frame=0;
  let compact=false;
@@ -82,7 +85,7 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
   // if a caller has not yet advanced (or rewound) the native clock.
   if((view.matchState==='STAGING'&&lastNativePhase!==null&&
       lastNativePhase!=='STAGING')||
-     !['STAGING','PLAYING','TIME_UP'].includes(view.matchState))ink=null;
+     !['STAGING','PLAYING','TIME_UP'].includes(view.matchState)){ink=null;floorInk=null;}
   lastNativePhase=view.matchState;
   // B247: native frame renders must respect PLAYER/QA inspection selection.
   // Earlier pointer-lock-only refresh overwrote B245's compact ready radar.
@@ -155,6 +158,22 @@ export function createF3SourceRadar(ui:HTMLElement,stage:StageDefinition,
     ctx.fillRect(px(dot.x)-1.2,pz(dot.z)-1.2,2.4,2.4);
    }
   }
+  // Keep the frozen original SOURCE proof separate. Only actual accepted
+  // owner-grid cells on extra F4 floors may appear in the player radar.
+  if(f4AffineRadar()&&view.tick>=1&&['STAGING','PLAYING','TIME_UP'].includes(view.matchState)){
+   const pos=view.player.position;
+   if(floorInk&&(view.tick<floorInk.tick||view.tick-floorInk.tick>180))floorInk=null;
+   if(!floorInk||view.tick-floorInk.tick>=90||Math.hypot((pos[0]??0)-(floorInk.position[0]??0),(pos[2]??0)-(floorInk.position[2]??0))>8||Math.abs((pos[1]??0)-(floorInk.position[1]??0))>2){
+    floorInk={tick:view.tick,position:[...pos],dots:f4FloorRadarSamples(provisionalFloors(),pos,HALF)};
+   }
+   for(const dot of floorInk.dots){
+    if(Math.abs(dot.y-(pos[1]??0))>4)continue;
+    ctx.fillStyle=dot.owner===1?'rgba(64,230,223,.78)':'rgba(251,93,154,.78)';
+    ctx.fillRect(px(dot.x)-1.2,pz(dot.z)-1.2,2.4,2.4);
+   }
+   if(playerView&&!inspectingQa)radarKey.textContent='● 味方位置 / 実インクの点表示（暫定）';
+  }else floorInk=null;
+  canvas.dataset.t21F4ProvisionalFloorDots=String(floorInk?.dots.length??0);
   canvas.dataset.t21B402SourceInk=ink?.status??'OFF';
   canvas.dataset.t21B402NativeTick=String(ink?.nativeTick??-1);
   canvas.dataset.t21B402RealADots=String(ink?.realTeamADots??0);

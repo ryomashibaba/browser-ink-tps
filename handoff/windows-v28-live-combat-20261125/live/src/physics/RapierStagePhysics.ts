@@ -47,6 +47,8 @@ export class RapierStagePhysics {
   // F4 backing is a synchronous, read-only query. The ray owns fresh
   // origin/direction objects; only the temporary world point is reused.
   private readonly paintBackingPoint = new Vec3();
+  // Immutable surface geometry only; never cache ownership or backing here.
+  private readonly f4PaintBounds=new WeakMap<PaintSurface,number>();
   private readonly paintBackingCollider = (collider: Collider): boolean =>
     this.solidByColliderHandle.has(collider.handle);
   private readonly paintHitProjection = {u:0,v:0,signedPlaneDistance:0,planeDistance:0,inside:false};
@@ -98,6 +100,16 @@ export class RapierStagePhysics {
     let best:SurfaceRayHit|null=null;
     let distance=F4_PAINT_PLANE_TOLERANCE;
     for(const surface of surfaces){
+      // Conservative sphere around the actual rectangular plane envelope.
+      // New floor tiles substantially increase the candidate array; reject
+      // distant tiles before doing projection and physical backing queries.
+      let limitSq=this.f4PaintBounds.get(surface);
+      if(limitSq===undefined){
+        const radius=Math.hypot(surface.widthMeters*.5,surface.heightMeters*.5,F4_PAINT_PLANE_TOLERANCE)+.001;
+        limitSq=radius*radius;this.f4PaintBounds.set(surface,limitSq);
+      }
+      const dx=hit.point.x-surface.center.x,dy=hit.point.y-surface.center.y,dz=hit.point.z-surface.center.z;
+      if(dx*dx+dy*dy+dz*dz>limitSq)continue;
       const p=surface.projectWorldPoint(hit.point,this.paintHitProjection);
       if(!p.inside||p.planeDistance>distance||
          (hit.normal&&Math.abs(hit.normal.dot(surface.normal))<F4_PAINT_NORMAL_ALIGNMENT)||

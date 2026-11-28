@@ -88,7 +88,7 @@ export function installF4MatchFlowExtras(root,finish,ui,readEvidence){
  const addEvidenceButton=(host,phase)=>{
   if(!host||typeof readEvidence!=='function')return;
   const button=make('button','f4-flow-weapon f4-flow-export');button.type='button';button.hidden=true;
-  button.textContent='実戦記録を保存（JSON）';
+  button.textContent='暫定ナワバリ実戦記録（HP・得点・移動）を保存';
   const status=make('section','f4-flow-note');status.hidden=true;status.setAttribute('role','status');
   host.append(button,status);
   button.addEventListener('click',event=>{

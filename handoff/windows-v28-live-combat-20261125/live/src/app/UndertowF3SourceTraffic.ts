@@ -1703,8 +1703,13 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
   const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
-  const ownsInk=(point:Vec3)=>this.sourceInk?.sampleWorld(
-   point,.10,SurfaceFlags.Paintable,SurfaceFlags.Scoreable|SurfaceFlags.Wall)?.owner===bot.team;
+  // Use the same physically supported swimmable owner cell as CPU resources.
+  const inkRelation=(point:Vec3)=>{
+   const floor=this.sourceNativeCharacterFootHit(point);
+   const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+   return !sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
+  };
+  const ownsInk=(point:Vec3)=>inkRelation(point)==='OWN';
   if(!visible&&recovering&&ownsInk(foot))return result(null);
   // Combat waypoints used to expire without registering the same lack of
   // real progress as patrol goals. Avoid repeatedly selecting that blocked
@@ -1742,7 +1747,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    // existing cover and owned ink, even if that puts their own gun offline.
    const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
    const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
-    covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit});
+    covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit})-
+    (inkRelation(floor.point)==='ENEMY'?(recovering?3:1.6):0);
    candidates.push({point:new Vec3(p.x,p.y,p.z),score,covered,
     localVerified:projection.success&&projection.distanceMeters!==null&&
      projection.distanceMeters<=.25&&Math.abs(floor.point.y-p.y)<=.12});
@@ -1779,7 +1785,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const support=this.sourceNativeCharacterFootHit(foot);
   if(!enemy||!support||Math.abs(support.point.y-foot.y)>.12||(support.normal?.y??0)<.97)return null;
   const inkRelation=(point:Vec3):F4InkRelation=>{
-   const ink=this.sourceInk?.sampleWorld(point,.10,SurfaceFlags.Paintable,SurfaceFlags.Scoreable|SurfaceFlags.Wall);
+   const floor=this.sourceNativeCharacterFootHit(point);
+   const ink=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
    return !ink?'UNKNOWN':ink.owner===bot.team?'OWN':ink.owner===Team.Neutral?'NEUTRAL':'ENEMY';
   };
   // Native projected candidates first; retain old patrol points as fallback
@@ -1959,7 +1966,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     this.f4WholeGoals.set(id,{point:combat.point,local:true,
      issued:this.b137NativeTick,advanced:this.b137NativeTick,
      bestDistance:foot.distance(combat.point),opponent:combat.opponent,
-     recovering:combat.recovering});
+     recovering:combat.recovering,patrolTrail:[{x:foot.x,y:foot.y,z:foot.z}]});
     this.realGoalRequests++;
    }
    out.copy(combat.point);
@@ -2049,7 +2056,7 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const options={recovering,reservations};
   const inkAt=(point:Vec3):PatrolInk=>{
    const floor=this.sourceNativeCharacterFootHit(point);
-   const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+   const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
    return !sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
   };
   // Mandatory ingress/center priorities remain; only rank existing fronts.
@@ -2070,6 +2077,36 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Returning false clears only the ordinary Crowd target; weapon recovery
   // and all real resource rates remain owned by CpuAgentSystem.
   if(holdRecovery)return false;
+  // Local recovery across tile boundaries. Keep mandatory ingress and
+  // center transfers above unchanged. Sample real supported current owner
+  // cells first, project only nearby own-ink candidates, then admit at most
+  // two complete native routes. Never grant a movement or refill here.
+  if(recovering&&this.freeCombat&&this.sourceInk&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42){
+   const ownCandidates:PatrolCandidate<Vec3>[]=[];
+   const offsets=[[1,0],[-1,0],[0,1],[0,-1],[.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]] as const;
+   for(const radius of [1.5,3.5]){
+    for(const [dx,dz] of offsets){
+     const probe=new Vec3(foot.x+radius*dx,foot.y,foot.z+radius*dz);
+     if(Math.abs(probe.z)<=12||Math.abs(probe.z)>=42||avoids(probe))continue;
+     const floor=this.sourceNativeCharacterFootHit(probe);
+     if(!floor||Math.abs(floor.point.y-foot.y)>.42||
+        this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner!==bot.team)continue;
+     const projection=this.nav.auditNavMeshProjection(floor.point),p=projection.nearestPoint;
+     if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
+        Math.abs(p.y-floor.point.y)>.12)continue;
+     const point=new Vec3(p.x,p.y,p.z);
+     if(avoids(point)||point.distance(foot)<.35||inkAt(point)!=='OWN')continue;
+     const index=ownCandidates.length;ownCandidates.push({point,ink:'OWN',order:index,index});
+    }
+    if(ownCandidates.length>=2)break;
+   }
+   const ordered=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,ownCandidates,
+    allies.map(a=>a.position),options).slice(0,2);
+   for(const c of ordered){
+    const point=this.f4WholeWalkTarget(foot,c.point,false,6);
+    if(point&&!avoids(point)&&point.distance(c.point)<=.25&&inkAt(point)==='OWN')return request(point,true);
+   }
+  }
   // Healthy bots still on their own approach lane should contest the center
   // before repeatedly surveying local unpainted cells. Recovery retains
   // priority, and all candidates still need the existing native route gate.

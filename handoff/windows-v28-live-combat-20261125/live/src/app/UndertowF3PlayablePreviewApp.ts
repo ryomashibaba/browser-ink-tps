@@ -153,6 +153,7 @@ import {UndertowF3SourceTraffic,type F3TrafficCpu}
  from './UndertowF3SourceTraffic';
 import {UndertowF3NativeHumanCrowd} from './UndertowF3NativeHumanCrowd';
 import {createF3SourceRadar} from './UndertowF3SourceRadar';
+import {f4FloorPaintEvidence} from './F4FloorRadarSamples.mjs';
 import {installCompactF4Hud} from './CompactF4Hud.mjs';
 import {installF4MatchFlowExtras as installF4PlayerPresentation} from './F4MatchFlowExtras.mjs';
 import {f4SpecialName} from '../special/F4SpecialNames';
@@ -1311,6 +1312,8 @@ export class UndertowF3PlayablePreviewApp{
   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
+  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)
+   this.projectiles.enableF4PlayableShooterControls();
   const zipResearchMode=sessionStorage.getItem('t21F4ZipKccResearch');
   this.f4ZipResearchAimed=this.f4SpecialProbe&&zipResearchMode==='wall-return-aimed';
   this.f4ZipResearchEnabled=this.f4SpecialProbe&&
@@ -1333,6 +1336,7 @@ export class UndertowF3PlayablePreviewApp{
   }
   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.f4Special){
    const runtime=this.f4Special;
+   runtime.useNaturalReadyCue(()=>this.feedback.specialReady());
    const tick=()=>Math.min(10800,Math.round((180-this.remainingSeconds)*60)+1);
    this.cpu.useF4NaturalSpecial({
     tick,
@@ -2093,7 +2097,7 @@ export class UndertowF3PlayablePreviewApp{
      return {weapon:weapon.displayName,sub:profile.displayName,subCost:profile.inkCost,
       subUsable:this.f4HumanSubActionOpen&&this.humanSub.canStartF4HumanSub(sub),
       special:f4SpecialName(weapon.id),probe:this.f4SpecialProbe,
-      turfLabel:this.f4ProvisionalTurfEnabled?f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'',
+      turfLabel:this.f4ProvisionalTurfEnabled?this.f4FloorRegistrationNotice()||f4ProvisionalTurfLabel(this.ink.readF4ProvisionalTurf())||'暫定得点準備':'',
       controls:'WASD 移動 · Space ジャンプ · Shift イカ · 左クリック 射撃 · F サブ'+
        (this.f4ZipResearchEnabled&&weapon.id==='arc-blaster'?
         (this.player.f4ZipResearchStatus==='RETURNED'?' · 接地帰還完了':
@@ -2120,6 +2124,7 @@ export class UndertowF3PlayablePreviewApp{
        return {...view,active,executorReady:this.f4WholeTrimeshInstalled&&this.ink.readF4ProvisionalTurf()?.status==='LIVE',
         ready:!active&&this.player.canShoot&&this.remainingSeconds>750/60&&
          this.f4Special.naturalZipReady(actor,nextTick),
+        readyControls:'壁を照準して G 発動',
         probeControls:this.player.f4ZipNaturalCanFire?'左クリック 射撃 · F 再フック · G 帰還 · '+Math.ceil(this.player.f4ZipNaturalTicksLeft/60)+'秒':
          active?'ショクワンダー移動中':'壁を照準して G 発動'};
       }
@@ -2926,7 +2931,8 @@ export class UndertowF3PlayablePreviewApp{
   // The radar is an original 25-solid visual reference, never movement
   // authority: F4's true 51-solid collision/Recast worlds stay separate.
   this.radar=createF3SourceRadar(ui,this.rawStage,this.b45SourceSurfaces,
-   ()=>this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled);
+   ()=>this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled,
+   ()=>this.f4PhysicalPaintSurfaces);
   // B245 player view preserves all QA nodes, snapshots, physics and controls.
   installB245SourcePresentation(ui,()=>{
    // The existing B441 SOURCE browser runner is a real 7-CPU human mode
@@ -3805,8 +3811,16 @@ export class UndertowF3PlayablePreviewApp{
   // grid cell raster, world coordinates, score, or private source records.
   const evidence={...report,
    originalSourceGridReadOnly:b400SourceGridDownloadRecap(
-    this.b400FinalOriginalGrid)};
-  const bytes=new Blob([JSON.stringify(evidence,null,2)+'\\n'],
+    this.b400FinalOriginalGrid),
+   // F4 only: retain the privacy-limited SOURCE summary, but distinguish
+   // actual provisional ownership from the permanently unscored official grid.
+   ...(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe?{
+    provisionalMatch:{mode:'F4_PROVISIONAL_TURF',officialCertification:false,
+     floorRegistration:this.canvas.dataset.t21F4ProvisionalFloors??'NOT_REGISTERED',
+     nativeTick:this.clock.tick,roundTick:Math.round((180-this.remainingSeconds)*60),
+     score:this.ink.readF4ProvisionalTurf()}
+   }:{})};
+  const bytes=new Blob([JSON.stringify(evidence,null,2)+'\n'],
    {type:'application/json'});
   const url=URL.createObjectURL(bytes);
   const a=document.createElement('a');
@@ -5644,6 +5658,11 @@ export class UndertowF3PlayablePreviewApp{
    :'SURVEY STAGE (V) · next viewpoint';
   this.refresh();
  }
+ private f4FloorRegistrationNotice():string{
+  if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeTrimeshInstalled)return '';
+  const count=this.canvas.dataset.t21F4ProvisionalFloors;
+  return count&&/^\d+$/.test(count)&&Number(count)>0?'':'追加床の塗装準備失敗 · 制限付き試合';
+ }
  private f4LiveWorldPending():boolean{
   return this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
    (!this.f4WholeTrimeshInstalled||!this.f4WholeCpuConnected);
@@ -6464,9 +6483,9 @@ export class UndertowF3PlayablePreviewApp{
        f4SpecialOwnsInput||specialAcceptedOrActive;
       this.f4SpecialSecondaryHeld=secondary;
      }
-     this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
-     if(!twin&&!profile.slosher)this.projectiles.solvePlayerLaunchDirection(
-      this.muzzle,this.target,this.aim);
+     const barrelContact=this.projectiles.clipF4PlayerShooterMuzzle(this.player.getPosition(this.p),this.muzzle);
+     if(!twin&&!profile.slosher)this.projectiles.solveF4PlayerMainAim(
+      this.muzzle,this.target,this.aim,barrelContact);
      // Only the provisional natural round: lock loss cannot masquerade as
      // a charge release or allow a buffered shot before pause notification.
      // An admissible physical F press (or already-held curling charge)
@@ -8067,12 +8086,15 @@ export class UndertowF3PlayablePreviewApp{
    '#t21-f3-b202-resume')!;
   const f4Pending=ready&&this.f4LiveWorldPending();
   stopResume.disabled=stoppedMenuOnly||f4Pending;
+  const floorWarning=ready?this.f4FloorRegistrationNotice():'';
   stopResume.textContent=f4Pending?
    (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
    sourceFallRecovery?
    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
-   ready?'START 180s ROUND':'RESUME THIS ROUND · SAME REAL WORLD';
+   ready?(floorWarning?'制限付き試合を開始（追加床未準備）':'START 180s ROUND'):'RESUME THIS ROUND · SAME REAL WORLD';
+  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
+  else stopResume.removeAttribute('title');
   const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-source-mode-menu-ready');
   if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
@@ -8409,13 +8431,19 @@ export class UndertowF3PlayablePreviewApp{
   if(!active)this.b167CombatNotice.hidden=true;
   if(!active)return;
 
+  // A visible enemy is not a clear shot if the real near muzzle is
+  // obstructed. One additional stage query only while the center ray
+  // actually sees a CPU; no actor selection or shot prediction.
+  const barrelBlocked=!!(target&&!twin&&this.f4ProvisionalTurfEnabled&&
+   !this.f4SpecialProbe&&this.player.canShoot&&this.projectiles.clipF4PlayerShooterMuzzle(
+    this.player.getPosition(),this.player.getMuzzlePosition(this.camera.getAimDirection())));
   const cue=tick-this.f4ReticleSplatTick<18?'SPLAT':
    tick-this.f4ReticleHitTick<8?'HIT':
-   target?'ON_TARGET':'NEUTRAL';
+   barrelBlocked?'BARREL_BLOCKED':target?'ON_TARGET':'NEUTRAL';
   if(cross.dataset.combatCue===cue)return;
   cross.dataset.combatCue=cue;
-  cross.textContent=cue==='SPLAT'?'✦':cue==='HIT'?'×':cue==='ON_TARGET'?'⊙':'+';
-  cross.style.color=cue==='SPLAT'?'#ffce63':cue==='HIT'?'#fff':'#e9fdff';
+  cross.textContent=cue==='SPLAT'?'✦':cue==='HIT'?'×':cue==='BARREL_BLOCKED'?'⊘':cue==='ON_TARGET'?'⊙':'+';
+  cross.style.color=cue==='SPLAT'||cue==='BARREL_BLOCKED'?'#ffce63':cue==='HIT'?'#fff':'#e9fdff';
  }
  private refreshTwinCometsReticles(active:boolean):void{
   const phase=this.player.twinCometsPhase;
@@ -10034,7 +10062,7 @@ export class UndertowF3PlayablePreviewApp{
      if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||!this.f4WholeCpuConnected||
         !(this.matchState==='TIME_UP'||this.matchState==='PLAYING'&&this.paused))return null;
      return {nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
-      roundTick:Math.round((180-this.remainingSeconds)*60),stopped:!!this.stopReason,
+      mode:'F4_PROVISIONAL_TURF',roundTick:Math.round((180-this.remainingSeconds)*60),stopped:!!this.stopReason,
       stopReason:this.stopReason,weapon:this.projectiles.currentPlayerWeapon.id,
       human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
        directHits:this.stats.humanCpuDirectHits,directSplats:this.stats.humanCpuDirectSplats,
@@ -10047,6 +10075,9 @@ export class UndertowF3PlayablePreviewApp{
       combatTotals:{cpuShots:this.stats.cpuShots,cpuCombatHits:this.stats.cpuCombatHits,
        humanShots:this.stats.shotsFired},
       projectile:this.projectiles.f4ActualEnemyProjectileEvidence(),aim:this.cpu.f4AimEvidenceSnapshot(),
+      floorRegistration:this.canvas.dataset.t21F4ProvisionalFloors??'NOT_REGISTERED',
+      floorPaint:f4FloorPaintEvidence(this.f4PhysicalPaintSurfaces),
+      floorContact:this.player.sourceNativeFloorInkWitness(),
       score:this.ink.readF4ProvisionalTurf()};
     });
    const f4Weapon=this.projectiles.currentPlayerWeapon;
