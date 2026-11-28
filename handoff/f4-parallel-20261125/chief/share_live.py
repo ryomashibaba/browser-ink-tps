@@ -8,7 +8,7 @@ import tempfile
 
 BRANCH = 'handoff/windows-v28-live-combat-20261125'
 REF = 'refs/heads/' + BRANCH
-EXPECTED = '175e1a63f4825d28761e57eef9ca2b44aeccb6db'
+EXPECTED = '8c0ae2121df3b0a87e68707f08d321ab95df8aed'
 DEST = BRANCH + '/live/'
 ORIGIN = 'ryomashibaba/browser-ink-tps'
 
@@ -62,13 +62,21 @@ def main(paths):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--publish', action='store_true')
+    parser.add_argument('--expected-sha', default=EXPECTED,
+                        help='Reviewed Windows shared HEAD (40 lowercase hex digits)')
+    parser.add_argument('--path', action='append', choices=paths,
+                        help='Publish only this allowlisted source; repeat as needed')
     args = parser.parse_args()
+    expected = args.expected_sha
+    if not re.fullmatch(r'[0-9a-f]{40}', expected):
+        parser.error('--expected-sha must be a full lowercase commit SHA')
+    paths = tuple(dict.fromkeys(args.path)) if args.path else paths
     root = args.root.resolve()
     url = git(root, 'remote', 'get-url', 'origin').decode().strip().rstrip('/')
     if url not in ('https://github.com/'+ORIGIN, 'https://github.com/'+ORIGIN+'.git',
                    'git@github.com:'+ORIGIN+'.git', 'git@github.com:'+ORIGIN):
         raise RuntimeError('unexpected origin')
-    if remote_head(root) != EXPECTED:
+    if remote_head(root) != expected:
         raise RuntimeError('shared HEAD changed; stop and reconcile')
     sources = read_sources(root, paths)
     print(f'{len(sources)} allowlisted source files; destination {DEST}src/')
@@ -76,17 +84,17 @@ def main(paths):
         print('Dry run: no Git writes or push. Review scope and secrets before --publish.')
         return
     git(root, 'fetch', '--no-tags', 'origin', REF)
-    if git(root, 'rev-parse', 'FETCH_HEAD').decode().strip() != EXPECTED:
+    if git(root, 'rev-parse', 'FETCH_HEAD').decode().strip() != expected:
         raise RuntimeError('shared HEAD changed during fetch')
-    tree, changed = prepare(root, EXPECTED, sources)
+    tree, changed = prepare(root, expected, sources)
     if not changed:
         print('No source changes to publish')
         return
     if read_sources(root, paths) != sources:
         raise RuntimeError('Windows source changed during snapshot')
-    commit = git(root, 'commit-tree', tree, '-p', EXPECTED, '-m',
+    commit = git(root, 'commit-tree', tree, '-p', expected, '-m',
                  '[skip ci] Publish built V28 Windows live source snapshot').decode().strip()
-    if remote_head(root) != EXPECTED:
+    if remote_head(root) != expected:
         raise RuntimeError('shared HEAD changed before push')
     git(root, 'push', 'origin', f'{commit}:{REF}')
     if remote_head(root) != commit:
@@ -94,7 +102,7 @@ def main(paths):
     print(f'Published {len(changed)} paths; shared HEAD {commit}')
 
 
-# Exact union of the three chief integration patches at 3dc902ca.
+# Reviewed source allowlist, including the retained-floor coverage repair.
 PATHS = (
     'src/ai/B216OriginalSourceBackfillInk.ts',
     'src/ai/CpuAgentSystem.ts',
@@ -173,6 +181,7 @@ PATHS = (
     'src/stage/F4ConcreteWallTiles.mjs',
     'src/stage/F4PhysicalStageSafety.d.mts',
     'src/stage/F4PhysicalStageSafety.mjs',
+    'src/stage/F4ProvisionalFloors.ts',
     'src/stage/F4ProvisionalWalls.ts',
     'src/stage/F4WallContinuationBrushes.d.mts',
     'src/stage/F4WallContinuationBrushes.mjs',
