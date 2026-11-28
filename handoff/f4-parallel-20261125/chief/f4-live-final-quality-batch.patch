@@ -1,0 +1,333 @@
+diff --git a/src/stage/F4ConcreteWallTiles.mjs b/src/stage/F4ConcreteWallTiles.mjs
+--- a/src/stage/F4ConcreteWallTiles.mjs
++++ b/src/stage/F4ConcreteWallTiles.mjs
+@@ -2,3 +2,3 @@
+ // Their local basis follows the exact vertical plane; no rectangle is invented.
+-export function extractF4ConcreteWallTiles(vertices,limit=12) {
++export function extractF4ConcreteWallTiles(vertices,limit=12,includeLow=false) {
+   const tile=6,cell=.125,n=48,bins=new Map(),planes=new Map();
+@@ -93,6 +93,7 @@
+     }}
+-    if(cells<64||maxColumn<8)continue;
+-    rows.push({...row,cells,lowest});
+-  }
+-  rows.sort((a,b)=>b.cells-a.cells||a.lowest-b.lowest||a.planeKey.localeCompare(b.planeKey)||a.minU-b.minU||a.minV-b.minV);
++    const legacyCandidate=cells>=64&&maxColumn>=8;
++    if(!legacyCandidate&&(!includeLow||cells===0))continue;
++    rows.push(includeLow?{...row,cells,lowest,legacyCandidate}:{...row,cells,lowest});
++  }
++  rows.sort((a,b)=>(includeLow?Number(b.legacyCandidate)-Number(a.legacyCandidate):0)||b.cells-a.cells||a.lowest-b.lowest||a.planeKey.localeCompare(b.planeKey)||a.minU-b.minU||a.minV-b.minV);
+   return rows.slice(0,limit);
+diff --git a/src/stage/F4ConcreteWallTiles.d.mts b/src/stage/F4ConcreteWallTiles.d.mts
+--- a/src/stage/F4ConcreteWallTiles.d.mts
++++ b/src/stage/F4ConcreteWallTiles.d.mts
+@@ -1,2 +1,2 @@
+-export interface F4ConcreteWallTile {axis:3;plane:number;planeKey:string;normal:readonly number[];uAxis:readonly number[];vAxis:readonly number[];minU:number;minV:number;width:number;height:number;mask:Uint8Array;positions:number[];cells:number;lowest:number}
+-export function extractF4ConcreteWallTiles(vertices:Float32Array|number[],limit?:number):F4ConcreteWallTile[];
++export interface F4ConcreteWallTile {axis:3;plane:number;planeKey:string;normal:readonly number[];uAxis:readonly number[];vAxis:readonly number[];minU:number;minV:number;width:number;height:number;mask:Uint8Array;positions:number[];cells:number;lowest:number;legacyCandidate?:boolean}
++export function extractF4ConcreteWallTiles(vertices:Float32Array|number[],limit?:number,includeLow?:boolean):F4ConcreteWallTile[];
+diff --git a/src/stage/F4ProvisionalWalls.ts b/src/stage/F4ProvisionalWalls.ts
+--- a/src/stage/F4ProvisionalWalls.ts
++++ b/src/stage/F4ProvisionalWalls.ts
+@@ -59,3 +59,3 @@
+  }
+- const rows=extractF4ConcreteWallTiles(vertices,64);
++ const rows=extractF4ConcreteWallTiles(vertices,64,true);
+  const surfaces:PaintSurface[]=[];
+@@ -115,7 +115,10 @@
+   maxBackedCells=Math.max(maxBackedCells,backed);
+-  if(backed<64)return null;
+-  physicallyBackedCandidates++;
+-  return {...row,mask,surface};
+- };
+- const selected=selectF4ConnectedWallTiles(candidates,()=>true,prepare,24);
++  if(backed<(row.legacyCandidate?64:1))return null;
++  physicallyBackedCandidates++;
++  return {...row,mask,surface};
++ };
++ // Keep tall-wall selection unchanged and fill only unused capacity.
++ const selected=selectF4ConnectedWallTiles(candidates.filter(row=>row.legacyCandidate),()=>true,prepare,24);
++ if(selected.length<24&&preparedCount<32)
++  selected.push(...selectF4ConnectedWallTiles(candidates.filter(row=>!row.legacyCandidate),()=>true,prepare,24-selected.length));
+  for(const row of selected){if(row.surface){surfaces.push(row.surface);positions.push(row.positions);}}
+diff --git a/src/stage/F4ConcreteWallTiles.test.mjs b/src/stage/F4ConcreteWallTiles.test.mjs
+--- a/src/stage/F4ConcreteWallTiles.test.mjs
++++ b/src/stage/F4ConcreteWallTiles.test.mjs
+@@ -44,3 +44,14 @@
+ 
+- it('rejects degenerate and horizontal triangles',()=>{
++ it('admits exact low side faces on opt-in without displacing tall walls',()=>{
++  const low=new Float32Array([0,0,2,2,0,2,2,.5,2,0,0,2,2,.5,2,0,.5,2]);
++  expect(extractF4ConcreteWallTiles(low,64)).toEqual([]);
++  const rows=extractF4ConcreteWallTiles(low,64,true);
++  expect(rows.length).toBe(1);
++  expect(rows[0].legacyCandidate).toBe(false);
++  expect(rows[0].cells).toBe(64);
++  expect(extractF4ConcreteWallTiles(new Float32Array([...wallVertices(2),...low]),1,true)[0].legacyCandidate).toBe(true);
++  const thin=new Float32Array([0,0,2,2,0,2,2,.06,2,0,0,2,2,.06,2,0,.06,2]);
++  expect(extractF4ConcreteWallTiles(thin,64,true)).toEqual([]);
++ });
++ it('rejects degenerate and horizontal triangles',()=>{
+   expect(extractF4ConcreteWallTiles(new Float32Array([
+diff --git a/src/app/F4LocalCombat.mjs b/src/app/F4LocalCombat.mjs
+--- a/src/app/F4LocalCombat.mjs
++++ b/src/app/F4LocalCombat.mjs
+@@ -21,5 +21,17 @@
+ }
+ 
+-export function rankCombatCandidate({distance:next,band,covered,ownInk,recovering,lateral,recentlyHit}){
++// A retained or projected goal must still suit the current physical target.
++// Never grant movement here: Recast/Rapier/KCC admission remains mandatory.
++export function f4CombatGoalFitsSpacing(plan,currentDistance,nextDistance){
++ if(!plan||!plan.band||![currentDistance,nextDistance,plan.band.near,plan.band.far].every(Number.isFinite)||
++    currentDistance<0||nextDistance<0||plan.band.near<0||plan.band.far<plan.band.near)return false;
++ const slack=.12;
++ if(plan.advance===-1)return nextDistance>=currentDistance-slack;
++ if(plan.advance===1)return nextDistance<=currentDistance+slack&&nextDistance>=Math.min(currentDistance,plan.band.near)-slack;
++ if(plan.advance===0)return nextDistance>=plan.band.near-slack&&nextDistance<=plan.band.far+slack;
++ return false;
++}
++
++export function rankCombatCandidate({distance:next,band,covered,ownInk,recovering,lateral,recentlyHit}){
+  if(!finite(next)||!band||!finite(band.ideal)||!finite(lateral)||typeof covered!=="boolean")return -Infinity;
+  if(recovering)return (covered?6:0)+(ownInk?2:0)+Math.min(next,band.far+3)*.2;
+diff --git a/src/app/F4LocalCombat.d.mts b/src/app/F4LocalCombat.d.mts
+--- a/src/app/F4LocalCombat.d.mts
++++ b/src/app/F4LocalCombat.d.mts
+@@ -5,5 +5,6 @@
+ export function preferredBand(weaponClass:string,rangeM:number):Band|null;
+ export function combatSpacing(weaponClass:string,rangeM:number,d:number,visible:boolean,recovering:boolean):{band:Band;advance:-1|0|1}|null;
+-export function rankCombatCandidate(input:{distance:number;band:Band;covered:boolean;ownInk:boolean;recovering:boolean;lateral:number;recentlyHit:boolean}):number;
++export function f4CombatGoalFitsSpacing(plan:{band:Band;advance:-1|0|1}|null,currentDistance:number,nextDistance:number):boolean;
++export function rankCombatCandidate(input:{distance:number;band:Band;covered:boolean;ownInk:boolean;recovering:boolean;lateral:number;recentlyHit:boolean}):number;
+ export function tacticalIntent(state:State):{mode:'BASELINE'}|{mode:'RETREAT'|'APPROACH'|'HOLD_RANGE';band:Band;distance:number;recovering:boolean};
+ export function chooseLocalCombatGoal(state:State,candidates:ReadonlyArray<{foot:Point;existingNativePoint:boolean;localTrafficAllowed:boolean;inkRelation:F4InkRelation;coveredFromEnemy?:boolean}>,admit:(foot:Point,mode:'APPROACH'|'RETREAT'|'HOLD_RANGE')=>{reached:boolean;staticSupport:boolean;trafficAllowed:boolean;step:Point;inkRelation?:F4InkRelation;coveredFromEnemy?:boolean}|null,options?:{maxChecks?:number}):{mode:'APPROACH'|'RETREAT'|'HOLD_RANGE';step:Point;checks:number}|null;
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -71,5 +71,5 @@
+  originalNativeRightLowFootReprojection}
+  from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
+-import {combatSpacing,rankCombatCandidate} from './F4LocalCombat.mjs';
++import {combatSpacing,rankCombatCandidate,f4CombatGoalFitsSpacing} from './F4LocalCombat.mjs';
+ 
+ import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
+@@ -1707,5 +1707,9 @@
+    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65))||
+    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+-  const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
++  const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
++  const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
++  if(!spacingPlan)return null;
++  const fitsSpacing=(point:Vec3)=>!this.f4WholeSupport||f4CombatGoalFitsSpacing(spacingPlan,distance,
++   Math.hypot(point.x-target.x,point.y+GAME_CONFIG.cpu.muzzleHeightMeters-target.y,point.z-target.z));
+   // Use the same physically supported swimmable owner cell as CPU resources.
+   const inkRelation=(point:Vec3)=>{
+@@ -1726,10 +1730,8 @@
+   if(previous?.opponent===seen.id&&previous.recovering===recovering&&!previous.patrolVeto&&
+      !this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,previous.point)&&
+-     foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+-     this.b137NativeTick-previous.advanced<30)return result(previous.point);
+-
+-  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+-  const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
+-  if(!spacingPlan)return null;
++     foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
++     this.b137NativeTick-previous.advanced<30&&fitsSpacing(previous.point))return result(previous.point);
++
++  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+   const advance=spacingPlan.advance;
+   const recentlyHit=(bot.b213ActualHitTick??-1)>=0&&
+@@ -1751,6 +1753,7 @@
+    // Healthy CPUs keep or regain a real firing lane. Wounded CPUs favor
+    // existing cover and owned ink, even if that puts their own gun offline.
+-   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
+-   const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
++   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
++   if(!fitsSpacing(floor.point))continue;
++   const score=rankCombatCandidate({distance:spacing,band:spacingPlan.band,
+     covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit})-
+     (inkRelation(floor.point)==='ENEMY'?(recovering?3:1.6):0);
+@@ -1774,5 +1777,5 @@
+    if(this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,point))continue;
+    const walk=this.f4WholeWalkTarget(foot,point);
+-   if(walk&&!this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,walk))return result(walk);
++   if(walk&&fitsSpacing(walk)&&!this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,walk))return result(walk);
+   }
+   return visible&&distance<=range?result(null):null;
+diff --git a/src/ai/F4CpuAttackPolicy.mjs b/src/ai/F4CpuAttackPolicy.mjs
+--- a/src/ai/F4CpuAttackPolicy.mjs
++++ b/src/ai/F4CpuAttackPolicy.mjs
+@@ -62,5 +62,25 @@
+ }
+ 
+-// F4 cache uses the same 3D envelope as fresh sight. The caller MUST
++// Try only the caller's current real hit-volume sample offsets, in order.
++// A ray is optical admission only; actual weapon collision still owns damage.
++export function chooseF4LaunchPoint(origin,body,offsets,range,blocked){
++ const valid=p=>!!p&&[p.x,p.y,p.z].every(Number.isFinite);
++ if(!valid(origin)||!valid(body)||!Array.isArray(offsets)||!Number.isFinite(range)||range<=0||typeof blocked!=='function')
++  return {point:null,offsetY:null,reason:'OUT_OF_RANGE'};
++ const seen=new Set();
++ let inRange=false;
++ for(const offsetY of offsets){
++  if(!Number.isFinite(offsetY)||seen.has(offsetY))continue;
++  seen.add(offsetY);
++  const point={x:body.x,y:body.y+offsetY,z:body.z};
++  const d=Math.hypot(point.x-origin.x,point.y-origin.y,point.z-origin.z);
++  if(!Number.isFinite(d)||d<1e-6||d>range)continue;
++  inRange=true;
++  if(!blocked(origin,point))return {point,offsetY,reason:null};
++ }
++ return {point:null,offsetY:null,reason:inRange?'COVERED':'OUT_OF_RANGE'};
++}
++
++// F4 cache uses the same 3D envelope as fresh sight. The caller MUST
+ // reray the returned current physical point; cached visibility is not authority.
+ export function reuseF4PhysicalSight(cached,frame,origin,candidates,range){
+diff --git a/src/ai/F4CpuAttackPolicy.d.mts b/src/ai/F4CpuAttackPolicy.d.mts
+--- a/src/ai/F4CpuAttackPolicy.d.mts
++++ b/src/ai/F4CpuAttackPolicy.d.mts
+@@ -3,3 +3,4 @@
+ export function reachablePreference(origin:Point,candidates:ReadonlyArray<{id:string;body:Point}>,preferred:string|null,range:number):string|null;
+ export function chooseF4PhysicalSight(origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,blocked:(from:Point,to:Point)=>boolean,preferred?:string|null,range?:number,preferenceRange?:number):{actorId:string|null;target:Point|null;rays:number;coverRejects:number};
+-export function reuseF4PhysicalSight(cached:Readonly<{frame:number;actorId:string|null;origin:Point;target:Point|null}>,frame:number,origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,range:number):Point|null;
++export function chooseF4LaunchPoint(origin:Point,body:Point,offsets:ReadonlyArray<number>,range:number,blocked:(from:Point,to:Point)=>boolean):{point:Point|null;offsetY:number|null;reason:'OUT_OF_RANGE'|'COVERED'|null};
++export function reuseF4PhysicalSight(cached:Readonly<{frame:number;actorId:string|null;origin:Point;target:Point|null}>,frame:number,origin:Point,candidates:ReadonlyArray<{id:string;body:Point;alternateHitPoints?:ReadonlyArray<Point>}>,range:number):Point|null;
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -50,5 +50,5 @@
+ import { CPU_ADVANCED_QA_WEAPONS, cpuLoadout } from './CpuLoadoutCatalog';
+ import { predictF4Lead } from './F4FlightLead';
+-import { chooseRailRelease, reachablePreference, chooseF4PhysicalSight, reuseF4PhysicalSight } from './F4CpuAttackPolicy.mjs';
++import { chooseRailRelease, reachablePreference, chooseF4PhysicalSight, reuseF4PhysicalSight, chooseF4LaunchPoint } from './F4CpuAttackPolicy.mjs';
+ import { sameCpuFireLife, unemittedCpuMainDisposition } from './F4CpuCommitment.mjs';
+ import { F4_SUB_REPEAT, f4SubRecovery } from '../subweapon/F4SubRules';
+@@ -5347,11 +5347,27 @@
+       if(aimEvidence)aimEvidence.staleTargetRejected++;return null;
+     }
+-    const offset = new Vec3(0,opponent.offsetY,0);
+-    const actual = sample.current.clone().add(offset);
+-    const clear = (from: Vec3, to: Vec3) => !ray(from,to);
+-    if(!Number.isFinite(range)||range<=0||![actual.x,actual.y,actual.z,origin.x,origin.y,origin.z].every(Number.isFinite)||
+-       Math.hypot(actual.x-origin.x,actual.y-origin.y,actual.z-origin.z)>range){if(aimEvidence)aimEvidence.outOfRange++;return null;}
+-    if(!clear(origin,actual)){if(aimEvidence)aimEvidence.covered++;return null;}
+-    const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
++    // Use exactly the existing native sight samples on the CURRENT body.
++    // A queued sample can be covered from the final muzzle even when
++    // another point of the same living target is genuinely exposed.
++    const squid=this.b181NativeHumanColliderMode==='SQUID';
++    const humanCenter=squid?PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters:0;
++    const humanHalf=squid?Math.min(.2,PLAYER_CHARACTER_PHYSICS.squidRadiusMeters*.6):.25;
++    const offsets=opponent.id==='HUMAN'?
++      [humanCenter,humanCenter+humanHalf,humanCenter-humanHalf]:
++      [.68,GAME_CONFIG.cpu.hitSphereOffsetsMeters[2],GAME_CONFIG.cpu.hitSphereOffsetsMeters[0]];
++    // The original offset was calculated by subtraction in world space.
++    // Match it to a known current sample rather than trusting stale offsets.
++    const preferred=offsets.find(y=>Math.abs(y-opponent.offsetY)<=1e-5);
++    const selection=chooseF4LaunchPoint(origin,sample.current,
++      preferred===undefined?offsets:[preferred,...offsets],range,
++      (_from,to)=>ray(origin,new Vec3(to.x,to.y,to.z)));
++    if(!selection.point||selection.offsetY===null){
++      if(aimEvidence){if(selection.reason==='COVERED')aimEvidence.covered++;else aimEvidence.outOfRange++;}
++      return null;
++    }
++    const actual=new Vec3(selection.point.x,selection.point.y,selection.point.z);
++    const offset=new Vec3(0,selection.offsetY,0);
++    const clear = (from: Vec3, to: Vec3) => !ray(from,to);
++    const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
+       1,range,solveFlightTicks,clear);
+     if (predicted){this.f4LeadAccepted++;if(aimEvidence)aimEvidence.predictedTarget++;}
+diff --git a/src/player/F4PlayerIntent.mjs b/src/player/F4PlayerIntent.mjs
+--- a/src/player/F4PlayerIntent.mjs
++++ b/src/player/F4PlayerIntent.mjs
+@@ -10,5 +10,20 @@
+ }
+ 
+-export function f4AirborneSquidSpeed(humanSpeed,ownSpeed,vx,vz){
+-  return Math.max(humanSpeed,Math.min(ownSpeed,Math.hypot(vx,vz)));
+-}
++export function f4AirborneSquidSpeed(humanSpeed,ownSpeed,vx,vz,speedScale=1){
++  // Actual velocity already includes the movement scale. Return a target
++  // before scaling because applyHorizontalTarget applies it once.
++  if(!Number.isFinite(speedScale)||speedScale<=0)return humanSpeed;
++  return Math.max(humanSpeed,Math.min(ownSpeed,Math.hypot(vx,vz)/speedScale));
++}
++
++// Geometry only: intersect the actual wall plane along a horizontal ray.
++export function f4WallCrestHorizontalProbe(normal,signedDistance,radius,extra){
++  if(!normal||![normal.x,normal.y,normal.z,signedDistance,radius,extra].every(Number.isFinite)||
++     radius<=0||extra<0)return null;
++  const horizontal=Math.hypot(normal.x,normal.z);
++  if(horizontal<1e-6||Math.abs(normal.y)>.15)return null;
++  const distance=Math.abs(signedDistance)/horizontal;
++  if(distance>radius+.20)return null;
++  const sign=signedDistance>=0?-1:1;
++  return {x:sign*normal.x/horizontal,z:sign*normal.z/horizontal,distance:distance+radius+extra};
++}
+diff --git a/src/player/F4PlayerIntent.d.mts b/src/player/F4PlayerIntent.d.mts
+--- a/src/player/F4PlayerIntent.d.mts
++++ b/src/player/F4PlayerIntent.d.mts
+@@ -2,3 +2,4 @@
+ export function f4MouseHeldAfterMask(held:boolean,buttons:number,bit:1|2):boolean;
+ export function f4KeepRollIntent(desired:XZ,armedDirection:XZ):boolean;
+-export function f4AirborneSquidSpeed(humanSpeed:number,ownSpeed:number,vx:number,vz:number):number;
++export function f4AirborneSquidSpeed(humanSpeed:number,ownSpeed:number,vx:number,vz:number,speedScale?:number):number;
++export function f4WallCrestHorizontalProbe(normal:Readonly<{x:number;y:number;z:number}>,signedDistance:number,radius:number,extra:number):{x:number;z:number;distance:number}|null;
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -6,5 +6,5 @@
+ import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+ import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+-import {f4KeepRollIntent,f4AirborneSquidSpeed} from './F4PlayerIntent.mjs';
++import {f4KeepRollIntent,f4AirborneSquidSpeed,f4WallCrestHorizontalProbe} from './F4PlayerIntent.mjs';
+ import {f4ZipReticleWitnessMatches} from './F4ZipReticleAim.mjs';
+ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+@@ -1059,5 +1059,5 @@
+             this.applyHorizontalTarget(
+               f4AirborneSquidSpeed(tuning.humanSpeedMetersPerSecond,
+-                tuning.squidOwnInkSpeedMetersPerSecond,this.velocity.x,this.velocity.z),
++                tuning.squidOwnInkSpeedMetersPerSecond,this.velocity.x,this.velocity.z,this.mistSpeedScale),
+               tuning.groundAccelerationMetersPerSecond2*.5,dt
+             );
+@@ -1472,9 +1472,12 @@
+     const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
+     const signed=surface.projectWorldPoint(center).signedPlaneDistance;
+-    if(Math.abs(signed)>PlayerController.squidRadius+.20)return false;
+-    const inward=surface.normal.clone().mulScalar(signed>=0?-1:1);
+-    const toward=this.desired.dot(inward);
+-    if(toward<GAME_CONFIG.player.wallAttachInputThreshold)return false;
+-    const across=center.clone().add(inward.mulScalar(Math.abs(signed)+PlayerController.squidRadius+.14));
++    const probe=this.f4ProvisionalControls?
++      f4WallCrestHorizontalProbe(surface.normal,signed,PlayerController.squidRadius,.14):null;
++    if(this.f4ProvisionalControls&&!probe)return false;
++    if(!probe&&Math.abs(signed)>PlayerController.squidRadius+.20)return false;
++    const inward=probe?new Vec3(probe.x,0,probe.z):surface.normal.clone().mulScalar(signed>=0?-1:1);
++    const toward=this.desired.dot(inward);
++    if(toward<GAME_CONFIG.player.wallAttachInputThreshold)return false;
++    const across=center.clone().add(inward.mulScalar(probe?.distance??(Math.abs(signed)+PlayerController.squidRadius+.14)));
+     const footY=body.y-PlayerController.humanFootOffset;
+     const support=this.physics.castCharacterFootSupport(new Vec3(across.x,footY+.42,across.z),0,'SQUID');
+diff --git a/src/player/F4SquidMomentumCrest.test.mjs b/src/player/F4SquidMomentumCrest.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4SquidMomentumCrest.test.mjs
+@@ -0,0 +1,16 @@
++import {describe,it,expect} from 'vitest';
++import {f4AirborneSquidSpeed,f4WallCrestHorizontalProbe} from './F4PlayerIntent.mjs';
++describe('F4 squid momentum and physical crest geometry',()=>{
++ it('does not repeatedly apply mist to actual airborne momentum',()=>{
++  expect(f4AirborneSquidSpeed(4,8,3,0,.5)*.5).toBe(3);
++  expect(f4AirborneSquidSpeed(4,8,9,0,.5)*.5).toBe(4);
++  expect(f4AirborneSquidSpeed(4,8,0,0,.5)*.5).toBe(2);
++ });
++ it('crosses an inclined plane horizontally with the existing reach',()=>{
++  const n={x:Math.sqrt(1-.1**2),y:.1,z:0};
++  const p=f4WallCrestHorizontalProbe(n,.4,.34,.14);
++  expect(p.x).toBe(-1);expect(p.z).toBeCloseTo(0);
++  expect(.4+n.x*p.x*p.distance).toBeCloseTo(-n.x*.48);
++  expect(f4WallCrestHorizontalProbe(n,.6,.34,.14)).toBeNull();
++ });
++});
