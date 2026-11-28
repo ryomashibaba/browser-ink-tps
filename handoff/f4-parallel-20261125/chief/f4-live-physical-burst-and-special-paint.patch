@@ -1,0 +1,104 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -78,7 +78,9 @@
+   lifeSeconds: number;
+   diameter: number;
+   directDamage: number;
+-  blast?: {radius: number; damage: number; paint: number; near?: {radius: number; damage: number}};
++  /** Optional direct terrain paint for non-explosive special rounds. */
++  impactPaintRadius?: number;
++  blast?: {radius: number; damage: number; paint: number; near?: {radius: number; damage: number}};
+   armingFrames?: number;
+   damageAtAge?(frame: number): number;
+   offset?(frame: number, index: number): readonly [number,number];
+@@ -1521,7 +1523,8 @@
+           this.physics.castStageInkSphere(from, to, radius))
+         : radii ? this.physics.castStageInkSphere(previous, next, radii.stage)
+         : this.physics.castStageSegment(previous, next, 'ink-projectile');
+-      const saberContact = slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
++      const saberContact = !(special && this.f4PlayableShooterControls) &&
++        slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
+       const paintHit = this.physics.hasF4WholeResearchTrimesh
+         ? saberContact ? null : this.physics.f4PaintAtStageHit(blockerHit, this.surfaces)
+         : this.findNearestSurfaceHit(previous, next);
+@@ -1753,8 +1756,15 @@
+ 
+       slot.terrainContactNormal = blockerHit?.normal;
+       if (special && blockerHit) special.flight.onTerrain?.(blockerHit);
+-      if (paintWins) {
+-        if (!blasterFlight && !special) this.enqueueImpact(
++      if (paintWins) {
++        // A real non-explosive special projectile can own turf on contact.
++        // Never credit its paint back to the natural special gauge.
++        const specialPaint=special?.flight.impactPaintRadius;
++        if(this.f4PlayableShooterControls&&specialPaint!==undefined&&
++           Number.isFinite(specialPaint)&&specialPaint>0)
++          this.enqueueF4Stamp(paintHit,slot.team,slot.sourceId,PaintEventType.Special,
++            {radiusU:specialPaint,radiusV:specialPaint,angle:0});
++        if (!blasterFlight && !special) this.enqueueImpact(
+           slot.team,
+           paintHit,
+           saber?.paintWidth ?? slot.paintRadius,
+@@ -4963,9 +4973,13 @@
+           projected.v < -span || projected.v > surface.heightMeters + span) continue;
+       // The blaster throws radial droplets. A stuck arrow has just one
+       // small second coat near its impact. All samples need a stage contact.
+-      for (let i = 0; i < (spray ? 9 : 1); i++) {
+-        const angle = i * Math.PI / 4;
+-        const offset = i === 0 ? 0 : span * 0.66;
++      // Fill the interior of broad bursts as well as the outer ring.
++      // Extra samples still require the same first physical contact.
++      const dense=this.f4PlayableShooterControls&&spray;
++      for (let i = 0; i < (spray ? (dense ? 17 : 9) : 1); i++) {
++        const inner=i>8;
++        const angle = i * Math.PI / 4 + (inner ? Math.PI / 8 : 0);
++        const offset = i === 0 ? 0 : span * (inner ? 0.34 : 0.66);
+         const u = projected.u + Math.cos(angle) * offset;
+         const v = projected.v + Math.sin(angle) * offset;
+         if (!sourceRegisteredPaintCellActive(surface, u, v)) continue;
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -767,8 +767,26 @@
+     for (let i = 0; i <= rule.splashes; i++) {
+       const a = i * 2.399963229728653;
+       const r = profile.paintRadiusMeters * Math.sqrt(i / rule.splashes) * .8;
+-      const end = origin.clone().add(new Vec3(Math.cos(a) * r,-1.6,Math.sin(a) * r));
+-      const hit = this.physics.f4PaintAtStageHit(this.physics.castStageSegment(origin,end,'ink-projectile'),this.surfaces);
++      const end = origin.clone().add(new Vec3(Math.cos(a) * r,-1.6,Math.sin(a) * r));
++      let stage=this.physics.castStageSegment(origin,end,'ink-projectile');
++      if(this.f4GaugeLifeAtLaunch&&i>0){
++        // A landed bomb sits just centimeters above ground. The original
++        // downward diagonal intersects the floor almost at the bomb for
++        // every radius. Find the intended radial ground contact first,
++        // then require an unobstructed physical ray from the real bomb.
++        const probe=end.clone();probe.y=origin.y+.15;
++        const target=this.physics.castStageSegment(probe,end,'ink-projectile');
++        if(target?.normal&&target.normal.y>=.5){
++          const direction=target.point.clone().sub(origin);
++          if(direction.lengthSq()>1e-8){
++            const beyond=target.point.clone().add(direction.normalize().mulScalar(.025));
++            const visible=this.physics.castStageSegment(origin,beyond,'ink-projectile');
++            if(visible&&visible.point.distance(target.point)<=.035&&
++               (visible.normal?.y??0)>=.5)stage=visible;
++          }
++        }
++      }
++      const hit = this.physics.f4PaintAtStageHit(stage,this.surfaces);
+       if (!hit || (hit.surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
+       const radius = profile.paintRadiusMeters * (i === 0 ? .42 : .23);
+       this.coordinator.enqueue({ source: actor ? PaintSource.Cpu : PaintSource.Human,
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -522,7 +522,8 @@
+         speed:21,gravity:4,lifeSeconds:1.15,diameter:.27,directDamage:shot.direct!,
+         blast:{radius:1.45,damage:shot.blast!,paint:.48}
+       }):launch({
+-        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,damageAtAge:crabProjectileDamage
++        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,
++        impactPaintRadius:.28,damageAtAge:crabProjectileDamage
+       })
+     });
+     const clean=()=>{this.devices.delete(contact);visual?.destroy();visual=null;};
