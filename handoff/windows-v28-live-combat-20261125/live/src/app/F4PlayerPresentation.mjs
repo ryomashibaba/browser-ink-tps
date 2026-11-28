@@ -171,9 +171,15 @@ export function installF4PlayerPresentation(root,finish,ui) {
    const canLocalize=active&&!stopped&&!!pause&&!pause.hidden&&!!pauseTitle&&!!resume&&!resume.disabled&&
     (pauseState==='READY_TO_START'||pauseState==='NATIVE_PAUSED');
    if(canLocalize){
-    str(pauseTitle,pauseState==='READY_TO_START'?'ナワバリバトル · 準備完了':'一時停止');
-    str(resume,pauseState==='READY_TO_START'?'バトル開始 · 3分間':'バトルに戻る');localizedPause=true;
-   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトルに戻る'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
+    // Do not relabel a limited match as fully ready. The underlying
+    // App owns admission; this layer only presents the real score status.
+    const preparing=pauseState==='READY_TO_START'&&score?.status!=='LIVE';
+    const hold=preparing&&score?.status==='HOLD';
+    str(pauseTitle,pauseState==='READY_TO_START'?
+     (hold?'ナワバリバトル · 得点集計保留':preparing?'ナワバリバトル · 得点準備中':'ナワバリバトル · 準備完了'):'一時停止');
+    const limited=pauseState==='READY_TO_START'&&(hold||resume.title.includes('追加床')||resume.textContent.includes('制限付き'));
+    str(resume,pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
+   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
    if(finished&&replayButton&&!replayButton.disabled&&!replayButton.hidden){str(replayButton,'もう一度遊ぶ  ·  R');localizedReplay=true}
    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));

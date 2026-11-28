@@ -382,6 +382,7 @@ export class CpuAgentSystem {
   }>();
   /** Throttles real QA turf projectiles without altering enemy fire rates. */
   private readonly qaTurfShotCooldown = new Map<string, number>();
+  private readonly f4FloorAimMissTick=new Map<string,number>();
   /** Preserve an already selected ORIGINAL paint aim through a genuine
    * charge/burst. Never licenses a new floor, shot, route, or enemy. */
   private readonly sourceCommittedPaintAims = new Map<string,{
@@ -4207,6 +4208,12 @@ export class CpuAgentSystem {
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
+    // Existing valid combat and paint aims retain priority. A failed old
+    // goal-based search can now fall back to independently backed turf.
+    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&!turfTarget&&
+       (cooldown<=0||finishTurfBurst)&&bot.weaponChargeSeconds<=0&&
+       bot.weaponBurstShotsRemaining<=0)
+      turfTarget=this.chooseF4NearbyTurfTarget(bot,profile);
     // Charger and splatling already hold an independently source-verified
     // committed floor aim while actually charging/finishing a burst.
     // The P2 drought fallback must not replace that live trajectory.
@@ -4755,6 +4762,15 @@ export class CpuAgentSystem {
    * This never creates a floor, shot, target or paint cell.
    * Disabled/default T20 behavior is unchanged. */
   private b216OriginalSourceTurfSightClear(bot:CpuBot,target:Vec3):boolean{
+    // Whole F4 is no longer the frozen original-solid world. A legacy
+    // opt-in validator may be absent; never interpret that as clear sight.
+    if(this.f4WholeNavigation){
+      const ray=this.f4ResearchCombatStageRay;
+      const muzzle=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
+      const delta=target.clone().sub(muzzle),distance=delta.length();
+      if(!ray||!Number.isFinite(distance)||distance<=.12)return false;
+      return !ray(muzzle,muzzle.clone().add(delta.mulScalar((distance-.08)/distance)));
+    }
     if(!this.b216SourceStageAimValidated)return true;
     const muzzle={x:bot.position.x,
       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
@@ -5063,6 +5079,44 @@ export class CpuAgentSystem {
          this.b216OriginalSourceTurfSightClear(bot,candidate))
        return candidate;
     }
+    return null;
+  }
+
+  // Quiet, paid main-weapon turf opportunity even if Crowd currently has
+  // no admitted goal. World owner cells and current physical shot line
+  // decide admission; never set a movement target or create a free stamp.
+  private chooseF4NearbyTurfTarget(bot:CpuBot,profile:ReturnType<typeof weaponProfile>):Vec3|null{
+    if(!this.f4WholeNavigation||!this.f4ResearchCombatStageRay||bot.f4RecoveringInk||
+       bot.lifeState!=='ACTIVE'||bot.hp<=0||bot.mobilityState!=='GROUND'||!bot.agent||
+       !this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)||bot.fireRemaining>0)return null;
+    const tick=this.b181NativeFrame,miss=this.f4FloorAimMissTick.get(bot.id);
+    if(miss!==undefined&&tick>=miss&&tick-miss<12)return null;
+    const support=this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position);
+    if(!support||Math.abs(support.point.y-bot.position.y)>.25)return null;
+    const range=cpuWeaponRangeMeters(profile);
+    const reach=Math.min(5.5,range*.75,profile.weaponClass==='BRUSH'?2.2:Infinity);
+    if(!Number.isFinite(reach)||reach<.8)return null;
+    const phase=(Math.floor(tick/30)+bot.id.charCodeAt(bot.id.length-1))%8;
+    // Short, bounded two-ring search. The same world sample must be
+    // backed, paintable and not already owned; no hidden enemy tracking.
+    const points:{target:Vec3;score:number}[]=[];
+    for(const radius of [Math.min(1.7,reach),reach]){
+      for(let i=0;i<8;i++){
+        const angle=(i+phase/8)*Math.PI/4;
+        const probe=new Vec3(support.point.x+radius*Math.cos(angle),
+          support.point.y,support.point.z+radius*Math.sin(angle));
+        const sample=this.gameplayInk.sampleWorld(probe,.35,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+        if(!sample||sample.surface.isScoreable||sample.owner===bot.team)continue;
+        const target=sample.surface.localToWorld(sample.u,sample.v);
+        if(!this.cpuTargetInRange(bot,target,profile)||Math.abs(target.y-support.point.y)>.55)continue;
+        points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
+      }
+    }
+    points.sort((x,y)=>y.score-x.score);
+    for(const {target} of points.slice(0,6)){
+      if(this.b216OriginalSourceTurfSightClear(bot,target)){this.f4FloorAimMissTick.delete(bot.id);return target;}
+    }
+    this.f4FloorAimMissTick.set(bot.id,tick);
     return null;
   }
 

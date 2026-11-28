@@ -171,7 +171,10 @@ export class PaintCoordinator {
           const center=from.localToWorld(event.centerU,event.centerV);
           const axis=from.uAxis.clone().mulScalar(Math.cos(event.angle)).add(from.vAxis.clone().mulScalar(Math.sin(event.angle)));
           const radius=Math.max(event.radiusU,event.radiusV),extra:Readonly<PaintRequest>[]=[];
-          for(const to of this.gameplay.getSurfaces()){
+          // The old local rectangle gate allows up to radius beyond each
+          // of two axes plus 2.5cm plane tolerance. The larger spherical
+          // padding is conservative, including rotated and sloped tiles.
+          for(const to of this.gameplay.f4NearbyPaintSurfaces(center,Math.SQRT2*radius+.025)){
             if(to===from||(!(to.id.startsWith('F4ProvisionalFloor:'))&&!from.id.startsWith('F4ProvisionalFloor:'))||
                !(to.baseFlags&SurfaceFlags.Paintable)||(to.baseFlags&SurfaceFlags.Wall)||Math.abs(to.normal.dot(from.normal))<.999)continue;
             const p=to.projectWorldPoint(center);

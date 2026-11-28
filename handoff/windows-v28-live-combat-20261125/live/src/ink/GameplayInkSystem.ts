@@ -33,6 +33,32 @@ export interface GameplayInkSample {
   planeDistance: number;
 }
 
+// Static XZ buckets are a conservative broadphase only. No owner, mask,
+// floor support, ray, registration ordering or scoring decision is cached.
+type PaintSampleBound={surface:PaintSurface;radiusMeters:number};
+const F4_SAMPLE_BUCKET_M=8,F4_SAMPLE_MARGIN_M=2;
+function buildF4SampleBuckets(rows:readonly PaintSampleBound[]):Map<string,PaintSampleBound[]>|null{
+ const bins=new Map<string,PaintSampleBound[]>();
+ for(const row of rows){
+  const {x,z}=row.surface.center,r=row.radiusMeters+F4_SAMPLE_MARGIN_M;
+  if(![x,z,r].every(Number.isFinite)||r<0)return null;
+  const x0=Math.floor((x-r)/F4_SAMPLE_BUCKET_M),x1=Math.floor((x+r)/F4_SAMPLE_BUCKET_M);
+  const z0=Math.floor((z-r)/F4_SAMPLE_BUCKET_M),z1=Math.floor((z+r)/F4_SAMPLE_BUCKET_M);
+  if(![x0,x1,z0,z1].every(Number.isSafeInteger)||(x1-x0+1)*(z1-z0+1)>4096)return null;
+  for(let ix=x0;ix<=x1;ix++)for(let iz=z0;iz<=z1;iz++){
+   const key=ix+':'+iz,old=bins.get(key);
+   if(old)old.push(row);else bins.set(key,[row]);
+  }
+ }
+ return bins;
+}
+function queryF4SampleBuckets(rows:readonly PaintSampleBound[],bins:Map<string,PaintSampleBound[]>|null,point:{x:number;y:number;z:number},padding:number):readonly PaintSampleBound[]{
+ if(!bins||![point.x,point.y,point.z,padding].every(Number.isFinite)||padding<0||padding>F4_SAMPLE_MARGIN_M)return rows;
+ const x=Math.floor(point.x/F4_SAMPLE_BUCKET_M),z=Math.floor(point.z/F4_SAMPLE_BUCKET_M);
+ if(!Number.isSafeInteger(x)||!Number.isSafeInteger(z))return rows;
+ return bins.get(x+':'+z)??[];
+}
+
 export class GameplayInkSystem {
   private readonly surfaces = new Map<string, PaintSurface>();
   private backedCell:((surface:PaintSurface,u:number,v:number)=>boolean)|null=null;
@@ -82,6 +108,17 @@ export class GameplayInkSystem {
   // Reuse registration order without allocating projected-point objects
   // for distant ink planes in the 60Hz player/7 CPU sampling hot path.
   // Radius is an oversized enclosing sphere, NOT physical paint authority.
+  // undefined = rebuild after registration; null = conservative linear fallback.
+  private f4SampleBuckets:Map<string,PaintSampleBound[]>|null|undefined;
+  private f4SampleCandidates(point:Vec3,padding:number):readonly PaintSampleBound[]{
+    if(!this.backedCell||this.sampleBounds.length<=64)return this.sampleBounds;
+    if(this.f4SampleBuckets===undefined)this.f4SampleBuckets=buildF4SampleBuckets(this.sampleBounds);
+    return queryF4SampleBuckets(this.sampleBounds,this.f4SampleBuckets,point,padding);
+  }
+  /** Only a candidate list. Callers still apply actual local plane and raster gates. */
+  public f4NearbyPaintSurfaces(point:Vec3,padding:number):readonly PaintSurface[]{
+    return this.f4SampleCandidates(point,padding).map(row=>row.surface);
+  }
   private readonly sampleBounds: Array<{
     surface: PaintSurface; radiusMeters: number
   }> = [];
@@ -101,6 +138,7 @@ export class GameplayInkSystem {
     if (this.surfaces.has(surface.id)) throw new Error(`Duplicate PaintSurface id: ${surface.id}`);
     this.f4ProvisionalTurf=null;
     this.surfaces.set(surface.id, surface);
+    this.f4SampleBuckets=undefined;
     // Orthogonal normalized original basis gives rectangle half-diagonal.
     // Add 0.2% + 2cm to cover footprint edge epsilon and float roundoff.
     // A real candidate with plane distance <= requested maxDistance
@@ -131,6 +169,7 @@ export class GameplayInkSystem {
     this.backingCache.delete(surface.id);
     const index=this.sampleBounds.findIndex(row=>row.surface===surface);
     if(index>=0)this.sampleBounds.splice(index,1);
+    this.f4SampleBuckets=undefined;
     this.f4ProvisionalTurf=null;
   }
 
@@ -160,7 +199,7 @@ export class GameplayInkSystem {
     let bestV = 0;
     let bestDistance = Number.POSITIVE_INFINITY;
 
-    for (const {surface,radiusMeters} of this.sampleBounds) {
+    for (const {surface,radiusMeters} of this.f4SampleCandidates(point,maxPlaneDistance)) {
       if (acceptSurface && !acceptSurface(surface)) continue;
       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;

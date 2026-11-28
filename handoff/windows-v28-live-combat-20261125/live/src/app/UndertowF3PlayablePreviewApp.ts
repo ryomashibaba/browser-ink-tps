@@ -501,6 +501,20 @@ export class UndertowF3PlayablePreviewApp{
  private f4SpecialLife=1;
  private f4HumanDeathTick:number|null=null;
  private readonly f4HumanLifePairs:{deathTick:number;respawnTick:number;elapsedTicks:number;hpAfter:number}[]=[];
+ private f4HumanPlay=this.newF4HumanPlay();
+ private readonly f4HumanMotionStart=new Vec3();
+ private newF4HumanPlay(){
+  return {ticks:0,moveIntentTicks:0,shiftIntentTicks:0,planarTravelM:0,moveIntentTravelM:0,
+   humanMoveTicks:0,humanMoveM:0,ownSquidTicks:0,ownSquidMoveTicks:0,ownSquidMoveM:0,
+   extraFloorContactTicks:0,extraFloorOwnSquidTicks:0,squidOwnInkRecovered:0,
+   minBodyZ:null as number|null,maxBodyZ:null as number|null,
+   extraFloorHumanChangedCells:0,extraFloorHumanChangedAreaM2:0,
+   tiles:new Map<string,{changedCells:number;events:number;minImpactZ:number;maxImpactZ:number}>()};
+ }
+ private readF4HumanPlay(){
+  return {...this.f4HumanPlay,tiles:[...this.f4HumanPlay.tiles].map(([id,row])=>({id,...row})),
+   note:'Per-tick physical travel excludes life teleports; changed cells are transitions, not unique cells or final score.'};
+ }
  private f4SpecialSecondaryHeld=false;
  private readonly b202PauseOverlay:HTMLElement;
  private readonly b167CombatNotice:HTMLElement;
@@ -892,6 +906,17 @@ export class UndertowF3PlayablePreviewApp{
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
    (event,changedCells,raster)=>{
     this.b23InkFeedback.accept(event,changedCells,raster);
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&event.source===PaintSource.Human&&
+       event.type!==PaintEventType.Debug&&changedCells>0&&event.surfaceId.startsWith('F4ProvisionalFloor:')){
+     const surface=this.ink.getSurface(event.surfaceId);
+     if(surface){
+      const z=surface.localToWorld(event.centerU,event.centerV).z,h=this.f4HumanPlay;
+      const row=h.tiles.get(event.surfaceId)??{changedCells:0,events:0,minImpactZ:z,maxImpactZ:z};
+      row.changedCells+=changedCells;row.events++;row.minImpactZ=Math.min(row.minImpactZ,z);row.maxImpactZ=Math.max(row.maxImpactZ,z);
+      h.tiles.set(event.surfaceId,row);h.extraFloorHumanChangedCells+=changedCells;
+      h.extraFloorHumanChangedAreaM2+=raster.f4ProvisionalProjectedAreaM2Changed??0;
+     }
+    }
     if(event.source===PaintSource.Special)this.f4Special?.notePaint(changedCells);
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.f4Special&&
        this.matchState==='PLAYING'&&event.gaugeEligible!==false&&
@@ -3182,7 +3207,7 @@ export class UndertowF3PlayablePreviewApp{
     nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
     human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
      pointerLocked:document.pointerLockElement===this.canvas,inputAvailable:this.input.sourceLiveInputAvailable,
-     moveX:this.input.moveX,moveY:this.input.moveY},traffic:this.traffic.f4WholeMotionEvidence()
+     moveX:this.input.moveX,moveY:this.input.moveY},humanPlay:this.readF4HumanPlay(),traffic:this.traffic.f4WholeMotionEvidence()
    }:null,
    f4ZipKccResearch:()=>this.f4ZipResearchEnabled||this.f4ProvisionalTurfEnabled?this.player.f4ZipResearchSnapshot():null,
    f4ActualCombatEvidence:()=>this.f4WholeTrimeshInstalled?{
@@ -6026,6 +6051,7 @@ export class UndertowF3PlayablePreviewApp{
   this.f4SpecialLife=1;
   this.f4HumanDeathTick=null;
   this.f4HumanLifePairs.length=0;
+   this.f4HumanPlay=this.newF4HumanPlay();
   this.f4SpecialSecondaryHeld=false;
   if(this.f4ProvisionalTurfEnabled){
    this.f4CurlingHeldFrames=null;
@@ -6258,6 +6284,8 @@ export class UndertowF3PlayablePreviewApp{
      undefined;
     const mist=this.f4SharedBombsEnabled?this.humanSub.sampleF4Mist('human',Team.A,
      alive?this.player.getPosition(this.p):null,this.stats.playerInk):undefined;
+    const observeHuman=alive&&this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.matchState==='PLAYING';
+    if(observeHuman)this.player.getPosition(this.f4HumanMotionStart);
     if(alive)this.player.computeFixed(seconds,twin&&!f4SpecialOwnsMobility?this.input.fireHeld:undefined,
      f4SpecialOwnsMobility?undefined:this.projectiles.f4SaberLungeVelocity(),mist?.speedScale);
     this.physics.step();
@@ -6280,8 +6308,24 @@ export class UndertowF3PlayablePreviewApp{
      alive=false;
      this.canvas.dataset.t21F4LastVoidSplatTick=String(frame);
     }
+    const inkBeforeRecovery=this.stats.playerInk;
     if(alive)this.resources.fixedUpdate(
      seconds,this.player.currentMode,this.player.currentInkRelation,mist);
+    if(observeHuman&&alive){
+     const h=this.f4HumanPlay,body=this.player.getPosition(this.p),intent=this.player.readF4ConsumedIntent();
+     const distance=Math.hypot(body.x-this.f4HumanMotionStart.x,body.z-this.f4HumanMotionStart.z);
+     const moving=intent.x!==0||intent.y!==0,own=this.player.currentMode==='SQUID'&&this.player.currentInkRelation==='OWN';
+     const extra=this.player.sourceNativeFloorInkWitness().provisionalF4FloorContact;
+     h.ticks++;h.planarTravelM+=distance;
+     if(moving){h.moveIntentTicks++;h.moveIntentTravelM+=distance;}
+     if(intent.squid)h.shiftIntentTicks++;
+     if(this.player.currentMode==='HUMAN'&&moving){h.humanMoveTicks++;h.humanMoveM+=distance;}
+     if(own){h.ownSquidTicks++;if(moving){h.ownSquidMoveTicks++;h.ownSquidMoveM+=distance;}
+      if(this.stats.playerInkRecoveryState==='SQUID_OWN')h.squidOwnInkRecovered+=Math.max(0,this.stats.playerInk-inkBeforeRecovery);}
+     if(extra){h.extraFloorContactTicks++;if(own)h.extraFloorOwnSquidTicks++;}
+     h.minBodyZ=h.minBodyZ===null?body.z:Math.min(h.minBodyZ,body.z);
+     h.maxBodyZ=h.maxBodyZ===null?body.z:Math.max(h.maxBodyZ,body.z);
+    }
     if((this.f4SpecialProbe||naturalSpecial)&&this.f4Special&&this.f4WholeTrimeshInstalled){
      this.projectiles.syncF4HumanTarget(this.player.getPosition(new Vec3()),Team.A,
       alive&&this.resources.currentHp>0,this.stats.playerGrounded,String(this.f4SpecialLife));
@@ -10078,6 +10122,7 @@ export class UndertowF3PlayablePreviewApp{
       floorRegistration:this.canvas.dataset.t21F4ProvisionalFloors??'NOT_REGISTERED',
       floorPaint:f4FloorPaintEvidence(this.f4PhysicalPaintSurfaces),
       floorContact:this.player.sourceNativeFloorInkWitness(),
+      humanPlay:this.readF4HumanPlay(),
       score:this.ink.readF4ProvisionalTurf()};
     });
    const f4Weapon=this.projectiles.currentPlayerWeapon;

@@ -218,6 +218,9 @@ export class PlayerController {
   private nativeSourceGroundInkGuard = false;
   private f4ProvisionalControls=false;
   public enableF4ProvisionalControls():void{this.f4ProvisionalControls=true;}
+  // Observation only: axes actually consumed by the existing KCC step.
+  private readonly f4ConsumedIntent={x:0,y:0,squid:false};
+  public readF4ConsumedIntent():Readonly<{x:number;y:number;squid:boolean}>{return this.f4ConsumedIntent;}
   // F4 research-only KCC observation. Never changes the collision solver.
   private f4KccAuditEnabled=false;
   private f4ZipResearch: F4ZipResearchRun | null = null;
@@ -757,6 +760,7 @@ export class PlayerController {
 
   public computeFixed(dt: number, twinCometsTrigger?: boolean, saberLunge?: Vec3, mistSpeedScale = 1): void {
     this.mistSpeedScale = mistSpeedScale;
+    this.f4ConsumedIntent.x=0;this.f4ConsumedIntent.y=0;this.f4ConsumedIntent.squid=false;
     const bodyPosition = this.body.translation();
     if(this.f4ZipResearchActive&&this.f4ZipResearch){
       this.input.consumeJump();
@@ -792,6 +796,7 @@ export class PlayerController {
       ? this.input.consumeMoveAxesForPlayerTick():null;
     const inputX = sourceAxes?sourceAxes.x:this.input.moveX;
     const inputY = sourceAxes?sourceAxes.y:this.input.moveY;
+    if(this.f4ProvisionalControls){this.f4ConsumedIntent.x=inputX;this.f4ConsumedIntent.y=inputY;}
     this.desired.set(
       this.right.x * inputX + this.flatForward.x * inputY,
       0,
@@ -810,6 +815,7 @@ export class PlayerController {
     // step; no extra floor, paint ownership, collision or wall authority.
     const squidHeldForTick=this.nativeSourceGroundInkGuard
       ? this.input.consumeSquidHeldForPlayerTick():this.input.squidHeld;
+    if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
     // A genuine Space tap one fixed tick before landing used to disappear.
     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
     // No extra ground/coyote-time/stepping or changes to frozen T20.

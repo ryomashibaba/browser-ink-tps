@@ -2065,6 +2065,32 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const orderedFronts=stalledOnRoute?[]:this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,
    frontsBySide.map((p,i)=>{const point=new Vec3(...p);return {point,ink:inkAt(point),order:i,index:i};}),
    allies.map(a=>a.position),options).map(r=>[r.point.x,r.point.y,r.point.z] as const);
+  // A single flank painter per team can take a short supported neutral
+  // side lane near mid, ONLY when no combat goal was admitted. Keep other
+  // actors and all ingress/transfer/respawn/recovery authority unchanged.
+  if(this.freeCombat&&!recovering&&!stalledOnRoute&&id.endsWith('2')&&
+     Math.abs(foot.z)<=10&&!this.respawnOriginalDrops.has(id)&&
+     this.isLiveRejoinedSourceCpu(id)&&this.sourceInk){
+   const flank:PatrolCandidate<Vec3>[]=[];
+   for(const dx of [-3,3,-5,5]){
+    const probe=new Vec3(foot.x+dx,foot.y,foot.z+side);
+    const projection=this.nav.auditNavMeshProjection(probe),p=projection.nearestPoint;
+    if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
+       Math.abs(p.y-foot.y)>.55||Math.abs(p.z)>11)continue;
+    const point=new Vec3(p.x,p.y,p.z),support=this.sourceNativeCharacterFootHit(point);
+    if(!support||Math.abs(support.point.y-p.y)>.12||avoids(point))continue;
+    const ink=inkAt(point);
+    if(ink!=='NEUTRAL'&&ink!=='ENEMY')continue;
+    const index=flank.length;flank.push({point,ink,order:index,index});
+   }
+   for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,flank,
+     allies.map(a=>a.position),options).slice(0,2)){
+    const point=this.f4WholeWalkTarget(foot,candidate.point,false,8);
+    if(point&&!avoids(point)&&point.distance(candidate.point)<=.25&&
+       Math.abs(point.z)<=11&&Math.abs(point.y-foot.y)<=.55&&
+       inkAt(point)===candidate.ink)return request(point,true);
+   }
+  }
   // Preserve measured ingress and center transfer priority before optional survey.
   for(const candidate of stalledOnRoute?[]:[...ahead,...centerLegs]){
    const target=new Vec3(...candidate);
