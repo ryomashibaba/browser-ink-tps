@@ -1,0 +1,131 @@
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -381,7 +381,8 @@
+    agent:CrowdAgent;goal:Vec3;repeat:number
+   }>();
+   /** Throttles real QA turf projectiles without altering enemy fire rates. */
+-  private readonly qaTurfShotCooldown = new Map<string, number>();
++  private readonly qaTurfShotCooldown = new Map<string, number>();
++  private readonly f4FloorAimMissTick=new Map<string,number>();
+   /** Preserve an already selected ORIGINAL paint aim through a genuine
+    * charge/burst. Never licenses a new floor, shot, route, or enemy. */
+   private readonly sourceCommittedPaintAims = new Map<string,{
+@@ -4206,7 +4207,13 @@
+          this.chooseB64SourceLateralInkTarget(bot,dt) ??
+           this.chooseOriginalSourceTurfTarget(bot)??
+           this.chooseB216ActualOriginalPaintBackfill(bot):
+-         this.chooseOriginalSourceTurfTarget(bot)) : null;
++         this.chooseOriginalSourceTurfTarget(bot)) : null;
++    // Existing valid combat and paint aims retain priority. A failed old
++    // goal-based search can now fall back to independently backed turf.
++    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&!turfTarget&&
++       (cooldown<=0||finishTurfBurst)&&bot.weaponChargeSeconds<=0&&
++       bot.weaponBurstShotsRemaining<=0)
++      turfTarget=this.chooseF4NearbyTurfTarget(bot,profile);
+     // Charger and splatling already hold an independently source-verified
+     // committed floor aim while actually charging/finishing a burst.
+     // The P2 drought fallback must not replace that live trajectory.
+@@ -4754,7 +4761,16 @@
+    * target with the SAME source-foot and projectile-ray authority as B216.
+    * This never creates a floor, shot, target or paint cell.
+    * Disabled/default T20 behavior is unchanged. */
+-  private b216OriginalSourceTurfSightClear(bot:CpuBot,target:Vec3):boolean{
++  private b216OriginalSourceTurfSightClear(bot:CpuBot,target:Vec3):boolean{
++    // Whole F4 is no longer the frozen original-solid world. A legacy
++    // opt-in validator may be absent; never interpret that as clear sight.
++    if(this.f4WholeNavigation){
++      const ray=this.f4ResearchCombatStageRay;
++      const muzzle=bot.position.clone().add(new Vec3(0,GAME_CONFIG.cpu.muzzleHeightMeters,0));
++      const delta=target.clone().sub(muzzle),distance=delta.length();
++      if(!ray||!Number.isFinite(distance)||distance<=.12)return false;
++      return !ray(muzzle,muzzle.clone().add(delta.mulScalar((distance-.08)/distance)));
++    }
+     if(!this.b216SourceStageAimValidated)return true;
+     const muzzle={x:bot.position.x,
+       y:bot.position.y+GAME_CONFIG.cpu.muzzleHeightMeters,
+@@ -5066,7 +5082,45 @@
+     return null;
+   }
+ 
+-  private chooseOriginalSourceTurfTarget(bot: CpuBot): Vec3 | null {
++  // Quiet, paid main-weapon turf opportunity even if Crowd currently has
++  // no admitted goal. World owner cells and current physical shot line
++  // decide admission; never set a movement target or create a free stamp.
++  private chooseF4NearbyTurfTarget(bot:CpuBot,profile:ReturnType<typeof weaponProfile>):Vec3|null{
++    if(!this.f4WholeNavigation||!this.f4ResearchCombatStageRay||bot.f4RecoveringInk||
++       bot.lifeState!=='ACTIVE'||bot.hp<=0||bot.mobilityState!=='GROUND'||!bot.agent||
++       !this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)||bot.fireRemaining>0)return null;
++    const tick=this.b181NativeFrame,miss=this.f4FloorAimMissTick.get(bot.id);
++    if(miss!==undefined&&tick>=miss&&tick-miss<12)return null;
++    const support=this.phase14qGroundCollision?.sourceFootSupport?.(bot.id,bot.position);
++    if(!support||Math.abs(support.point.y-bot.position.y)>.25)return null;
++    const range=cpuWeaponRangeMeters(profile);
++    const reach=Math.min(5.5,range*.75,profile.weaponClass==='BRUSH'?2.2:Infinity);
++    if(!Number.isFinite(reach)||reach<.8)return null;
++    const phase=(Math.floor(tick/30)+bot.id.charCodeAt(bot.id.length-1))%8;
++    // Short, bounded two-ring search. The same world sample must be
++    // backed, paintable and not already owned; no hidden enemy tracking.
++    const points:{target:Vec3;score:number}[]=[];
++    for(const radius of [Math.min(1.7,reach),reach]){
++      for(let i=0;i<8;i++){
++        const angle=(i+phase/8)*Math.PI/4;
++        const probe=new Vec3(support.point.x+radius*Math.cos(angle),
++          support.point.y,support.point.z+radius*Math.sin(angle));
++        const sample=this.gameplayInk.sampleWorld(probe,.35,SurfaceFlags.Paintable,SurfaceFlags.Wall);
++        if(!sample||sample.surface.isScoreable||sample.owner===bot.team)continue;
++        const target=sample.surface.localToWorld(sample.u,sample.v);
++        if(!this.cpuTargetInRange(bot,target,profile)||Math.abs(target.y-support.point.y)>.55)continue;
++        points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
++      }
++    }
++    points.sort((x,y)=>y.score-x.score);
++    for(const {target} of points.slice(0,6)){
++      if(this.b216OriginalSourceTurfSightClear(bot,target)){this.f4FloorAimMissTick.delete(bot.id);return target;}
++    }
++    this.f4FloorAimMissTick.set(bot.id,tick);
++    return null;
++  }
++
++  private chooseOriginalSourceTurfTarget(bot: CpuBot): Vec3 | null {
+     if (!bot.agent || bot.lifeState !== 'ACTIVE' ||
+         bot.mobilityState !== 'GROUND') return null;
+     const goal = this.qaMotionGoals.get(bot.id);
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -2065,7 +2065,33 @@
+   const orderedFronts=stalledOnRoute?[]:this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,
+    frontsBySide.map((p,i)=>{const point=new Vec3(...p);return {point,ink:inkAt(point),order:i,index:i};}),
+    allies.map(a=>a.position),options).map(r=>[r.point.x,r.point.y,r.point.z] as const);
+-  // Preserve measured ingress and center transfer priority before optional survey.
++  // A single flank painter per team can take a short supported neutral
++  // side lane near mid, ONLY when no combat goal was admitted. Keep other
++  // actors and all ingress/transfer/respawn/recovery authority unchanged.
++  if(this.freeCombat&&!recovering&&!stalledOnRoute&&id.endsWith('2')&&
++     Math.abs(foot.z)<=10&&!this.respawnOriginalDrops.has(id)&&
++     this.isLiveRejoinedSourceCpu(id)&&this.sourceInk){
++   const flank:PatrolCandidate<Vec3>[]=[];
++   for(const dx of [-3,3,-5,5]){
++    const probe=new Vec3(foot.x+dx,foot.y,foot.z+side);
++    const projection=this.nav.auditNavMeshProjection(probe),p=projection.nearestPoint;
++    if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
++       Math.abs(p.y-foot.y)>.55||Math.abs(p.z)>11)continue;
++    const point=new Vec3(p.x,p.y,p.z),support=this.sourceNativeCharacterFootHit(point);
++    if(!support||Math.abs(support.point.y-p.y)>.12||avoids(point))continue;
++    const ink=inkAt(point);
++    if(ink!=='NEUTRAL'&&ink!=='ENEMY')continue;
++    const index=flank.length;flank.push({point,ink,order:index,index});
++   }
++   for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,flank,
++     allies.map(a=>a.position),options).slice(0,2)){
++    const point=this.f4WholeWalkTarget(foot,candidate.point,false,8);
++    if(point&&!avoids(point)&&point.distance(candidate.point)<=.25&&
++       Math.abs(point.z)<=11&&Math.abs(point.y-foot.y)<=.55&&
++       inkAt(point)===candidate.ink)return request(point,true);
++   }
++  }
++  // Preserve measured ingress and center transfer priority before optional survey.
+   for(const candidate of stalledOnRoute?[]:[...ahead,...centerLegs]){
+    const target=new Vec3(...candidate);
+    if(Math.hypot(target.x-foot.x,target.z-foot.z)<.25)continue;
