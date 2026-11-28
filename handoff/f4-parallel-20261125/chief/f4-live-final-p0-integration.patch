@@ -1,0 +1,1566 @@
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -10,7 +10,9 @@
+   actorId?: string;
+   /** B152 informational only; forwarded to the immutable PaintEvent. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+-  gaugeEligible?: boolean;
++  gaugeEligible?: boolean;
++  /** Contact travel already sampled this individual physical cell. */
++  f4ExactContactCell?: boolean;
+   /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
+   f4GaugeLaunchLife?: string|null;
+   team: Team.A | Team.B;
+@@ -58,31 +60,73 @@
+   return true;
+ }
+ 
+-export class PaintCoordinator {
+-  private readonly requests: Readonly<PaintRequest>[] = [];
++// F4 provisional play balance only. Keep hit locations, direction, damage,
++// cadence and ink consumption untouched. The CPU raster remains the authority.
++function f4PlayableBrush(request: PaintRequest): PaintRequest {
++  if (request.f4ExactContactCell) return request;
++  if (request.source !== PaintSource.Human && request.source !== PaintSource.Cpu &&
++      request.source !== PaintSource.Special) return request;
++  if (!Number.isFinite(request.radiusU) || !Number.isFinite(request.radiusV) ||
++      request.radiusU <= 0 || request.radiusV <= 0) return request;
++  let factor = 1, maxGrowth = 0;
++  switch (request.type) {
++    case PaintEventType.Impact: factor = 1.5; maxGrowth = .75; break;
++    case PaintEventType.MidDroplet: factor = 1.45; maxGrowth = .65; break;
++    case PaintEventType.Foot: factor = 1.2; maxGrowth = .15; break;
++    case PaintEventType.WallImpact: factor = 1.3; maxGrowth = .4; break;
++    case PaintEventType.Bomb:
++    case PaintEventType.Special: factor = 1.55; maxGrowth = 1; break;
++    default: return request;
++  }
++  const u = request.radiusU, v = request.radiusV;
++  const grow = (r: number) => r + Math.min(r * (factor - 1), maxGrowth);
++  // Long narrow charger/trail stamps become wider, never longer.
++  return {...request, radiusU: u > 3*v ? u : grow(u),
++    radiusV: v > 3*u ? v : grow(v)};
++}
++
++export class PaintCoordinator {
++  private f4PlayablePaint=false;
++  public enableF4PlayablePaint():void{
++    this.f4PlayablePaint=true;
++    this.gpu.enableF4FullCellRendering();
++    this.f4WallAtlas?.enableF4FullCellRendering();
++    for(const atlas of this.f4FloorAtlases)atlas.enableF4FullCellRendering();
++  }
++  private readonly requests: Readonly<PaintRequest>[] = [];
+   public lastEvent: PaintEvent | null = null;
+   private f4WallAtlas:GpuInkAtlas|null=null;
+   public attachF4WallAtlas(atlas:GpuInkAtlas):void{
+     if(this.f4WallAtlas)throw Error('F4_WALL_ATLAS_ALREADY_ATTACHED');
+     this.f4WallAtlas=atlas;
+     // The wall atlas exists only in the provisional native F4 world.
+-    atlas.enableF4QueueOptimization();
++    atlas.enableF4QueueOptimization();
++    if(this.f4PlayablePaint)atlas.enableF4FullCellRendering();
+   }
+   private readonly f4FloorAtlasBySurface=new Map<string,GpuInkAtlas>();
+   private readonly f4FloorAtlases=new Set<GpuInkAtlas>();
+   public attachF4FloorAtlas(atlas:GpuInkAtlas,surfaces:readonly PaintSurface[]):void{
+     if(surfaces.some(s=>!s.id.startsWith('F4ProvisionalFloor:')||this.f4FloorAtlasBySurface.has(s.id)))throw Error('F4_FLOOR_ATLAS_DUPLICATE');
+-    atlas.enableF4QueueOptimization();this.f4FloorAtlases.add(atlas);
++    atlas.enableF4QueueOptimization();
++    if(this.f4PlayablePaint)atlas.enableF4FullCellRendering();
++    this.f4FloorAtlases.add(atlas);
+     for(const s of surfaces)this.f4FloorAtlasBySurface.set(s.id,atlas);
+   }
+   public detachF4FloorAtlas(atlas:GpuInkAtlas):void{
+     this.f4FloorAtlases.delete(atlas);
+     for(const [id,a] of this.f4FloorAtlasBySurface)if(a===atlas)this.f4FloorAtlasBySurface.delete(id);
+   }
+-  public flushF4WallAtlas(maxEvents:number):void{
+-    this.f4WallAtlas?.flush(maxEvents);
+-    for(const atlas of this.f4FloorAtlases)atlas.flush(maxEvents);
+-  }
++  public flushF4WallAtlas(maxEvents:number):void{
++    const flush=(atlas:GpuInkAtlas)=>{
++      // Keep normal budget when caught up; drain more queued real paint
++      // after bursts. The GPU atlas still enforces its 16-bit quad cap.
++      const budget=this.f4PlayablePaint&&Number.isFinite(maxEvents)&&maxEvents>=1?
++        Math.max(maxEvents,Math.min(128,Math.ceil(atlas.backlog/2))):maxEvents;
++      atlas.flush(budget);
++    };
++    if(this.f4WallAtlas)flush(this.f4WallAtlas);
++    for(const atlas of this.f4FloorAtlases)flush(atlas);
++  }
+   public detachF4WallAtlas(atlas:GpuInkAtlas):void{
+     if(this.f4WallAtlas!==atlas)return;
+     this.f4WallAtlas=null;
+@@ -106,7 +150,8 @@
+     // The weapon/projectile side may reuse its request object later in this
+     // tick. Capture the actual impact now, rather than painting at its next
+     // location after the pooled request has been mutated.
+-    this.requests.push(Object.freeze({ ...request }));
++    const brush = this.f4PlayablePaint&&this.f4FloorAtlases.size ? f4PlayableBrush(request) : request;
++    this.requests.push(Object.freeze({ ...brush }));
+   }
+ 
+   public enqueueMany(requests: readonly PaintRequest[]): void {
+@@ -163,9 +208,13 @@
+       // One genuine floor brush can straddle a new tile or the old SOURCE
+       // boundary. Reproject onto neighboring coplanar registered surfaces;
+       // each continuation still passes the same live raster/backing authority.
+-      if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
+-         (source===PaintSource.Human||source===PaintSource.Cpu)&&
+-         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||event.type===PaintEventType.MidDroplet)){
++      if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
++         !(this.f4PlayablePaint&&request.f4ExactContactCell)&&
++         (source===PaintSource.Human||source===PaintSource.Cpu||
++          (this.f4PlayablePaint&&source===PaintSource.Special))&&
++         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||
++          event.type===PaintEventType.MidDroplet||(this.f4PlayablePaint&&
++          (event.type===PaintEventType.Bomb||event.type===PaintEventType.Special)))){
+         const from=this.gameplay.getSurface(event.surfaceId);
+         if(from&&!(from.baseFlags&SurfaceFlags.Wall)){
+           const center=from.localToWorld(event.centerU,event.centerV);
+diff --git a/src/core/InkBrushRasterStream.ts b/src/core/InkBrushRasterStream.ts
+--- a/src/core/InkBrushRasterStream.ts
++++ b/src/core/InkBrushRasterStream.ts
+@@ -110,8 +110,9 @@
+ 
+ export function packInkBrushRasterRuns(
+   groups: readonly InkStreamGroup[],
+-  scratch?: InkBrushRasterScratch
+-): InkBrushGpuBuffers | null {
++  scratch?: InkBrushRasterScratch,
++  fullAuthorizedCells = false
++): InkBrushGpuBuffers | null {
+   let capacity = 0;
+   for (const group of groups) capacity += group.paintableRuns.length;
+   if (capacity === 0) return null;
+@@ -172,10 +173,13 @@
+           run.startX < 0 || run.endXExclusive > surface.widthCells ||
+           run.startX >= run.endXExclusive) continue;
+ 
+-      const minU = Math.max(0, run.startX * surface.cellSize, brushMinU);
+-      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, brushMaxU);
+-      const minV = Math.max(0, run.row * surface.cellSize, brushMinV);
+-      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, brushMaxV);
++      // F4: ownership is a whole cell, not a sub-cell ellipse. Rendering
++      // the ellipse again leaves neutral/old-team texels in owned cells.
++      // Preserve the exact legacy path unless explicitly enabled by F4.
++      const minU = Math.max(0, run.startX * surface.cellSize, fullAuthorizedCells ? 0 : brushMinU);
++      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, fullAuthorizedCells ? surface.widthMeters : brushMaxU);
++      const minV = Math.max(0, run.row * surface.cellSize, fullAuthorizedCells ? 0 : brushMinV);
++      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, fullAuthorizedCells ? surface.heightMeters : brushMaxV);
+       if (minU >= maxU || minV >= maxV) continue;
+ 
+       const x0 = atlasLeft + minU * scale;
+@@ -201,8 +205,10 @@
+         positions[p++] = x;
+         positions[p++] = y;
+         positions[p++] = 0;
+-        uvs[uv++] = 0.5 + ((right ? xc1 : xc0) - (top ? ys0 : ys1)) / diameterX;
+-        uvs[uv++] = 0.5 + ((right ? xs1 : xs0) - (top ? yc0 : yc1)) / diameterY;
++        // A constant center UV passes the existing ellipse shader for the
++        // approved run only; rect bounds still prevent any outside writes.
++        uvs[uv++] = fullAuthorizedCells ? 0.5 : 0.5 + ((right ? xc1 : xc0) - (top ? ys0 : ys1)) / diameterX;
++        uvs[uv++] = fullAuthorizedCells ? 0.5 : 0.5 + ((right ? xs1 : xs0) - (top ? yc0 : yc1)) / diameterY;
+         rectMins[rectCursor] = x0;
+         rectMaxs[rectCursor++] = x1;
+         rectMins[rectCursor] = y0;
+diff --git a/src/ink/GpuInkAtlas.ts b/src/ink/GpuInkAtlas.ts
+--- a/src/ink/GpuInkAtlas.ts
++++ b/src/ink/GpuInkAtlas.ts
+@@ -144,7 +144,9 @@
+   private clearPending = false;
+   private paintedThisFrame = false;
+   private f4QueueOptimized=false;
+-  public enableF4QueueOptimization():void {this.f4QueueOptimized=true;}
++  public enableF4QueueOptimization():void {this.f4QueueOptimized=true;}
++  private f4FullCellRendering=false;
++  public enableF4FullCellRendering():void {this.f4FullCellRendering=true;}
+   // W10-B20: default OFF for every other game route / production stage.
+   // A primed, persistent atlas needs no idle render-target submission.
+   private sourceIdlePostRenderFrames = 0;
+@@ -311,7 +313,9 @@
+       groups.push({ surface, event, paintableRuns });
+     }
+ 
+-    const buffers = packInkBrushRasterRuns(groups, this.rasterScratch);
++    // In the provisional F4 world, draw every CPU-owned cell completely.
++    // All legacy and formal QA atlases retain their ellipse renderer.
++    const buffers = packInkBrushRasterRuns(groups, this.rasterScratch, this.f4FullCellRendering);
+     if (!buffers) {
+       return { events: completedEvents, buildMs: performance.now() - started };
+     }
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -78,7 +78,9 @@
+   lifeSeconds: number;
+   diameter: number;
+   directDamage: number;
+-  blast?: {radius: number; damage: number; paint: number; near?: {radius: number; damage: number}};
++  /** Optional direct terrain paint for non-explosive special rounds. */
++  impactPaintRadius?: number;
++  blast?: {radius: number; damage: number; paint: number; near?: {radius: number; damage: number}};
+   armingFrames?: number;
+   damageAtAge?(frame: number): number;
+   offset?(frame: number, index: number): readonly [number,number];
+@@ -134,11 +136,12 @@
+   slosherFlight?: {
+     droplet: SlosherDroplet;
+     resolvedTargets: Set<string>;
+-    launchY: number;
+-    age: number;
+-    distance: number;
+-  };
+-  canopyPellet?: ShooterFlight & {
++    launchY: number;
++    age: number;
++    distance: number;
++    paintDropMask?: number;
++  };
++  canopyPellet?: ShooterFlight & {
+     index: number;
+     distance: number;
+     acceptedDamage: Map<string, number>;
+@@ -1422,14 +1425,26 @@
+ 
+     if (f4) this.f4ConsumeInstantTrigger(f4InstantShotsBefore, f4InstantCooldownBefore);
+ 
+-    this.feedback.updateChargeVisual(
+-      profile,
+-      team,
+-      muzzlePosition,
+-      aimDirection,
+-      chargeFraction(profile, this.chargeSeconds),
+-      playerDamageable && fireHeld && isChargeWeaponClass(profile.weaponClass)
+-    );
++    const chargeVisualActive=playerDamageable&&fireHeld&&isChargeWeaponClass(profile.weaponClass)&&
++      (!this.f4PlayableShooterControls||f4HumanAllowed);
++    let guideLimit:number|undefined;
++    if(this.f4PlayableShooterControls&&chargeVisualActive&&
++       (profile.weaponClass==='CHARGER'||profile.weaponClass==='SPLATLING')){
++      // Visual charge guide is NOT a promised projectile path. Stop it at
++      // the first real stage contact; do not draw a laser through cover.
++      const length=profile.weaponClass==='CHARGER'?18:14;
++      const end=muzzlePosition.clone().add(aimDirection.clone().normalize().mulScalar(length));
++      const hit=this.physics.castStageSegment(muzzlePosition,end,'ink-projectile');
++      guideLimit=hit?Math.max(0,Math.min(length,hit.distance-.025)):length;
++    }
++    this.feedback.updateChargeVisual(
++      profile,
++      team,
++      muzzlePosition,
++      aimDirection,
++      chargeFraction(profile, this.chargeSeconds),
++      chargeVisualActive,guideLimit
++    );
+     this.wasFireHeld = fireHeld && (!this.physics.hasF4WholeResearchTrimesh ||
+       (playerWeaponEnabled && playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'));
+ 
+@@ -1521,7 +1536,8 @@
+           this.physics.castStageInkSphere(from, to, radius))
+         : radii ? this.physics.castStageInkSphere(previous, next, radii.stage)
+         : this.physics.castStageSegment(previous, next, 'ink-projectile');
+-      const saberContact = slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
++      const saberContact = !(special && this.f4PlayableShooterControls) &&
++        slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
+       const paintHit = this.physics.hasF4WholeResearchTrimesh
+         ? saberContact ? null : this.physics.f4PaintAtStageHit(blockerHit, this.surfaces)
+         : this.findNearestSurfaceHit(previous, next);
+@@ -1753,8 +1769,15 @@
+ 
+       slot.terrainContactNormal = blockerHit?.normal;
+       if (special && blockerHit) special.flight.onTerrain?.(blockerHit);
+-      if (paintWins) {
+-        if (!blasterFlight && !special) this.enqueueImpact(
++      if (paintWins) {
++        // A real non-explosive special projectile can own turf on contact.
++        // Never credit its paint back to the natural special gauge.
++        const specialPaint=special?.flight.impactPaintRadius;
++        if(this.f4PlayableShooterControls&&specialPaint!==undefined&&
++           Number.isFinite(specialPaint)&&specialPaint>0)
++          this.enqueueF4Stamp(paintHit,slot.team,slot.sourceId,PaintEventType.Special,
++            {radiusU:specialPaint,radiusV:specialPaint,angle:0});
++        if (!blasterFlight && !special) this.enqueueImpact(
+           slot.team,
+           paintHit,
+           saber?.paintWidth ?? slot.paintRadius,
+@@ -2284,7 +2307,8 @@
+   ): boolean {
+     const contact = profile.contactWeapon!;
+     const settings = contactPaintSettings(contact, motion.distance * 60);
+-    const cells = collectContactPaint(motion, settings.halfWidth, this.physics, this.surfaces);
++    const halfWidth=this.f4PlayableShooterControls?settings.halfWidth*1.25:settings.halfWidth;
++    const cells = collectContactPaint(motion, halfWidth, this.physics, this.surfaces);
+     if (!cells || !pay(settings.ink, contact.rollRecovery)) return false;
+     for (const hit of cells) {
+       this.enqueueF4ContactCell(hit, team, actor);
+@@ -2295,10 +2319,10 @@
+ 
+   private enqueueF4ContactCell(hit: SurfaceRayHit, team: Team.A | Team.B, actor: string): void {
+     // The raster can select only this independently verified cell.
+-    const radius = hit.surface.cellSize * 0.72;
+-    this.enqueueF4Stamp(hit, team, actor, PaintEventType.Foot, {
+-      radiusU: radius, radiusV: radius, angle: 0
+-    });
++    const radius = hit.surface.cellSize * 0.72;
++    this.enqueueF4Stamp(hit, team, actor, PaintEventType.Foot, {
++      radiusU: radius, radiusV: radius, angle: 0, f4ExactContactCell:true
++    });
+   }
+ 
+   private resolveContactDamage(
+@@ -2530,17 +2554,26 @@
+ 
+   private enqueueSlosherMidDrop(slot: ProjectileSlot, from: Vec3, to: Vec3, terminal: number): void {
+     const flight = slot.slosherFlight!;
+-    if (flight.droplet.head || flight.droplet.index !== 2 || flight.distance >= 1.05) return;
+-    const at = 1.05 - flight.distance;
+-    if (at >= Math.min(from.distance(to), terminal)) return;
+-    const point = pointOnSegment(from, to, at);
+-    const hit = this.castF4Paint(point, point.clone().add(new Vec3(0, -1.05, 0)));
+-    if (hit && (hit.surface.baseFlags & SurfaceFlags.Wall) === 0) {
+-      this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet, {
+-        radiusU: 0.37, radiusV: 0.21,
+-        angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis))
+-      },slot.f4GaugeLaunchLife);
+-    }
++    if (flight.droplet.head || flight.droplet.index !== 2) return;
++    const playable=this.f4PlayableShooterControls;
++    const targets=playable?[1.05,2.10]:[1.05];
++    for(let i=0;i<targets.length;i++){
++      const at=targets[i]!-flight.distance;
++      if(at<0||(!playable&&at===0)||at>=Math.min(from.distance(to),terminal))continue;
++      // Piercing contacts can revisit this segment; release each sample once.
++      if(playable){
++        const bit=1<<i;if((flight.paintDropMask??0)&bit)continue;
++        flight.paintDropMask=(flight.paintDropMask??0)|bit;
++      }
++      const point=pointOnSegment(from,to,at);
++      const hit=this.castF4Paint(point,point.clone().add(new Vec3(0,playable?-1.65:-1.05,0)));
++      if(hit&&(hit.surface.baseFlags&SurfaceFlags.Wall)===0){
++        this.enqueueF4Stamp(hit,slot.team,slot.sourceId,PaintEventType.MidDroplet,{
++          radiusU:0.37,radiusV:0.21,
++          angle:Math.atan2(slot.velocity.dot(hit.surface.vAxis),slot.velocity.dot(hit.surface.uAxis))
++        },slot.f4GaugeLaunchLife);
++      }
++    }
+   }
+ 
+   private enqueueSlosherWallRunoff(slot: ProjectileSlot, wall: SurfaceRayHit): void {
+@@ -3298,9 +3331,12 @@
+     const length = axis.length();
+     if (length <= 1e-8) return;
+     axis.mulScalar(1 / length);
+-    for (let d = rail.depth * 0.55; d < length; d += rail.spacing) {
+-      const point = origin.clone().add(axis.clone().mulScalar(d));
+-      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - 1.8, point.z));
++    // Sample only the actual terminated beam; limit extra ray count.
++    const spacing=this.f4PlayableShooterControls?Math.max(rail.spacing*.6,Math.min(rail.spacing,rail.depth*.85)):rail.spacing;
++    if(!Number.isFinite(spacing)||spacing<=0)return;
++    for (let d = rail.depth * 0.55; d < length; d += spacing) {
++      const point = origin.clone().add(axis.clone().mulScalar(d));
++      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - (this.f4PlayableShooterControls?2.4:1.8), point.z));
+       if (!hit) continue;
+       const angle = Math.atan2(axis.dot(hit.surface.vAxis), axis.dot(hit.surface.uAxis));
+       this.enqueueF4Stamp(hit, team, actor, PaintEventType.MidDroplet, {
+@@ -4913,8 +4949,8 @@
+ 
+   private enqueueF4Stamp(
+     hit: SurfaceRayHit, team: Team.A | Team.B, actor: string, type: PaintEventType,
+-    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle'>,
+-    f4GaugeLaunchLife?:string|null
++    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle' | 'f4ExactContactCell'>,
++    f4GaugeLaunchLife?:string|null
+   ): void {
+     this.coordinator.enqueue({
+       source: type === PaintEventType.Special ? PaintSource.Special :
+@@ -4963,9 +4999,13 @@
+           projected.v < -span || projected.v > surface.heightMeters + span) continue;
+       // The blaster throws radial droplets. A stuck arrow has just one
+       // small second coat near its impact. All samples need a stage contact.
+-      for (let i = 0; i < (spray ? 9 : 1); i++) {
+-        const angle = i * Math.PI / 4;
+-        const offset = i === 0 ? 0 : span * 0.66;
++      // Fill the interior of broad bursts as well as the outer ring.
++      // Extra samples still require the same first physical contact.
++      const dense=this.f4PlayableShooterControls&&spray;
++      for (let i = 0; i < (spray ? (dense ? 17 : 9) : 1); i++) {
++        const inner=i>8;
++        const angle = i * Math.PI / 4 + (inner ? Math.PI / 8 : 0);
++        const offset = i === 0 ? 0 : span * (inner ? 0.34 : 0.66);
+         const u = projected.u + Math.cos(angle) * offset;
+         const v = projected.v + Math.sin(angle) * offset;
+         if (!sourceRegisteredPaintCellActive(surface, u, v)) continue;
+diff --git a/src/subweapon/SubWeaponSystem.ts b/src/subweapon/SubWeaponSystem.ts
+--- a/src/subweapon/SubWeaponSystem.ts
++++ b/src/subweapon/SubWeaponSystem.ts
+@@ -767,8 +767,26 @@
+     for (let i = 0; i <= rule.splashes; i++) {
+       const a = i * 2.399963229728653;
+       const r = profile.paintRadiusMeters * Math.sqrt(i / rule.splashes) * .8;
+-      const end = origin.clone().add(new Vec3(Math.cos(a) * r,-1.6,Math.sin(a) * r));
+-      const hit = this.physics.f4PaintAtStageHit(this.physics.castStageSegment(origin,end,'ink-projectile'),this.surfaces);
++      const end = origin.clone().add(new Vec3(Math.cos(a) * r,-1.6,Math.sin(a) * r));
++      let stage=this.physics.castStageSegment(origin,end,'ink-projectile');
++      if(this.f4GaugeLifeAtLaunch&&i>0){
++        // A landed bomb sits just centimeters above ground. The original
++        // downward diagonal intersects the floor almost at the bomb for
++        // every radius. Find the intended radial ground contact first,
++        // then require an unobstructed physical ray from the real bomb.
++        const probe=end.clone();probe.y=origin.y+.15;
++        const target=this.physics.castStageSegment(probe,end,'ink-projectile');
++        if(target?.normal&&target.normal.y>=.5){
++          const direction=target.point.clone().sub(origin);
++          if(direction.lengthSq()>1e-8){
++            const beyond=target.point.clone().add(direction.normalize().mulScalar(.025));
++            const visible=this.physics.castStageSegment(origin,beyond,'ink-projectile');
++            if(visible&&visible.point.distance(target.point)<=.035&&
++               (visible.normal?.y??0)>=.5)stage=visible;
++          }
++        }
++      }
++      const hit = this.physics.f4PaintAtStageHit(stage,this.surfaces);
+       if (!hit || (hit.surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
+       const radius = profile.paintRadiusMeters * (i === 0 ? .42 : .23);
+       this.coordinator.enqueue({ source: actor ? PaintSource.Cpu : PaintSource.Human,
+diff --git a/src/special/F4SpecialRuntime.ts b/src/special/F4SpecialRuntime.ts
+--- a/src/special/F4SpecialRuntime.ts
++++ b/src/special/F4SpecialRuntime.ts
+@@ -522,7 +522,8 @@
+         speed:21,gravity:4,lifeSeconds:1.15,diameter:.27,directDamage:shot.direct!,
+         blast:{radius:1.45,damage:shot.blast!,paint:.48}
+       }):launch({
+-        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,damageAtAge:crabProjectileDamage
++        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,
++        impactPaintRadius:.28,damageAtAge:crabProjectileDamage
+       })
+     });
+     const clean=()=>{this.devices.delete(contact);visual?.destroy();visual=null;};
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1337,8 +1337,12 @@
+   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
+    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
+    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
+-  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)
+-   this.projectiles.enableF4PlayableShooterControls();
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++   this.projectiles.enableF4PlayableShooterControls();
++   this.coordinator.enableF4PlayablePaint();
++   this.cpu.enableF4PlayableTactics();
++   this.traffic.enableF4PlayableRecovery();
++  }
+   const zipResearchMode=sessionStorage.getItem('t21F4ZipKccResearch');
+   this.f4ZipResearchAimed=this.f4SpecialProbe&&zipResearchMode==='wall-return-aimed';
+   this.f4ZipResearchEnabled=this.f4SpecialProbe&&
+@@ -2213,8 +2217,20 @@
+       !this.f4LiveWorldPending()&&
+       !this.survey.snapshot().active&&this.galleryIndex<0&&
+       (this.b203FullRound||
+-       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
+-    void this.canvas.requestPointerLock();
++       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING')){
++    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++     // A background/unfocused document can reject the browser request.
++     // Never start a simulated round or retry without a real user click.
++     const report=()=>{
++      this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
++      resumeButton.textContent='CLICK GAME WINDOW · TRY AGAIN';
++     };
++     if(document.hidden||!document.hasFocus()){report();return;}
++     this.canvas.dataset.t21F4PointerLockRequest='REQUESTED';
++     try{void Promise.resolve(this.canvas.requestPointerLock()).catch(report);}
++     catch{report();}
++    }else void this.canvas.requestPointerLock();
++   }
+   });
+   // B378: Existing physical weapon profiles become playable in source
+   // 180s only before first pointer lock; never disturb genuine B343's
+@@ -2903,7 +2919,20 @@
+     this.refreshB25PaintRun();
+    }
+   });
+-  document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++   document.addEventListener('pointerlockerror',()=>{
++    if(this.canvas.dataset.t21F4PointerLockRequest!=='REQUESTED')return;
++    this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
++    resumeButton.textContent='CLICK GAME WINDOW · TRY AGAIN';
++   });
++   document.addEventListener('pointerlockchange',()=>{
++    if(document.pointerLockElement===this.canvas){
++     this.canvas.dataset.t21F4PointerLockRequest='LOCKED';
++     resumeButton.textContent='RESUME THIS ROUND · SAME REAL WORLD';
++    }
++   });
++  }
++  document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
+   document.addEventListener('pointerlockchange',()=>{
+    const running=this.b25Run.snapshot().status==='RUNNING';
+    if(document.pointerLockElement===this.canvas){
+@@ -6302,8 +6331,9 @@
+     if(alive&&this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
+        this.matchState==='PLAYING'&&f4BelowInstalledGeometry(
+         this.physics.f4ResearchBottomY,
+-        this.player.getPosition(this.p).y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+-        this.stats.playerGrounded)){
++        this.player.getPosition(this.p).y+(this.player.currentMode==='SQUID'?
++         PLAYER_CHARACTER_PHYSICS.squidTopOffsetFromBodyMeters:PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters),
++        this.stats.playerGrounded)){
+      this.resources.applyDamage(this.resources.currentHp);
+      alive=false;
+      this.canvas.dataset.t21F4LastVoidSplatTick=String(frame);
+@@ -8137,8 +8167,13 @@
+    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
+    ready?(floorWarning?'制限付き試合を開始（追加床未準備）':'START 180s ROUND'):'RESUME THIS ROUND · SAME REAL WORLD';
+-  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
+-  else stopResume.removeAttribute('title');
++  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
++  else stopResume.removeAttribute('title');
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&ordinaryPause&&!stopResume.disabled&&
++     this.canvas.dataset.t21F4PointerLockRequest==='REJECTED'){
++   stopResume.textContent='ゲーム画面を選択して再試行';
++   stopResume.title='ブラウザがマウス操作の取得を拒否しました。画面を選択してもう一度クリックしてください。';
++  }
+   const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+    '#t21-f3-source-mode-menu-ready');
+   if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
+@@ -10133,8 +10168,9 @@
+     kit:{weapon:f4Weapon.displayName,classLabel:f4Weapon.classLabel,
+      sub:f4Sub.displayName,subCost:f4Sub.inkCost,special:f4SpecialName(f4Weapon.id)},
+     score:this.ink.readF4ProvisionalTurf(),matchState:state.matchState,
+-    paused:state.paused,stopped:!!state.stopReason,remainingSeconds:state.timeRemainingSeconds,
+-    matchSummary:state.matchState==='TIME_UP'?{
++    paused:state.paused,stopped:!!state.stopReason,remainingSeconds:state.timeRemainingSeconds,
++    pointerLockState:this.canvas.dataset.t21F4PointerLockRequest??null,
++    matchSummary:state.matchState==='TIME_UP'?{
+      directHits:state.humanCpuDirectHits,directSplats:state.humanCpuDirectSplats,
+      deaths:state.humanSplats,respawns:state.humanRespawns,
+      changedCells:state.b23HumanInkFeedback.humanChangedCells
+diff --git a/src/ink/InkSurfaceMaterial.ts b/src/ink/InkSurfaceMaterial.ts
+--- a/src/ink/InkSurfaceMaterial.ts
++++ b/src/ink/InkSurfaceMaterial.ts
+@@ -89,7 +89,8 @@
+     vec3 lightDir = normalize(uF4LightDir);
+     vec3 hRaw = lightDir + v;
+     vec3 h = hRaw / max(length(hRaw), 0.001);
+-    vec2 p = local;
++    // World-anchored pigment crosses independent floor tiles without a seam.
++    vec2 p = vWorldPos.xz + vWorldPos.y * vec2(0.47, 0.69);
+     float detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
+     float pigment = 0.97;
+     // Fade fine pigment before it becomes subpixel; skip far-away waves.
+@@ -197,7 +198,8 @@
+     let lightDir = normalize(uniform.uF4LightDir);
+     let hRaw = lightDir + v;
+     let h = hRaw / max(length(hRaw), 0.001);
+-    let p = local;
++    // Same world-anchored pigment as GLSL; mask and ownership unchanged.
++    let p = input.vWorldPos.xz + input.vWorldPos.y * vec2f(0.47, 0.69);
+     let detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
+     var pigment = 0.97;
+     if (detail > 0.0) {
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -12,7 +12,7 @@
+ import { GAME_CONFIG } from '../config/game/gameConfig';
+ import type { PerformanceStats } from '../core/PerformanceStats';
+ import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
+-import type { PaintSurface } from '../ink/PaintSurface';
++import { F4_PAINT_PLANE_TOLERANCE, type PaintSurface } from '../ink/PaintSurface';
+ import { SurfaceFlags, Team } from '../ink/types';
+ import type { PlayerInput } from '../input/PlayerInput';
+ import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
+@@ -235,7 +235,8 @@
+   private sourceSupportedSolidId:string|null=null;
+   private sourceFootGapMeters:number|null=null;
+   private readonly sourceFootCastPosition=new Vec3();
+-  private readonly sourceFloorInkPoint=new Vec3();
++  private readonly sourceFloorInkPoint=new Vec3();
++  private sourceFloorNormal:Vec3|null=null;
+   private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
+     this.sourceSupportedSolidId!==null&&
+     (this.physics.hasF4WholeResearchTrimesh?
+@@ -593,8 +594,9 @@
+   ):void{
+     this.nativeSourceGroundInkGuard=enabled;
+     this.sourceSupportedSolidId=null;
+-    this.sourceFootGapMeters=null;
+-    this.sourcePaintBackingById=null;
++    this.sourceFootGapMeters=null;
++    this.sourceFloorNormal=null;
++    this.sourcePaintBackingById=null;
+     if(!enabled)return;
+     if(!paint||paint.length!==17||
+        this.gameplayInk.getSurfaces().length!==paint.length)
+@@ -624,8 +626,16 @@
+   private sampleFootInk():GameplayInkSample|null{
+     if(this.nativeSourceGroundInkGuard&&
+        (!this.grounded||!this.sourceSupportedSolidId))return null;
+-    return this.gameplayInk.sampleWorld(
+-      this.nativeSourceGroundInkGuard?this.sourceFloorInkPoint:this.footPoint,
++    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&this.nativeSourceGroundInkGuard){
++      const normal=this.sourceFloorNormal;
++      if(!normal||this.sourceSupportedSolidId!=='T21_F4_LOCAL_F3L_RESEARCH')return null;
++      // Match actual support normal and projectile paint tolerance.
++      return this.gameplayInk.sampleWorld(this.sourceFloorInkPoint,F4_PAINT_PLANE_TOLERANCE,
++        SurfaceFlags.Swimmable,SurfaceFlags.Wall,s=>this.sourceBackingMatchesSupport(s)&&
++          Math.abs(s.normal.dot(normal))>=.95);
++    }
++    return this.gameplayInk.sampleWorld(
++      this.nativeSourceGroundInkGuard?this.sourceFloorInkPoint:this.footPoint,
+       this.physics.hasF4WholeResearchTrimesh?.10:.40,
+       SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+       this.nativeSourceGroundInkGuard?this.sourceBackingMatchesSupport:undefined
+@@ -748,9 +758,10 @@
+     this.renderPosition.copy(position);
+     // Presentation reset only; the actual spawn and colliders above remain authoritative.
+     this.camera.resetF4AimTracking?.();
+-    this.sourceSupportedSolidId=null;
+-    this.sourceFootGapMeters=null;
+-    this.footPoint.set(
++    this.sourceSupportedSolidId=null;
++    this.sourceFootGapMeters=null;
++    this.sourceFloorNormal=null;
++    this.footPoint.set(
+       position.x,
+       position.y - PlayerController.humanFootOffset + 0.06,
+       position.z
+@@ -815,7 +826,13 @@
+     // step; no extra floor, paint ownership, collision or wall authority.
+     const squidHeldForTick=this.nativeSourceGroundInkGuard
+       ? this.input.consumeSquidHeldForPlayerTick():this.input.squidHeld;
+-    if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
++    if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
++    // Releasing Shift must not materialize a taller capsule inside a ceiling.
++    // Keep actual squid movement until the requested human shape fits.
++    const blockedHumanForm=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++      this.mode==='SQUID'&&!squidHeldForTick&&
++      !this.physics.f4HumanFormClear(bodyPosition,PlayerController.humanHalfHeight,
++        PlayerController.humanRadius,this.body);
+     // A genuine Space tap one fixed tick before landing used to disappear.
+     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
+     // No extra ground/coyote-time/stepping or changes to frozen T20.
+@@ -953,9 +970,9 @@
+       this.surgeRemainingSeconds = Math.max(0, this.surgeRemainingSeconds - dt);
+       this.verticalVelocity -= GAME_CONFIG.player.surgeGravityMetersPerSecond2 * dt;
+       this.setSnapToGround(false);
+-    } else if (squidHeldForTick) {
+-      this.setMode('SQUID');
+-      const wall = this.findOwnWallSample(bodyPosition);
++    } else if (squidHeldForTick || blockedHumanForm) {
++      this.setMode('SQUID');
++      const wall = squidHeldForTick?this.findOwnWallSample(bodyPosition):null;
+       // A wall swim/charge owns its Space semantics; do not carry a floor
+       // jump tap into a later unrelated ground contact.
+       if (wall) this.sourceJumpBufferSeconds = 0;
+@@ -995,7 +1012,7 @@
+         // when releasing Shift into HUMAN. Do not create airborne ascent
+         // from a missing wall or change genuine SURGE/roll jump impulses.
+         if(this.nativeSourceGroundInkGuard&&
+-           !this.f4CanCarryWallCrest(bodyPosition))
++           (blockedHumanForm||!this.f4CanCarryWallCrest(bodyPosition)))
+           this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
+             this.locomotionState,this.verticalVelocity);
+         this.surgeChargeSeconds = 0;
+@@ -1018,8 +1035,8 @@
+           this.captureSquidRollTurnIntent();
+ 
+           if (nativeSourceSquidRollJumpRequested(
+-            jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
+-          ) && this.grounded && this.squidRollTurnWindowSeconds > 0) {
++            jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
++          ) && !blockedHumanForm && this.grounded && this.squidRollTurnWindowSeconds > 0) {
+             this.startSquidRoll();
+           } else {
+             this.applyHorizontalTarget(
+@@ -1118,8 +1135,19 @@
+       this.characterCollisionFilter
+     );
+     const corrected = this.character.computedMovement();
+-    this.grounded = this.character.computedGrounded();
+-    if(this.f4KccAuditEnabled){
++    this.grounded = this.character.computedGrounded();
++    // Real overhead contact terminates upward momentum, not the entire jump.
++    // Keep normal slope/autostep results and intentional wall drive intact.
++    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++       this.verticalVelocity>0&&movement.y>0&&movement.y-corrected.y>.005&&
++       this.locomotionState!=='SWIM_WALL'&&this.locomotionState!=='SURGE_CHARGE'){
++      for(let i=0;i<this.character.numComputedCollisions();i++){
++        const contact=this.character.computedCollision(i);
++        if(contact?.collider&&this.physics.sourceSolidIdForCollider(contact.collider)&&
++           contact.normal1.y<-.5){this.verticalVelocity=0;break;}
++      }
++    }
++    if(this.f4KccAuditEnabled){
+       const contacts:{colliderHandle:number;solidId:string|null;normal:number[]}[]=[];
+       for(let i=0;i<this.character.numComputedCollisions();i++){
+         const hit=this.character.computedCollision(i);
+@@ -1206,19 +1234,28 @@
+          !candidate||Math.abs(p.y-PlayerController.humanFootOffset-candidate.point.y)>.12)?null:candidate;
+       // At an actual floor seam, use a real grounded KCC contact, not
+       // an invented center floor ray. Restrict its witness to current foot.
+-      if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
+-        const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
++      if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
++        const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
++        let bestSupportCost=Infinity;
+         for(let i=0;i<this.character.numComputedCollisions();i++){
+           const c=this.character.computedCollision(i);
+           if(!c?.collider||!f4WalkableSupportNormal(c.normal1.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))continue;
+           const id=this.physics.sourceSolidIdForCollider(c.collider),w=c.witness1;
+           if(!id||Math.abs(p.y-PlayerController.humanFootOffset-w.y)>.12||
+              Math.hypot(w.x-p.x,w.z-p.z)>radius+.075)continue;
+-          hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
+-            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};break;
++          // Prefer the contact closest to the actual foot center, rather
++          // than an arbitrary first triangle at a ramp/step seam.
++          const cost=Math.abs(p.y-PlayerController.humanFootOffset-w.y)+
++            Math.hypot(w.x-p.x,w.z-p.z);
++          if(this.f4ProvisionalControls&&cost>=bestSupportCost)continue;
++          bestSupportCost=cost;
++          hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
++            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};
++          if(!this.f4ProvisionalControls)break;
+         }
+       }
+-      this.sourceSupportedSolidId=hit?.solidId??null;
++      this.sourceSupportedSolidId=hit?.solidId??null;
++      this.sourceFloorNormal=hit?.normal??null;
+       // Read the ink cell at the actual registered Rapier support point.
+       // Projecting the elevated capsule/ball foot onto a slope shifts UV
+       // downhill/uphill across ink-cell and surface boundaries. Reuse this
+@@ -1239,9 +1276,14 @@
+     }
+     // Ownership cannot survive a real departure from a painted wall for
+     // even one resource-update tick. No state/velocity/position change.
+-    if(this.physics.hasF4WholeResearchTrimesh&&this.wallSurfaceId.startsWith('F4ProvisionalWall:')&&
+-       (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')&&
+-       !this.findOwnWallSample(p))this.inkRelation='NONE';
++    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++       (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')){
++      const wall=this.findF4PhysicalOwnWall(p);
++      this.inkRelation=wall?'OWN':'NONE';
++      if(wall)this.wallSurfaceId=wall.sample.surface.id;
++    }else if(this.physics.hasF4WholeResearchTrimesh&&this.wallSurfaceId.startsWith('F4ProvisionalWall:')&&
++       (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')&&
++       !this.findOwnWallSample(p))this.inkRelation='NONE';
+     this.stats.playerInkRelation = this.currentInkRelation;
+     this.stats.playerSampleSurface = debugSample?.surface.id ?? '-';
+     this.stats.playerSampleU = debugSample?.u ?? Number.NaN;
+@@ -1373,7 +1415,10 @@
+ 
+   private applyWallSwim(wall: OwnWallSample): void {
+     const tuning = GAME_CONFIG.player;
+-    const tangent = wall.sample.surface.uAxis;
++    // Retained wall UVs need not have a horizontal U axis.
++    const live=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh;
++    const tangent = live?new Vec3(-wall.outward.z,0,wall.outward.x):wall.sample.surface.uAxis;
++    const speedScale=live?(this.mistSpeedScale??1):1;
+     const lateralAmount = clamp(
+       this.desired.x * tangent.x + this.desired.z * tangent.z,
+       -1,
+@@ -1382,12 +1427,12 @@
+     const climbAmount = clamp(wall.towardAmount, 0, 1);
+ 
+     this.velocity.x =
+-      tangent.x * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond -
++      tangent.x * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond * speedScale -
+       wall.outward.x * tuning.wallStickSpeedMetersPerSecond;
+     this.velocity.z =
+-      tangent.z * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond -
++      tangent.z * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond * speedScale -
+       wall.outward.z * tuning.wallStickSpeedMetersPerSecond;
+-    this.verticalVelocity = climbAmount * tuning.squidWallClimbSpeedMetersPerSecond;
++    this.verticalVelocity = climbAmount * tuning.squidWallClimbSpeedMetersPerSecond * speedScale;
+     this.grounded = false;
+   }
+ 
+@@ -1420,11 +1465,11 @@
+   // the next movement; floor ray is only a gate, not a landing guarantee.
+   private f4CanCarryWallCrest(body:{x:number;y:number;z:number}):boolean{
+     if(!this.physics.hasF4WholeResearchTrimesh||this.locomotionState!=='SWIM_WALL'||
+-       !this.wallSurfaceId.startsWith('F4ProvisionalWall:')||this.verticalVelocity<=0||
++       (!this.f4ProvisionalControls&&!this.wallSurfaceId.startsWith('F4ProvisionalWall:'))||this.verticalVelocity<=0||
+        !this.input.sourceLiveInputAvailable)return false;
+     const surface=this.gameplayInk.getSurface(this.wallSurfaceId);
+-    if(!surface)return false;
+-    const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
++    if(!surface||!(surface.baseFlags&SurfaceFlags.Wall))return false;
++    const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
+     const signed=surface.projectWorldPoint(center).signedPlaneDistance;
+     if(Math.abs(signed)>PlayerController.squidRadius+.20)return false;
+     const inward=surface.normal.clone().mulScalar(signed>=0?-1:1);
+@@ -1439,8 +1484,57 @@
+       this.verticalVelocity,toward,GAME_CONFIG.player.gravityMetersPerSecond2,clear);
+   }
+ 
+-  private findOwnWallSample(bodyPosition: { x: number; y: number; z: number }): OwnWallSample | null {
+-    if (this.desired.lengthSq() < 0.04) return null;
++  /** Live F4: first physical contact, including sideways wall travel. */
++  private findF4PhysicalOwnWall(body:{x:number;y:number;z:number}):OwnWallSample|null{
++    const tuning=GAME_CONFIG.player;
++    const from=new Vec3(body.x,body.y+PlayerController.squidCenterOffsetY,body.z);
++    const reach=PlayerController.squidRadius+.20;
++    const previous=(this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')
++      ?this.gameplayInk.getSurface(this.wallSurfaceId):null;
++    const directions:{direction:Vec3;continuing:boolean}[]=[];
++    if(previous){
++      const side=previous.projectWorldPoint(from).signedPlaneDistance;
++      const inward=previous.normal.clone().mulScalar(side>=0?-1:1);
++      inward.y=0;
++      if(inward.lengthSq()>1e-8){
++        inward.normalize();
++        // No grace through an unpainted wall or after moving away.
++        if(this.desired.dot(inward)>=-.12)
++          directions.push({direction:inward,continuing:true});
++      }
++    }
++    if(this.desired.lengthSq()>=.04)
++      directions.push({direction:this.desired.clone().normalize(),continuing:false});
++    if(!directions.length)return null;
++    const candidates=this.gameplayInk.f4NearbyPaintSurfaces(from,reach+F4_PAINT_PLANE_TOLERANCE)
++      .filter(s=>(s.baseFlags&(SurfaceFlags.Swimmable|SurfaceFlags.Wall))===
++        (SurfaceFlags.Swimmable|SurfaceFlags.Wall));
++    for(const {direction,continuing} of directions){
++      const to=from.clone().add(direction.clone().mulScalar(reach));
++      const physical=this.physics.castStageSegment(from,to,'ink-projectile');
++      if(!physical?.normal||!Number.isFinite(physical.distance)||
++         physical.distance<0||physical.distance>reach||Math.abs(physical.normal.y)>.15)continue;
++      const hit=this.physics.f4PaintAtStageHit(physical,candidates);
++      if(!hit)continue;
++      const actual=this.gameplayInk.sampleWorld(hit.worldPoint,F4_PAINT_PLANE_TOLERANCE,
++        SurfaceFlags.Swimmable|SurfaceFlags.Wall,0,s=>s===hit.surface);
++      if(!actual||actual.owner!==this.team)continue;
++      const outward=physical.normal.clone();
++      outward.y=0;
++      if(outward.lengthSq()<1e-8)continue;
++      outward.normalize();
++      if(outward.dot(direction)>0)outward.mulScalar(-1);
++      const towardAmount=-this.desired.dot(outward);
++      if(towardAmount<(continuing?-.12:tuning.wallAttachInputThreshold))continue;
++      return {sample:actual,outward,towardAmount};
++    }
++    return null;
++  }
++
++  private findOwnWallSample(bodyPosition: { x: number; y: number; z: number }): OwnWallSample | null {
++    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh)
++      return this.findF4PhysicalOwnWall(bodyPosition);
++    if (this.desired.lengthSq() < 0.04) return null;
+ 
+     const tuning = GAME_CONFIG.player;
+     this.wallProbePoint.set(
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -1,4 +1,4 @@
+-import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
++import RAPIER, { type Collider, type RigidBody, type World } from '@dimforge/rapier3d-compat';
+ import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
+ import { Quat, Vec3 } from 'playcanvas';
+ import {
+@@ -233,7 +233,16 @@
+     };
+   }
+ 
+-  /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */
++  /** Exact prospective human capsule overlap; no movement or collider writes. */
++  public f4HumanFormClear(center:{x:number;y:number;z:number},halfHeight:number,radius:number,body:RigidBody):boolean{
++    if(!this.f4WholeResearchTrimeshActive||
++       ![center.x,center.y,center.z,halfHeight,radius].every(Number.isFinite)||halfHeight<=0||radius<=0)return false;
++    return !this.world.intersectionWithShape(center,this.cameraSweepRotation,
++      new RAPIER.Capsule(halfHeight,radius),undefined,undefined,undefined,body,
++      collider=>this.shouldCharacterCollide(collider,'HUMAN'));
++  }
++
++  /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */
+   public auditF4HumanCapsuleSegment(
+     from:Vec3,to:Vec3,halfHeight:number,radius:number,ownCollider:Collider
+   ) {
+diff --git a/src/ai/CpuAgentSystem.ts b/src/ai/CpuAgentSystem.ts
+--- a/src/ai/CpuAgentSystem.ts
++++ b/src/ai/CpuAgentSystem.ts
+@@ -84,7 +84,13 @@
+   shieldAbsorbed:boolean;lethalHpZero:boolean;
+ }
+ 
+-export type CpuWeaponAction =
++/** Actual HP hysteresis for provisional CPU recovery. No HP writes. */
++export function f4CpuWoundedRecovery(previous:boolean,hp:number,maxHp:number):boolean{
++  if(!Number.isFinite(hp)||!Number.isFinite(maxHp)||hp<=0||maxHp<=0||hp>maxHp)return false;
++  return previous?hp<maxHp*.65:hp<=maxHp*.35;
++}
++
++export type CpuWeaponAction =
+   | 'PROJECTILE'
+   | 'ROLLER_FLICK'
+   | 'ROLLER_ROLL'
+@@ -308,7 +314,8 @@
+   ink: number;
+   inkRecoveryLockSeconds: number;
+   f4SubRecoverySeconds?: number;
+-  f4RecoveringInk?: boolean;
++  f4RecoveringInk?: boolean;
++  f4RecoveringHp?: boolean;
+   hpRecoveryDelaySeconds: number;
+   lethalHumanDirect: boolean;
+   b213ActualAttackerId:string|null;
+@@ -532,7 +539,9 @@
+   private readonly samplePoint = new Vec3();
+   private readonly targetPoint = new Vec3();
+   private activeLastTick = false;
+-  private f4WholeNavigation = false;
++  private f4WholeNavigation = false;
++  private f4PlayableTactics=false;
++  public enableF4PlayableTactics():void{this.f4PlayableTactics=true;}
+   private f4CombatVisualFacing=false;
+   private readonly f4VisualAimTick=new Map<string,{tick:number;life:number}>();
+   /** Render-only opt-in from the existing local visual-polish gate. */
+@@ -3457,9 +3466,11 @@
+       return null;
+     const support=this.phase14qGroundCollision?.sourceFootSupport?.(
+       bot.id,bot.position)??null;
+-    if(this.f4WholeNavigation)
+-      return support?this.gameplayInk.sampleWorld(
+-        support.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall):null;
++    if(this.f4WholeNavigation){
++      if(this.f4PlayableTactics&&(!support||Math.abs(support.point.y-bot.position.y)>.25))return null;
++      return support?this.gameplayInk.sampleWorld(
++        support.point,this.f4PlayableTactics?.055:.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall):null;
++    }
+     return b178SampleRegisteredSourceFoot(
+       this.gameplayInk,this.stage.paintSurfaces,support);
+   }
+@@ -3543,9 +3554,14 @@
+       const rate = relation === 'OWN'
+         ? GAME_CONFIG.cpu.ownInkHpRecoveryPerSecond
+         : GAME_CONFIG.combat.humanHpRecoveryPerSecond;
+-      bot.hp = Math.min(GAME_CONFIG.combat.playerMaxHp, bot.hp + rate * dt);
+-    }
+-  }
++      bot.hp = Math.min(GAME_CONFIG.combat.playerMaxHp, bot.hp + rate * dt);
++    }
++    if(this.f4PlayableTactics&&this.f4WholeNavigation){
++      bot.f4RecoveringHp=f4CpuWoundedRecovery(bot.f4RecoveringHp===true,bot.hp,GAME_CONFIG.combat.playerMaxHp);
++      // Steering reads the same current tank as the later weapon decision.
++      bot.f4RecoveringInk=recoveringInk(bot.f4RecoveringInk===true,bot.ink,GAME_CONFIG.inkEconomy.capacity);
++    }
++  }
+ 
+   /** SOURCE turf-only SUB target for an otherwise idle real CPU.
+    * The cost, cooldown, and ballistic hit/paint are owned by the existing
+@@ -4061,8 +4077,19 @@
+       if(!Number.isFinite(distance)||distance<=.12)return null;
+       // The aim ends on the floor itself. Check the open segment before
+       // contact; actual projectile collision remains authoritative.
+-      const end=muzzle.clone().add(delta.mulScalar((distance-.08)/distance));
+-      return ray(muzzle,end)?null:aim.target;
++      const end=muzzle.clone().add(delta.mulScalar((distance-.08)/distance));
++      if(ray(muzzle,end))return null;
++      // A committed weapon may finish its paid action, but prefer an
++      // independently backed unowned neighbor over a saturated impact.
++      if(this.f4PlayableTactics&&paint.owner===bot.team){
++        const neighbor=b180OriginalSourceUnownedNeighborAim(paint,bot.team,candidate=>
++          this.cpuTargetInRange(bot,candidate,profile)&&
++          this.b216OriginalSourceTurfSightClear(bot,candidate)&&
++          !!this.gameplayInk.sampleWorld(candidate,.055,SurfaceFlags.Paintable,SurfaceFlags.Wall,
++            surface=>surface===paint.surface));
++        if(neighbor)return neighbor;
++      }
++      return aim.target;
+     }
+     if(!this.b216SourceStageAimValidated||!this.sampleRegisteredSourceFoot(bot))return null;
+     const paint=this.gameplayInk.sampleWorld(
+@@ -4210,10 +4237,13 @@
+          this.chooseOriginalSourceTurfTarget(bot)) : null;
+     // Existing valid combat and paint aims retain priority. A failed old
+     // goal-based search can now fall back to independently backed turf.
+-    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&!turfTarget&&
+-       (cooldown<=0||finishTurfBurst)&&bot.weaponChargeSeconds<=0&&
+-       bot.weaponBurstShotsRemaining<=0)
+-      turfTarget=this.chooseF4NearbyTurfTarget(bot,profile);
++    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&
++       (!turfTarget||(this.f4PlayableTactics&&realSaturatedImpacts>=8&&!allyInk))&&
++       (cooldown<=0||finishTurfBurst)&&bot.weaponChargeSeconds<=0&&
++       bot.weaponBurstShotsRemaining<=0){
++      const fresh=this.chooseF4NearbyTurfTarget(bot,profile);
++      if(fresh)turfTarget=fresh;
++    }
+     // Charger and splatling already hold an independently source-verified
+     // committed floor aim while actually charging/finishing a burst.
+     // The P2 drought fallback must not replace that live trajectory.
+@@ -4380,7 +4410,11 @@
+       const turf = !hasCombatInRange && (!target || bot.fireRemaining > 0) && bot.ink > 16
+         ? this.gameplayInk.sampleWorld(motion.to, 0.10, SurfaceFlags.Paintable, SurfaceFlags.Wall)
+         : null;
+-      if ((closeContact || turf) && bot.ink + 1e-6 >= price) {
++      // Do not spend the whole tank rolling on already-owned turf. Keep
++      // rolling if a nearby backed cell is still worth painting or fighting.
++      const usefulTurf=turf&&(!this.f4PlayableTactics||turf.owner!==bot.team||
++        this.f4TurfValue(turf,bot.team,.65)>0);
++      if ((closeContact || usefulTurf) && bot.ink + 1e-6 >= price) {
+         this.pendingShots.push({
+           sourceId: bot.id, team: bot.team, origin: bot.position.clone(),
+           bodyPosition: bot.position.clone(), target: (target ?? motion.to).clone(), weaponId: profile.id,
+@@ -5085,7 +5119,30 @@
+   // Quiet, paid main-weapon turf opportunity even if Crowd currently has
+   // no admitted goal. World owner cells and current physical shot line
+   // decide admission; never set a movement target or create a free stamp.
+-  private chooseF4NearbyTurfTarget(bot:CpuBot,profile:ReturnType<typeof weaponProfile>):Vec3|null{
++  /** Bounded tactical estimate from current backed ownership, not a paint
++   * operation. Enemy turf carries twice the swing in a turf contest.
++   * No cross-surface guess: every counted neighbor is an active backed cell. */
++  private f4TurfValue(sample:GameplayInkSample,team:Team.A|Team.B,radius:number):number{
++    const surface=sample.surface;
++    const stride=Math.max(1,Math.min(8,Math.round(radius*.65/surface.cellSize)));
++    const cx=Math.min(surface.widthCells-1,Math.floor(sample.u/surface.cellSize));
++    const cy=Math.min(surface.heightCells-1,Math.floor(sample.v/surface.cellSize));
++    let value=0,seen=0;
++    for(const [dx,dy] of [[0,0],[stride,0],[-stride,0],[0,stride],[0,-stride]]){
++      const x=cx+dx!,y=cy+dy!;
++      if(x<0||y<0||x>=surface.widthCells||y>=surface.heightCells)continue;
++      const u=Math.min(surface.widthMeters-1e-6,(x+.5)*surface.cellSize);
++      const v=Math.min(surface.heightMeters-1e-6,(y+.5)*surface.cellSize);
++      if(!this.gameplayInk.isCellPhysicallyBackedAt(surface,u,v))continue;
++      const owner=surface.ownerGrid[surface.index(x,y)];
++      seen++;
++      if(owner===Team.Neutral)value+=1;
++      else if(owner!==team&&(owner===Team.A||owner===Team.B))value+=2;
++    }
++    return seen?value/5:0;
++  }
++
++  private chooseF4NearbyTurfTarget(bot:CpuBot,profile:ReturnType<typeof weaponProfile>):Vec3|null{
+     if(!this.f4WholeNavigation||!this.f4ResearchCombatStageRay||bot.f4RecoveringInk||
+        bot.lifeState!=='ACTIVE'||bot.hp<=0||bot.mobilityState!=='GROUND'||!bot.agent||
+        !this.f3dSourceGoals?.isLiveRejoinedSourceCpu?.(bot.id)||bot.fireRemaining>0)return null;
+@@ -5099,8 +5156,9 @@
+     const phase=(Math.floor(tick/30)+bot.id.charCodeAt(bot.id.length-1))%8;
+     // Short, bounded two-ring search. The same world sample must be
+     // backed, paintable and not already owned; no hidden enemy tracking.
+-    const points:{target:Vec3;score:number}[]=[];
+-    for(const radius of [Math.min(1.7,reach),reach]){
++    const points:{target:Vec3;score:number}[]=[];
++    const seen=new Set<string>();
++    for(const radius of [Math.min(1.7,reach),reach]){
+       for(let i=0;i<8;i++){
+         const angle=(i+phase/8)*Math.PI/4;
+         const probe=new Vec3(support.point.x+radius*Math.cos(angle),
+@@ -5109,7 +5167,17 @@
+         if(!sample||sample.surface.isScoreable||sample.owner===bot.team)continue;
+         const target=sample.surface.localToWorld(sample.u,sample.v);
+         if(!this.cpuTargetInRange(bot,target,profile)||Math.abs(target.y-support.point.y)>.55)continue;
+-        points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
++        if(this.f4PlayableTactics){
++          const s=sample.surface;
++          const key=s.id+':'+Math.floor(sample.u/s.cellSize)+':'+Math.floor(sample.v/s.cellSize);
++          if(seen.has(key))continue;
++          seen.add(key);
++          const value=this.f4TurfValue(sample,bot.team,Math.max(.35,profile.paintRadiusMeters));
++          if(value<=0)continue;
++          // Favor larger unowned patches and enemy turf over distant
++          // single-cell holes. Keep the existing actual weapon range/ray.
++          points.push({target,score:value*3+(sample.owner===Team.Neutral?1:2)-radius*.08});
++        }else points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
+       }
+     }
+     points.sort((x,y)=>y.score-x.score);
+@@ -5844,8 +5912,9 @@
+     bot.weaponGuarding = false;
+     bot.f4CanopyHold = false;
+     bot.f4CanopyOpen = false;
+-    bot.f4RecoveringInk = false;
+-    bot.guardEntity.enabled = false;
++    bot.f4RecoveringInk = false;
++    bot.f4RecoveringHp = false;
++    bot.guardEntity.enabled = false;
+     if (resetGuard) {
+       bot.weaponGuardHp = 100;
+       bot.weaponGuardBreakSeconds = 0;
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -87,7 +87,8 @@
+  fireRemaining:number;jumpCooldownSeconds:number;
+  lifeState?:'ACTIVE'|'SPLATTED';hp?:number;weaponId?:WeaponId;
+  ink?:number;b213ActualAttackerId?:string|null;b213ActualHitTick?:number;
+- f4RecoveringInk?:boolean;
++ f4RecoveringInk?:boolean;
++ f4RecoveringHp?:boolean;
+ }
+ /** Read-only SOURCE QA observation: a native splat may occur in the
+  * projectile phase AFTER traffic.observe() in the same physics tick.
+@@ -625,7 +626,9 @@
+  private readonly f4LastSeenOpponent=new Map<string,{id:string;point:Vec3;tick:number}>();
+  private readonly f4WholeDirections=new Map<string,number>();
+  private readonly f4PatrolNavigation=new F4PatrolNavigation();
+- private readonly f4PatrolSurvey=new F4PatrolSurvey();
++ private readonly f4PatrolSurvey=new F4PatrolSurvey();
++ private f4PlayableRecovery=false;
++ public enableF4PlayableRecovery():void{this.f4PlayableRecovery=true;}
+ 
+  constructor(
+   private readonly stage:StageDefinition,private nav:RecastStageNavigation,
+@@ -1699,9 +1702,10 @@
+   // Steering remains planar, but the firing envelope is measured from
+   // the real muzzle to the same physical body sample used by sight.
+   const distance=Math.hypot(dx,target.y-foot.y-GAME_CONFIG.cpu.muzzleHeightMeters,dz);
+-  const recovering=(bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
+-   (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
+-   (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
++  const recovering=(this.f4PlayableRecovery?bot.f4RecoveringHp===true:
++   (bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
++   (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65))||
++   (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+   const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
+   // Use the same physically supported swimmable owner cell as CPU resources.
+   const inkRelation=(point:Vec3)=>{
+@@ -1709,7 +1713,8 @@
+    const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
+    return !sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
+   };
+-  const ownsInk=(point:Vec3)=>inkRelation(point)==='OWN';
++  const ownsInk=(point:Vec3)=>this.f4PlayableRecovery?
++   this.f4RecoveryOwnFloor(point,bot.team):inkRelation(point)==='OWN';
+   if(!visible&&recovering&&ownsInk(foot))return result(null);
+   // Combat waypoints used to expire without registering the same lack of
+   // real progress as patrol goals. Avoid repeatedly selecting that blocked
+@@ -1950,7 +1955,29 @@
+   return null;
+  }
+ 
+- private chooseF4WholeGoal(id:string,foot:Vec3,out:Vec3,localActionsOpen:boolean):boolean{
++ /** Check actual static floor, support normal and authoritative backed ownership.
++  * Used only for live provisional recovery, never to authorize movement. */
++ private f4RecoveryOwnFloor(point:Readonly<{x:number;y:number;z:number}>,team:Team.A|Team.B):boolean{
++  const floor=this.sourceNativeCharacterFootHit(point);
++  const normal=floor?.normal;
++  if(!floor||!normal||Math.abs(floor.point.y-point.y)>.12||
++     normal.y<Math.cos(PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)-1e-6)return false;
++  const sample=this.sourceInk?.sampleWorld(floor.point,.055,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
++   s=>Math.abs(s.normal.dot(normal))>=.95);
++  return sample?.owner===team;
++ }
++
++ /** Prefer a real patch of own ink, rather than a single isolated cell.
++  * Center is mandatory. Four nearby floor samples are a bounded tie-break. */
++ private f4RecoveryPatchQuality(point:Vec3,team:Team.A|Team.B):number{
++  if(!this.f4RecoveryOwnFloor(point,team))return 0;
++  let count=1;
++  for(const [x,z] of [[.25,0],[-.25,0],[0,.25],[0,-.25]] as const)
++   if(this.f4RecoveryOwnFloor(new Vec3(point.x+x,point.y,point.z+z),team))count++;
++  return count;
++ }
++
++ private chooseF4WholeGoal(id:string,foot:Vec3,out:Vec3,localActionsOpen:boolean):boolean{
+   const bot=this.bots.find(candidate=>candidate.id===id);
+   if(!bot?.agent||!this.f4WholeSupport?.(id,foot))return false;
+   const previous=this.f4WholeGoals.get(id);
+@@ -1974,16 +2001,23 @@
+   }
+   // Share the combat recovery hysteresis, including the first low-ink tick.
+   // Hold only on actual swimmable own ink in ordinary lanes, never in combat.
+-  const quietRecovery=recoveringInk(bot.f4RecoveringInk===true,bot.ink??Infinity,GAME_CONFIG.inkEconomy.capacity);
++  const quietRecovery=recoveringInk(bot.f4RecoveringInk===true,bot.ink??Infinity,GAME_CONFIG.inkEconomy.capacity)||
++   (this.f4PlayableRecovery&&bot.f4RecoveringHp===true);
+   const recoveryFloor=quietRecovery&&this.freeCombat&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42?
+    this.sourceNativeCharacterFootHit(foot):null;
+-  const holdRecovery=!!recoveryFloor&&this.sourceInk?.sampleWorld(
+-   recoveryFloor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team;
++  const holdRecovery=!!recoveryFloor&&(this.f4PlayableRecovery?
++   this.f4RecoveryOwnFloor(foot,bot.team):this.sourceInk?.sampleWorld(
++   recoveryFloor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team);
+   const reached=!!previous&&foot.distance(previous.point)<=.35;
+   if(reached&&!previous?.opponent)this.f4PatrolNavigation.noteReached(id,this.b137NativeTick,foot);
+-  if(previous&&!previous.opponent&&!reached&&
+-     (previous.local?!holdRecovery&&localPatrolCanContinue(this.b137NativeTick,previous.issued,previous.advanced,previous.patrolVeto):
+-      this.b137NativeTick-previous.advanced<48)){
++  // A recovery destination can be repainted during travel. Revalidate
++  // its live ownership before retention; resume patrol when healed.
++  const retainedRecoveryValid=!this.f4PlayableRecovery||!previous?.recovering||
++   (quietRecovery&&this.f4RecoveryOwnFloor(previous.point,bot.team));
++  if(previous&&!previous.opponent&&!reached&&retainedRecoveryValid&&
++     (previous.local?!holdRecovery&&(!this.f4PlayableRecovery||!quietRecovery||previous.recovering===true)&&
++      localPatrolCanContinue(this.b137NativeTick,previous.issued,previous.advanced,previous.patrolVeto):
++      this.b137NativeTick-previous.advanced<48)){
+    out.copy(previous.point);
+    return true;
+   }
+@@ -1995,10 +2029,11 @@
+   if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
+   this.f4WholeGoals.delete(id);
+   const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
+-  const request=(point:Vec3,local:boolean)=>{
+-   this.f4PatrolNavigation.newGoal(id);
+-   this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
+-    advanced:this.b137NativeTick,bestDistance:foot.distance(point),
++  const request=(point:Vec3,local:boolean,recovery=false)=>{
++   this.f4PatrolNavigation.newGoal(id);
++   this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
++    ...(this.f4PlayableRecovery&&recovery?{recovering:true}:{}),
++    advanced:this.b137NativeTick,bestDistance:foot.distance(point),
+     // Real horizontal progress around bends also counts on ingress routes.
+     patrolTrail:[{x:foot.x,y:foot.y,z:foot.z}]});
+    out.copy(point);
+@@ -2051,8 +2086,11 @@
+   const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
+    a.mobilityState==='GROUND'&&(a.hp??0)>0);
+   const reservations=allies.flatMap(a=>{const g=this.f4WholeGoals.get(a.id);return g&&!g.opponent?[g.point]:[];});
+-  const recovering=quietRecovery||(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
+-   (bot.hp??Infinity)<GAME_CONFIG.combat.playerMaxHp*.45;
++  // Live recovery uses one hysteresis state for steering, holding and
++  // retained goals. Preserve the broader historical thresholds elsewhere.
++  const recovering=this.f4PlayableRecovery?quietRecovery:
++   quietRecovery||(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
++   (bot.hp??Infinity)<GAME_CONFIG.combat.playerMaxHp*.45;
+   const options={recovering,reservations};
+   const inkAt=(point:Vec3):PatrolInk=>{
+    const floor=this.sourceNativeCharacterFootHit(point);
+@@ -2115,23 +2153,30 @@
+      const probe=new Vec3(foot.x+radius*dx,foot.y,foot.z+radius*dz);
+      if(Math.abs(probe.z)<=12||Math.abs(probe.z)>=42||avoids(probe))continue;
+      const floor=this.sourceNativeCharacterFootHit(probe);
+-     if(!floor||Math.abs(floor.point.y-foot.y)>.42||
+-        this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner!==bot.team)continue;
++     if(!floor||Math.abs(floor.point.y-foot.y)>.42||
++        (this.f4PlayableRecovery?!this.f4RecoveryOwnFloor(floor.point,bot.team):
++         this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner!==bot.team))continue;
+      const projection=this.nav.auditNavMeshProjection(floor.point),p=projection.nearestPoint;
+      if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
+         Math.abs(p.y-floor.point.y)>.12)continue;
+      const point=new Vec3(p.x,p.y,p.z);
+-     if(avoids(point)||point.distance(foot)<.35||inkAt(point)!=='OWN')continue;
++     if(avoids(point)||point.distance(foot)<.35||(this.f4PlayableRecovery?
++        !this.f4RecoveryOwnFloor(point,bot.team):inkAt(point)!=='OWN'))continue;
+      const index=ownCandidates.length;ownCandidates.push({point,ink:'OWN',order:index,index});
+     }
+-    if(ownCandidates.length>=2)break;
+-   }
+-   const ordered=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,ownCandidates,
+-    allies.map(a=>a.position),options).slice(0,2);
+-   for(const c of ordered){
+-    const point=this.f4WholeWalkTarget(foot,c.point,false,6);
+-    if(point&&!avoids(point)&&point.distance(c.point)<=.25&&inkAt(point)==='OWN')return request(point,true);
+-   }
++    if(ownCandidates.length>=(this.f4PlayableRecovery?4:2))break;
++   }
++   const ranked=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,ownCandidates,
++    allies.map(a=>a.position),options);
++   // Shortlist by existing navigation/team-spacing rank first. At most
++   // four candidates get a five-point patch check, two get route queries.
++   const ordered=this.f4PlayableRecovery?ranked.slice(0,4).map(c=>({c,quality:this.f4RecoveryPatchQuality(c.point,bot.team)}))
++    .filter(r=>r.quality>0).sort((a,b)=>b.quality-a.quality).slice(0,2).map(r=>r.c):ranked.slice(0,2);
++   for(const c of ordered){
++    const point=this.f4WholeWalkTarget(foot,c.point,false,6);
++    if(point&&!avoids(point)&&point.distance(c.point)<=.25&&(this.f4PlayableRecovery?
++       this.f4RecoveryOwnFloor(point,bot.team):inkAt(point)==='OWN'))return request(point,true,true);
++   }
+   }
+   // Healthy bots still on their own approach lane should contest the center
+   // before repeatedly surveying local unpainted cells. Recovery retains
+@@ -2172,7 +2217,9 @@
+     }
+     for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,verified,allies.map(a=>a.position),options).slice(0,2)){
+      const point=this.f4WholeWalkTarget(foot,candidate.point,false,8);
+-     if(point&&!avoids(point)&&point.distance(candidate.point)<=.25)return request(point,true);
++     if(point&&!avoids(point)&&point.distance(candidate.point)<=.25&&
++        (!this.f4PlayableRecovery||!recovering||this.f4RecoveryOwnFloor(point,bot.team)))
++      return request(point,true,recovering);
+     }
+    }
+   }
+diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
+--- a/src/feedback/GameFeedback.ts
++++ b/src/feedback/GameFeedback.ts
+@@ -7,7 +7,7 @@
+ import {sourceShotTone,type SourceCue} from '../audio/SourcePracticeAudio';
+ import {f4AudioBus,weaponTexture,type F4Texture} from './F4AudioBus.mjs';
+ 
+-type FxMode = 'BURST' | 'FUSE' | 'DROP';
++type FxMode = 'BURST' | 'FUSE' | 'DROP' | 'FLASH' | 'BEAM';
+ 
+ interface FxSlot {
+   entity: Entity;
+@@ -15,8 +15,9 @@
+   duration: number;
+   baseScale: number;
+   mode: FxMode;
+-  priority?:number;
+-  motion?:{x:number;y:number;z:number;vx:number;vy:number;vz:number};
++  priority?:number;
++  beamLength?:number;
++  motion?:{x:number;y:number;z:number;vx:number;vy:number;vz:number};
+ }
+ 
+ export class GameFeedback {
+@@ -127,7 +128,13 @@
+         const m=slot.motion;
+         const [x,y,z,s]=pose(m.x,m.y,m.z,m.vx,m.vy,m.vz,slot.duration-slot.ttl,slot.duration,slot.baseScale);
+         slot.entity.setPosition(x,y,z);slot.entity.setLocalScale(s,s*1.25,s);
+-      } else if (slot.mode === 'FUSE') {
++      } else if(slot.mode==='FLASH'){
++        const scale=slot.baseScale*Math.max(0,1-progress)*(.85+.15*(1-progress));
++        slot.entity.setLocalScale(scale,scale,scale);
++      } else if(slot.mode==='BEAM'){
++        const width=slot.baseScale*Math.max(0,1-progress);
++        slot.entity.setLocalScale(width,width,(slot.beamLength??0)*Math.max(0,1-progress*.25));
++      } else if (slot.mode === 'FUSE') {
+         const pulse = 0.74 + Math.abs(Math.sin(progress * Math.PI * 9)) * 0.7;
+         const grow = 1 + progress * 0.75;
+         const scale = slot.baseScale * pulse * grow;
+@@ -145,8 +152,9 @@
+     origin: Vec3,
+     direction: Vec3,
+     charge: number,
+-    active: boolean
+-  ): void {
++    active: boolean,
++    guideLimit?:number
++  ): void {
+     const chargeClass = isChargeClass(profile.weaponClass)
+       ? profile.weaponClass
+       : null;
+@@ -183,10 +191,10 @@
+ 
+     switch (chargeClass) {
+       case 'CHARGER':
+-        this.updateChargerCharge(origin, forward, right, up, t);
++        this.updateChargerCharge(origin, forward, right, up, t,guideLimit);
+         break;
+       case 'SPLATLING':
+-        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing);
++        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing,guideLimit);
+         break;
+       case 'STRINGER':
+         this.updateStringerCharge(origin, forward, right, up, t, firstRing);
+@@ -223,8 +231,12 @@
+     profile: WeaponProfile,
+     localPlayer: boolean
+   ): void {
+-    this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
+-    if(this.f4Presentation){
++    // Brief shrinking muzzle flash, rather than an expanding impact sphere.
++    if(this.f4Presentation){
++      const scale=Math.min(.18,.09*profile.fxScale*(localPlayer?1.35:1));
++      this.spawnFx(team,position,scale,.065,'FLASH',localPlayer?1:0);
++    }else this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
++    if(this.f4Presentation){
+       const tone=sourceShotTone(profile.id);
+       if(this.playTone(245*profile.audioPitch,(localPlayer?.025:.014)*tone.volume,.065*tone.length,tone.wave,130/245,localPlayer?1:0,localPlayer?undefined:position,weaponTexture(profile.weaponClass),localPlayer?'local-shot':'remote-shot')&&localPlayer)this.handledCues.add('SHOT');
+       return;
+@@ -399,8 +411,28 @@
+     to: Vec3,
+     profile: WeaponProfile
+   ): void {
+-    const samples = 11;
+-    for (let i = 0; i < samples; i += 1) {
++    if(this.f4Presentation){
++      // Reuse the capped sphere pool as short connected beam segments.
++      // The endpoints come from the resolved physical ray, never nominal range.
++      const length=from.distance(to);
++      if(Number.isFinite(length)&&length>.015){
++        const count=Math.min(8,Math.max(1,Math.ceil(length/1.8)));
++        const step=length/count;
++        const axis=to.clone().sub(from).mulScalar(1/length);
++        for(let i=0;i<count;i++){
++          const center=from.clone().add(axis.clone().mulScalar((i+.5)*step));
++          const slot=this.spawnFx(team,center,Math.min(.10,.055*profile.fxScale),.095,'BEAM',1);
++          if(!slot)break;
++          slot.beamLength=step;
++          slot.entity.lookAt(center.clone().add(axis));
++          slot.entity.setLocalScale(slot.baseScale,slot.baseScale,step);
++        }
++      }
++      this.playTone(720*profile.audioPitch,.028,.07,'sawtooth',.74,0,from);
++      return;
++    }
++    const samples = 11;
++    for (let i = 0; i < samples; i += 1) {
+       const t = samples <= 1 ? 0 : i / (samples - 1);
+       const point = new Vec3(
+         from.x + (to.x - from.x) * t,
+@@ -427,17 +459,18 @@
+     forward: Vec3,
+     right: Vec3,
+     up: Vec3,
+-    charge: number
+-  ): void {
+-    const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
++    charge: number,
++    guideLimit?:number
++  ): void {
++    const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
+     this.chargeCore.setPosition(corePoint);
+     const coreScale = 0.08 + charge * 0.13;
+     this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
+ 
+     const guide = this.chargeBars[0]!;
+-    guide.enabled = true;
+-    const guideLength = 4 + charge * 14;
+-    placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
++    const guideLength = guideLimit===undefined?4+charge*14:Math.min(4+charge*14,guideLimit);
++    guide.enabled = guideLength>.02;
++    if(guide.enabled)placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
+ 
+     for (let i = 0; i < 3; i += 1) {
+       const dot = this.chargeDots[i]!;
+@@ -459,16 +492,17 @@
+     right: Vec3,
+     up: Vec3,
+     charge: number,
+-    firstRing: number
+-  ): void {
+-    const firstProgress = firstRing > 0
+-      ? clamp01(charge / firstRing)
+-      : charge;
+-    const secondProgress = firstRing > 0 && firstRing < 1
+-      ? clamp01((charge - firstRing) / (1 - firstRing))
+-      : 0;
+-
+-    // Ring 1 establishes maximum effective range; ring 2 mainly stores fire duration.
++    firstRing: number,
++    guideLimit?:number
++  ): void {
++    const firstProgress = firstRing > 0
++      ? clamp01(charge / firstRing)
++      : charge;
++    const secondProgress = firstRing > 0 && firstRing < 1
++      ? clamp01((charge - firstRing) / (1 - firstRing))
++      : 0;
++
++    // Ring 1 establishes maximum effective range; ring 2 mainly stores fire duration.
+     const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
+     this.chargeCore.setPosition(corePoint);
+     const pulse = 0.075 + firstProgress * 0.075 + secondProgress * 0.055 +
+@@ -476,10 +510,10 @@
+     this.chargeCore.setLocalScale(pulse, pulse, pulse);
+ 
+     const guide = this.chargeBars[0]!;
+-    guide.enabled = true;
+-    const guideLength = 3.2 + firstProgress * 10.8;
+-    placeBarAlong(
+-      guide,
++    const guideLength = guideLimit===undefined?3.2+firstProgress*10.8:Math.min(3.2+firstProgress*10.8,guideLimit);
++    guide.enabled = guideLength>.02;
++    if(guide.enabled)placeBarAlong(
++      guide,
+       origin,
+       forward,
+       guideLength,
+@@ -626,8 +660,10 @@
+     slot.baseScale = baseScale;
+     slot.mode = mode;
+     slot.priority=mode==='FUSE'?2:priority;
+-    slot.motion=undefined;
+-    slot.entity.setPosition(position);
++    slot.motion=undefined;
++    slot.beamLength=undefined;
++    if(this.f4Presentation)slot.entity.setLocalEulerAngles(0,0,0);
++    slot.entity.setPosition(position);
+     slot.entity.setLocalScale(baseScale, baseScale, baseScale);
+     slot.entity.enabled = true;
+     return slot;
+diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
+--- a/src/app/CompactF4Hud.mjs
++++ b/src/app/CompactF4Hud.mjs
+@@ -1,7 +1,10 @@
+ // F4 only: read-only compact HUD, no input listener, simulation or score writer.
+ import {f4CombatCue} from './F4PlayerPresentation.mjs';
+ const number=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
+-const pct=v=>number(v,0,100)?Math.round(v):null;
++const pct=v=>number(v,0,100)?Math.round(v):null;
++// A living player must not be displayed as having zero HP. Keep the
++// numeric bar width and the raw readiness gates independent of this label.
++const resourceLabel=(raw,rounded)=>rounded===null?'—':raw>0&&rounded===0?'<1':raw<100&&rounded===100?'>99':String(rounded);
+ const label=v=>typeof v==='string'&&v.trim()?v.trim():'—';
+ export function compactF4View(frame,kit,special){
+  const hp=pct(frame.hp),ink=pct(frame.ink);
+@@ -21,7 +24,7 @@
+   special?.provisional&&full?(alive?(special.probeState==='LOCKED'?'終了動作中':'満タン · 現在発動不可'):'復活待ち'):`${specialPercent}%`;
+  const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
+  const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
+- return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:valid&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?(special?.provisional?'暫定得点面':'認証済み得点面'):'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':special?.ready&&special?.readyControls?label(special.readyControls):label(kit?.controls):'復活待ち'};
++ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,hpLabel:resourceLabel(frame.hp,hp),inkLabel:resourceLabel(frame.ink,ink),respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:valid&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?(special?.provisional?'暫定得点面':'認証済み得点面'):'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':special?.ready&&special?.readyControls?label(special.readyControls):label(kit?.controls):'復活待ち'};
+ }
+ const CSS=`[data-f4-compact-active="true"]{box-sizing:border-box!important;width:min(420px,calc(100vw - 24px))!important;padding:9px 12px!important;background:rgba(8,16,29,.89)!important;border:1px solid #ffffff35!important;border-radius:14px!important;box-shadow:0 4px 18px #0005!important;top:10px!important;pointer-events:none!important}[data-f4-compact-active="true"] > [data-f4-legacy-display],[data-f4-compact-active="true"] > #t21-f3-source-practice-ink-balance{display:none!important}.f4-compact-hud{color:#f5f7fc;font:600 12px/1.3 system-ui,sans-serif;font-variant-numeric:tabular-nums}.f4-compact-hud[hidden]{display:none!important}.f4-compact-hud .f4-top,.f4-compact-hud .f4-line{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.f4-compact-hud .f4-clock{font-size:28px;line-height:1;font-weight:850;letter-spacing:.5px}.f4-compact-hud .f4-meta{color:#d1d8e6;font-size:11px;text-align:right}.f4-compact-hud .f4-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.f4-compact-hud .f4-track{height:7px;background:#ffffff26;border-radius:5px;overflow:hidden;margin-top:3px}.f4-compact-hud .f4-fill{height:100%;width:0%;background:#70e2c3;border-radius:5px}.f4-compact-hud .f4-ink{background:#ff88c7}.f4-compact-hud .f4-sp{background:#ffcf6f}.f4-compact-hud .f4-weapon{font-size:14px;overflow-wrap:anywhere}.f4-compact-hud .f4-muted{color:#c0cad9;font-size:11px;overflow-wrap:anywhere}.f4-compact-hud .f4-notice{color:#ffd9ae;font-size:12px;font-weight:750;margin-top:4px}.f4-compact-hud .f4-sub[data-ready="true"]{color:#a5f5d5}.f4-compact-hud .f4-sub[data-ready="false"]{color:#c0cad9}.f4-compact-hud .f4-special{margin-top:5px}.f4-compact-hud .f4-help{font-size:10px;color:#d1d8e6;margin-top:5px;overflow-wrap:anywhere}@media(max-width:480px){.f4-compact-hud .f4-clock{font-size:23px}.f4-compact-hud .f4-meta{font-size:10px}.f4-compact-hud .f4-help{font-size:10px}}`;
+ export function installCompactF4Hud(legacy,{visible,readKit,readSpecial}){
+@@ -47,7 +50,7 @@
+    const mark=cue.threshold===null?'':cue.threshold+'%';
+    if(inkTrack.style.getPropertyValue('--f4-ui-sub-threshold')!==mark)inkTrack.style.setProperty('--f4-ui-sub-threshold',mark);}
+   for(const key of ['clock','scoreLabel','weapon','special','specialStatus','controls'])set(nodes[key],v[key]);
+-  set(nodes.hp,v.hp===null?'—':String(v.hp));set(nodes.ink,v.ink===null?'—':String(v.ink));bar(bars.hp,v.hp);bar(bars.ink,v.ink);bar(bars.specialPercent,v.specialPercent);show(track,v.specialPercent!==null);
++  set(nodes.hp,v.hpLabel);set(nodes.ink,v.inkLabel);bar(bars.hp,v.hp);bar(bars.ink,v.ink);bar(bars.specialPercent,v.specialPercent);show(track,v.specialPercent!==null);
+   set(nodes.sub,v.sub+(v.subCost===null?'':` · ${v.subCost}%`)+(kit?.probe!==true&&special?.provisional&&v.subReady?' · F 使用可':''));if(nodes.sub.dataset.ready!==String(v.subReady))nodes.sub.dataset.ready=String(v.subReady);
+   const notice=v.respawn!==null?`復活まで ${v.respawn}秒`:v.danger;set(nodes.notice,notice);show(nodes.notice,notice.length>0);
+  };
+diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
+--- a/src/app/F4PlayerPresentation.mjs
++++ b/src/app/F4PlayerPresentation.mjs
+@@ -13,8 +13,20 @@
+  const neutral=Number.isFinite(neutralArea)&&Number.isFinite(totalProjectedM2)&&totalProjectedM2>0&&neutralArea>=0&&neutralArea<=totalProjectedM2?100*neutralArea/totalProjectedM2:null;
+  if(neutral!==null&&Math.abs(a+b+neutral-100)>0.001)return unavailable('得点不明','得点面積の整合性を確認できません');
+  if(phase==='TIME_UP'){
+-  if(score.status!=='FINAL'||!['A','B','DRAW'].includes(score.winner))return unavailable('結果集計保留','確定した勝敗データがありません');
+-  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral};
++  if(score.status!=='FINAL'||!['A','B','DRAW'].includes(score.winner))return unavailable('結果集計保留','確定した勝敗データがありません');
++  // Validate the actual projected area snapshot before presenting a result.
++  // This never sets a winner: inconsistent authority remains HOLD.
++  const {areaA,areaB}=score;
++  if(![areaA,areaB,totalProjectedM2,neutralArea].every(Number.isFinite)||totalProjectedM2<=0||
++     areaA<0||areaB<0||neutral===null)return unavailable('結果集計保留','実面積データを確認できません');
++  const epsilon=Math.max(1e-8,totalProjectedM2*1e-8);
++  if(Math.abs(areaA+areaB+neutralArea-totalProjectedM2)>epsilon||
++     Math.abs(a-areaA/totalProjectedM2*100)>0.000001||
++     Math.abs(b-areaB/totalProjectedM2*100)>0.000001||
++     (score.winner==='DRAW'?Math.abs(areaA-areaB)>epsilon:
++      score.winner==='A'?areaA-areaB<=epsilon:areaB-areaA<=epsilon))
++   return unavailable('結果集計保留','確定得点と勝敗の整合性を確認できません');
++  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral,areaA,areaB,totalProjectedM2};
+  }
+  if(score.status!=='LIVE'||phase!=='PLAYING')return unavailable('暫定得点準備','試合中の集計待ち');
+  return {kind:'LIVE',title:'暫定ナワバリ',detail:'実塗装面積 · 未塗装面を含む',a,b,neutral};
+@@ -139,12 +151,16 @@
+   if(known){const digits=f4ScoreDigits(v);
+    str(p.a,`自チーム A ${v.a.toFixed(digits)}%`);str(p.b,`敵チーム B ${v.b.toFixed(digits)}%`);
+    width(p.fillA,v.a);width(p.fillB,v.b);if(v.neutral!==null)str(p.neutral,`未塗装 ${v.neutral.toFixed(digits)}%`);
+-   if(v.kind==='FINAL'&&v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits))str(p.detail,v.detail+' · 表示桁未満の実面積差');
++   if(v.kind==='FINAL'){
++    const difference=Math.abs(v.areaA-v.areaB);
++    const margin=v.title==='引き分け'?'実面積差は同点許容範囲内':difference<.01?'実面積差 0.01 m² 未満':`実面積差 ${difference.toFixed(2)} m²`;
++    str(p.detail,v.detail+' · '+margin+(v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits)?' · 表示桁未満の実面積差':''));
++   }
+   }
+  };
+  let disposed=false;
+  return {
+-  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null}){
++  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null,pointerLockState=null}){
+    if(disposed)return;
+    const active=playerView===true;
+    data(root,'f4UiSkin',String(active));data(ui,'f4UiSkin',String(active));
+@@ -178,8 +194,8 @@
+     str(pauseTitle,pauseState==='READY_TO_START'?
+      (hold?'ナワバリバトル · 得点集計保留':preparing?'ナワバリバトル · 得点準備中':'ナワバリバトル · 準備完了'):'一時停止');
+     const limited=pauseState==='READY_TO_START'&&(hold||resume.title.includes('追加床')||resume.textContent.includes('制限付き'));
+-    str(resume,pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
+-   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
++    str(resume,pointerLockState==='REJECTED'?'ゲーム画面を選択して再試行':pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
++   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る','ゲーム画面を選択して再試行'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
+    if(finished&&replayButton&&!replayButton.disabled&&!replayButton.hidden){str(replayButton,'もう一度遊ぶ  ·  R');localizedReplay=true}
+    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
+    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));
+diff --git a/src/app/F4PlayerPresentation.d.mts b/src/app/F4PlayerPresentation.d.mts
+--- a/src/app/F4PlayerPresentation.d.mts
++++ b/src/app/F4PlayerPresentation.d.mts
+@@ -4,3 +4,3 @@
+ export function f4Urgency(seconds:number):'normal'|'soon'|'critical'|'unknown';
+-export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null;matchSummary?:F4MatchSummary|null}):void;dispose():void};
++export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null;matchSummary?:F4MatchSummary|null;pointerLockState?:string|null}):void;dispose():void};
+ export type F4MatchSummary={directHits:number;directSplats:number;deaths:number;respawns:number;changedCells:number};
