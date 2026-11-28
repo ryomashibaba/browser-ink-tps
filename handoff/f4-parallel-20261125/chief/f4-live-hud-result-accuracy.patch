@@ -1,0 +1,120 @@
+diff --git a/src/app/CompactF4Hud.mjs b/src/app/CompactF4Hud.mjs
+--- a/src/app/CompactF4Hud.mjs
++++ b/src/app/CompactF4Hud.mjs
+@@ -1,7 +1,10 @@
+ // F4 only: read-only compact HUD, no input listener, simulation or score writer.
+ import {f4CombatCue} from './F4PlayerPresentation.mjs';
+ const number=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
+-const pct=v=>number(v,0,100)?Math.round(v):null;
++const pct=v=>number(v,0,100)?Math.round(v):null;
++// A living player must not be displayed as having zero HP. Keep the
++// numeric bar width and the raw readiness gates independent of this label.
++const resourceLabel=(raw,rounded)=>rounded===null?'—':raw>0&&rounded===0?'<1':raw<100&&rounded===100?'>99':String(rounded);
+ const label=v=>typeof v==='string'&&v.trim()?v.trim():'—';
+ export function compactF4View(frame,kit,special){
+  const hp=pct(frame.hp),ink=pct(frame.ink);
+@@ -21,7 +24,7 @@
+   special?.provisional&&full?(alive?(special.probeState==='LOCKED'?'終了動作中':'満タン · 現在発動不可'):'復活待ち'):`${specialPercent}%`;
+  const sub=label(kit?.sub),cost=number(kit?.subCost,0,100)?kit.subCost:null;
+  const subReady=alive&&probe!=='ACTIVE'&&probe!=='LOCKED'&&special?.active!==true&&ink!==null&&cost!==null&&frame.ink>=cost&&kit?.subUsable===true;
+- return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:valid&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?(special?.provisional?'暫定得点面':'認証済み得点面'):'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':special?.ready&&special?.readyControls?label(special.readyControls):label(kit?.controls):'復活待ち'};
++ return {clock:clock===null?'—:—':`${Math.floor(clock/60)}:${String(clock%60).padStart(2,'0')}`,hp,ink,hpLabel:resourceLabel(frame.hp,hp),inkLabel:resourceLabel(frame.ink,ink),respawn,alive,weapon:label(kit?.weapon),sub,subReady,subCost:cost,special:label(kit?.special),specialPercent:valid&&!probe?specialPercent:null,specialStatus,scoreLabel:kit?.turfLabel|| (kit?.probe===true?'物理単独検証':valid?(special?.provisional?'暫定得点面':'認証済み得点面'):'研究試合・得点未認証'),danger:alive&&(frame.hp<=35||frame.inkRelation==='ENEMY')?[frame.hp<=35?'HP低下':'',frame.inkRelation==='ENEMY'?'敵インク':''].filter(Boolean).join(' / '):'',controls:alive?(probe==='ACTIVE'||special?.active===true)?label(special?.probeControls):probe==='LOCKED'?'終了動作中 · 通常武器待機':special?.ready&&special?.readyControls?label(special.readyControls):label(kit?.controls):'復活待ち'};
+ }
+ const CSS=`[data-f4-compact-active="true"]{box-sizing:border-box!important;width:min(420px,calc(100vw - 24px))!important;padding:9px 12px!important;background:rgba(8,16,29,.89)!important;border:1px solid #ffffff35!important;border-radius:14px!important;box-shadow:0 4px 18px #0005!important;top:10px!important;pointer-events:none!important}[data-f4-compact-active="true"] > [data-f4-legacy-display],[data-f4-compact-active="true"] > #t21-f3-source-practice-ink-balance{display:none!important}.f4-compact-hud{color:#f5f7fc;font:600 12px/1.3 system-ui,sans-serif;font-variant-numeric:tabular-nums}.f4-compact-hud[hidden]{display:none!important}.f4-compact-hud .f4-top,.f4-compact-hud .f4-line{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.f4-compact-hud .f4-clock{font-size:28px;line-height:1;font-weight:850;letter-spacing:.5px}.f4-compact-hud .f4-meta{color:#d1d8e6;font-size:11px;text-align:right}.f4-compact-hud .f4-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.f4-compact-hud .f4-track{height:7px;background:#ffffff26;border-radius:5px;overflow:hidden;margin-top:3px}.f4-compact-hud .f4-fill{height:100%;width:0%;background:#70e2c3;border-radius:5px}.f4-compact-hud .f4-ink{background:#ff88c7}.f4-compact-hud .f4-sp{background:#ffcf6f}.f4-compact-hud .f4-weapon{font-size:14px;overflow-wrap:anywhere}.f4-compact-hud .f4-muted{color:#c0cad9;font-size:11px;overflow-wrap:anywhere}.f4-compact-hud .f4-notice{color:#ffd9ae;font-size:12px;font-weight:750;margin-top:4px}.f4-compact-hud .f4-sub[data-ready="true"]{color:#a5f5d5}.f4-compact-hud .f4-sub[data-ready="false"]{color:#c0cad9}.f4-compact-hud .f4-special{margin-top:5px}.f4-compact-hud .f4-help{font-size:10px;color:#d1d8e6;margin-top:5px;overflow-wrap:anywhere}@media(max-width:480px){.f4-compact-hud .f4-clock{font-size:23px}.f4-compact-hud .f4-meta{font-size:10px}.f4-compact-hud .f4-help{font-size:10px}}`;
+ export function installCompactF4Hud(legacy,{visible,readKit,readSpecial}){
+@@ -47,7 +50,7 @@
+    const mark=cue.threshold===null?'':cue.threshold+'%';
+    if(inkTrack.style.getPropertyValue('--f4-ui-sub-threshold')!==mark)inkTrack.style.setProperty('--f4-ui-sub-threshold',mark);}
+   for(const key of ['clock','scoreLabel','weapon','special','specialStatus','controls'])set(nodes[key],v[key]);
+-  set(nodes.hp,v.hp===null?'—':String(v.hp));set(nodes.ink,v.ink===null?'—':String(v.ink));bar(bars.hp,v.hp);bar(bars.ink,v.ink);bar(bars.specialPercent,v.specialPercent);show(track,v.specialPercent!==null);
++  set(nodes.hp,v.hpLabel);set(nodes.ink,v.inkLabel);bar(bars.hp,v.hp);bar(bars.ink,v.ink);bar(bars.specialPercent,v.specialPercent);show(track,v.specialPercent!==null);
+   set(nodes.sub,v.sub+(v.subCost===null?'':` · ${v.subCost}%`)+(kit?.probe!==true&&special?.provisional&&v.subReady?' · F 使用可':''));if(nodes.sub.dataset.ready!==String(v.subReady))nodes.sub.dataset.ready=String(v.subReady);
+   const notice=v.respawn!==null?`復活まで ${v.respawn}秒`:v.danger;set(nodes.notice,notice);show(nodes.notice,notice.length>0);
+  };
+diff --git a/src/app/F4PlayerPresentation.mjs b/src/app/F4PlayerPresentation.mjs
+--- a/src/app/F4PlayerPresentation.mjs
++++ b/src/app/F4PlayerPresentation.mjs
+@@ -13,8 +13,20 @@
+  const neutral=Number.isFinite(neutralArea)&&Number.isFinite(totalProjectedM2)&&totalProjectedM2>0&&neutralArea>=0&&neutralArea<=totalProjectedM2?100*neutralArea/totalProjectedM2:null;
+  if(neutral!==null&&Math.abs(a+b+neutral-100)>0.001)return unavailable('得点不明','得点面積の整合性を確認できません');
+  if(phase==='TIME_UP'){
+-  if(score.status!=='FINAL'||!['A','B','DRAW'].includes(score.winner))return unavailable('結果集計保留','確定した勝敗データがありません');
+-  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral};
++  if(score.status!=='FINAL'||!['A','B','DRAW'].includes(score.winner))return unavailable('結果集計保留','確定した勝敗データがありません');
++  // Validate the actual projected area snapshot before presenting a result.
++  // This never sets a winner: inconsistent authority remains HOLD.
++  const {areaA,areaB}=score;
++  if(![areaA,areaB,totalProjectedM2,neutralArea].every(Number.isFinite)||totalProjectedM2<=0||
++     areaA<0||areaB<0||neutral===null)return unavailable('結果集計保留','実面積データを確認できません');
++  const epsilon=Math.max(1e-8,totalProjectedM2*1e-8);
++  if(Math.abs(areaA+areaB+neutralArea-totalProjectedM2)>epsilon||
++     Math.abs(a-areaA/totalProjectedM2*100)>0.000001||
++     Math.abs(b-areaB/totalProjectedM2*100)>0.000001||
++     (score.winner==='DRAW'?Math.abs(areaA-areaB)>epsilon:
++      score.winner==='A'?areaA-areaB<=epsilon:areaB-areaA<=epsilon))
++   return unavailable('結果集計保留','確定得点と勝敗の整合性を確認できません');
++  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral,areaA,areaB,totalProjectedM2};
+  }
+  if(score.status!=='LIVE'||phase!=='PLAYING')return unavailable('暫定得点準備','試合中の集計待ち');
+  return {kind:'LIVE',title:'暫定ナワバリ',detail:'実塗装面積 · 未塗装面を含む',a,b,neutral};
+@@ -139,12 +151,16 @@
+   if(known){const digits=f4ScoreDigits(v);
+    str(p.a,`自チーム A ${v.a.toFixed(digits)}%`);str(p.b,`敵チーム B ${v.b.toFixed(digits)}%`);
+    width(p.fillA,v.a);width(p.fillB,v.b);if(v.neutral!==null)str(p.neutral,`未塗装 ${v.neutral.toFixed(digits)}%`);
+-   if(v.kind==='FINAL'&&v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits))str(p.detail,v.detail+' · 表示桁未満の実面積差');
++   if(v.kind==='FINAL'){
++    const difference=Math.abs(v.areaA-v.areaB);
++    const margin=v.title==='引き分け'?'実面積差は同点許容範囲内':difference<.01?'実面積差 0.01 m² 未満':`実面積差 ${difference.toFixed(2)} m²`;
++    str(p.detail,v.detail+' · '+margin+(v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits)?' · 表示桁未満の実面積差':''));
++   }
+   }
+  };
+  let disposed=false;
+  return {
+-  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null}){
++  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null,pointerLockState=null}){
+    if(disposed)return;
+    const active=playerView===true;
+    data(root,'f4UiSkin',String(active));data(ui,'f4UiSkin',String(active));
+@@ -178,8 +194,8 @@
+     str(pauseTitle,pauseState==='READY_TO_START'?
+      (hold?'ナワバリバトル · 得点集計保留':preparing?'ナワバリバトル · 得点準備中':'ナワバリバトル · 準備完了'):'一時停止');
+     const limited=pauseState==='READY_TO_START'&&(hold||resume.title.includes('追加床')||resume.textContent.includes('制限付き'));
+-    str(resume,pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
+-   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
++    str(resume,pointerLockState==='REJECTED'?'ゲーム画面を選択して再試行':pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
++   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る','ゲーム画面を選択して再試行'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
+    if(finished&&replayButton&&!replayButton.disabled&&!replayButton.hidden){str(replayButton,'もう一度遊ぶ  ·  R');localizedReplay=true}
+    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
+    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -8167,8 +8167,13 @@
+    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
+    ready?(floorWarning?'制限付き試合を開始（追加床未準備）':'START 180s ROUND'):'RESUME THIS ROUND · SAME REAL WORLD';
+-  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
+-  else stopResume.removeAttribute('title');
++  if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
++  else stopResume.removeAttribute('title');
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&ordinaryPause&&!stopResume.disabled&&
++     this.canvas.dataset.t21F4PointerLockRequest==='REJECTED'){
++   stopResume.textContent='ゲーム画面を選択して再試行';
++   stopResume.title='ブラウザがマウス操作の取得を拒否しました。画面を選択してもう一度クリックしてください。';
++  }
+   const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+    '#t21-f3-source-mode-menu-ready');
+   if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
+@@ -10163,8 +10168,9 @@
+     kit:{weapon:f4Weapon.displayName,classLabel:f4Weapon.classLabel,
+      sub:f4Sub.displayName,subCost:f4Sub.inkCost,special:f4SpecialName(f4Weapon.id)},
+     score:this.ink.readF4ProvisionalTurf(),matchState:state.matchState,
+-    paused:state.paused,stopped:!!state.stopReason,remainingSeconds:state.timeRemainingSeconds,
+-    matchSummary:state.matchState==='TIME_UP'?{
++    paused:state.paused,stopped:!!state.stopReason,remainingSeconds:state.timeRemainingSeconds,
++    pointerLockState:this.canvas.dataset.t21F4PointerLockRequest??null,
++    matchSummary:state.matchState==='TIME_UP'?{
+      directHits:state.humanCpuDirectHits,directSplats:state.humanCpuDirectSplats,
+      deaths:state.humanSplats,respawns:state.humanRespawns,
+      changedCells:state.b23HumanInkFeedback.humanChangedCells
