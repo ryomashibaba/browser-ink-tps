@@ -1,6 +1,7 @@
 """Apply the exact pending F4 playable batch, then build. No reset, merge, push, install or asset upload."""
 import argparse
 import hashlib
+import difflib
 from pathlib import Path
 import re
 import subprocess
@@ -42,6 +43,33 @@ def validate_patch(raw):
             raise RuntimeError('unexpected mode change: ' + path)
 
 
+def declaration_delta(root, name):
+    # Add only the two optional HUD fields. No whole-file replacement.
+    # Retain actual local bytes, including CRLF, BOM and final newline.
+    p = root / name
+    before = p.read_bytes()
+    old = b'probeControls?: string } | null;'
+    new = b'probeControls?: string; activationNotice?:string;readyControls?:string } | null;'
+    if before.count(new) == 1 and before.count(old) == 0:
+        return None
+    if before.count(old) != 1 or b'activationNotice' in before or b'readyControls' in before:
+        raise RuntimeError('ambiguous HUD declaration; inspect actual readSpecial type')
+    # The exact old field must be on the expected readSpecial declaration.
+    at = before.index(old)
+    declaration = before.rfind(b'readSpecial(): {', 0, at)
+    if declaration < 0 or b'} | null;' in before[declaration:at]:
+        raise RuntimeError('unexpected HUD declaration structure')
+    after = before.replace(old, new, 1)
+    # Preserve the previous line-ending bytes even for a local untracked file.
+    diff = difflib.diff_bytes(difflib.unified_diff,
+        before.splitlines(keepends=True), after.splitlines(keepends=True),
+        fromfile=('a/' + name).encode(), tofile=('b/' + name).encode())
+    result = b'diff --git a/' + name.encode() + b' b/' + name.encode() + b'\n'
+    for line in diff:
+        result += line if line.endswith(b'\n') else line + b'\n\\ No newline at end of file\n'
+    return result
+
+
 def apply_checked(root, raw):
     validate_patch(raw)
     for name in TARGETS:
@@ -50,18 +78,43 @@ def apply_checked(root, raw):
             raise RuntimeError('redirected or invalid target: ' + name)
         if (name not in NEW and not p.is_file()) or (p.exists() and not p.is_file()):
             raise RuntimeError('missing or invalid target: ' + name)
-    forward = git(root, 'apply', '--check', '-', data=raw, check=False)
-    reverse = git(root, 'apply', '--reverse', '--check', '-', data=raw, check=False)
-    if reverse.returncode == 0 and forward.returncode != 0:
+    # File hashes are diagnostic only. The pinned patch and actual Git
+    # context checks are the authority, including for untracked files.
+    # Classify ALL targets before changing any; never stop at the first
+    # harmless hash mismatch or apply separate blocks to the live tree.
+    blocks = [b for b in re.split(rb'(?=^diff --git )', raw, flags=re.M) if b]
+    pending, conflicts = [], []
+    for block in blocks:
+        name = block.splitlines()[0].split(b' b/', 1)[1].decode()
+        f = git(root, 'apply', '--check', '-', data=block, check=False)
+        r = git(root, 'apply', '--reverse', '--check', '-', data=block, check=False)
+        if f.returncode == 0 and r.returncode != 0:
+            pending.append(block)
+            print('PENDING:', name, flush=True)
+        elif r.returncode == 0 and f.returncode != 0:
+            print('ALREADY_APPLIED:', name, flush=True)
+        elif name == 'src/app/CompactF4Hud.d.mts' and f.returncode != 0 and r.returncode != 0:
+            try:
+                delta = declaration_delta(root, name)
+                if delta is not None:
+                    if git(root, 'apply', '--check', '-', data=delta, check=False).returncode != 0:
+                        raise RuntimeError('local declaration delta failed Git check')
+                    pending.append(delta)
+                print('HUD_DECLARATION_LOCAL_CONTEXT:', name, flush=True)
+            except RuntimeError as exc:
+                conflicts.append(name + ': ' + str(exc))
+        else:
+            conflicts.append(name + ': ' + f.stderr.decode(errors='replace').strip())
+    if conflicts:
+        raise RuntimeError('unresolved targets; no files changed\n' + '\n'.join(conflicts))
+    if not pending:
         return 'ALREADY_APPLIED'
-    if forward.returncode != 0 or reverse.returncode == 0:
-        raise RuntimeError('mixed state or patch conflict; no files changed\n' +
-                           forward.stderr.decode(errors='replace'))
-    if any((root / name).exists() for name in NEW):
-        raise RuntimeError('unexpected existing new file; no files changed')
-    git(root, 'apply', '-', data=raw)
-    git(root, 'apply', '--reverse', '--check', '-', data=raw)
-    return 'APPLIED'
+    batch = b''.join(pending)
+    git(root, 'apply', '--check', '-', data=batch)
+    git(root, 'apply', '-', data=batch)
+    git(root, 'apply', '--reverse', '--check', '-', data=batch)
+    return 'APPLIED_PENDING_TARGETS'
+
 
 
 def main():
