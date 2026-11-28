@@ -1,0 +1,111 @@
+diff --git a/src/physics/F4PaintHitIndex.mjs b/src/physics/F4PaintHitIndex.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/physics/F4PaintHitIndex.mjs
+@@ -0,0 +1,28 @@
++// F4 only: static conservative XZ bins, preserving input order. No hit authority.
++export function buildF4PaintHitIndex(surfaces,tolerance){
++ if(!Number.isFinite(tolerance)||tolerance<0)return null;
++ const bins=new Map(),cell=8;let assignments=0;
++ for(const s of surfaces){
++  const {x,z}=s.center;
++  const r=Math.hypot(s.widthMeters*.5,s.heightMeters*.5,tolerance)+.001;
++  if(![x,z,r].every(Number.isFinite)||r<=0)return null;
++  const x0=Math.floor((x-r)/cell),x1=Math.floor((x+r)/cell),
++    z0=Math.floor((z-r)/cell),z1=Math.floor((z+r)/cell);
++  if(![x0,x1,z0,z1].every(Number.isSafeInteger))return null;
++  const count=(x1-x0+1)*(z1-z0+1);
++  if(count>4096||assignments+count>262144)return null;
++  assignments+=count;
++  for(let i=x0;i<=x1;i++)for(let j=z0;j<=z1;j++){
++   const key=i+':'+j,bin=bins.get(key);
++   if(bin)bin.push(s);else bins.set(key,[s]);
++  }
++ }
++ return {surfaces,length:surfaces.length,bins,cell};
++}
++export function queryF4PaintHitIndex(index,surfaces,point){
++ if(!index||index.surfaces!==surfaces||index.length!==surfaces.length||
++    ![point.x,point.y,point.z].every(Number.isFinite))return surfaces;
++ const x=Math.floor(point.x/index.cell),z=Math.floor(point.z/index.cell);
++ if(!Number.isSafeInteger(x)||!Number.isSafeInteger(z))return surfaces;
++ return index.bins.get(x+':'+z)??[];
++}
+diff --git a/src/physics/F4PaintHitIndex.d.mts b/src/physics/F4PaintHitIndex.d.mts
+new file mode 100644
+--- /dev/null
++++ b/src/physics/F4PaintHitIndex.d.mts
+@@ -0,0 +1,6 @@
++type BoundSurface={center:{x:number;z:number};widthMeters:number;heightMeters:number};
++export interface F4PaintHitIndex<S extends BoundSurface>{
++ surfaces:readonly S[];length:number;bins:Map<string,S[]>;cell:number;
++}
++export function buildF4PaintHitIndex<S extends BoundSurface>(surfaces:readonly S[],tolerance:number):F4PaintHitIndex<S>|null;
++export function queryF4PaintHitIndex<S extends BoundSurface>(index:F4PaintHitIndex<S>|null,surfaces:readonly S[],point:{x:number;y:number;z:number}):readonly S[];
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -1,4 +1,5 @@
+ import RAPIER, { type Collider, type RigidBody, type World } from '@dimforge/rapier3d-compat';
+-import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
++import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
++import {buildF4PaintHitIndex,queryF4PaintHitIndex,type F4PaintHitIndex} from './F4PaintHitIndex.mjs';
+ import { Quat, Vec3 } from 'playcanvas';
+ import {
+@@ -49,5 +50,6 @@
+   private readonly paintBackingPoint = new Vec3();
+   // Immutable surface geometry only; never cache ownership or backing here.
+-  private readonly f4PaintBounds=new WeakMap<PaintSurface,number>();
++  private readonly f4PaintBounds=new WeakMap<PaintSurface,number>();
++  private f4PaintHitIndex:F4PaintHitIndex<PaintSurface>|null=null;
+   private readonly paintBackingCollider = (collider: Collider): boolean =>
+     this.solidByColliderHandle.has(collider.handle);
+@@ -94,11 +96,16 @@
+   }
+ 
+-  public f4PaintAtStageHit(
+-    hit:StageRayHit|null,surfaces:readonly PaintSurface[]
+-  ):SurfaceRayHit|null{
+-    if(!this.f4WholeResearchTrimeshActive||!hit)return null;
+-    let best:SurfaceRayHit|null=null;
+-    let distance=F4_PAINT_PLANE_TOLERANCE;
+-    for(const surface of surfaces){
++  /** Call only after the complete F4 registration, never for mutable subsets. */
++  public prepareF4PaintHitIndex(surfaces:readonly PaintSurface[]):void{
++    this.f4PaintHitIndex=this.f4WholeResearchTrimeshActive?
++      buildF4PaintHitIndex(surfaces,F4_PAINT_PLANE_TOLERANCE):null;
++  }
++  public f4PaintAtStageHit(
++    hit:StageRayHit|null,surfaces:readonly PaintSurface[]
++  ):SurfaceRayHit|null{
++    if(!this.f4WholeResearchTrimeshActive||!hit)return null;
++    let best:SurfaceRayHit|null=null;
++    let distance=F4_PAINT_PLANE_TOLERANCE;
++    for(const surface of queryF4PaintHitIndex(this.f4PaintHitIndex,surfaces,hit.point)){
+       // Conservative sphere around the actual rectangular plane envelope.
+       // New floor tiles substantially increase the candidate array; reject
+@@ -168,6 +175,7 @@
+ 
+   /** Recovery for a failed local install. The original stage remains frozen. */
+-  public restoreF4ResearchStaticStage(): void {
+-    if (!this.f4WholeResearchTrimeshActive) return;
++  public restoreF4ResearchStaticStage(): void {
++    this.f4PaintHitIndex=null;
++    if (!this.f4WholeResearchTrimeshActive) return;
+     for (const handle of [...this.solidByColliderHandle.keys()]) {
+       const old = this.world.getCollider(handle);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3616,7 +3616,8 @@
+     // registerSurface invalidates the provisional accumulator. Initialize
+     // only after the complete surface set is fixed, before first live tick.
+-    if(this.f4ProvisionalTurfEnabled){
+-     this.f4ScorePreparationStartedAt=performance.now();
+-     this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
++    if(this.f4ProvisionalTurfEnabled){
++     this.physics.prepareF4PaintHitIndex(this.f4PhysicalPaintSurfaces);
++     this.f4ScorePreparationStartedAt=performance.now();
++     this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
+     }
+    }
