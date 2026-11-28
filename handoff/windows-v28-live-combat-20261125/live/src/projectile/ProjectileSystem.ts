@@ -302,9 +302,11 @@ export class ProjectileSystem {
   private readonly f4FloorContacts:{frame:number;weapon:string;point:number[];normal:number[];
     surfaceId:string|null;u:number|null;v:number|null}[]=[];
   private readonly f4UnmappedFloorContacts:typeof this.f4FloorContacts=[];
+  private readonly f4WallContacts:typeof this.f4FloorContacts=[];
   public f4FloorContactEvidence(){
     const copy=(row:typeof this.f4FloorContacts[number])=>({...row,point:[...row.point],normal:[...row.normal]});
-    return {recent:this.f4FloorContacts.map(copy),unmapped:this.f4UnmappedFloorContacts.map(copy)};
+    return {recent:this.f4FloorContacts.map(copy),unmapped:this.f4UnmappedFloorContacts.map(copy),
+      walls:this.f4WallContacts.map(copy)};
   }
   /** Counts actual enemy pooled projectile slots, not all CPU attacks or aim intentions. */
   public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
@@ -1085,7 +1087,7 @@ export class ProjectileSystem {
   }
 
   public reset(): void {
-    this.f4FloorContacts.length=0;this.f4UnmappedFloorContacts.length=0;
+    this.f4FloorContacts.length=0;this.f4UnmappedFloorContacts.length=0;this.f4WallContacts.length=0;
     this.shooterCadence?.clear();
     this.clearHumanContactInput();
     this.brushSwings?.clear();
@@ -1791,6 +1793,16 @@ export class ProjectileSystem {
         if(this.f4FloorContacts.length>64)this.f4FloorContacts.shift();
         if(!mapped){this.f4UnmappedFloorContacts.push(row);
           if(this.f4UnmappedFloorContacts.length>64)this.f4UnmappedFloorContacts.shift();}
+      }
+      if(this.f4PlayableShooterControls&&this.physics.hasF4WholeResearchTrimesh&&
+         slot.sourceKind==='HUMAN'&&slot.sourceId==='human'&&!special&&!blasterFlight&&!saberContact&&
+         blockerHit?.normal&&Math.abs(blockerHit.normal.y)<.4){
+        const mapped=paintWins?paintHit:null;
+        this.f4WallContacts.push({frame:this.b367NativeFrame,weapon:slot.weaponId,
+          point:[blockerHit.point.x,blockerHit.point.y,blockerHit.point.z],
+          normal:[blockerHit.normal.x,blockerHit.normal.y,blockerHit.normal.z],
+          surfaceId:mapped?.surface.id??null,u:mapped?.u??null,v:mapped?.v??null});
+        if(this.f4WallContacts.length>64)this.f4WallContacts.shift();
       }
       if (special && blockerHit) special.flight.onTerrain?.(blockerHit);
       if (paintWins) {

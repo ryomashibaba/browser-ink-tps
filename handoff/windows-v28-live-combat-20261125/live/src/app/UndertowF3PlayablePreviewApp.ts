@@ -388,6 +388,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly f4FloorRasterEvidence:{tick:number;surfaceId:string;type:PaintEventType;
   point:number[];eligible:number;changed:number;alreadyOwned:number}[]=[];
  private readonly f4DeniedFloorRasterEvidence:typeof this.f4FloorRasterEvidence=[];
+ private readonly f4WallRasterEvidence:typeof this.f4FloorRasterEvidence=[];
  private nav:RecastStageNavigation;
  /** Read-only original underpass gap review; never CPU path authority. */
  private readonly b155SourceConnectivityReview:
@@ -946,6 +947,13 @@ export class UndertowF3PlayablePreviewApp{
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&event.source===PaintSource.Human&&
        event.type!==PaintEventType.Debug){
      const surface=this.ink.getSurface(event.surfaceId);
+     if(surface&&(surface.baseFlags&SurfaceFlags.Wall)){
+      const p=surface.localToWorld(event.centerU,event.centerV);
+      this.f4WallRasterEvidence.push({tick:event.tick,surfaceId:event.surfaceId,type:event.type,
+       point:[p.x,p.y,p.z],eligible:raster.rasterEligibleCells,changed:changedCells,
+       alreadyOwned:raster.rasterAlreadyTeamOwnedCells});
+      if(this.f4WallRasterEvidence.length>64)this.f4WallRasterEvidence.shift();
+     }
      if(surface&&!(surface.baseFlags&SurfaceFlags.Wall)){
       const p=surface.localToWorld(event.centerU,event.centerV);
       const row={tick:event.tick,surfaceId:event.surfaceId,type:event.type,point:[p.x,p.y,p.z],
@@ -3298,6 +3306,7 @@ export class UndertowF3PlayablePreviewApp{
     contacts:this.projectiles.f4FloorContactEvidence(),
     raster:this.f4FloorRasterEvidence.map(row=>({...row,point:[...row.point]})),
     deniedRaster:this.f4DeniedFloorRasterEvidence.map(row=>({...row,point:[...row.point]})),
+    wallRaster:this.f4WallRasterEvidence.map(row=>({...row,point:[...row.point]})),
     queue:this.coordinator.f4PaintQueueEvidence(),
     note:'Actual direct human projectile contacts and CPU-authoritative raster observations; queue is current backlog, not GPU pixel readback.'
    }:null,
@@ -6253,6 +6262,7 @@ export class UndertowF3PlayablePreviewApp{
   this.f4HumanLifePairs.length=0;
    this.f4HumanPlay=this.newF4HumanPlay();
   this.f4FloorRasterEvidence.length=0;this.f4DeniedFloorRasterEvidence.length=0;
+  this.f4WallRasterEvidence.length=0;
   this.f4SpecialSecondaryHeld=false;
   if(this.f4ProvisionalTurfEnabled){
    this.f4CurlingHeldFrames=null;

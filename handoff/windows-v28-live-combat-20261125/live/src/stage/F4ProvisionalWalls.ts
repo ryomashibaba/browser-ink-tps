@@ -84,19 +84,20 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
   }
   return false;
  };
- const candidateSet=new Set(candidates),seedCache=new WeakMap<Prepared,boolean>();
+ const seedCache=new WeakMap<Prepared,boolean>();
  let accessibleRoots=0;
  const isCachedSeed=(row:Prepared)=>{
   const cached=seedCache.get(row);if(cached!==undefined)return cached;
-  const value=isSeed(row);seedCache.set(row,value);
-  if(candidateSet.has(row)&&value)accessibleRoots++;
-  return value;
+  const value=isSeed(row);seedCache.set(row,value);return value;
  };
- // Evaluate backing only for reachable roots and connected candidates.
- // Cap expensive attempts in addition to the eight committed atlas slots.
+ for(const row of candidates)if(isCachedSeed(row))accessibleRoots++;
+ // Paintable walls do not need a walkable floor immediately beside them.
+ // Their exact source triangles are already part of the stage, and every
+ // accepted cell is still checked against Rapier in prepare(). Keep nearby
+ // walkable bases as diagnostics rather than as an ink admission gate.
  let preparedCount=0,physicallyBackedCandidates=0,maxBackedCells=0;
  const prepare=(row:Prepared):Prepared|null=>{
-  if(preparedCount++>=16)return null;
+  if(preparedCount++>=32)return null;
   const n=Math.round(row.width/cell),mask=row.mask.slice();
   const surface=new PaintSurface(F4_WALL_PREFIX+[row.planeKey,row.minU,row.minV].join(':'),
    point(row,row.minU+row.width/2,row.minV+row.height/2),
@@ -116,7 +117,7 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
   physicallyBackedCandidates++;
   return {...row,mask,surface};
  };
- const selected=selectF4ConnectedWallTiles(candidates,isCachedSeed,prepare,8);
+ const selected=selectF4ConnectedWallTiles(candidates,()=>true,prepare,24);
  for(const row of selected){if(row.surface){surfaces.push(row.surface);positions.push(row.positions);}}
  report?.({sourceTriangles:vertices.length/9,verticalTriangles,axisAlignedVerticalTriangles,
   rapierBackedTriangles,nearbySupportedBases,
@@ -124,7 +125,7 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
   accessibleRoots,physicallyBackedCandidates,maxBackedCells,
   selectedTiles:selected.length,registeredSurfaces:surfaces.length});
  if(!surfaces.length)return null;
- const atlas=new GpuInkAtlas(app,surfaces,Math.min(1024,app.graphicsDevice.maxTextureSize),32,
+ const atlas=new GpuInkAtlas(app,surfaces,Math.min(2048,app.graphicsDevice.maxTextureSize),32,
   GAME_CONFIG.ink.atlasGutterPixels,true);
  const root=new Entity('F4ProvisionalWallInk');
  try{

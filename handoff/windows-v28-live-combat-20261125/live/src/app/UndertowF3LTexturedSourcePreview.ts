@@ -459,7 +459,15 @@ export async function loadF3lTexturedSource(
    };
    const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
    const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
-   const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
+   // Exact retained support faces (including the central raised-step sides)
+   // already live in the same verified F4 Rapier collider. The former wall
+   // input omitted them because it only selected the WallConcrete material.
+   // Cell admission still requires this source geometry and live Rapier
+   // backing in prepareF4ProvisionalWalls.
+   const retainedSupportGroups=f4RetainedSeedModelVertices.materials
+    .filter(group=>group.kind==='SUPPORT').map(group=>group.positions);
+   const wallGroups=[...concreteGroups,...retainedSupportGroups];
+   const wallConcreteWorld=toWorld(wallGroups,wallGroups.reduce((n,g)=>n+g.length,0));
    // Whole F4 physically installs every verified original source material.
    // Admit source FLOOR/SLOPE classes and original FloorLine faces; each
    // raster cell still needs geometric mask and live Rapier support. The
