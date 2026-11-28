@@ -1,0 +1,71 @@
+diff --git a/src/stage/F4ConcreteWallTiles.mjs b/src/stage/F4ConcreteWallTiles.mjs
+--- a/src/stage/F4ConcreteWallTiles.mjs
++++ b/src/stage/F4ConcreteWallTiles.mjs
+@@ -2,3 +2,3 @@
+ // Their local basis follows the exact vertical plane; no rectangle is invented.
+-export function extractF4ConcreteWallTiles(vertices,limit=12) {
++export function extractF4ConcreteWallTiles(vertices,limit=12,includeLow=false) {
+   const tile=6,cell=.125,n=48,bins=new Map(),planes=new Map();
+@@ -93,6 +93,7 @@
+     }}
+-    if(cells<64||maxColumn<8)continue;
+-    rows.push({...row,cells,lowest});
+-  }
+-  rows.sort((a,b)=>b.cells-a.cells||a.lowest-b.lowest||a.planeKey.localeCompare(b.planeKey)||a.minU-b.minU||a.minV-b.minV);
++    const legacyCandidate=cells>=64&&maxColumn>=8;
++    if(!legacyCandidate&&(!includeLow||cells===0))continue;
++    rows.push(includeLow?{...row,cells,lowest,legacyCandidate}:{...row,cells,lowest});
++  }
++  rows.sort((a,b)=>(includeLow?Number(b.legacyCandidate)-Number(a.legacyCandidate):0)||b.cells-a.cells||a.lowest-b.lowest||a.planeKey.localeCompare(b.planeKey)||a.minU-b.minU||a.minV-b.minV);
+   return rows.slice(0,limit);
+diff --git a/src/stage/F4ConcreteWallTiles.d.mts b/src/stage/F4ConcreteWallTiles.d.mts
+--- a/src/stage/F4ConcreteWallTiles.d.mts
++++ b/src/stage/F4ConcreteWallTiles.d.mts
+@@ -1,2 +1,2 @@
+-export interface F4ConcreteWallTile {axis:3;plane:number;planeKey:string;normal:readonly number[];uAxis:readonly number[];vAxis:readonly number[];minU:number;minV:number;width:number;height:number;mask:Uint8Array;positions:number[];cells:number;lowest:number}
+-export function extractF4ConcreteWallTiles(vertices:Float32Array|number[],limit?:number):F4ConcreteWallTile[];
++export interface F4ConcreteWallTile {axis:3;plane:number;planeKey:string;normal:readonly number[];uAxis:readonly number[];vAxis:readonly number[];minU:number;minV:number;width:number;height:number;mask:Uint8Array;positions:number[];cells:number;lowest:number;legacyCandidate?:boolean}
++export function extractF4ConcreteWallTiles(vertices:Float32Array|number[],limit?:number,includeLow?:boolean):F4ConcreteWallTile[];
+diff --git a/src/stage/F4ProvisionalWalls.ts b/src/stage/F4ProvisionalWalls.ts
+--- a/src/stage/F4ProvisionalWalls.ts
++++ b/src/stage/F4ProvisionalWalls.ts
+@@ -59,3 +59,3 @@
+  }
+- const rows=extractF4ConcreteWallTiles(vertices,64);
++ const rows=extractF4ConcreteWallTiles(vertices,64,true);
+  const surfaces:PaintSurface[]=[];
+@@ -115,7 +115,10 @@
+   maxBackedCells=Math.max(maxBackedCells,backed);
+-  if(backed<64)return null;
+-  physicallyBackedCandidates++;
+-  return {...row,mask,surface};
+- };
+- const selected=selectF4ConnectedWallTiles(candidates,()=>true,prepare,24);
++  if(backed<(row.legacyCandidate?64:1))return null;
++  physicallyBackedCandidates++;
++  return {...row,mask,surface};
++ };
++ // Keep tall-wall selection unchanged and fill only unused capacity.
++ const selected=selectF4ConnectedWallTiles(candidates.filter(row=>row.legacyCandidate),()=>true,prepare,24);
++ if(selected.length<24&&preparedCount<32)
++  selected.push(...selectF4ConnectedWallTiles(candidates.filter(row=>!row.legacyCandidate),()=>true,prepare,24-selected.length));
+  for(const row of selected){if(row.surface){surfaces.push(row.surface);positions.push(row.positions);}}
+diff --git a/src/stage/F4ConcreteWallTiles.test.mjs b/src/stage/F4ConcreteWallTiles.test.mjs
+--- a/src/stage/F4ConcreteWallTiles.test.mjs
++++ b/src/stage/F4ConcreteWallTiles.test.mjs
+@@ -44,3 +44,14 @@
+ 
+- it('rejects degenerate and horizontal triangles',()=>{
++ it('admits exact low side faces on opt-in without displacing tall walls',()=>{
++  const low=new Float32Array([0,0,2,2,0,2,2,.5,2,0,0,2,2,.5,2,0,.5,2]);
++  expect(extractF4ConcreteWallTiles(low,64)).toEqual([]);
++  const rows=extractF4ConcreteWallTiles(low,64,true);
++  expect(rows.length).toBe(1);
++  expect(rows[0].legacyCandidate).toBe(false);
++  expect(rows[0].cells).toBe(64);
++  expect(extractF4ConcreteWallTiles(new Float32Array([...wallVertices(2),...low]),1,true)[0].legacyCandidate).toBe(true);
++  const thin=new Float32Array([0,0,2,2,0,2,2,.06,2,0,0,2,2,.06,2,0,.06,2]);
++  expect(extractF4ConcreteWallTiles(thin,64,true)).toEqual([]);
++ });
++ it('rejects degenerate and horizontal triangles',()=>{
+   expect(extractF4ConcreteWallTiles(new Float32Array([
