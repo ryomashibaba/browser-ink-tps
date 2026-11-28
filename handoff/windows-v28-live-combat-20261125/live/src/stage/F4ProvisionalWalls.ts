@@ -15,17 +15,58 @@ export const F4_WALL_PREFIX='F4ProvisionalWall:';
 // Prepare a separate small atlas + exact source-triangle renderer before
 // publishing any surface. No original StageDefinition or score flags change.
 export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics,
- vertices:Float32Array,visualPolish=false,visualLightDirection?:Vec3){
+ vertices:Float32Array,visualPolish=false,visualLightDirection?:Vec3,
+ report?:(probe:Readonly<{sourceTriangles:number;verticalTriangles:number;axisAlignedVerticalTriangles:number;
+  rapierBackedTriangles:number;nearbySupportedBases:number;axisWallCandidates:number;accessibleRoots:number;
+  physicallyBackedCandidates:number;maxBackedCells:number;
+  selectedTiles:number;registeredSurfaces:number}>)=>void){
  if(!physics.hasF4WholeResearchTrimesh)return null;
  const cell=GAME_CONFIG.ink.cellSizeMeters;
  if(cell!==.125)return null;
+ let verticalTriangles=0,axisAlignedVerticalTriangles=0,rapierBackedTriangles=0,nearbySupportedBases=0;
+ const wallNormal=new Vec3(),face=new Vec3(),from=new Vec3(),to=new Vec3(),low=new Vec3(),probe=new Vec3();
+ for(let i=0;i<vertices.length;i+=9){
+  const ax=vertices[i+3]!-vertices[i]!,ay=vertices[i+4]!-vertices[i+1]!,az=vertices[i+5]!-vertices[i+2]!;
+  const bx=vertices[i+6]!-vertices[i]!,by=vertices[i+7]!-vertices[i+1]!,bz=vertices[i+8]!-vertices[i+2]!;
+  const nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,mag=Math.hypot(nx,ny,nz);
+  if(mag<1e-7||Math.abs(ny)/mag>=.1)continue;
+  verticalTriangles++;
+  wallNormal.set(nx/mag,ny/mag,nz/mag);
+  const ax0=vertices[i]!,ay0=vertices[i+1]!,az0=vertices[i+2]!;
+  const bx0=vertices[i+3]!,by0=vertices[i+4]!,bz0=vertices[i+5]!;
+  const cx0=vertices[i+6]!,cy0=vertices[i+7]!,cz0=vertices[i+8]!;
+  face.set((ax0+bx0+cx0)/3,(ay0+by0+cy0)/3,(az0+bz0+cz0)/3);
+  from.copy(face).add(wallNormal.clone().mulScalar(.08));
+  to.copy(face).add(wallNormal.clone().mulScalar(-.08));
+  const hit=physics.castStageSegment(from,to,'ink-projectile');
+  if(hit&&hit.point.distance(face)<.025&&hit.normal&&Math.abs(hit.normal.dot(wallNormal))>=.95)
+   rapierBackedTriangles++;
+  const floorY=Math.min(ay0,by0,cy0),baseX=(ax0+bx0+cx0)/3,baseZ=(az0+bz0+cz0)/3;
+  low.set(baseX,floorY,baseZ);
+  for(const side of [-1,1]){
+   probe.copy(low).add(wallNormal.clone().mulScalar(side*.48));probe.y+=.22;
+   const floor=physics.castCharacterFootSupport(probe,0,'HUMAN');
+   if(floor&&Math.abs(floor.point.y-floorY)<=.36&&
+      f4WalkableSupportNormal(floor.normal?.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)){
+    nearbySupportedBases++;break;
+   }
+  }
+  const axis=Math.abs(nx)>Math.abs(nz)?0:2,normalAxis=axis===0?Math.abs(nx):Math.abs(nz);
+  const a=vertices[i+axis]!,b=vertices[i+3+axis]!,c=vertices[i+6+axis]!;
+  const plane=Math.round(a*1000)/1000;
+  if(normalAxis/mag>=.9999&&Math.abs(a-plane)<=.002&&Math.abs(b-plane)<=.002&&Math.abs(c-plane)<=.002)
+   axisAlignedVerticalTriangles++;
+ }
  const rows=extractF4ConcreteWallTiles(vertices,64);
  const surfaces:PaintSurface[]=[];
  const positions:number[][]=[];
  type Prepared=F4ConcreteWallTile&{surface?:PaintSurface};
  const candidates:Prepared[]=rows;
- const point=(row:F4ConcreteWallTile,u:number,v:number,offset=0)=>row.axis===0?
-   new Vec3(row.plane+offset,v,u):new Vec3(u,v,row.plane+offset);
+ const point=(row:F4ConcreteWallTile,u:number,v:number,offset=0)=>
+  new Vec3(row.normal[0]!*row.plane,row.normal[1]!*row.plane,row.normal[2]!*row.plane)
+   .add(new Vec3(row.uAxis[0]!,row.uAxis[1]!,row.uAxis[2]!).mulScalar(u))
+   .add(new Vec3(row.vAxis[0]!,row.vAxis[1]!,row.vAxis[2]!).mulScalar(v))
+   .add(new Vec3(row.normal[0]!,row.normal[1]!,row.normal[2]!).mulScalar(offset));
  const isSeed=(row:Prepared)=>{
   const n=Math.round(row.width/cell);
   for(let x=2;x<n;x+=4){
@@ -41,15 +82,24 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
   }
   return false;
  };
+ const candidateSet=new Set(candidates),seedCache=new WeakMap<Prepared,boolean>();
+ let accessibleRoots=0;
+ const isCachedSeed=(row:Prepared)=>{
+  const cached=seedCache.get(row);if(cached!==undefined)return cached;
+  const value=isSeed(row);seedCache.set(row,value);
+  if(candidateSet.has(row)&&value)accessibleRoots++;
+  return value;
+ };
  // Evaluate backing only for reachable roots and connected candidates.
  // Cap expensive attempts in addition to the eight committed atlas slots.
- let preparedCount=0;
+ let preparedCount=0,physicallyBackedCandidates=0,maxBackedCells=0;
  const prepare=(row:Prepared):Prepared|null=>{
   if(preparedCount++>=16)return null;
   const n=Math.round(row.width/cell),mask=row.mask.slice();
-  const surface=new PaintSurface(F4_WALL_PREFIX+[row.axis,row.plane,row.minU,row.minV].join(':'),
+  const surface=new PaintSurface(F4_WALL_PREFIX+[row.planeKey,row.minU,row.minV].join(':'),
    point(row,row.minU+row.width/2,row.minV+row.height/2),
-   row.axis===0?new Vec3(0,0,1):new Vec3(1,0,0),new Vec3(0,1,0),
+   new Vec3(row.uAxis[0]!,row.uAxis[1]!,row.uAxis[2]!),
+   new Vec3(row.vAxis[0]!,row.vAxis[1]!,row.vAxis[2]!),
    row.width,row.height,cell,SurfaceFlags.Paintable|SurfaceFlags.Swimmable|SurfaceFlags.Wall,
    GAME_CONFIG.ink.dirtyTileCells);
   let backed=0;
@@ -59,10 +109,18 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
     surface.flagsGrid[index]=0;mask[index]=0;
    }else backed++;
   }
-  return backed>=64?{...row,mask,surface}:null;
+  maxBackedCells=Math.max(maxBackedCells,backed);
+  if(backed<64)return null;
+  physicallyBackedCandidates++;
+  return {...row,mask,surface};
  };
- const selected=selectF4ConnectedWallTiles(candidates,isSeed,prepare,8);
+ const selected=selectF4ConnectedWallTiles(candidates,isCachedSeed,prepare,8);
  for(const row of selected){if(row.surface){surfaces.push(row.surface);positions.push(row.positions);}}
+ report?.({sourceTriangles:vertices.length/9,verticalTriangles,axisAlignedVerticalTriangles,
+  rapierBackedTriangles,nearbySupportedBases,
+  axisWallCandidates:candidates.length,
+  accessibleRoots,physicallyBackedCandidates,maxBackedCells,
+  selectedTiles:selected.length,registeredSurfaces:surfaces.length});
  if(!surfaces.length)return null;
  const atlas=new GpuInkAtlas(app,surfaces,Math.min(1024,app.graphicsDevice.maxTextureSize),32,
   GAME_CONFIG.ink.atlasGutterPixels,true);

@@ -3559,7 +3559,8 @@ export class UndertowF3PlayablePreviewApp{
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&f4WallVertices){
      try{
       const walls=wallInstallation=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices,
-       f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined);
+       f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined,
+       probe=>{this.canvas.dataset.t21F4WallProbe=JSON.stringify(probe);});
       if(walls){
        // Original 17-surface QA list remains separate. Existing weapon
        // runtimes share the mutable physical array, not a copied snapshot.

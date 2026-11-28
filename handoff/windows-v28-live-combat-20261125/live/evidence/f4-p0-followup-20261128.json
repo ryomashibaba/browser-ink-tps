@@ -1,0 +1,71 @@
+{
+  "schema": "F4_P0_FOLLOWUP_V1",
+  "recordedAt": "2026-11-28",
+  "repository": "ryomashibaba/browser-ink-tps",
+  "canonicalBaseHead": "b2e41bde14bc744231e4c16fd9300ce3db49f244",
+  "sharedBranchBaseHead": "4f4b477a81eae50a12c64d00d8f4fcd7b70388a5",
+  "realGameDelta": {
+    "shooterPaintDefinitionCount": {
+      "canonical": 1,
+      "shared": 1,
+      "action": "Removed only the stale duplicate from shared source; current player helper retains 1.20x authored impact radii and splash radius."
+    },
+    "floorReadiness": {
+      "sameApi": "f4ProvisionalTurf()",
+      "startupPartialAreaM2": 2081.9103083955106,
+      "startupProgress": 0.509975,
+      "previousReadyAreaM2": 3202.1742427022364,
+      "currentStatus": "LIVE",
+      "currentProgress": 1,
+      "currentReadyAreaM2": 3244.887693293978,
+      "previousReadyTiles": 839,
+      "currentReadyTiles": 858,
+      "currentTotalProjectedM2": 5693.405302076608,
+      "finding": "The 2081.91 m2 reading was an in-progress scan, not missing floor."
+    },
+    "walls": {
+      "sourceVerticalTriangles": 40,
+      "rapierBackedTriangles": 40,
+      "nearbySupportedBases": 32,
+      "axisAlignedCandidatesBeforeFix": 0,
+      "obliquePlaneCandidates": 17,
+      "physicallyBackedCandidates": 8,
+      "backedMaskCells": 660,
+      "registeredSurfaces": 8,
+      "fix": "Extract and clip paint tiles in each real vertical source plane; retain Rapier backing and access gates."
+    },
+    "pointerLock": {
+      "userScreenshot": "Embedded Chromium displayed a requestPointerLock UnknownError on START.",
+      "sourceState": "The REQUESTED to REJECTED event path is present in shared source; canonical now sets request state before requesting and skips unfocused/hidden requests.",
+      "realInputVerification": "NOT_RUN"
+    }
+  },
+  "runtime": {
+    "chrome": "158.0.8127.38",
+    "renderer": "WebGL2 / ANGLE D3D11 AMD Radeon 890M",
+    "rapier": "READY, 57,840 source triangles",
+    "gpuInkAtlasPrimed": true,
+    "pendingPaintEvents": 0,
+    "state": "STAGING",
+    "tick": 0,
+    "pointerLocked": false,
+    "activeGameplayFps": "NOT_MEASURED",
+    "realShotsOrPaintEvents": 0
+  },
+  "validation": {
+    "npmRunBuild": "PASS, tsc -b and Vite; 1,585 modules",
+    "viteChunkWarning": "Existing chunks exceed 500 kB.",
+    "targetedTests": {
+      "files": 10,
+      "tests": 111,
+      "status": "PASS"
+    },
+    "gitDiffCheck": "PASS"
+  },
+  "holds": [
+    "Reported dry floor location was not available in the capture; no real projectile could be traced through impact, ownership and GPU display.",
+    "Main/sub/special post-adjustment balance was not re-tested in active play. Preserve the current player-only adjustments; do not add unsupported multipliers.",
+    "Wall tile registration is physically backed; actual manual wall painting remains unverified.",
+    "No active-play movement, squid/climb, fall, aiming, CPU combat, flicker-over-time, queue drain or FPS measurement was obtained."
+  ]
+}

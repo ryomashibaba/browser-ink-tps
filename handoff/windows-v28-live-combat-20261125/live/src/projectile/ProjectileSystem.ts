@@ -222,18 +222,6 @@ interface CanopyVolley {
   request?: CpuFireRequest;
 }
 
-// Local playable tuning only. No combat, cadence or reference-weapon edits.
-function f4PlayableShooterPaint(profile:ShooterProfile):ShooterProfile{
- return {...profile,
-  impactNear:[profile.impactNear[0],profile.impactNear[1]*1.22],
-  impactMiddle:[profile.impactMiddle[0],profile.impactMiddle[1]*1.22],
-  impactFar:[profile.impactFar[0],profile.impactFar[1]*1.22],
-  splashRadius:profile.splashRadius*1.35,
-  splashSpacing:profile.splashSpacing*.78,
-  footRadius:profile.footRadius*1.10
- };
-}
-
 // A camera target behind a physical muzzle must not reverse the gun.
 function f4ForwardAimTarget(origin:Vec3,target:Vec3,forward:Vec3):boolean{
  const x=target.x-origin.x,y=target.y-origin.y,z=target.z-origin.z;
@@ -313,7 +301,9 @@ export class ProjectileSystem {
   public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
 
   private f4CountEnemyTerminal(slot:ProjectileSlot,reason:string):void {
-    if(!this.physics.hasF4WholeResearchTrimesh||slot.sourceKind!=='CPU'||slot.team===this.currentHumanTeam)return;
+    // SOURCE-only unit fixtures may exercise terminal authority without
+    // constructing Rapier. F4 counters must remain absent in that path.
+    if(!this.physics?.hasF4WholeResearchTrimesh||slot.sourceKind!=='CPU'||slot.team===this.currentHumanTeam)return;
     const e=this.f4EnemyProjectileEvidence;
     switch(reason){
       case 'ORIGINAL_PAINTABLE':case 'ORIGINAL_SOLID':e.terrain++;break;
@@ -4313,7 +4303,7 @@ export class ProjectileSystem {
           slot.team, undefined, false, slot.sourceKind === 'HUMAN' ? slot.weaponId : undefined);
         this.enqueueF4BurstPaint(center, slot.team, slot.sourceId,
           terrain ? 1.25 : 2.15, terrain ? 0.66 : 0.88, true,PaintEventType.Bomb,slot.f4GaugeLaunchLife);
-        if(this.physics.hasF4WholeResearchTrimesh)this.feedback.subBurst(slot.team,center,slot.blastRadius*scale);
+        if(this.physics?.hasF4WholeResearchTrimesh)this.feedback.subBurst(slot.team,center,slot.blastRadius*scale);
       }
     } else if (slot.blastRadius > 0 && slot.blastDamage > 0) {
       this.applyAreaDamage(point,slot.blastRadius,slot.blastDamage,
@@ -4379,7 +4369,7 @@ export class ProjectileSystem {
     }
 
     // Empty-air expiry is not physical contact.
-    if(!this.physics.hasF4WholeResearchTrimesh||reason!=='TTL')this.feedback.impact(slot.team, point, profile);
+    if(!this.physics?.hasF4WholeResearchTrimesh||reason!=='TTL')this.feedback.impact(slot.team, point, profile);
     this.stats.projectileImpacts += 1;
     this.deactivate(slot);
   }

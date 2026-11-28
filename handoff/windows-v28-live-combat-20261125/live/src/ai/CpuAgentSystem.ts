@@ -5336,6 +5336,7 @@ export class CpuAgentSystem {
 
   public aimF4ShotAtLaunch(request: CpuFireRequest, origin: Vec3, range: number,
     solveFlightTicks: (point: Vec3) => number | null): Vec3 | null {
+    const aimEvidence=this.f4AimEvidence as typeof this.f4AimEvidence|undefined;
     const ray = this.f4ResearchCombatStageRay;
     const opponent = request.f4Opponent;
     if (!this.f4LeadEnabled || !ray || !opponent || request.sourceFloorPaint) return request.target;
@@ -5343,18 +5344,18 @@ export class CpuAgentSystem {
     const enemy = opponent.id === 'HUMAN' ? null : this.bots.find(bot=>bot.id===opponent.id);
     if (!sample || opponent.life===null || sample.life !== opponent.life || sample.tick !== this.b181NativeFrame ||
         (opponent.id !== 'HUMAN' && (!enemy || enemy.hp <= 0 || enemy.lifeState !== 'ACTIVE'))){
-      this.f4AimEvidence.staleTargetRejected++;return null;
+      if(aimEvidence)aimEvidence.staleTargetRejected++;return null;
     }
     const offset = new Vec3(0,opponent.offsetY,0);
     const actual = sample.current.clone().add(offset);
     const clear = (from: Vec3, to: Vec3) => !ray(from,to);
     if(!Number.isFinite(range)||range<=0||![actual.x,actual.y,actual.z,origin.x,origin.y,origin.z].every(Number.isFinite)||
-       Math.hypot(actual.x-origin.x,actual.y-origin.y,actual.z-origin.z)>range){this.f4AimEvidence.outOfRange++;return null;}
-    if(!clear(origin,actual)){this.f4AimEvidence.covered++;return null;}
+       Math.hypot(actual.x-origin.x,actual.y-origin.y,actual.z-origin.z)>range){if(aimEvidence)aimEvidence.outOfRange++;return null;}
+    if(!clear(origin,actual)){if(aimEvidence)aimEvidence.covered++;return null;}
     const predicted = sample.previous && predictF4Lead(origin,actual,sample.previous.clone().add(offset),
       1,range,solveFlightTicks,clear);
-    if (predicted){this.f4LeadAccepted++;this.f4AimEvidence.predictedTarget++;}
-    else this.f4AimEvidence.currentTarget++;
+    if (predicted){this.f4LeadAccepted++;if(aimEvidence)aimEvidence.predictedTarget++;}
+    else if(aimEvidence)aimEvidence.currentTarget++;
     return predicted ?? actual;
   }
 

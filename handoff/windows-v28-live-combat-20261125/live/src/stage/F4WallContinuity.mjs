@@ -1,6 +1,6 @@
 // Bounded provisional wall continuity; no movement/paint state writes.
 export function f4SharedWallSeam(a,b,minRun=6){
- if(a===b||a.axis!==b.axis||a.plane!==b.plane||a.width!==b.width||a.height!==b.height)return false;
+ if(a===b||a.axis!==b.axis||a.planeKey!==b.planeKey||a.width!==b.width||a.height!==b.height)return false;
  const n=Math.round(Math.sqrt(a.mask.length));
  if(!Number.isInteger(n)||n*n!==a.mask.length||a.mask.length!==b.mask.length)return false;
  const du=b.minU-a.minU,dv=b.minV-a.minV;
