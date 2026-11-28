@@ -1,0 +1,165 @@
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -670,7 +670,9 @@
+  private b400FinalOriginalGrid:B400SourceRecap|null=null;
+  private readonly b401LiveSourceInk=new B401NativeLiveSourceInkOwnership();
+  private readonly sourcePracticeInkBalance:ReturnType<typeof createSourcePracticeInkBalance>;
+- private b203EverLockedRealPointer=false;
++ private b203EverLockedRealPointer=false;
++ private f4PrestartScoreUiState='';
++ private f4PointerLockIssue='';
+  private renderedFrames=0;
+  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
+  /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
+@@ -2190,7 +2192,12 @@
+   const pauseInfo=document.createElement('p');
+   pauseInfo.id='t21-f3-b202-remaining';
+   pauseInfo.style.cssText='color:#c9ebe8;margin:9px 0 12px';
+-  const resumeButton=document.createElement('button');
++  const f4ReadyStatus=document.createElement('p');
++  f4ReadyStatus.id='t21-f4-ready-status';
++  f4ReadyStatus.setAttribute('role','status');
++  f4ReadyStatus.style.cssText='margin:8px 0;color:#ffd9ae;font:650 12px/1.5 system-ui';
++  f4ReadyStatus.hidden=true;
++  const resumeButton=document.createElement('button');
+   resumeButton.id='t21-f3-b202-resume';
+   resumeButton.type='button';
+   resumeButton.textContent='RESUME THIS ROUND · SAME REAL WORLD';
+@@ -2210,11 +2217,22 @@
+     return;
+    }
+    if(!this.stopReason&&this.matchState!=='TIME_UP'&&
+-      !this.f4LiveWorldPending()&&
+-      !this.survey.snapshot().active&&this.galleryIndex<0&&
+-      (this.b203FullRound||
+-       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
+-    void this.canvas.requestPointerLock();
++      !this.f4LiveWorldPending()&&
++      !this.f4InitialScorePending()&&
++      !this.survey.snapshot().active&&this.galleryIndex<0&&
++      (this.b203FullRound||
++       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
++    {
++     if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe){void this.canvas.requestPointerLock();return;}
++     this.f4PointerLockIssue='';
++     const rejected=(error:unknown)=>{
++      if(document.pointerLockElement===this.canvas)return;
++      this.f4PointerLockIssue='マウス操作を開始できません: '+String(error).slice(0,150);
++      this.refreshF4ReadyStatus();
++     };
++     try{void Promise.resolve(this.canvas.requestPointerLock()).catch(rejected);}
++     catch(error){rejected(error);}
++    }
+   });
+   // B378: Existing physical weapon profiles become playable in source
+   // 180s only before first pointer lock; never disturb genuine B343's
+@@ -2291,7 +2309,7 @@
+   const pauseHint=document.createElement('div');
+   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
+   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
+-  pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
++  pauseOverlay.append(pauseTitle,pauseInfo,f4ReadyStatus,resumeButton,pauseHint);
+   if(this.nativeLiveSourcePrestart||this.f4WholeTrimeshRequested){
+    this.b21QualityButton.style.cssText='width:100%;margin-top:8px;'+
+     'padding:8px;border:1px solid #75cbd9;border-radius:8px;'+
+@@ -2907,7 +2925,8 @@
+   document.addEventListener('pointerlockchange',()=>{
+    const running=this.b25Run.snapshot().status==='RUNNING';
+    if(document.pointerLockElement===this.canvas){
+-    const firstStart=this.b203FullRound&&!this.b203EverLockedRealPointer;
++    const firstStart=this.b203FullRound&&!this.b203EverLockedRealPointer;
++    this.f4PointerLockIssue='';
+     // A delayed lock after blur must not resume an unfocused window.
+     if(document.hidden||!document.hasFocus()||this.stopReason||
+        this.matchState==='TIME_UP'){
+@@ -2923,7 +2942,7 @@
+     }
+     // A premature canvas click must not latch START or discard the selected kit.
+     // Require another genuine lock after real collision and CPU connection.
+-    if(this.f4LiveWorldPending()){
++    if(this.f4LiveWorldPending()||this.f4InitialScorePending()){
+      this.paused=true;document.exitPointerLock();return;
+     }
+     this.b203EverLockedRealPointer=true;
+@@ -5688,7 +5707,41 @@
+   const count=this.canvas.dataset.t21F4ProvisionalFloors;
+   return count&&/^\d+$/.test(count)&&Number(count)>0?'':'追加床の塗装準備失敗 · 制限付き試合';
+  }
+- private f4LiveWorldPending():boolean{
++ // First start only; existing limited HOLD play and resume are preserved.
++ private f4InitialScorePending():boolean{
++  if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||this.b203EverLockedRealPointer||
++     this.matchState!=='STAGING')return false;
++  const score=this.ink.readF4ProvisionalTurf();
++  return !score||score.status==='BUILDING';
++ }
++ private refreshF4ReadyStatus():void{
++  const node=this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f4-ready-status');
++  if(!node)return;
++  const enabled=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&!this.stopReason&&
++   this.matchState!=='TIME_UP'&&this.paused;
++  const first=enabled&&!this.b203EverLockedRealPointer&&this.matchState==='STAGING';
++  const score=first?this.ink.readF4ProvisionalTurf():null;
++  const world=first&&this.f4LiveWorldPending();
++  const state=world?'WORLD_PENDING':first?score?.status??'NOT_INITIALIZED':'INACTIVE';
++  const pct=score&&Number.isFinite(score.progress)?Math.floor(Math.max(0,Math.min(1,score.progress))*100):0;
++  const message=world?'ステージ・CPUの準備中…':
++   first&&!score?'得点集計の初期化待ち（まだ開始できません）':
++   score?.status==='BUILDING'?'床の物理支持と得点面を集計中 · '+pct+'%':
++   score?.status==='LIVE'?'暫定得点の準備完了':
++   score?.status==='HOLD'?'暫定得点 HOLD · '+(score.reason??'UNKNOWN'):'';
++  const text=[message,enabled?this.f4PointerLockIssue:''].filter(Boolean).join(' / ');
++  if(node.textContent!==text)node.textContent=text;
++  node.hidden=!text;
++  if(first){
++   this.canvas.dataset.t21F4ScorePreparation=state;
++   this.canvas.dataset.t21F4ScoreProgress=String(pct);
++  }
++  if(state!==this.f4PrestartScoreUiState){
++   this.f4PrestartScoreUiState=state;
++   if(first)this.refresh();
++  }
++ }
++ private f4LiveWorldPending():boolean{
+   return this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
+    (!this.f4WholeTrimeshInstalled||!this.f4WholeCpuConnected);
+  }
+@@ -7353,7 +7406,7 @@
+   try{
+   this.updateW10B22OwnerTrial();
+   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+-   const deadline=performance.now()+3;
++   const deadline=performance.now()+(!this.b203EverLockedRealPointer&&this.paused?6:3);
+    this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
+   }
+   // No player/CPU physics ticks with old colliders while F3L verifies.
+@@ -7376,7 +7429,8 @@
+     this.atlas.flush(GAME_CONFIG.ink.maxGpuPaintEventsPerFrame);
+     this.coordinator.flushF4WallAtlas(16);
+    }
+-   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
++   this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
++   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)this.refreshF4ReadyStatus();
+    this.b399UpdateCameraAimClearance();
+    this.refreshF4CombatReticle();
+    this.lastSourceFrameAtMs=Number.NaN;
+@@ -8128,11 +8182,13 @@
+     ready?'READY · 180s SOURCE ROUND':'PAUSED · REAL SOURCE WORLD';
+   const stopResume=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
+    '#t21-f3-b202-resume')!;
+-  const f4Pending=ready&&this.f4LiveWorldPending();
+-  stopResume.disabled=stoppedMenuOnly||f4Pending;
+-  const floorWarning=ready?this.f4FloorRegistrationNotice():'';
+-  stopResume.textContent=f4Pending?
+-   (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
++  const f4Pending=ready&&this.f4LiveWorldPending();
++  const f4ScorePending=ready&&!f4Pending&&this.f4InitialScorePending();
++  stopResume.disabled=stoppedMenuOnly||f4Pending||f4ScorePending;
++  const floorWarning=ready?this.f4FloorRegistrationNotice():'';
++  stopResume.textContent=f4Pending?
++   (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
++   f4ScorePending?'得点集計中 · 準備完了をお待ちください':
+    sourceFallRecovery?
+    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
+    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':
