@@ -39,10 +39,10 @@ export class GameplayInkSystem {
   private readonly backingCache=new Map<string,Uint8Array>();
   private f4ProvisionalTurf:F4ProvisionalTurf|null=null;
 
-  public enableF4ProvisionalTurf():boolean{
+  public enableF4ProvisionalTurf(requireExtra=false):boolean{
     if(!this.backedCell||this.f4ProvisionalTurf)return false;
     this.f4ProvisionalTurf=new F4ProvisionalTurf([...this.surfaces.values()],
-      (s,x,y,index)=>this.isPhysicallyBacked(s,x,y,index));
+      (s,x,y,index)=>this.isPhysicallyBacked(s,x,y,index),requireExtra);
     return true;
   }
   public scanF4ProvisionalTurf(limit:number,keepGoing:()=>boolean):void{

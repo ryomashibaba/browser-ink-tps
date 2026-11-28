@@ -34,7 +34,7 @@ export function prepareF4ProvisionalFloors(app:AppBase,ink:GameplayInkSystem,
   const overlap=original.filter(s=>Math.abs(s.normal.dot(n))>.999&&
    s.center.distance(center)<Math.hypot(s.widthMeters,s.heightMeters)/2+Math.hypot(row.width,row.height)/2+.12);
   const prior=entries.map(e=>e.surface).filter(s=>Math.abs(s.normal.dot(n))>.999&&
-   s.center.distance(center)<Math.hypot(row.width,row.height)+.12);
+   s.center.distance(center)<Math.hypot(s.widthMeters,s.heightMeters)/2+Math.hypot(row.width,row.height)/2+.12);
   let active=0;
   for(let y=0;y<surface.heightCells;y++)for(let x=0;x<surface.widthCells;x++){
    const k=surface.index(x,y);
@@ -50,15 +50,30 @@ export function prepareF4ProvisionalFloors(app:AppBase,ink:GameplayInkSystem,
   if(active)entries.push({surface,positions:row.positions});
  }
  if(!entries.length)return null;
- if(entries.length>576)throw Error('F4 floor atlas capacity exceeded');
+ // Limit actual retained geometry, never empty plane candidates.
+ if(entries.length>2048)throw Error('F4 retained floor surface limit '+entries.length);
  const root=new Entity('F4ProvisionalFloorInk');
  const pages:{atlas:GpuInkAtlas;surfaces:PaintSurface[]}[]=[];
  try{
   // Four texels per 12.5cm cell, bounded atlas pages; no original atlas repack.
   const size=app.graphicsDevice.maxTextureSize>=4096&&entries.length>36?4096:2048;
-  const pageSize=size===4096?144:36;
-  for(let start=0;start<entries.length;start+=pageSize){
-   const batch=entries.slice(start,start+pageSize),surfaces=batch.map(e=>e.surface);
+  // Pack cropped surfaces by the same descending-height shelf rule as
+  // AtlasAllocator. Bound total texture bytes rather than empty rectangles.
+  const gutter=GAME_CONFIG.ink.atlasGutterPixels;
+  const sorted=[...entries].sort((a,b)=>b.surface.heightMeters-a.surface.heightMeters);
+  const batches:(typeof entries)[]=[];
+  let batch:typeof entries=[],x=gutter,y=gutter,shelf=0;
+  for(const entry of sorted){
+   const w=Math.ceil(entry.surface.widthMeters*32),h=Math.ceil(entry.surface.heightMeters*32);
+   if(x+w+gutter>size){x=gutter;y+=shelf+gutter;shelf=0;}
+   if(y+h+gutter>size){batches.push(batch);batch=[];x=gutter;y=gutter;shelf=0;}
+   batch.push(entry);x+=w+gutter;shelf=Math.max(shelf,h);
+  }
+  if(batch.length)batches.push(batch);
+  if(batches.length*size*size*4>256*1024*1024)
+   throw Error('F4 cropped floor atlas capacity '+entries.length+' surfaces / '+batches.length+' pages');
+  for(const batch of batches){
+   const surfaces=batch.map(e=>e.surface);
    const atlas=new GpuInkAtlas(app,surfaces,size,32,GAME_CONFIG.ink.atlasGutterPixels,true);
    pages.push({atlas,surfaces});
    for(const {surface,positions} of batch){

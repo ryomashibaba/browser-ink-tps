@@ -3519,7 +3519,7 @@ export class UndertowF3PlayablePreviewApp{
     }
     // registerSurface invalidates the provisional accumulator. Initialize
     // only after the complete surface set is fixed, before first live tick.
-    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
+    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
    }
    // Optical only: retain the existing single directional light and draw budget.
    // Apply only after the actual F4 geometry and CPU world are connected.
