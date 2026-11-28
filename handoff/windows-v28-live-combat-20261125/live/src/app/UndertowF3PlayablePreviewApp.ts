@@ -101,7 +101,7 @@ import {PaintEventType,PaintSource,SurfaceFlags,Team} from '../ink/types';
 import {b415StepNativeInkLoop,b415ReadableInstruction,
  b415CanonicalOriginalRoundEnabled,type B415InkLoop} from './B415LiveInkLoop';
 import {b417RealSourcePaintedCellView} from './B417SourcePaintedCellView';
-import type {PaintSurface} from '../ink/PaintSurface';
+import {sourceRegisteredPaintCellActive,type PaintSurface} from '../ink/PaintSurface';
 import type {CrowdAgent} from 'recast-navigation';
 import {PlayerInput} from '../input/PlayerInput';
 import {initializeRecastNavigation,RecastStageNavigation}
@@ -385,6 +385,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly physics:RapierStagePhysics;
  private b45SourceSurfaces:readonly PaintSurface[]=[];
  private f4PhysicalPaintSurfaces:PaintSurface[]=[];
+ private readonly f4FloorRasterEvidence:{tick:number;surfaceId:string;type:PaintEventType;
+  point:number[];eligible:number;changed:number;alreadyOwned:number}[]=[];
+ private readonly f4DeniedFloorRasterEvidence:typeof this.f4FloorRasterEvidence=[];
  private nav:RecastStageNavigation;
  /** Read-only original underpass gap review; never CPU path authority. */
  private readonly b155SourceConnectivityReview:
@@ -692,7 +695,9 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b401LiveSourceInk=new B401NativeLiveSourceInkOwnership();
  private readonly sourcePracticeInkBalance:ReturnType<typeof createSourcePracticeInkBalance>;
  private b203EverLockedRealPointer=false;
+ private f4PrestartScoreUiState='';
  private f4ScorePreparationStartedAt=0;
+ private f4PointerLockIssue='';
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
  /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
@@ -938,6 +943,19 @@ export class UndertowF3PlayablePreviewApp{
   this.coordinator=new PaintCoordinator(this.ink,this.atlas,this.stats,
    (event,changedCells,raster)=>{
     this.b23InkFeedback.accept(event,changedCells,raster);
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&event.source===PaintSource.Human&&
+       event.type!==PaintEventType.Debug){
+     const surface=this.ink.getSurface(event.surfaceId);
+     if(surface&&!(surface.baseFlags&SurfaceFlags.Wall)){
+      const p=surface.localToWorld(event.centerU,event.centerV);
+      const row={tick:event.tick,surfaceId:event.surfaceId,type:event.type,point:[p.x,p.y,p.z],
+       eligible:raster.rasterEligibleCells,changed:changedCells,alreadyOwned:raster.rasterAlreadyTeamOwnedCells};
+      this.f4FloorRasterEvidence.push(row);
+      if(this.f4FloorRasterEvidence.length>64)this.f4FloorRasterEvidence.shift();
+      if(row.eligible===0){this.f4DeniedFloorRasterEvidence.push(row);
+       if(this.f4DeniedFloorRasterEvidence.length>64)this.f4DeniedFloorRasterEvidence.shift();}
+     }
+    }
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&event.source===PaintSource.Human&&
        event.type!==PaintEventType.Debug&&changedCells>0&&event.surfaceId.startsWith('F4ProvisionalFloor:')){
      const surface=this.ink.getSurface(event.surfaceId);
@@ -2226,6 +2244,11 @@ export class UndertowF3PlayablePreviewApp{
   const pauseInfo=document.createElement('p');
   pauseInfo.id='t21-f3-b202-remaining';
   pauseInfo.style.cssText='color:#c9ebe8;margin:9px 0 12px';
+  const f4ReadyStatus=document.createElement('p');
+  f4ReadyStatus.id='t21-f4-ready-status';
+  f4ReadyStatus.setAttribute('role','status');
+  f4ReadyStatus.style.cssText='margin:8px 0;color:#ffd9ae;font:650 12px/1.5 system-ui';
+  f4ReadyStatus.hidden=true;
   const resumeButton=document.createElement('button');
   resumeButton.id='t21-f3-b202-resume';
   resumeButton.type='button';
@@ -2247,23 +2270,27 @@ export class UndertowF3PlayablePreviewApp{
    }
    if(!this.stopReason&&this.matchState!=='TIME_UP'&&
       !this.f4LiveWorldPending()&&
+      !this.f4InitialScorePending()&&
       !this.survey.snapshot().active&&this.galleryIndex<0&&
       (this.b203FullRound||
-       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING')){
-    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
-     // A background/unfocused document can reject the browser request.
-     // Never start a simulated round or retry without a real user click.
-     const report=()=>{
-      this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
-      resumeButton.textContent='CLICK GAME WINDOW · TRY AGAIN';
-      resumeButton.title='ブラウザがマウス操作を拒否しました。単独Chromeのゲーム画面を選択して再試行してください。';
-     };
-     if(document.hidden||!document.hasFocus()){report();return;}
+       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
+    {
+     if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe){void this.canvas.requestPointerLock();return;}
+     this.f4PointerLockIssue='';
      this.canvas.dataset.t21F4PointerLockRequest='REQUESTED';
-     try{void Promise.resolve(this.canvas.requestPointerLock()).catch(report);}
-     catch{report();}
-    }else void this.canvas.requestPointerLock();
-   }
+     const rejected=(error:unknown)=>{
+      if(document.pointerLockElement===this.canvas)return;
+      this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
+      // Chromium's generic UnknownError is implementation detail and gives
+      // no useful recovery path in embedded browser hosts. Keep the real
+      // pointer-lock gate, but tell the player how to retry in standalone Chrome.
+      this.f4PointerLockIssue='ブラウザがマウス操作を拒否しました。単独Chromeのゲーム画面を選択して再試行してください。';
+      this.refreshF4ReadyStatus();
+     };
+     if(document.hidden||!document.hasFocus()){rejected(null);return;}
+     try{void Promise.resolve(this.canvas.requestPointerLock()).catch(rejected);}
+     catch(error){rejected(error);}
+    }
   });
   // B378: Existing physical weapon profiles become playable in source
   // 180s only before first pointer lock; never disturb genuine B343's
@@ -2340,7 +2367,7 @@ export class UndertowF3PlayablePreviewApp{
   const pauseHint=document.createElement('div');
   pauseHint.textContent='Esc/P pauses · click game view also resumes · NO OFFICIAL TURF RESULT';
   pauseHint.style.cssText='margin-top:9px;color:#b9d9e4;font:600 10px/1.5 system-ui';
-  pauseOverlay.append(pauseTitle,pauseInfo,resumeButton,pauseHint);
+  pauseOverlay.append(pauseTitle,pauseInfo,f4ReadyStatus,resumeButton,pauseHint);
   if(this.nativeLiveSourcePrestart||this.f4WholeTrimeshRequested){
    this.b21QualityButton.style.cssText='width:100%;margin-top:8px;'+
     'padding:8px;border:1px solid #75cbd9;border-radius:8px;'+
@@ -2970,6 +2997,7 @@ export class UndertowF3PlayablePreviewApp{
    const running=this.b25Run.snapshot().status==='RUNNING';
    if(document.pointerLockElement===this.canvas){
     const firstStart=this.b203FullRound&&!this.b203EverLockedRealPointer;
+    this.f4PointerLockIssue='';
     // A delayed lock after blur must not resume an unfocused window.
     if(document.hidden||!document.hasFocus()||this.stopReason||
        this.matchState==='TIME_UP'){
@@ -2985,7 +3013,7 @@ export class UndertowF3PlayablePreviewApp{
     }
     // A premature canvas click must not latch START or discard the selected kit.
     // Require another genuine lock after real collision and CPU connection.
-    if(this.f4LiveWorldPending()){
+    if(this.f4LiveWorldPending()||this.f4InitialScorePending()){
      this.paused=true;document.exitPointerLock();return;
     }
     this.b203EverLockedRealPointer=true;
@@ -3265,6 +3293,67 @@ export class UndertowF3PlayablePreviewApp{
   const api={snapshot:()=>this.snapshot(),
    f4PhysicalSpecial:()=>this.f4Special?.snapshot()??null,
    f4ProvisionalTurf:()=>this.f4ProvisionalTurfEnabled?this.ink.readF4ProvisionalTurf():null,
+   f4FloorDiagnosis:()=>this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&this.f4WholeTrimeshInstalled?{
+    tick:this.clock.tick,matchState:this.matchState,body:this.player.getPosition().toArray(),
+    contacts:this.projectiles.f4FloorContactEvidence(),
+    raster:this.f4FloorRasterEvidence.map(row=>({...row,point:[...row.point]})),
+    deniedRaster:this.f4DeniedFloorRasterEvidence.map(row=>({...row,point:[...row.point]})),
+    queue:this.coordinator.f4PaintQueueEvidence(),
+    note:'Actual direct human projectile contacts and CPU-authoritative raster observations; queue is current backlog, not GPU pixel readback.'
+   }:null,
+   f4AuditPaintHitIndexOnStage:()=>{
+    if(!this.f4ProvisionalTurfEnabled||!this.f4WholeTrimeshInstalled||
+       !this.physics.hasF4WholeResearchTrimesh||this.f4PhysicalPaintSurfaces.length===0)
+     return {status:'HOLD',reason:'F4_STAGE_OR_SURFACES_NOT_READY',tested:0,mismatches:[]};
+    const surfaces=this.f4PhysicalPaintSurfaces;
+    const mismatches:{surfaceId:string;indexed:string|null;exhaustive:string|null}[]=[];
+    const unmappedFloorSamples:{surfaceId:string;point:number[];planeDistance:number;
+     inside:boolean;activeCell:boolean;backed:boolean;normalAlignment:number|null;
+     hitNormal:number[]|null}[]=[];
+    let rays=0,hits=0,floorRays=0,floorHits=0,floorMapped=0;
+    for(const surface of surfaces){
+     const floor=(surface.baseFlags&SurfaceFlags.Floor)!==0;
+     let sample=surface.center.clone(),sampleU=surface.widthMeters*.5,sampleV=surface.heightMeters*.5;
+     if(floor){
+      let found=false;
+      for(let y=0;y<surface.heightCells&&!found;y++)for(let x=0;x<surface.widthCells;x++){
+       const u=Math.min((x+.5)*surface.cellSize,surface.widthMeters-.0001);
+       const v=Math.min((y+.5)*surface.cellSize,surface.heightMeters-.0001);
+       if(sourceRegisteredPaintCellActive(surface,u,v)){
+        sampleU=u;sampleV=v;sample=surface.localToWorld(u,v);found=true;break;
+       }
+      }
+      if(!found)continue;
+     }
+     const normal=floor?surface.normal:new Vec3(0,1,0);
+     const hit=this.physics.castStageSegment(
+      sample.clone().add(normal.clone().mulScalar(.5)),
+      sample.clone().sub(normal.clone().mulScalar(.5)),'ink-projectile');
+     rays++;
+     if(floor)floorRays++;
+     if(!hit)continue;
+     hits++;
+     if(floor)floorHits++;
+     const comparison=this.physics.compareF4PaintAtStageHit(hit,surfaces);
+     if(floor&&comparison.indexed)floorMapped++;
+     if(floor&&!comparison.indexed&&unmappedFloorSamples.length<32){
+      const projection=surface.projectWorldPoint(hit.point);
+      const activeCell=sourceRegisteredPaintCellActive(surface,sampleU,sampleV);
+      const backed=projection.inside&&activeCell?
+       this.physics.hasF4PaintBacking(surface,sampleU,sampleV):false;
+      const normalAlignment=hit.normal?hit.normal.dot(surface.normal):null;
+      unmappedFloorSamples.push({surfaceId:surface.id,point:[hit.point.x,hit.point.y,hit.point.z],
+       planeDistance:projection.planeDistance,inside:projection.inside,activeCell,backed,normalAlignment,
+       hitNormal:hit.normal?[hit.normal.x,hit.normal.y,hit.normal.z]:null});
+     }
+     if(!comparison.equal&&mismatches.length<16)
+      mismatches.push({surfaceId:surface.id,indexed:comparison.indexed,exhaustive:comparison.exhaustive});
+    }
+    return {status:mismatches.length?'MISMATCH':'PASS',tested:rays,stageHits:hits,
+     surfaceCount:surfaces.length,mismatches,floorActiveSamples:{tested:floorRays,stageHits:floorHits,
+      mapped:floorMapped,unmapped:floorHits-floorMapped,unmappedSamples:unmappedFloorSamples},
+     note:'Read-only Rapier rays start from real active mask cells (or registered surface centers) and compare indexed with exhaustive paint-plane evaluation on each actual stage hit.'};
+   },
    f4ActualMotionEvidence:()=>this.f4ProvisionalTurfEnabled&&this.f4WholeCpuConnected?{
     nativeTick:this.clock.tick,matchState:this.matchState,remainingSeconds:this.remainingSeconds,
     human:{body:this.player.getPosition().toArray(),hp:this.resources.currentHp,grounded:this.stats.playerGrounded,
@@ -3616,6 +3705,9 @@ export class UndertowF3PlayablePreviewApp{
     // registerSurface invalidates the provisional accumulator. Initialize
     // only after the complete surface set is fixed, before first live tick.
     if(this.f4ProvisionalTurfEnabled){
+     const paintIndexStartedAt=performance.now();
+     this.physics.prepareF4PaintHitIndex(this.f4PhysicalPaintSurfaces);
+     recordF4StartupTiming(this.canvas,'paintHitIndexBuildMs',paintIndexStartedAt);
      this.f4ScorePreparationStartedAt=performance.now();
      this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
     }
@@ -5762,6 +5854,40 @@ export class UndertowF3PlayablePreviewApp{
   const count=this.canvas.dataset.t21F4ProvisionalFloors;
   return count&&/^\d+$/.test(count)&&Number(count)>0?'':'追加床の塗装準備失敗 · 制限付き試合';
  }
+ // First start only; existing limited HOLD play and resume are preserved.
+ private f4InitialScorePending():boolean{
+  if(!this.f4ProvisionalTurfEnabled||this.f4SpecialProbe||this.b203EverLockedRealPointer||
+     this.matchState!=='STAGING')return false;
+  const score=this.ink.readF4ProvisionalTurf();
+  return !score||score.status==='BUILDING';
+ }
+ private refreshF4ReadyStatus():void{
+  const node=this.b202PauseOverlay.querySelector<HTMLElement>('#t21-f4-ready-status');
+  if(!node)return;
+  const enabled=this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&!this.stopReason&&
+   this.matchState!=='TIME_UP'&&this.paused;
+  const first=enabled&&!this.b203EverLockedRealPointer&&this.matchState==='STAGING';
+  const score=first?this.ink.readF4ProvisionalTurf():null;
+  const world=first&&this.f4LiveWorldPending();
+  const state=world?'WORLD_PENDING':first?score?.status??'NOT_INITIALIZED':'INACTIVE';
+  const pct=score&&Number.isFinite(score.progress)?Math.floor(Math.max(0,Math.min(1,score.progress))*100):0;
+  const message=world?'ステージ・CPUの準備中…':
+   first&&!score?'得点集計の初期化待ち（まだ開始できません）':
+   score?.status==='BUILDING'?'床の物理支持と得点面を集計中 · '+pct+'%':
+   score?.status==='LIVE'?'暫定得点の準備完了':
+   score?.status==='HOLD'?'暫定得点 HOLD · '+(score.reason??'UNKNOWN'):'';
+  const text=[message,enabled?this.f4PointerLockIssue:''].filter(Boolean).join(' / ');
+  if(node.textContent!==text)node.textContent=text;
+  node.hidden=!text;
+  if(first){
+   this.canvas.dataset.t21F4ScorePreparation=state;
+   this.canvas.dataset.t21F4ScoreProgress=String(pct);
+  }
+  if(state!==this.f4PrestartScoreUiState){
+   this.f4PrestartScoreUiState=state;
+   if(first)this.refresh();
+  }
+ }
  private f4LiveWorldPending():boolean{
   return this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
    (!this.f4WholeTrimeshInstalled||!this.f4WholeCpuConnected);
@@ -6126,6 +6252,7 @@ export class UndertowF3PlayablePreviewApp{
   this.f4HumanDeathTick=null;
   this.f4HumanLifePairs.length=0;
    this.f4HumanPlay=this.newF4HumanPlay();
+  this.f4FloorRasterEvidence.length=0;this.f4DeniedFloorRasterEvidence.length=0;
   this.f4SpecialSecondaryHeld=false;
   if(this.f4ProvisionalTurfEnabled){
    this.f4CurlingHeldFrames=null;
@@ -7428,8 +7555,8 @@ export class UndertowF3PlayablePreviewApp{
   try{
   this.updateW10B22OwnerTrial();
   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
-   // While waiting for START, prioritize real score/backing preparation.
-   // Keep the existing tight active-play budget and all admission gates.
+   // Spend more of the pre-start frame budget completing real Rapier-backed
+   // score cells. Preserve the bounded active-play scan budget.
    const staging=this.matchState==='STAGING'&&this.paused&&!this.f4SpecialProbe;
    const deadline=performance.now()+(staging?12:3);
    this.ink.scanF4ProvisionalTurf(staging?8192:1024,()=>performance.now()<deadline);
@@ -7462,6 +7589,7 @@ export class UndertowF3PlayablePreviewApp{
     this.coordinator.flushF4WallAtlas(16);
    }
    this.syncF4ActorArt(); // READY kit changes and paused state, without physics.
+   if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)this.refreshF4ReadyStatus();
    this.b399UpdateCameraAimClearance();
    this.refreshF4CombatReticle();
    this.lastSourceFrameAtMs=Number.NaN;
@@ -8214,10 +8342,12 @@ export class UndertowF3PlayablePreviewApp{
   const stopResume=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-b202-resume')!;
   const f4Pending=ready&&this.f4LiveWorldPending();
-  stopResume.disabled=stoppedMenuOnly||f4Pending;
+  const f4ScorePending=ready&&!f4Pending&&this.f4InitialScorePending();
+  stopResume.disabled=stoppedMenuOnly||f4Pending||f4ScorePending;
   const floorWarning=ready?this.f4FloorRegistrationNotice():'';
   stopResume.textContent=f4Pending?
    (this.texturedF3lStatus==='ERROR'?'ステージ準備失敗 · 再読み込みしてください':'ステージ・CPU準備中…'):
+   f4ScorePending?'得点集計中 · 準備完了をお待ちください':
    sourceFallRecovery?
    'RESTART SOURCE · NEW WORLD (NO IN-PLACE RESET)':
    stoppedMenuOnly?'STOPPED · RETURN VIA SOURCE MENU BELOW':

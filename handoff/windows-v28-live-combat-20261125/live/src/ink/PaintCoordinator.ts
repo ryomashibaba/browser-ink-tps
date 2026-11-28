@@ -73,15 +73,14 @@ function f4PlayableBrush(request: PaintRequest): PaintRequest {
     (request.source === PaintSource.Special &&
       (!request.actorId || request.actorId === 'human'));
   switch (request.type) {
-    // Keep CPU balance at the integrated values. The player's primary fire
-    // already covers its authored projectile pattern; the former blanket
-    // 1.5x/1.45x brush growth made that pattern overpaint the floor.
+    // The previous blanket 1.5x/1.45x boost made the player's primary
+    // weapon cover far more ground than its projectile pattern warrants.
+    // Leave CPU paint unchanged and keep the player's main at its authored
+    // footprint, with only a small edge allowance for cell quantization.
     case PaintEventType.Impact:
     case PaintEventType.MidDroplet:
-      if (!playerOwned) {
-        factor = request.type === PaintEventType.Impact ? 1.5 : 1.45;
-        maxGrowth = request.type === PaintEventType.Impact ? .75 : .65;
-      } else { factor = 1.05; maxGrowth = .06; }
+      if (!playerOwned) { factor = request.type === PaintEventType.Impact ? 1.5 : 1.45; maxGrowth = request.type === PaintEventType.Impact ? .75 : .65; }
+      else { factor = 1.05; maxGrowth = .06; }
       break;
     case PaintEventType.Foot:
       if (!playerOwned) { factor = 1.2; maxGrowth = .15; }
@@ -137,6 +136,12 @@ export class PaintCoordinator {
   public detachF4FloorAtlas(atlas:GpuInkAtlas):void{
     this.f4FloorAtlases.delete(atlas);
     for(const [id,a] of this.f4FloorAtlasBySurface)if(a===atlas)this.f4FloorAtlasBySurface.delete(id);
+  }
+  /** Read-only backlog, not proof of pixels already drawn. */
+  public f4PaintQueueEvidence(){
+    const floors=[...this.f4FloorAtlases].map(atlas=>atlas.backlog);
+    const main=this.gpu.backlog,wall=this.f4WallAtlas?.backlog??0;
+    return {main,wall,floors,total:main+wall+floors.reduce((sum,n)=>sum+n,0)};
   }
   public flushF4WallAtlas(maxEvents:number):void{
     const flush=(atlas:GpuInkAtlas)=>{

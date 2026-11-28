@@ -204,15 +204,26 @@ function createSourceTriangleMesh(
  mesh.update();
  return mesh;
 }
-async function verifiedBuffer(url:string,bytes:number,hash:string){
- const r=await fetch(url,{cache:'no-store'});
- if(!r.ok)throw Error('F3L_MISSING_ORIGINAL_SOURCE_'+r.status);
- const b=await r.arrayBuffer();
- if(b.byteLength!==bytes)throw Error('F3L_SOURCE_FILE_SIZE_MISMATCH');
- const sha=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)))
-  .map(n=>n.toString(16).padStart(2,'0')).join('');
- if(sha!==hash)throw Error('F3L_SOURCE_FILE_HASH_MISMATCH');
- return b;
+// Only hash-pinned F4 asset bytes may use browser caching. Never cache
+// the manifest or accept stale/invalid bytes. A failed cache read reloads.
+async function readVerifiedWithCache(preferCache:boolean,read:(cache:RequestCache)=>Promise<ArrayBuffer>):Promise<ArrayBuffer>{
+ if(preferCache){
+  try{return await read('force-cache');}
+  catch{return await read('reload');}
+ }
+ return await read('no-store');
+}
+async function verifiedBuffer(url:string,bytes:number,hash:string,preferCache=false){
+ return readVerifiedWithCache(preferCache,async cache=>{
+  const r=await fetch(url,{cache});
+  if(!r.ok)throw Error('F3L_MISSING_ORIGINAL_SOURCE_'+r.status);
+  const b=await r.arrayBuffer();
+  if(b.byteLength!==bytes)throw Error('F3L_SOURCE_FILE_SIZE_MISMATCH');
+  const sha=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)))
+   .map(n=>n.toString(16).padStart(2,'0')).join('');
+  if(sha!==hash)throw Error('F3L_SOURCE_FILE_HASH_MISMATCH');
+  return b;
+ });
 }
 
 /** Exactly PlayCanvas 2.22.1's standard opacityPS plus one screen-local
@@ -300,7 +311,7 @@ export async function loadF3lTexturedSource(
  try{
   phaseStarted=performance.now();
   const textures=await Promise.all(manifest.textures.map(async file=>{
-   const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256);
+   const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256,!!f4RetainedSeedModelVertices);
    const blobUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
    const img=new Image();
    try{
@@ -329,7 +340,7 @@ export async function loadF3lTexturedSource(
   phaseStarted=performance.now();
   const f4VerifiedGeometry=f4RetainedSeedModelVertices?
    await Promise.all(manifest.materials.map(material=>
-    verifiedBuffer(base+material.file,material.bytes,material.sha256))):null;
+    verifiedBuffer(base+material.file,material.bytes,material.sha256,true))):null;
   if(f4VerifiedGeometry)recordF4StartupTiming(app,'geometryFetchAndHashMs',phaseStarted);
   phaseStarted=performance.now();
   for(const [materialIndex,material] of manifest.materials.entries()){
@@ -457,8 +468,6 @@ export async function loadF3lTexturedSource(
     const material=manifest.materials[i];
     return !!material&&f4OriginalFloorMaterialCandidate(material.kind,material.name);
    });
-   floorGroups.push(...f4ResearchPositionGroups.filter((_,i)=>
-    /^Fld_Temple01_FloorLine[0-9]{2}$/.test(manifest.materials[i]?.name??'')));
    // The retained center/ingress faces are also in the installed collider.
    // Previously they were omitted from the additional-floor candidates.
    // Submit exactly those same faces; extractor slope/mask and Rapier

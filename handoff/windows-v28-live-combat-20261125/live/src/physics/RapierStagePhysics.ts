@@ -1,6 +1,8 @@
 import RAPIER, { type Collider, type RigidBody, type World } from '@dimforge/rapier3d-compat';
 import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
+import {buildF4PaintHitIndex,queryF4PaintHitIndex,type F4PaintHitIndex} from './F4PaintHitIndex.mjs';
 import { Quat, Vec3 } from 'playcanvas';
+import {SurfaceFlags} from '../ink/types';
 import {
   stageSolidCollisionEnabled,
   type StageDefinition,
@@ -8,6 +10,7 @@ import {
 } from '../stage/StageDefinition';
 import { rasterizeStageFootprint } from '../stage/StageFootprint';
 import { stageSolidTriangleMeshErrors } from '../stage/StageTriangleMesh';
+import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
 import {
   F4_PAINT_NORMAL_ALIGNMENT, F4_PAINT_PLANE_TOLERANCE,
   sourceRegisteredPaintCellActive, type PaintSurface, type SurfaceRayHit
@@ -49,6 +52,7 @@ export class RapierStagePhysics {
   private readonly paintBackingPoint = new Vec3();
   // Immutable surface geometry only; never cache ownership or backing here.
   private readonly f4PaintBounds=new WeakMap<PaintSurface,number>();
+  private f4PaintHitIndex:F4PaintHitIndex<PaintSurface>|null=null;
   private readonly paintBackingCollider = (collider: Collider): boolean =>
     this.solidByColliderHandle.has(collider.handle);
   private readonly paintHitProjection = {u:0,v:0,signedPlaneDistance:0,planeDistance:0,inside:false};
@@ -89,17 +93,47 @@ export class RapierStagePhysics {
       undefined,undefined,undefined,undefined,this.paintBackingCollider);
     if(!hit)return false;
     const aligned=hit.normal.x*nx+hit.normal.y*ny+hit.normal.z*nz;
-    // New floor tiles must be supported from their exposed upper side.
-    return (surface.id.startsWith('F4ProvisionalFloor:')?aligned:Math.abs(aligned))>=F4_PAINT_NORMAL_ALIGNMENT;
+    // A floor/ramp raster mask plus the real Rapier contact identifies the
+    // actual walkable source face. At internal mesh seams Rapier can return
+    // a blended neighboring normal; use the same slope limit as the KCC.
+    const walkableSurface=(surface.baseFlags&(SurfaceFlags.Floor|SurfaceFlags.Ramp))!==0;
+    return walkableSurface?
+      Math.abs(hit.normal.y)>=Math.cos(PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians):
+      Math.abs(aligned)>=F4_PAINT_NORMAL_ALIGNMENT;
   }
 
+  /** Call only after the complete F4 registration, never for mutable subsets. */
+  public prepareF4PaintHitIndex(surfaces:readonly PaintSurface[]):void{
+    this.f4PaintHitIndex=this.f4WholeResearchTrimeshActive?
+      buildF4PaintHitIndex(surfaces,F4_PAINT_PLANE_TOLERANCE):null;
+  }
   public f4PaintAtStageHit(
     hit:StageRayHit|null,surfaces:readonly PaintSurface[]
   ):SurfaceRayHit|null{
     if(!this.f4WholeResearchTrimeshActive||!hit)return null;
+    return this.evaluateF4PaintAtStageHit(
+      hit,queryF4PaintHitIndex(this.f4PaintHitIndex,surfaces,hit.point));
+  }
+  /** Read-only oracle using the pre-index exhaustive surface traversal. */
+  public f4PaintAtStageHitExhaustive(
+    hit:StageRayHit|null,surfaces:readonly PaintSurface[]
+  ):SurfaceRayHit|null{
+    if(!this.f4WholeResearchTrimeshActive||!hit)return null;
+    return this.evaluateF4PaintAtStageHit(hit,surfaces);
+  }
+  public compareF4PaintAtStageHit(hit:StageRayHit,surfaces:readonly PaintSurface[]){
+    const indexed=this.f4PaintAtStageHit(hit,surfaces)?.surface.id??null;
+    const exhaustive=this.f4PaintAtStageHitExhaustive(hit,surfaces)?.surface.id??null;
+    return {indexed,exhaustive,equal:indexed===exhaustive};
+  }
+  private evaluateF4PaintAtStageHit(
+    hit:StageRayHit,surfaces:readonly PaintSurface[]
+  ):SurfaceRayHit|null{
     let best:SurfaceRayHit|null=null;
     let distance=F4_PAINT_PLANE_TOLERANCE;
     for(const surface of surfaces){
+      // The caller selects either the conservative index candidates or the
+      // full source array. Keep every downstream paint predicate identical.
       // Conservative sphere around the actual rectangular plane envelope.
       // New floor tiles substantially increase the candidate array; reject
       // distant tiles before doing projection and physical backing queries.
@@ -111,8 +145,11 @@ export class RapierStagePhysics {
       const dx=hit.point.x-surface.center.x,dy=hit.point.y-surface.center.y,dz=hit.point.z-surface.center.z;
       if(dx*dx+dy*dy+dz*dz>limitSq)continue;
       const p=surface.projectWorldPoint(hit.point,this.paintHitProjection);
+      const walkableSurface=(surface.baseFlags&(SurfaceFlags.Floor|SurfaceFlags.Ramp))!==0;
       if(!p.inside||p.planeDistance>distance||
-         (hit.normal&&Math.abs(hit.normal.dot(surface.normal))<F4_PAINT_NORMAL_ALIGNMENT)||
+         (hit.normal&&(walkableSurface?
+          Math.abs(hit.normal.y)<Math.cos(PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians):
+          Math.abs(hit.normal.dot(surface.normal))<F4_PAINT_NORMAL_ALIGNMENT))||
          !this.hasF4PaintBacking(surface,p.u,p.v))continue;
       distance=p.planeDistance;
       best={surface,distance:hit.distance,worldPoint:hit.point,u:p.u,v:p.v};
@@ -168,6 +205,7 @@ export class RapierStagePhysics {
 
   /** Recovery for a failed local install. The original stage remains frozen. */
   public restoreF4ResearchStaticStage(): void {
+    this.f4PaintHitIndex=null;
     if (!this.f4WholeResearchTrimeshActive) return;
     for (const handle of [...this.solidByColliderHandle.keys()]) {
       const old = this.world.getCollider(handle);

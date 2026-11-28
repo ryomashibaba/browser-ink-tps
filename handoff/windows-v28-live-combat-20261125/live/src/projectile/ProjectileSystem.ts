@@ -297,6 +297,15 @@ export class ProjectileSystem {
   private readonly f4EnemyProjectileEvidence={spawned:0,terrain:0,expired:0,cpuContact:0,
     humanContact:0,canopy:0,device:0,absorbed:0,other:0,humanHpLossContacts:0,humanHpLoss:0};
 
+  // Bounded observations of real human direct-projectile terminal floor contacts.
+  // A missing paint mapping is not proof that the surface should be paintable.
+  private readonly f4FloorContacts:{frame:number;weapon:string;point:number[];normal:number[];
+    surfaceId:string|null;u:number|null;v:number|null}[]=[];
+  private readonly f4UnmappedFloorContacts:typeof this.f4FloorContacts=[];
+  public f4FloorContactEvidence(){
+    const copy=(row:typeof this.f4FloorContacts[number])=>({...row,point:[...row.point],normal:[...row.normal]});
+    return {recent:this.f4FloorContacts.map(copy),unmapped:this.f4UnmappedFloorContacts.map(copy)};
+  }
   /** Counts actual enemy pooled projectile slots, not all CPU attacks or aim intentions. */
   public f4ActualEnemyProjectileEvidence(){return {...this.f4EnemyProjectileEvidence};}
 
@@ -1076,6 +1085,7 @@ export class ProjectileSystem {
   }
 
   public reset(): void {
+    this.f4FloorContacts.length=0;this.f4UnmappedFloorContacts.length=0;
     this.shooterCadence?.clear();
     this.clearHumanContactInput();
     this.brushSwings?.clear();
@@ -1769,6 +1779,19 @@ export class ProjectileSystem {
       }
 
       slot.terrainContactNormal = blockerHit?.normal;
+      if(this.f4PlayableShooterControls&&this.physics.hasF4WholeResearchTrimesh&&
+         slot.sourceKind==='HUMAN'&&slot.sourceId==='human'&&!special&&!blasterFlight&&!saberContact&&
+         blockerHit?.normal&&Math.abs(blockerHit.normal.y)>=.4){
+        const mapped=paintWins?paintHit:null;
+        const row={frame:this.b367NativeFrame,weapon:slot.weaponId,
+          point:[blockerHit.point.x,blockerHit.point.y,blockerHit.point.z],
+          normal:[blockerHit.normal.x,blockerHit.normal.y,blockerHit.normal.z],
+          surfaceId:mapped?.surface.id??null,u:mapped?.u??null,v:mapped?.v??null};
+        this.f4FloorContacts.push(row);
+        if(this.f4FloorContacts.length>64)this.f4FloorContacts.shift();
+        if(!mapped){this.f4UnmappedFloorContacts.push(row);
+          if(this.f4UnmappedFloorContacts.length>64)this.f4UnmappedFloorContacts.shift();}
+      }
       if (special && blockerHit) special.flight.onTerrain?.(blockerHit);
       if (paintWins) {
         // A real non-explosive special projectile can own turf on contact.
@@ -4904,7 +4927,7 @@ export class ProjectileSystem {
   ): void {
     const cadence = this.shooterCadence?.get(actor);
     if (!cadence || !shooterPaintPattern(profile, cadence.shots).foot) return;
-    this.enqueueF4Foot(body, team, actor, this.f4PlayablePaintProfile(profile).footRadius);
+    this.enqueueF4Foot(body, team, actor, profile.footRadius);
   }
 
   private enqueueF4Foot(body: Vec3, team: Team.A | Team.B, actor: string, radius: number): void {
