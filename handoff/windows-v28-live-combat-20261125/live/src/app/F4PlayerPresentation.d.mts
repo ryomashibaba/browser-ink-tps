@@ -2,7 +2,7 @@ import type {F4ProvisionalScore} from '../ink/F4ProvisionalTurf.mjs';
 type ScoreView={kind:'HOLD'|'BUILDING'|'LIVE'|'FINAL';title:string;detail:string;a:number|null;b:number|null;neutral:number|null};
 export function f4TurfPresentation(score:F4ProvisionalScore|null,phase:string,stopped?:boolean):ScoreView;
 export function f4Urgency(seconds:number):'normal'|'soon'|'critical'|'unknown';
-export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null;matchSummary?:F4MatchSummary|null}):void;dispose():void};
+export function installF4PlayerPresentation(root:HTMLElement,finish:HTMLElement,ui:HTMLElement):{render(frame:{score:F4ProvisionalScore|null;matchState:string;paused:boolean;stopped:boolean;remainingSeconds:number;playerView:boolean;roster?:F4Roster|null;teamColors?:{a:ArrayLike<number>;b:ArrayLike<number>}|null;kit?:F4Kit|null;matchSummary?:F4MatchSummary|null;pointerLockState?:string|null}):void;dispose():void};
 export type F4MatchSummary={directHits:number;directSplats:number;deaths:number;respawns:number;changedCells:number};
 export function f4MatchSummary(summary:F4MatchSummary|null):[string,number][]|null;
 

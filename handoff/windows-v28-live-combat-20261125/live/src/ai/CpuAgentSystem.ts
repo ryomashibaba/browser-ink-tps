@@ -84,6 +84,12 @@ export interface CpuProjectileHpResult {
   shieldAbsorbed:boolean;lethalHpZero:boolean;
 }
 
+/** Actual HP hysteresis for provisional CPU recovery. No HP writes. */
+export function f4CpuWoundedRecovery(previous:boolean,hp:number,maxHp:number):boolean{
+  if(!Number.isFinite(hp)||!Number.isFinite(maxHp)||hp<=0||maxHp<=0||hp>maxHp)return false;
+  return previous?hp<maxHp*.65:hp<=maxHp*.35;
+}
+
 export type CpuWeaponAction =
   | 'PROJECTILE'
   | 'ROLLER_FLICK'
@@ -309,6 +315,7 @@ interface CpuBot {
   inkRecoveryLockSeconds: number;
   f4SubRecoverySeconds?: number;
   f4RecoveringInk?: boolean;
+  f4RecoveringHp?: boolean;
   hpRecoveryDelaySeconds: number;
   lethalHumanDirect: boolean;
   b213ActualAttackerId:string|null;
@@ -533,6 +540,9 @@ export class CpuAgentSystem {
   private readonly targetPoint = new Vec3();
   private activeLastTick = false;
   private f4WholeNavigation = false;
+  private f4PlayableTactics=false;
+  private readonly f4FloorAimMissTick=new Map<string,number>();
+  public enableF4PlayableTactics():void{this.f4PlayableTactics=true;}
   private f4CombatVisualFacing=false;
   private readonly f4VisualAimTick=new Map<string,{tick:number;life:number}>();
   /** Render-only opt-in from the existing local visual-polish gate. */
@@ -3457,9 +3467,11 @@ export class CpuAgentSystem {
       return null;
     const support=this.phase14qGroundCollision?.sourceFootSupport?.(
       bot.id,bot.position)??null;
-    if(this.f4WholeNavigation)
+    if(this.f4WholeNavigation){
+      if(this.f4PlayableTactics&&(!support||Math.abs(support.point.y-bot.position.y)>.25))return null;
       return support?this.gameplayInk.sampleWorld(
-        support.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall):null;
+        support.point,this.f4PlayableTactics?.055:.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall):null;
+    }
     return b178SampleRegisteredSourceFoot(
       this.gameplayInk,this.stage.paintSurfaces,support);
   }
@@ -3544,6 +3556,11 @@ export class CpuAgentSystem {
         ? GAME_CONFIG.cpu.ownInkHpRecoveryPerSecond
         : GAME_CONFIG.combat.humanHpRecoveryPerSecond;
       bot.hp = Math.min(GAME_CONFIG.combat.playerMaxHp, bot.hp + rate * dt);
+    }
+    if(this.f4PlayableTactics&&this.f4WholeNavigation){
+      bot.f4RecoveringHp=f4CpuWoundedRecovery(bot.f4RecoveringHp===true,bot.hp,GAME_CONFIG.combat.playerMaxHp);
+      // Steering reads the same current tank as the later weapon decision.
+      bot.f4RecoveringInk=recoveringInk(bot.f4RecoveringInk===true,bot.ink,GAME_CONFIG.inkEconomy.capacity);
     }
   }
 
@@ -4062,7 +4079,18 @@ export class CpuAgentSystem {
       // The aim ends on the floor itself. Check the open segment before
       // contact; actual projectile collision remains authoritative.
       const end=muzzle.clone().add(delta.mulScalar((distance-.08)/distance));
-      return ray(muzzle,end)?null:aim.target;
+      if(ray(muzzle,end))return null;
+      // A committed weapon may finish its paid action, but prefer an
+      // independently backed unowned neighbor over a saturated impact.
+      if(this.f4PlayableTactics&&paint.owner===bot.team){
+        const neighbor=b180OriginalSourceUnownedNeighborAim(paint,bot.team,candidate=>
+          this.cpuTargetInRange(bot,candidate,profile)&&
+          this.b216OriginalSourceTurfSightClear(bot,candidate)&&
+          !!this.gameplayInk.sampleWorld(candidate,.055,SurfaceFlags.Paintable,SurfaceFlags.Wall,
+            surface=>surface===paint.surface));
+        if(neighbor)return neighbor;
+      }
+      return aim.target;
     }
     if(!this.b216SourceStageAimValidated||!this.sampleRegisteredSourceFoot(bot))return null;
     const paint=this.gameplayInk.sampleWorld(
@@ -4208,12 +4236,16 @@ export class CpuAgentSystem {
           this.chooseOriginalSourceTurfTarget(bot)??
           this.chooseB216ActualOriginalPaintBackfill(bot):
          this.chooseOriginalSourceTurfTarget(bot)) : null;
-    // Existing valid combat and paint aims retain priority. A failed old
-    // goal-based search can now fall back to independently backed turf.
-    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&!turfTarget&&
+    // A failed old goal-based search may use an existing nearby backed turf
+    // cell. After repeated real saturated impacts, permit a fresh patch even
+    // when the prior candidate remains valid; never alter movement authority.
+    if(this.f4WholeNavigation&&canTurfPaint&&!hasCombatInRange&&
+       (!turfTarget||(this.f4PlayableTactics&&realSaturatedImpacts>=8&&!allyInk))&&
        (cooldown<=0||finishTurfBurst)&&bot.weaponChargeSeconds<=0&&
-       bot.weaponBurstShotsRemaining<=0)
-      turfTarget=this.chooseF4NearbyTurfTarget(bot,profile);
+       bot.weaponBurstShotsRemaining<=0){
+      const fresh=this.chooseF4NearbyTurfTarget(bot,profile);
+      if(fresh)turfTarget=fresh;
+    }
     // Charger and splatling already hold an independently source-verified
     // committed floor aim while actually charging/finishing a burst.
     // The P2 drought fallback must not replace that live trajectory.
@@ -4380,7 +4412,11 @@ export class CpuAgentSystem {
       const turf = !hasCombatInRange && (!target || bot.fireRemaining > 0) && bot.ink > 16
         ? this.gameplayInk.sampleWorld(motion.to, 0.10, SurfaceFlags.Paintable, SurfaceFlags.Wall)
         : null;
-      if ((closeContact || turf) && bot.ink + 1e-6 >= price) {
+      // Do not spend the whole tank rolling on already-owned turf. Keep
+      // rolling if a nearby backed cell is still worth painting or fighting.
+      const usefulTurf=turf&&(!this.f4PlayableTactics||turf.owner!==bot.team||
+        this.f4TurfValue(turf,bot.team,.65)>0);
+      if ((closeContact || usefulTurf) && bot.ink + 1e-6 >= price) {
         this.pendingShots.push({
           sourceId: bot.id, team: bot.team, origin: bot.position.clone(),
           bodyPosition: bot.position.clone(), target: (target ?? motion.to).clone(), weaponId: profile.id,
@@ -5082,9 +5118,26 @@ export class CpuAgentSystem {
     return null;
   }
 
-  // Quiet, paid main-weapon turf opportunity even if Crowd currently has
-  // no admitted goal. World owner cells and current physical shot line
-  // decide admission; never set a movement target or create a free stamp.
+  /** Bounded estimate over current backed ownership; this never paints. */
+  private f4TurfValue(sample:GameplayInkSample,team:Team.A|Team.B,radius:number):number{
+    const surface=sample.surface;
+    const stride=Math.max(1,Math.min(8,Math.round(radius*.65/surface.cellSize)));
+    const cx=Math.min(surface.widthCells-1,Math.floor(sample.u/surface.cellSize));
+    const cy=Math.min(surface.heightCells-1,Math.floor(sample.v/surface.cellSize));
+    let value=0,seen=0;
+    for(const [dx,dy] of [[0,0],[stride,0],[-stride,0],[0,stride],[0,-stride]]){
+      const x=cx+dx!,y=cy+dy!;
+      if(x<0||y<0||x>=surface.widthCells||y>=surface.heightCells)continue;
+      const u=Math.min(surface.widthMeters-1e-6,(x+.5)*surface.cellSize);
+      const v=Math.min(surface.heightMeters-1e-6,(y+.5)*surface.cellSize);
+      if(!this.gameplayInk.isCellPhysicallyBackedAt(surface,u,v))continue;
+      const owner=surface.ownerGrid[surface.index(x,y)];
+      seen++;
+      if(owner===Team.Neutral)value+=1;
+      else if(owner!==team&&(owner===Team.A||owner===Team.B))value+=2;
+    }
+    return seen?value/5:0;
+  }
   private chooseF4NearbyTurfTarget(bot:CpuBot,profile:ReturnType<typeof weaponProfile>):Vec3|null{
     if(!this.f4WholeNavigation||!this.f4ResearchCombatStageRay||bot.f4RecoveringInk||
        bot.lifeState!=='ACTIVE'||bot.hp<=0||bot.mobilityState!=='GROUND'||!bot.agent||
@@ -5097,24 +5150,29 @@ export class CpuAgentSystem {
     const reach=Math.min(5.5,range*.75,profile.weaponClass==='BRUSH'?2.2:Infinity);
     if(!Number.isFinite(reach)||reach<.8)return null;
     const phase=(Math.floor(tick/30)+bot.id.charCodeAt(bot.id.length-1))%8;
-    // Short, bounded two-ring search. The same world sample must be
-    // backed, paintable and not already owned; no hidden enemy tracking.
-    const points:{target:Vec3;score:number}[]=[];
-    for(const radius of [Math.min(1.7,reach),reach]){
-      for(let i=0;i<8;i++){
-        const angle=(i+phase/8)*Math.PI/4;
-        const probe=new Vec3(support.point.x+radius*Math.cos(angle),
-          support.point.y,support.point.z+radius*Math.sin(angle));
-        const sample=this.gameplayInk.sampleWorld(probe,.35,SurfaceFlags.Paintable,SurfaceFlags.Wall);
-        if(!sample||sample.surface.isScoreable||sample.owner===bot.team)continue;
-        const target=sample.surface.localToWorld(sample.u,sample.v);
-        if(!this.cpuTargetInRange(bot,target,profile)||Math.abs(target.y-support.point.y)>.55)continue;
-        points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
-      }
+    const points:{target:Vec3;score:number}[]=[],seen=new Set<string>();
+    for(const radius of [Math.min(1.7,reach),reach])for(let i=0;i<8;i++){
+      const angle=(i+phase/8)*Math.PI/4;
+      const probe=new Vec3(support.point.x+radius*Math.cos(angle),
+        support.point.y,support.point.z+radius*Math.sin(angle));
+      const sample=this.gameplayInk.sampleWorld(probe,.35,SurfaceFlags.Paintable,SurfaceFlags.Wall);
+      if(!sample||sample.surface.isScoreable||sample.owner===bot.team)continue;
+      const target=sample.surface.localToWorld(sample.u,sample.v);
+      if(!this.cpuTargetInRange(bot,target,profile)||Math.abs(target.y-support.point.y)>.55)continue;
+      if(this.f4PlayableTactics){
+        const s=sample.surface,key=s.id+':'+Math.floor(sample.u/s.cellSize)+':'+Math.floor(sample.v/s.cellSize);
+        if(seen.has(key))continue;
+        seen.add(key);
+        const value=this.f4TurfValue(sample,bot.team,Math.max(.35,profile.paintRadiusMeters));
+        if(value<=0)continue;
+        points.push({target,score:value*3+(sample.owner===Team.Neutral?1:2)-radius*.08});
+      }else points.push({target,score:(sample.owner===Team.Neutral?2:1)+radius*.12});
     }
     points.sort((x,y)=>y.score-x.score);
     for(const {target} of points.slice(0,6)){
-      if(this.b216OriginalSourceTurfSightClear(bot,target)){this.f4FloorAimMissTick.delete(bot.id);return target;}
+      if(this.b216OriginalSourceTurfSightClear(bot,target)){
+        this.f4FloorAimMissTick.delete(bot.id);return target;
+    }
     }
     this.f4FloorAimMissTick.set(bot.id,tick);
     return null;
@@ -5845,6 +5903,7 @@ export class CpuAgentSystem {
     bot.f4CanopyHold = false;
     bot.f4CanopyOpen = false;
     bot.f4RecoveringInk = false;
+    bot.f4RecoveringHp = false;
     bot.guardEntity.enabled = false;
     if (resetGuard) {
       bot.weaponGuardHp = 100;

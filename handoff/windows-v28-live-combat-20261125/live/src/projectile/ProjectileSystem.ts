@@ -72,12 +72,25 @@ function originalSourcePaintBeforeRapier(
 
 const F4_CANOPY_PELLET_FLIGHT = { straightFrames: 3, brakeSpeedMetersPerSecond: 64 };
 
+// Player-only F4 brush tuning. Preserve projectile count and cadence while
+// taking the edge off the integrated main-weapon overpaint.
+function f4PlayableShooterPaint(profile:ShooterProfile):ShooterProfile{
+ return {...profile,
+  impactNear:[profile.impactNear[0],profile.impactNear[1]*1.2],
+  impactMiddle:[profile.impactMiddle[0],profile.impactMiddle[1]*1.2],
+  impactFar:[profile.impactFar[0],profile.impactFar[1]*1.2],
+  splashRadius:profile.splashRadius*1.2
+ };
+}
+
 export interface F4SpecialFlight {
   speed: number;
   gravity: number;
   lifeSeconds: number;
   diameter: number;
   directDamage: number;
+  /** Optional direct terrain paint for non-explosive special rounds. */
+  impactPaintRadius?: number;
   blast?: {radius: number; damage: number; paint: number; near?: {radius: number; damage: number}};
   armingFrames?: number;
   damageAtAge?(frame: number): number;
@@ -137,6 +150,7 @@ interface ProjectileSlot {
     launchY: number;
     age: number;
     distance: number;
+    paintDropMask?: number;
   };
   canopyPellet?: ShooterFlight & {
     index: number;
@@ -1422,13 +1436,25 @@ export class ProjectileSystem {
 
     if (f4) this.f4ConsumeInstantTrigger(f4InstantShotsBefore, f4InstantCooldownBefore);
 
+    const chargeVisualActive=playerDamageable&&fireHeld&&isChargeWeaponClass(profile.weaponClass)&&
+      (!this.f4PlayableShooterControls||f4HumanAllowed);
+    let guideLimit:number|undefined;
+    if(this.f4PlayableShooterControls&&chargeVisualActive&&
+       (profile.weaponClass==='CHARGER'||profile.weaponClass==='SPLATLING')){
+      // Visual charge guide is NOT a promised projectile path. Stop it at
+      // the first real stage contact; do not draw a laser through cover.
+      const length=profile.weaponClass==='CHARGER'?18:14;
+      const end=muzzlePosition.clone().add(aimDirection.clone().normalize().mulScalar(length));
+      const hit=this.physics.castStageSegment(muzzlePosition,end,'ink-projectile');
+      guideLimit=hit?Math.max(0,Math.min(length,hit.distance-.025)):length;
+    }
     this.feedback.updateChargeVisual(
       profile,
       team,
       muzzlePosition,
       aimDirection,
       chargeFraction(profile, this.chargeSeconds),
-      playerDamageable && fireHeld && isChargeWeaponClass(profile.weaponClass)
+      chargeVisualActive,guideLimit
     );
     this.wasFireHeld = fireHeld && (!this.physics.hasF4WholeResearchTrimesh ||
       (playerWeaponEnabled && playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'));
@@ -1521,7 +1547,8 @@ export class ProjectileSystem {
           this.physics.castStageInkSphere(from, to, radius))
         : radii ? this.physics.castStageInkSphere(previous, next, radii.stage)
         : this.physics.castStageSegment(previous, next, 'ink-projectile');
-      const saberContact = slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
+      const saberContact = !(special && this.f4PlayableShooterControls) &&
+        slot.weaponId === 'ink-saber' && slot.paintRadius <= 0;
       const paintHit = this.physics.hasF4WholeResearchTrimesh
         ? saberContact ? null : this.physics.f4PaintAtStageHit(blockerHit, this.surfaces)
         : this.findNearestSurfaceHit(previous, next);
@@ -1754,6 +1781,13 @@ export class ProjectileSystem {
       slot.terrainContactNormal = blockerHit?.normal;
       if (special && blockerHit) special.flight.onTerrain?.(blockerHit);
       if (paintWins) {
+        // A real non-explosive special projectile can own turf on contact.
+        // Never credit its paint back to the natural special gauge.
+        const specialPaint=special?.flight.impactPaintRadius;
+        if(this.f4PlayableShooterControls&&specialPaint!==undefined&&
+           Number.isFinite(specialPaint)&&specialPaint>0)
+          this.enqueueF4Stamp(paintHit,slot.team,slot.sourceId,PaintEventType.Special,
+            {radiusU:specialPaint,radiusV:specialPaint,angle:0});
         if (!blasterFlight && !special) this.enqueueImpact(
           slot.team,
           paintHit,
@@ -2284,7 +2318,8 @@ export class ProjectileSystem {
   ): boolean {
     const contact = profile.contactWeapon!;
     const settings = contactPaintSettings(contact, motion.distance * 60);
-    const cells = collectContactPaint(motion, settings.halfWidth, this.physics, this.surfaces);
+    const halfWidth=this.f4PlayableShooterControls?settings.halfWidth*1.25:settings.halfWidth;
+    const cells = collectContactPaint(motion, halfWidth, this.physics, this.surfaces);
     if (!cells || !pay(settings.ink, contact.rollRecovery)) return false;
     for (const hit of cells) {
       this.enqueueF4ContactCell(hit, team, actor);
@@ -2297,7 +2332,7 @@ export class ProjectileSystem {
     // The raster can select only this independently verified cell.
     const radius = hit.surface.cellSize * 0.72;
     this.enqueueF4Stamp(hit, team, actor, PaintEventType.Foot, {
-      radiusU: radius, radiusV: radius, angle: 0
+      radiusU: radius, radiusV: radius, angle: 0, f4ExactContactCell:true
     });
   }
 
@@ -2530,16 +2565,25 @@ export class ProjectileSystem {
 
   private enqueueSlosherMidDrop(slot: ProjectileSlot, from: Vec3, to: Vec3, terminal: number): void {
     const flight = slot.slosherFlight!;
-    if (flight.droplet.head || flight.droplet.index !== 2 || flight.distance >= 1.05) return;
-    const at = 1.05 - flight.distance;
-    if (at >= Math.min(from.distance(to), terminal)) return;
-    const point = pointOnSegment(from, to, at);
-    const hit = this.castF4Paint(point, point.clone().add(new Vec3(0, -1.05, 0)));
-    if (hit && (hit.surface.baseFlags & SurfaceFlags.Wall) === 0) {
-      this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet, {
-        radiusU: 0.37, radiusV: 0.21,
-        angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis))
-      },slot.f4GaugeLaunchLife);
+    if (flight.droplet.head || flight.droplet.index !== 2) return;
+    const playable=this.f4PlayableShooterControls;
+    const targets=playable?[1.05,2.10]:[1.05];
+    for(let i=0;i<targets.length;i++){
+      const at=targets[i]!-flight.distance;
+      if(at<0||(!playable&&at===0)||at>=Math.min(from.distance(to),terminal))continue;
+      // Piercing contacts can revisit this segment; release each sample once.
+      if(playable){
+        const bit=1<<i;if((flight.paintDropMask??0)&bit)continue;
+        flight.paintDropMask=(flight.paintDropMask??0)|bit;
+      }
+      const point=pointOnSegment(from,to,at);
+      const hit=this.castF4Paint(point,point.clone().add(new Vec3(0,playable?-1.65:-1.05,0)));
+      if(hit&&(hit.surface.baseFlags&SurfaceFlags.Wall)===0){
+        this.enqueueF4Stamp(hit,slot.team,slot.sourceId,PaintEventType.MidDroplet,{
+          radiusU:0.37,radiusV:0.21,
+          angle:Math.atan2(slot.velocity.dot(hit.surface.vAxis),slot.velocity.dot(hit.surface.uAxis))
+        },slot.f4GaugeLaunchLife);
+      }
     }
   }
 
@@ -3298,9 +3342,12 @@ export class ProjectileSystem {
     const length = axis.length();
     if (length <= 1e-8) return;
     axis.mulScalar(1 / length);
-    for (let d = rail.depth * 0.55; d < length; d += rail.spacing) {
+    // Sample only the actual terminated beam; limit extra ray count.
+    const spacing=this.f4PlayableShooterControls?Math.max(rail.spacing*.6,Math.min(rail.spacing,rail.depth*.85)):rail.spacing;
+    if(!Number.isFinite(spacing)||spacing<=0)return;
+    for (let d = rail.depth * 0.55; d < length; d += spacing) {
       const point = origin.clone().add(axis.clone().mulScalar(d));
-      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - 1.8, point.z));
+      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - (this.f4PlayableShooterControls?2.4:1.8), point.z));
       if (!hit) continue;
       const angle = Math.atan2(axis.dot(hit.surface.vAxis), axis.dot(hit.surface.uAxis));
       this.enqueueF4Stamp(hit, team, actor, PaintEventType.MidDroplet, {
@@ -4196,7 +4243,7 @@ export class ProjectileSystem {
         airborne ? 0.4 : bias, sourceId, shots
       );
       if (!explicitShooterAim) slot.velocity.copy(rotateYaw(direction, yaw)).mulScalar(speed);
-      const paintProfile=f4Special?shooter:this.f4PlayablePaintProfile(shooter);
+      const paintProfile=f4Special||sourceKind!=='HUMAN'?shooter:this.f4PlayablePaintProfile(shooter);
       const pattern = shooterPaintPattern(paintProfile, shots);
       slot.shooterFlight = {
         profile: paintProfile, frame: 0, free: false, distance: 0,
@@ -4913,7 +4960,7 @@ export class ProjectileSystem {
 
   private enqueueF4Stamp(
     hit: SurfaceRayHit, team: Team.A | Team.B, actor: string, type: PaintEventType,
-    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle'>,
+    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle' | 'f4ExactContactCell'>,
     f4GaugeLaunchLife?:string|null
   ): void {
     this.coordinator.enqueue({
@@ -4963,9 +5010,13 @@ export class ProjectileSystem {
           projected.v < -span || projected.v > surface.heightMeters + span) continue;
       // The blaster throws radial droplets. A stuck arrow has just one
       // small second coat near its impact. All samples need a stage contact.
-      for (let i = 0; i < (spray ? 9 : 1); i++) {
-        const angle = i * Math.PI / 4;
-        const offset = i === 0 ? 0 : span * 0.66;
+      // Fill the interior of broad bursts as well as the outer ring.
+      // Extra samples still require the same first physical contact.
+      const dense=this.f4PlayableShooterControls&&spray;
+      for (let i = 0; i < (spray ? (dense ? 17 : 9) : 1); i++) {
+        const inner=i>8;
+        const angle = i * Math.PI / 4 + (inner ? Math.PI / 8 : 0);
+        const offset = i === 0 ? 0 : span * (inner ? 0.34 : 0.66);
         const u = projected.u + Math.cos(angle) * offset;
         const v = projected.v + Math.sin(angle) * offset;
         if (!sourceRegisteredPaintCellActive(surface, u, v)) continue;

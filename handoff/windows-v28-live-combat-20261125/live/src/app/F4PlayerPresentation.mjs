@@ -14,7 +14,19 @@ export function f4TurfPresentation(score, phase, stopped=false) {
  if(neutral!==null&&Math.abs(a+b+neutral-100)>0.001)return unavailable('得点不明','得点面積の整合性を確認できません');
  if(phase==='TIME_UP'){
   if(score.status!=='FINAL'||!['A','B','DRAW'].includes(score.winner))return unavailable('結果集計保留','確定した勝敗データがありません');
-  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral};
+  // Validate the actual projected area snapshot before presenting a result.
+  // This never sets a winner: inconsistent authority remains HOLD.
+  const {areaA,areaB}=score;
+  if(![areaA,areaB,totalProjectedM2,neutralArea].every(Number.isFinite)||totalProjectedM2<=0||
+     areaA<0||areaB<0||neutral===null)return unavailable('結果集計保留','実面積データを確認できません');
+  const epsilon=Math.max(1e-8,totalProjectedM2*1e-8);
+  if(Math.abs(areaA+areaB+neutralArea-totalProjectedM2)>epsilon||
+     Math.abs(a-areaA/totalProjectedM2*100)>0.000001||
+     Math.abs(b-areaB/totalProjectedM2*100)>0.000001||
+     (score.winner==='DRAW'?Math.abs(areaA-areaB)>epsilon:
+      score.winner==='A'?areaA-areaB<=epsilon:areaB-areaA<=epsilon))
+   return unavailable('結果集計保留','確定得点と勝敗の整合性を確認できません');
+  return {kind:'FINAL',title:({A:'勝利！',B:'敗北',DRAW:'引き分け'})[score.winner],detail:'暫定研究得点による結果 · 正式原作勝敗は未認証',a,b,neutral,areaA,areaB,totalProjectedM2};
  }
  if(score.status!=='LIVE'||phase!=='PLAYING')return unavailable('暫定得点準備','試合中の集計待ち');
  return {kind:'LIVE',title:'暫定ナワバリ',detail:'実塗装面積 · 未塗装面を含む',a,b,neutral};
@@ -139,12 +151,16 @@ export function installF4PlayerPresentation(root,finish,ui) {
   if(known){const digits=f4ScoreDigits(v);
    str(p.a,`自チーム A ${v.a.toFixed(digits)}%`);str(p.b,`敵チーム B ${v.b.toFixed(digits)}%`);
    width(p.fillA,v.a);width(p.fillB,v.b);if(v.neutral!==null)str(p.neutral,`未塗装 ${v.neutral.toFixed(digits)}%`);
-   if(v.kind==='FINAL'&&v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits))str(p.detail,v.detail+' · 表示桁未満の実面積差');
+   if(v.kind==='FINAL'){
+    const difference=Math.abs(v.areaA-v.areaB);
+    const margin=v.title==='引き分け'?'実面積差は同点許容範囲内':difference<.01?'実面積差 0.01 m² 未満':`実面積差 ${difference.toFixed(2)} m²`;
+    str(p.detail,v.detail+' · '+margin+(v.title!=='引き分け'&&v.a.toFixed(digits)===v.b.toFixed(digits)?' · 表示桁未満の実面積差':''));
+   }
   }
  };
  let disposed=false;
  return {
-  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null}){
+  render({score,matchState,paused,stopped,remainingSeconds,playerView,roster=null,teamColors=null,kit=null,matchSummary=null,pointerLockState=null}){
    if(disposed)return;
    const active=playerView===true;
    data(root,'f4UiSkin',String(active));data(ui,'f4UiSkin',String(active));
@@ -178,8 +194,8 @@ export function installF4PlayerPresentation(root,finish,ui) {
     str(pauseTitle,pauseState==='READY_TO_START'?
      (hold?'ナワバリバトル · 得点集計保留':preparing?'ナワバリバトル · 得点準備中':'ナワバリバトル · 準備完了'):'一時停止');
     const limited=pauseState==='READY_TO_START'&&(hold||resume.title.includes('追加床')||resume.textContent.includes('制限付き'));
-    str(resume,pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
-   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
+    str(resume,pointerLockState==='REJECTED'?'ゲーム画面を選択して再試行':pauseState==='READY_TO_START'?(limited?'制限付きバトル開始':preparing?'バトル開始 · 得点準備中':'バトル開始 · 3分間'):'バトルに戻る');localizedPause=true
+   }else if(localizedPause){if(pauseTitle&&['ナワバリバトル · 準備完了','ナワバリバトル · 得点集計保留','ナワバリバトル · 得点準備中','一時停止'].includes(pauseTitle.textContent))str(pauseTitle,originalPauseTitle);if(resume&&['バトル開始 · 3分間','バトル開始 · 得点準備中','制限付きバトル開始','バトルに戻る','ゲーム画面を選択して再試行'].includes(resume.textContent))str(resume,originalResume);localizedPause=false}
    if(finished&&replayButton&&!replayButton.disabled&&!replayButton.hidden){str(replayButton,'もう一度遊ぶ  ·  R');localizedReplay=true}
    else if(localizedReplay){if(replayButton&&replayButton.textContent==='もう一度遊ぶ  ·  R')str(replayButton,originalReplay);localizedReplay=false}
    if(playing)paint(live,f4TurfPresentation(score,matchState,stopped));

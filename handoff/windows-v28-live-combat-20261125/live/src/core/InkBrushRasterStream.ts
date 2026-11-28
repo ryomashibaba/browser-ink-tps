@@ -110,7 +110,8 @@ export class InkBrushRasterScratch {
 
 export function packInkBrushRasterRuns(
   groups: readonly InkStreamGroup[],
-  scratch?: InkBrushRasterScratch
+  scratch?: InkBrushRasterScratch,
+  fullAuthorizedCells = false
 ): InkBrushGpuBuffers | null {
   let capacity = 0;
   for (const group of groups) capacity += group.paintableRuns.length;
@@ -172,10 +173,13 @@ export function packInkBrushRasterRuns(
           run.startX < 0 || run.endXExclusive > surface.widthCells ||
           run.startX >= run.endXExclusive) continue;
 
-      const minU = Math.max(0, run.startX * surface.cellSize, brushMinU);
-      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, brushMaxU);
-      const minV = Math.max(0, run.row * surface.cellSize, brushMinV);
-      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, brushMaxV);
+      // F4: ownership is a whole cell, not a sub-cell ellipse. Rendering
+      // the ellipse again leaves neutral/old-team texels in owned cells.
+      // Preserve the exact legacy path unless explicitly enabled by F4.
+      const minU = Math.max(0, run.startX * surface.cellSize, fullAuthorizedCells ? 0 : brushMinU);
+      const maxU = Math.min(surface.widthMeters, run.endXExclusive * surface.cellSize, fullAuthorizedCells ? surface.widthMeters : brushMaxU);
+      const minV = Math.max(0, run.row * surface.cellSize, fullAuthorizedCells ? 0 : brushMinV);
+      const maxV = Math.min(surface.heightMeters, (run.row + 1) * surface.cellSize, fullAuthorizedCells ? surface.heightMeters : brushMaxV);
       if (minU >= maxU || minV >= maxV) continue;
 
       const x0 = atlasLeft + minU * scale;
@@ -201,8 +205,10 @@ export function packInkBrushRasterRuns(
         positions[p++] = x;
         positions[p++] = y;
         positions[p++] = 0;
-        uvs[uv++] = 0.5 + ((right ? xc1 : xc0) - (top ? ys0 : ys1)) / diameterX;
-        uvs[uv++] = 0.5 + ((right ? xs1 : xs0) - (top ? yc0 : yc1)) / diameterY;
+        // A constant center UV passes the existing ellipse shader for the
+        // approved run only; rect bounds still prevent any outside writes.
+        uvs[uv++] = fullAuthorizedCells ? 0.5 : 0.5 + ((right ? xc1 : xc0) - (top ? ys0 : ys1)) / diameterX;
+        uvs[uv++] = fullAuthorizedCells ? 0.5 : 0.5 + ((right ? xs1 : xs0) - (top ? yc0 : yc1)) / diameterY;
         rectMins[rectCursor] = x0;
         rectMaxs[rectCursor++] = x1;
         rectMins[rectCursor] = y0;

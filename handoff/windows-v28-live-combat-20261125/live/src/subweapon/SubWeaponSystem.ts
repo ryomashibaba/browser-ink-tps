@@ -768,7 +768,25 @@ export class SubWeaponSystem {
       const a = i * 2.399963229728653;
       const r = profile.paintRadiusMeters * Math.sqrt(i / rule.splashes) * .8;
       const end = origin.clone().add(new Vec3(Math.cos(a) * r,-1.6,Math.sin(a) * r));
-      const hit = this.physics.f4PaintAtStageHit(this.physics.castStageSegment(origin,end,'ink-projectile'),this.surfaces);
+      let stage=this.physics.castStageSegment(origin,end,'ink-projectile');
+      if(this.f4GaugeLifeAtLaunch&&i>0){
+        // A landed bomb sits just centimeters above ground. The original
+        // downward diagonal intersects the floor almost at the bomb for
+        // every radius. Find the intended radial ground contact first,
+        // then require an unobstructed physical ray from the real bomb.
+        const probe=end.clone();probe.y=origin.y+.15;
+        const target=this.physics.castStageSegment(probe,end,'ink-projectile');
+        if(target?.normal&&target.normal.y>=.5){
+          const direction=target.point.clone().sub(origin);
+          if(direction.lengthSq()>1e-8){
+            const beyond=target.point.clone().add(direction.normalize().mulScalar(.025));
+            const visible=this.physics.castStageSegment(origin,beyond,'ink-projectile');
+            if(visible&&visible.point.distance(target.point)<=.035&&
+               (visible.normal?.y??0)>=.5)stage=visible;
+          }
+        }
+      }
+      const hit = this.physics.f4PaintAtStageHit(stage,this.surfaces);
       if (!hit || (hit.surface.baseFlags & SurfaceFlags.Paintable) === 0) continue;
       const radius = profile.paintRadiusMeters * (i === 0 ? .42 : .23);
       this.coordinator.enqueue({ source: actor ? PaintSource.Cpu : PaintSource.Human,

@@ -11,6 +11,8 @@ export interface PaintRequest {
   /** B152 informational only; forwarded to the immutable PaintEvent. */
   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
   gaugeEligible?: boolean;
+  /** Contact travel already sampled this individual physical cell. */
+  f4ExactContactCell?: boolean;
   /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
   f4GaugeLaunchLife?: string|null;
   team: Team.A | Team.B;
@@ -58,7 +60,61 @@ function sameInkGpuOverwrite(
   return true;
 }
 
+// F4 provisional play balance only. Keep hit locations, direction, damage,
+// cadence and ink consumption untouched. The CPU raster remains the authority.
+function f4PlayableBrush(request: PaintRequest): PaintRequest {
+  if (request.f4ExactContactCell) return request;
+  if (request.source !== PaintSource.Human && request.source !== PaintSource.Cpu &&
+      request.source !== PaintSource.Special) return request;
+  if (!Number.isFinite(request.radiusU) || !Number.isFinite(request.radiusV) ||
+      request.radiusU <= 0 || request.radiusV <= 0) return request;
+  let factor = 1, maxGrowth = 0;
+  const playerOwned = request.source === PaintSource.Human ||
+    (request.source === PaintSource.Special &&
+      (!request.actorId || request.actorId === 'human'));
+  switch (request.type) {
+    // Keep CPU balance at the integrated values. The player's primary fire
+    // already covers its authored projectile pattern; the former blanket
+    // 1.5x/1.45x brush growth made that pattern overpaint the floor.
+    case PaintEventType.Impact:
+    case PaintEventType.MidDroplet:
+      if (!playerOwned) {
+        factor = request.type === PaintEventType.Impact ? 1.5 : 1.45;
+        maxGrowth = request.type === PaintEventType.Impact ? .75 : .65;
+      } else { factor = 1.05; maxGrowth = .06; }
+      break;
+    case PaintEventType.Foot:
+      if (!playerOwned) { factor = 1.2; maxGrowth = .15; }
+      break;
+    case PaintEventType.WallImpact:
+      if (!playerOwned) { factor = 1.3; maxGrowth = .4; }
+      else { factor = 1.05; maxGrowth = .06; }
+      break;
+    case PaintEventType.Bomb:
+      if (playerOwned) { factor = 1.8; maxGrowth = 1.2; }
+      else { factor = 1.55; maxGrowth = 1; }
+      break;
+    case PaintEventType.Special:
+      if (playerOwned) { factor = 2; maxGrowth = .55; }
+      else { factor = 1.55; maxGrowth = 1; }
+      break;
+    default: return request;
+  }
+  const u = request.radiusU, v = request.radiusV;
+  const grow = (r: number) => r + Math.min(r * (factor - 1), maxGrowth);
+  // Long narrow charger/trail stamps become wider, never longer.
+  return {...request, radiusU: u > 3*v ? u : grow(u),
+    radiusV: v > 3*u ? v : grow(v)};
+}
+
 export class PaintCoordinator {
+  private f4PlayablePaint=false;
+  public enableF4PlayablePaint():void{
+    this.f4PlayablePaint=true;
+    this.gpu.enableF4FullCellRendering();
+    this.f4WallAtlas?.enableF4FullCellRendering();
+    for(const atlas of this.f4FloorAtlases)atlas.enableF4FullCellRendering();
+  }
   private readonly requests: Readonly<PaintRequest>[] = [];
   public lastEvent: PaintEvent | null = null;
   private f4WallAtlas:GpuInkAtlas|null=null;
@@ -67,12 +123,15 @@ export class PaintCoordinator {
     this.f4WallAtlas=atlas;
     // The wall atlas exists only in the provisional native F4 world.
     atlas.enableF4QueueOptimization();
+    if(this.f4PlayablePaint)atlas.enableF4FullCellRendering();
   }
   private readonly f4FloorAtlasBySurface=new Map<string,GpuInkAtlas>();
   private readonly f4FloorAtlases=new Set<GpuInkAtlas>();
   public attachF4FloorAtlas(atlas:GpuInkAtlas,surfaces:readonly PaintSurface[]):void{
     if(surfaces.some(s=>!s.id.startsWith('F4ProvisionalFloor:')||this.f4FloorAtlasBySurface.has(s.id)))throw Error('F4_FLOOR_ATLAS_DUPLICATE');
-    atlas.enableF4QueueOptimization();this.f4FloorAtlases.add(atlas);
+    atlas.enableF4QueueOptimization();
+    if(this.f4PlayablePaint)atlas.enableF4FullCellRendering();
+    this.f4FloorAtlases.add(atlas);
     for(const s of surfaces)this.f4FloorAtlasBySurface.set(s.id,atlas);
   }
   public detachF4FloorAtlas(atlas:GpuInkAtlas):void{
@@ -80,8 +139,15 @@ export class PaintCoordinator {
     for(const [id,a] of this.f4FloorAtlasBySurface)if(a===atlas)this.f4FloorAtlasBySurface.delete(id);
   }
   public flushF4WallAtlas(maxEvents:number):void{
-    this.f4WallAtlas?.flush(maxEvents);
-    for(const atlas of this.f4FloorAtlases)atlas.flush(maxEvents);
+    const flush=(atlas:GpuInkAtlas)=>{
+      // Keep normal budget when caught up; drain more queued real paint
+      // after bursts. The GPU atlas still enforces its 16-bit quad cap.
+      const budget=this.f4PlayablePaint&&Number.isFinite(maxEvents)&&maxEvents>=1?
+        Math.max(maxEvents,Math.min(128,Math.ceil(atlas.backlog/2))):maxEvents;
+      atlas.flush(budget);
+    };
+    if(this.f4WallAtlas)flush(this.f4WallAtlas);
+    for(const atlas of this.f4FloorAtlases)flush(atlas);
   }
   public detachF4WallAtlas(atlas:GpuInkAtlas):void{
     if(this.f4WallAtlas!==atlas)return;
@@ -106,7 +172,8 @@ export class PaintCoordinator {
     // The weapon/projectile side may reuse its request object later in this
     // tick. Capture the actual impact now, rather than painting at its next
     // location after the pooled request has been mutated.
-    this.requests.push(Object.freeze({ ...request }));
+    const brush = this.f4PlayablePaint&&this.f4FloorAtlases.size ? f4PlayableBrush(request) : request;
+    this.requests.push(Object.freeze({ ...brush }));
   }
 
   public enqueueMany(requests: readonly PaintRequest[]): void {
@@ -164,8 +231,12 @@ export class PaintCoordinator {
       // boundary. Reproject onto neighboring coplanar registered surfaces;
       // each continuation still passes the same live raster/backing authority.
       if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
-         (source===PaintSource.Human||source===PaintSource.Cpu)&&
-         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||event.type===PaintEventType.MidDroplet)){
+         !(this.f4PlayablePaint&&request.f4ExactContactCell)&&
+         (source===PaintSource.Human||source===PaintSource.Cpu||
+          (this.f4PlayablePaint&&source===PaintSource.Special))&&
+         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||
+          event.type===PaintEventType.MidDroplet||(this.f4PlayablePaint&&
+          (event.type===PaintEventType.Bomb||event.type===PaintEventType.Special)))){
         const from=this.gameplay.getSurface(event.surfaceId);
         if(from&&!(from.baseFlags&SurfaceFlags.Wall)){
           const center=from.localToWorld(event.centerU,event.centerV);

@@ -1,0 +1,38 @@
+{
+  "schema": "F4_P0_POSTFIX_CDP_READONLY_V1",
+  "capturedAt": "2026-11-28T19:19:24+09:00",
+  "entry": "http://127.0.0.1:4176/play-f4.html",
+  "mode": "isolated headless Chrome via CDP; read-only Page/Runtime/SystemInfo; no input dispatch",
+  "build": "npm run build passed on Windows canonical worktree: tsc -b and vite build; 1585 modules transformed",
+  "chrome": "Chrome/158.0.8127.38",
+  "renderer": {
+    "api": "webgl2",
+    "gpu": "ANGLE (AMD, AMD Radeon(TM) 890M Graphics (0x0000150E) Direct3D11 vs_5_0 ps_5_0, D3D11-32.0.21039.6001)",
+    "displayType": "ANGLE_D3D11",
+    "webgl": "enabled",
+    "gpuCompositing": "enabled"
+  },
+  "f4": {
+    "trimesh": "READY",
+    "triangles": 57840,
+    "provisionalFloorTiles": 858,
+    "walkableTriangles": 512,
+    "walls": "HOLD_NO_ACCESSIBLE_CONCRETE",
+    "backedProjectedM2": 2081.9103083955106
+  },
+  "run": {
+    "matchState": "STAGING",
+    "paused": true,
+    "tick": 0,
+    "pointerLocked": false,
+    "inputAvailable": false
+  },
+  "render": {
+    "gpuAtlasPersistent": true,
+    "pendingEvents": 0,
+    "idlePostRenderFrames": 833,
+    "liveFrameIntervalSamples": 0,
+    "fpsMeasured": false,
+    "gpuTimeMeasured": false
+  }
+}

@@ -7,7 +7,7 @@ import {spatial,eventTone} from './F4SpatialAudio.mjs';
 import {sourceShotTone,type SourceCue} from '../audio/SourcePracticeAudio';
 import {f4AudioBus,weaponTexture,type F4Texture} from './F4AudioBus.mjs';
 
-type FxMode = 'BURST' | 'FUSE' | 'DROP';
+type FxMode = 'BURST' | 'FUSE' | 'DROP' | 'FLASH' | 'BEAM';
 
 interface FxSlot {
   entity: Entity;
@@ -16,6 +16,7 @@ interface FxSlot {
   baseScale: number;
   mode: FxMode;
   priority?:number;
+  beamLength?:number;
   motion?:{x:number;y:number;z:number;vx:number;vy:number;vz:number};
 }
 
@@ -127,6 +128,12 @@ export class GameFeedback {
         const m=slot.motion;
         const [x,y,z,s]=pose(m.x,m.y,m.z,m.vx,m.vy,m.vz,slot.duration-slot.ttl,slot.duration,slot.baseScale);
         slot.entity.setPosition(x,y,z);slot.entity.setLocalScale(s,s*1.25,s);
+      } else if(slot.mode==='FLASH'){
+        const scale=slot.baseScale*Math.max(0,1-progress)*(.85+.15*(1-progress));
+        slot.entity.setLocalScale(scale,scale,scale);
+      } else if(slot.mode==='BEAM'){
+        const width=slot.baseScale*Math.max(0,1-progress);
+        slot.entity.setLocalScale(width,width,(slot.beamLength??0)*Math.max(0,1-progress*.25));
       } else if (slot.mode === 'FUSE') {
         const pulse = 0.74 + Math.abs(Math.sin(progress * Math.PI * 9)) * 0.7;
         const grow = 1 + progress * 0.75;
@@ -145,7 +152,8 @@ export class GameFeedback {
     origin: Vec3,
     direction: Vec3,
     charge: number,
-    active: boolean
+    active: boolean,
+    guideLimit?:number
   ): void {
     const chargeClass = isChargeClass(profile.weaponClass)
       ? profile.weaponClass
@@ -183,10 +191,10 @@ export class GameFeedback {
 
     switch (chargeClass) {
       case 'CHARGER':
-        this.updateChargerCharge(origin, forward, right, up, t);
+        this.updateChargerCharge(origin, forward, right, up, t,guideLimit);
         break;
       case 'SPLATLING':
-        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing);
+        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing,guideLimit);
         break;
       case 'STRINGER':
         this.updateStringerCharge(origin, forward, right, up, t, firstRing);
@@ -223,7 +231,11 @@ export class GameFeedback {
     profile: WeaponProfile,
     localPlayer: boolean
   ): void {
-    this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
+    // Brief shrinking muzzle flash, rather than an expanding impact sphere.
+    if(this.f4Presentation){
+      const scale=Math.min(.18,.09*profile.fxScale*(localPlayer?1.35:1));
+      this.spawnFx(team,position,scale,.065,'FLASH',localPlayer?1:0);
+    }else this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
     if(this.f4Presentation){
       const tone=sourceShotTone(profile.id);
       if(this.playTone(245*profile.audioPitch,(localPlayer?.025:.014)*tone.volume,.065*tone.length,tone.wave,130/245,localPlayer?1:0,localPlayer?undefined:position,weaponTexture(profile.weaponClass),localPlayer?'local-shot':'remote-shot')&&localPlayer)this.handledCues.add('SHOT');
@@ -399,6 +411,26 @@ export class GameFeedback {
     to: Vec3,
     profile: WeaponProfile
   ): void {
+    if(this.f4Presentation){
+      // Reuse the capped sphere pool as short connected beam segments.
+      // The endpoints come from the resolved physical ray, never nominal range.
+      const length=from.distance(to);
+      if(Number.isFinite(length)&&length>.015){
+        const count=Math.min(8,Math.max(1,Math.ceil(length/1.8)));
+        const step=length/count;
+        const axis=to.clone().sub(from).mulScalar(1/length);
+        for(let i=0;i<count;i++){
+          const center=from.clone().add(axis.clone().mulScalar((i+.5)*step));
+          const slot=this.spawnFx(team,center,Math.min(.10,.055*profile.fxScale),.095,'BEAM',1);
+          if(!slot)break;
+          slot.beamLength=step;
+          slot.entity.lookAt(center.clone().add(axis));
+          slot.entity.setLocalScale(slot.baseScale,slot.baseScale,step);
+        }
+      }
+      this.playTone(720*profile.audioPitch,.028,.07,'sawtooth',.74,0,from);
+      return;
+    }
     const samples = 11;
     for (let i = 0; i < samples; i += 1) {
       const t = samples <= 1 ? 0 : i / (samples - 1);
@@ -427,7 +459,8 @@ export class GameFeedback {
     forward: Vec3,
     right: Vec3,
     up: Vec3,
-    charge: number
+    charge: number,
+    guideLimit?:number
   ): void {
     const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
     this.chargeCore.setPosition(corePoint);
@@ -435,9 +468,9 @@ export class GameFeedback {
     this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
 
     const guide = this.chargeBars[0]!;
-    guide.enabled = true;
-    const guideLength = 4 + charge * 14;
-    placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
+    const guideLength = guideLimit===undefined?4+charge*14:Math.min(4+charge*14,guideLimit);
+    guide.enabled = guideLength>.02;
+    if(guide.enabled)placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
 
     for (let i = 0; i < 3; i += 1) {
       const dot = this.chargeDots[i]!;
@@ -459,7 +492,8 @@ export class GameFeedback {
     right: Vec3,
     up: Vec3,
     charge: number,
-    firstRing: number
+    firstRing: number,
+    guideLimit?:number
   ): void {
     const firstProgress = firstRing > 0
       ? clamp01(charge / firstRing)
@@ -476,9 +510,9 @@ export class GameFeedback {
     this.chargeCore.setLocalScale(pulse, pulse, pulse);
 
     const guide = this.chargeBars[0]!;
-    guide.enabled = true;
-    const guideLength = 3.2 + firstProgress * 10.8;
-    placeBarAlong(
+    const guideLength = guideLimit===undefined?3.2+firstProgress*10.8:Math.min(3.2+firstProgress*10.8,guideLimit);
+    guide.enabled = guideLength>.02;
+    if(guide.enabled)placeBarAlong(
       guide,
       origin,
       forward,
@@ -627,6 +661,8 @@ export class GameFeedback {
     slot.mode = mode;
     slot.priority=mode==='FUSE'?2:priority;
     slot.motion=undefined;
+    slot.beamLength=undefined;
+    if(this.f4Presentation)slot.entity.setLocalEulerAngles(0,0,0);
     slot.entity.setPosition(position);
     slot.entity.setLocalScale(baseScale, baseScale, baseScale);
     slot.entity.enabled = true;

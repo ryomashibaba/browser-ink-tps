@@ -522,7 +522,8 @@ export class F4SpecialRuntime {
         speed:21,gravity:4,lifeSeconds:1.15,diameter:.27,directDamage:shot.direct!,
         blast:{radius:1.45,damage:shot.blast!,paint:.48}
       }):launch({
-        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,damageAtAge:crabProjectileDamage
+        speed:31,gravity:6,lifeSeconds:.73,diameter:.11,directDamage:32,
+        impactPaintRadius:.28,damageAtAge:crabProjectileDamage
       })
     });
     const clean=()=>{this.devices.delete(contact);visual?.destroy();visual=null;};

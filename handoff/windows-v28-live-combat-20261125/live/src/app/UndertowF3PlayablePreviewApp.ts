@@ -1337,8 +1337,12 @@ export class UndertowF3PlayablePreviewApp{
   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
-  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)
+  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
    this.projectiles.enableF4PlayableShooterControls();
+   this.coordinator.enableF4PlayablePaint();
+   this.cpu.enableF4PlayableTactics();
+   this.traffic.enableF4PlayableRecovery();
+  }
   const zipResearchMode=sessionStorage.getItem('t21F4ZipKccResearch');
   this.f4ZipResearchAimed=this.f4SpecialProbe&&zipResearchMode==='wall-return-aimed';
   this.f4ZipResearchEnabled=this.f4SpecialProbe&&
@@ -2213,8 +2217,21 @@ export class UndertowF3PlayablePreviewApp{
       !this.f4LiveWorldPending()&&
       !this.survey.snapshot().active&&this.galleryIndex<0&&
       (this.b203FullRound||
-       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING'))
-    void this.canvas.requestPointerLock();
+       this.resumeAfterRealPointerLock&&this.b25Run.snapshot().status==='RUNNING')){
+    if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
+     // A background/unfocused document can reject the browser request.
+     // Never start a simulated round or retry without a real user click.
+     const report=()=>{
+      this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
+      resumeButton.textContent='CLICK GAME WINDOW · TRY AGAIN';
+      resumeButton.title='ブラウザがマウス操作を拒否しました。単独Chromeのゲーム画面を選択して再試行してください。';
+     };
+     if(document.hidden||!document.hasFocus()){report();return;}
+     this.canvas.dataset.t21F4PointerLockRequest='REQUESTED';
+     try{void Promise.resolve(this.canvas.requestPointerLock()).catch(report);}
+     catch{report();}
+    }else void this.canvas.requestPointerLock();
+   }
   });
   // B378: Existing physical weapon profiles become playable in source
   // 180s only before first pointer lock; never disturb genuine B343's
@@ -2903,6 +2920,19 @@ export class UndertowF3PlayablePreviewApp{
     this.refreshB25PaintRun();
    }
   });
+  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
+   document.addEventListener('pointerlockerror',()=>{
+    if(this.canvas.dataset.t21F4PointerLockRequest!=='REQUESTED')return;
+    this.canvas.dataset.t21F4PointerLockRequest='REJECTED';
+    resumeButton.textContent='CLICK GAME WINDOW · TRY AGAIN';
+   });
+   document.addEventListener('pointerlockchange',()=>{
+    if(document.pointerLockElement===this.canvas){
+     this.canvas.dataset.t21F4PointerLockRequest='LOCKED';
+     resumeButton.textContent='RESUME THIS ROUND · SAME REAL WORLD';
+    }
+   });
+  }
   document.addEventListener('pointerlockchange',()=>this.refreshB36PlayFocus());
   document.addEventListener('pointerlockchange',()=>{
    const running=this.b25Run.snapshot().status==='RUNNING';
@@ -6302,7 +6332,8 @@ export class UndertowF3PlayablePreviewApp{
     if(alive&&this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
        this.matchState==='PLAYING'&&f4BelowInstalledGeometry(
         this.physics.f4ResearchBottomY,
-        this.player.getPosition(this.p).y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+        this.player.getPosition(this.p).y+(this.player.currentMode==='SQUID'?
+         PLAYER_CHARACTER_PHYSICS.squidTopOffsetFromBodyMeters:PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters),
         this.stats.playerGrounded)){
      this.resources.applyDamage(this.resources.currentHp);
      alive=false;
@@ -8139,6 +8170,11 @@ export class UndertowF3PlayablePreviewApp{
    ready?(floorWarning?'制限付き試合を開始（追加床未準備）':'START 180s ROUND'):'RESUME THIS ROUND · SAME REAL WORLD';
   if(floorWarning&&!f4Pending)stopResume.title=floorWarning;
   else stopResume.removeAttribute('title');
+  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&ordinaryPause&&!stopResume.disabled&&
+     this.canvas.dataset.t21F4PointerLockRequest==='REJECTED'){
+   stopResume.textContent='ゲーム画面を選択して再試行';
+   stopResume.title='ブラウザがマウス操作の取得を拒否しました。画面を選択してもう一度クリックしてください。';
+  }
   const stopMenu=this.b202PauseOverlay.querySelector<HTMLButtonElement>(
    '#t21-f3-source-mode-menu-ready');
   if(stopMenu)stopMenu.textContent=stoppedSourceMenu?
@@ -10134,6 +10170,7 @@ export class UndertowF3PlayablePreviewApp{
      sub:f4Sub.displayName,subCost:f4Sub.inkCost,special:f4SpecialName(f4Weapon.id)},
     score:this.ink.readF4ProvisionalTurf(),matchState:state.matchState,
     paused:state.paused,stopped:!!state.stopReason,remainingSeconds:state.timeRemainingSeconds,
+    pointerLockState:this.canvas.dataset.t21F4PointerLockRequest??null,
     matchSummary:state.matchState==='TIME_UP'?{
      directHits:state.humanCpuDirectHits,directSplats:state.humanCpuDirectSplats,
      deaths:state.humanSplats,respawns:state.humanRespawns,

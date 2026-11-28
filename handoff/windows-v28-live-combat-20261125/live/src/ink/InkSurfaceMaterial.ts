@@ -89,7 +89,8 @@ void main(void) {
     vec3 lightDir = normalize(uF4LightDir);
     vec3 hRaw = lightDir + v;
     vec3 h = hRaw / max(length(hRaw), 0.001);
-    vec2 p = local;
+    // World-anchored pigment crosses independent floor tiles without a seam.
+    vec2 p = vWorldPos.xz + vWorldPos.y * vec2(0.47, 0.69);
     float detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
     float pigment = 0.97;
     // Fade fine pigment before it becomes subpixel; skip far-away waves.
@@ -197,7 +198,8 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     let lightDir = normalize(uniform.uF4LightDir);
     let hRaw = lightDir + v;
     let h = hRaw / max(length(hRaw), 0.001);
-    let p = local;
+    // Same world-anchored pigment as GLSL; mask and ownership unchanged.
+    let p = input.vWorldPos.xz + input.vWorldPos.y * vec2f(0.47, 0.69);
     let detail = 1.0 - smoothstep(6.0, 24.0, distanceToEye);
     var pigment = 0.97;
     if (detail > 0.0) {

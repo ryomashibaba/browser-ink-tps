@@ -145,6 +145,8 @@ export class GpuInkAtlas {
   private paintedThisFrame = false;
   private f4QueueOptimized=false;
   public enableF4QueueOptimization():void {this.f4QueueOptimized=true;}
+  private f4FullCellRendering=false;
+  public enableF4FullCellRendering():void {this.f4FullCellRendering=true;}
   // W10-B20: default OFF for every other game route / production stage.
   // A primed, persistent atlas needs no idle render-target submission.
   private sourceIdlePostRenderFrames = 0;
@@ -311,7 +313,9 @@ export class GpuInkAtlas {
       groups.push({ surface, event, paintableRuns });
     }
 
-    const buffers = packInkBrushRasterRuns(groups, this.rasterScratch);
+    // In the provisional F4 world, draw every CPU-owned cell completely.
+    // All legacy and formal QA atlases retain their ellipse renderer.
+    const buffers = packInkBrushRasterRuns(groups, this.rasterScratch, this.f4FullCellRendering);
     if (!buffers) {
       return { events: completedEvents, buildMs: performance.now() - started };
     }

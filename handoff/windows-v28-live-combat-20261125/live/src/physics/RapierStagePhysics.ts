@@ -1,4 +1,4 @@
-import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
+import RAPIER, { type Collider, type RigidBody, type World } from '@dimforge/rapier3d-compat';
 import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
 import { Quat, Vec3 } from 'playcanvas';
 import {
@@ -231,6 +231,15 @@ export class RapierStagePhysics {
       solidId: solid.id,
       ...('normal' in hit?{normal:new Vec3(hit.normal.x,hit.normal.y,hit.normal.z)}:{})
     };
+  }
+
+  /** Exact prospective human capsule overlap; no movement or collider writes. */
+  public f4HumanFormClear(center:{x:number;y:number;z:number},halfHeight:number,radius:number,body:RigidBody):boolean{
+    if(!this.f4WholeResearchTrimeshActive||
+       ![center.x,center.y,center.z,halfHeight,radius].every(Number.isFinite)||halfHeight<=0||radius<=0)return false;
+    return !this.world.intersectionWithShape(center,this.cameraSweepRotation,
+      new RAPIER.Capsule(halfHeight,radius),undefined,undefined,undefined,body,
+      collider=>this.shouldCharacterCollide(collider,'HUMAN'));
   }
 
   /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */

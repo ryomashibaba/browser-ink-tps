@@ -88,6 +88,7 @@ export interface F3TrafficCpu{
  lifeState?:'ACTIVE'|'SPLATTED';hp?:number;weaponId?:WeaponId;
  ink?:number;b213ActualAttackerId?:string|null;b213ActualHitTick?:number;
  f4RecoveringInk?:boolean;
+ f4RecoveringHp?:boolean;
 }
 /** Read-only SOURCE QA observation: a native splat may occur in the
  * projectile phase AFTER traffic.observe() in the same physics tick.
@@ -626,6 +627,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
  private readonly f4WholeDirections=new Map<string,number>();
  private readonly f4PatrolNavigation=new F4PatrolNavigation();
  private readonly f4PatrolSurvey=new F4PatrolSurvey();
+ private f4PlayableRecovery=false;
+ public enableF4PlayableRecovery():void{this.f4PlayableRecovery=true;}
 
  constructor(
   private readonly stage:StageDefinition,private nav:RecastStageNavigation,
@@ -1699,8 +1702,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   // Steering remains planar, but the firing envelope is measured from
   // the real muzzle to the same physical body sample used by sight.
   const distance=Math.hypot(dx,target.y-foot.y-GAME_CONFIG.cpu.muzzleHeightMeters,dz);
-  const recovering=(bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
-   (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65)||
+  const recovering=(this.f4PlayableRecovery?bot.f4RecoveringHp===true:
+   (bot.hp??100)<=GAME_CONFIG.combat.playerMaxHp*.35||
+   (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65))||
    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
   const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
   // Use the same physically supported swimmable owner cell as CPU resources.
@@ -1709,7 +1713,8 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
    const sample=floor&&this.sourceInk?.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall);
    return !sample?'UNKNOWN':sample.owner===bot.team?'OWN':sample.owner===Team.Neutral?'NEUTRAL':'ENEMY';
   };
-  const ownsInk=(point:Vec3)=>inkRelation(point)==='OWN';
+  const ownsInk=(point:Vec3)=>this.f4PlayableRecovery?
+   this.f4RecoveryOwnFloor(point,bot.team):inkRelation(point)==='OWN';
   if(!visible&&recovering&&ownsInk(foot))return result(null);
   // Combat waypoints used to expire without registering the same lack of
   // real progress as patrol goals. Avoid repeatedly selecting that blocked
@@ -1950,6 +1955,28 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   return null;
  }
 
+ /** Check actual static floor, support normal and authoritative backed ownership.
+  * Used only for live provisional recovery, never to authorize movement. */
+ private f4RecoveryOwnFloor(point:Readonly<{x:number;y:number;z:number}>,team:Team.A|Team.B):boolean{
+  const floor=this.sourceNativeCharacterFootHit(point);
+  const normal=floor?.normal;
+  if(!floor||!normal||Math.abs(floor.point.y-point.y)>.12||
+     normal.y<Math.cos(PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians)-1e-6)return false;
+  const sample=this.sourceInk?.sampleWorld(floor.point,.055,SurfaceFlags.Swimmable,SurfaceFlags.Wall,
+   s=>Math.abs(s.normal.dot(normal))>=.95);
+  return sample?.owner===team;
+ }
+
+ /** Prefer a real patch of own ink, rather than a single isolated cell.
+  * Center is mandatory. Four nearby floor samples are a bounded tie-break. */
+ private f4RecoveryPatchQuality(point:Vec3,team:Team.A|Team.B):number{
+  if(!this.f4RecoveryOwnFloor(point,team))return 0;
+  let count=1;
+  for(const [x,z] of [[.25,0],[-.25,0],[0,.25],[0,-.25]] as const)
+   if(this.f4RecoveryOwnFloor(new Vec3(point.x+x,point.y,point.z+z),team))count++;
+  return count;
+ }
+
  private chooseF4WholeGoal(id:string,foot:Vec3,out:Vec3,localActionsOpen:boolean):boolean{
   const bot=this.bots.find(candidate=>candidate.id===id);
   if(!bot?.agent||!this.f4WholeSupport?.(id,foot))return false;
@@ -1974,15 +2001,22 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   }
   // Share the combat recovery hysteresis, including the first low-ink tick.
   // Hold only on actual swimmable own ink in ordinary lanes, never in combat.
-  const quietRecovery=recoveringInk(bot.f4RecoveringInk===true,bot.ink??Infinity,GAME_CONFIG.inkEconomy.capacity);
+  const quietRecovery=recoveringInk(bot.f4RecoveringInk===true,bot.ink??Infinity,GAME_CONFIG.inkEconomy.capacity)||
+   (this.f4PlayableRecovery&&bot.f4RecoveringHp===true);
   const recoveryFloor=quietRecovery&&this.freeCombat&&Math.abs(foot.z)>12&&Math.abs(foot.z)<42?
    this.sourceNativeCharacterFootHit(foot):null;
-  const holdRecovery=!!recoveryFloor&&this.sourceInk?.sampleWorld(
-   recoveryFloor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team;
+  const holdRecovery=!!recoveryFloor&&(this.f4PlayableRecovery?
+   this.f4RecoveryOwnFloor(foot,bot.team):this.sourceInk?.sampleWorld(
+   recoveryFloor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner===bot.team);
   const reached=!!previous&&foot.distance(previous.point)<=.35;
   if(reached&&!previous?.opponent)this.f4PatrolNavigation.noteReached(id,this.b137NativeTick,foot);
-  if(previous&&!previous.opponent&&!reached&&
-     (previous.local?!holdRecovery&&localPatrolCanContinue(this.b137NativeTick,previous.issued,previous.advanced,previous.patrolVeto):
+  // A recovery destination can be repainted during travel. Revalidate
+  // its live ownership before retention; resume patrol when healed.
+  const retainedRecoveryValid=!this.f4PlayableRecovery||!previous?.recovering||
+   (quietRecovery&&this.f4RecoveryOwnFloor(previous.point,bot.team));
+  if(previous&&!previous.opponent&&!reached&&retainedRecoveryValid&&
+     (previous.local?!holdRecovery&&(!this.f4PlayableRecovery||!quietRecovery||previous.recovering===true)&&
+      localPatrolCanContinue(this.b137NativeTick,previous.issued,previous.advanced,previous.patrolVeto):
       this.b137NativeTick-previous.advanced<48)){
    out.copy(previous.point);
    return true;
@@ -1995,9 +2029,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   if(stalledOnRoute&&previous)this.f4PatrolNavigation.noteStalled(id,this.b137NativeTick,foot,previous.point);
   this.f4WholeGoals.delete(id);
   const avoids=(point:Vec3)=>this.f4PatrolNavigation.avoids(id,this.b137NativeTick,foot,point);
-  const request=(point:Vec3,local:boolean)=>{
+  const request=(point:Vec3,local:boolean,recovery=false)=>{
    this.f4PatrolNavigation.newGoal(id);
    this.f4WholeGoals.set(id,{point,local,issued:this.b137NativeTick,
+    ...(this.f4PlayableRecovery&&recovery?{recovering:true}:{}),
     advanced:this.b137NativeTick,bestDistance:foot.distance(point),
     // Real horizontal progress around bends also counts on ingress routes.
     patrolTrail:[{x:foot.x,y:foot.y,z:foot.z}]});
@@ -2051,7 +2086,10 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
   const allies=this.bots.filter(a=>a.id!==id&&a.team===bot.team&&a.lifeState==='ACTIVE'&&
    a.mobilityState==='GROUND'&&(a.hp??0)>0);
   const reservations=allies.flatMap(a=>{const g=this.f4WholeGoals.get(a.id);return g&&!g.opponent?[g.point]:[];});
-  const recovering=quietRecovery||(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
+  // Live recovery uses one hysteresis state for steering, holding and
+  // retained goals. Preserve the broader historical thresholds elsewhere.
+  const recovering=this.f4PlayableRecovery?quietRecovery:
+   quietRecovery||(bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.25||
    (bot.hp??Infinity)<GAME_CONFIG.combat.playerMaxHp*.45;
   const options={recovering,reservations};
   const inkAt=(point:Vec3):PatrolInk=>{
@@ -2116,21 +2154,28 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
      if(Math.abs(probe.z)<=12||Math.abs(probe.z)>=42||avoids(probe))continue;
      const floor=this.sourceNativeCharacterFootHit(probe);
      if(!floor||Math.abs(floor.point.y-foot.y)>.42||
-        this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner!==bot.team)continue;
+        (this.f4PlayableRecovery?!this.f4RecoveryOwnFloor(floor.point,bot.team):
+         this.sourceInk.sampleWorld(floor.point,.10,SurfaceFlags.Swimmable,SurfaceFlags.Wall)?.owner!==bot.team))continue;
      const projection=this.nav.auditNavMeshProjection(floor.point),p=projection.nearestPoint;
      if(!projection.success||!p||projection.distanceMeters===null||projection.distanceMeters>.25||
         Math.abs(p.y-floor.point.y)>.12)continue;
      const point=new Vec3(p.x,p.y,p.z);
-     if(avoids(point)||point.distance(foot)<.35||inkAt(point)!=='OWN')continue;
+     if(avoids(point)||point.distance(foot)<.35||(this.f4PlayableRecovery?
+        !this.f4RecoveryOwnFloor(point,bot.team):inkAt(point)!=='OWN'))continue;
      const index=ownCandidates.length;ownCandidates.push({point,ink:'OWN',order:index,index});
     }
-    if(ownCandidates.length>=2)break;
+    if(ownCandidates.length>=(this.f4PlayableRecovery?4:2))break;
    }
-   const ordered=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,ownCandidates,
-    allies.map(a=>a.position),options).slice(0,2);
+   const ranked=this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,ownCandidates,
+    allies.map(a=>a.position),options);
+   // Shortlist by existing navigation/team-spacing rank first. At most
+   // four candidates get a five-point patch check, two get route queries.
+   const ordered=this.f4PlayableRecovery?ranked.slice(0,4).map(c=>({c,quality:this.f4RecoveryPatchQuality(c.point,bot.team)}))
+    .filter(r=>r.quality>0).sort((a,b)=>b.quality-a.quality).slice(0,2).map(r=>r.c):ranked.slice(0,2);
    for(const c of ordered){
     const point=this.f4WholeWalkTarget(foot,c.point,false,6);
-    if(point&&!avoids(point)&&point.distance(c.point)<=.25&&inkAt(point)==='OWN')return request(point,true);
+    if(point&&!avoids(point)&&point.distance(c.point)<=.25&&(this.f4PlayableRecovery?
+       this.f4RecoveryOwnFloor(point,bot.team):inkAt(point)==='OWN'))return request(point,true,true);
    }
   }
   // Healthy bots still on their own approach lane should contest the center
@@ -2172,7 +2217,9 @@ export class UndertowF3SourceTraffic implements CpuQaSourceGoalAuthority{
     }
     for(const candidate of this.f4PatrolNavigation.rank(id,this.b137NativeTick,foot,verified,allies.map(a=>a.position),options).slice(0,2)){
      const point=this.f4WholeWalkTarget(foot,candidate.point,false,8);
-     if(point&&!avoids(point)&&point.distance(candidate.point)<=.25)return request(point,true);
+     if(point&&!avoids(point)&&point.distance(candidate.point)<=.25&&
+        (!this.f4PlayableRecovery||!recovering||this.f4RecoveryOwnFloor(point,bot.team)))
+      return request(point,true,recovering);
     }
    }
   }

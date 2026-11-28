@@ -12,7 +12,7 @@ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
 import { GAME_CONFIG } from '../config/game/gameConfig';
 import type { PerformanceStats } from '../core/PerformanceStats';
 import type { GameplayInkSystem, GameplayInkSample } from '../ink/GameplayInkSystem';
-import type { PaintSurface } from '../ink/PaintSurface';
+import { F4_PAINT_PLANE_TOLERANCE, type PaintSurface } from '../ink/PaintSurface';
 import { SurfaceFlags, Team } from '../ink/types';
 import type { PlayerInput } from '../input/PlayerInput';
 import type { RapierStagePhysics } from '../physics/RapierStagePhysics';
@@ -236,6 +236,7 @@ export class PlayerController {
   private sourceFootGapMeters:number|null=null;
   private readonly sourceFootCastPosition=new Vec3();
   private readonly sourceFloorInkPoint=new Vec3();
+  private sourceFloorNormal:Vec3|null=null;
   private readonly sourceBackingMatchesSupport=(surface:PaintSurface):boolean=>
     this.sourceSupportedSolidId!==null&&
     (this.physics.hasF4WholeResearchTrimesh?
@@ -594,6 +595,7 @@ export class PlayerController {
     this.nativeSourceGroundInkGuard=enabled;
     this.sourceSupportedSolidId=null;
     this.sourceFootGapMeters=null;
+    this.sourceFloorNormal=null;
     this.sourcePaintBackingById=null;
     if(!enabled)return;
     if(!paint||paint.length!==17||
@@ -624,6 +626,14 @@ export class PlayerController {
   private sampleFootInk():GameplayInkSample|null{
     if(this.nativeSourceGroundInkGuard&&
        (!this.grounded||!this.sourceSupportedSolidId))return null;
+    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&this.nativeSourceGroundInkGuard){
+      const normal=this.sourceFloorNormal;
+      if(!normal||this.sourceSupportedSolidId!=='T21_F4_LOCAL_F3L_RESEARCH')return null;
+      // Match actual support normal and projectile paint tolerance.
+      return this.gameplayInk.sampleWorld(this.sourceFloorInkPoint,F4_PAINT_PLANE_TOLERANCE,
+        SurfaceFlags.Swimmable,SurfaceFlags.Wall,s=>this.sourceBackingMatchesSupport(s)&&
+          Math.abs(s.normal.dot(normal))>=.95);
+    }
     return this.gameplayInk.sampleWorld(
       this.nativeSourceGroundInkGuard?this.sourceFloorInkPoint:this.footPoint,
       this.physics.hasF4WholeResearchTrimesh?.10:.40,
@@ -750,6 +760,7 @@ export class PlayerController {
     this.camera.resetF4AimTracking?.();
     this.sourceSupportedSolidId=null;
     this.sourceFootGapMeters=null;
+    this.sourceFloorNormal=null;
     this.footPoint.set(
       position.x,
       position.y - PlayerController.humanFootOffset + 0.06,
@@ -816,6 +827,12 @@ export class PlayerController {
     const squidHeldForTick=this.nativeSourceGroundInkGuard
       ? this.input.consumeSquidHeldForPlayerTick():this.input.squidHeld;
     if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
+    // Releasing Shift must not materialize a taller capsule inside a ceiling.
+    // Keep actual squid movement until the requested human shape fits.
+    const blockedHumanForm=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
+      this.mode==='SQUID'&&!squidHeldForTick&&
+      !this.physics.f4HumanFormClear(bodyPosition,PlayerController.humanHalfHeight,
+        PlayerController.humanRadius,this.body);
     // A genuine Space tap one fixed tick before landing used to disappear.
     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
     // No extra ground/coyote-time/stepping or changes to frozen T20.
@@ -953,9 +970,9 @@ export class PlayerController {
       this.surgeRemainingSeconds = Math.max(0, this.surgeRemainingSeconds - dt);
       this.verticalVelocity -= GAME_CONFIG.player.surgeGravityMetersPerSecond2 * dt;
       this.setSnapToGround(false);
-    } else if (squidHeldForTick) {
+    } else if (squidHeldForTick || blockedHumanForm) {
       this.setMode('SQUID');
-      const wall = this.findOwnWallSample(bodyPosition);
+      const wall = squidHeldForTick?this.findOwnWallSample(bodyPosition):null;
       // A wall swim/charge owns its Space semantics; do not carry a floor
       // jump tap into a later unrelated ground contact.
       if (wall) this.sourceJumpBufferSeconds = 0;
@@ -995,7 +1012,7 @@ export class PlayerController {
         // when releasing Shift into HUMAN. Do not create airborne ascent
         // from a missing wall or change genuine SURGE/roll jump impulses.
         if(this.nativeSourceGroundInkGuard&&
-           !this.f4CanCarryWallCrest(bodyPosition))
+           (blockedHumanForm||!this.f4CanCarryWallCrest(bodyPosition)))
           this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
             this.locomotionState,this.verticalVelocity);
         this.surgeChargeSeconds = 0;
@@ -1019,7 +1036,7 @@ export class PlayerController {
 
           if (nativeSourceSquidRollJumpRequested(
             jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
-          ) && this.grounded && this.squidRollTurnWindowSeconds > 0) {
+          ) && !blockedHumanForm && this.grounded && this.squidRollTurnWindowSeconds > 0) {
             this.startSquidRoll();
           } else {
             this.applyHorizontalTarget(
@@ -1119,6 +1136,17 @@ export class PlayerController {
     );
     const corrected = this.character.computedMovement();
     this.grounded = this.character.computedGrounded();
+    // Real overhead contact terminates upward momentum, not the entire jump.
+    // Keep normal slope/autostep results and intentional wall drive intact.
+    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
+       this.verticalVelocity>0&&movement.y>0&&movement.y-corrected.y>.005&&
+       this.locomotionState!=='SWIM_WALL'&&this.locomotionState!=='SURGE_CHARGE'){
+      for(let i=0;i<this.character.numComputedCollisions();i++){
+        const contact=this.character.computedCollision(i);
+        if(contact?.collider&&this.physics.sourceSolidIdForCollider(contact.collider)&&
+           contact.normal1.y<-.5){this.verticalVelocity=0;break;}
+      }
+    }
     if(this.f4KccAuditEnabled){
       const contacts:{colliderHandle:number;solidId:string|null;normal:number[]}[]=[];
       for(let i=0;i<this.character.numComputedCollisions();i++){
@@ -1208,17 +1236,26 @@ export class PlayerController {
       // an invented center floor ray. Restrict its witness to current foot.
       if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
         const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
+        let bestSupportCost=Infinity;
         for(let i=0;i<this.character.numComputedCollisions();i++){
           const c=this.character.computedCollision(i);
           if(!c?.collider||!f4WalkableSupportNormal(c.normal1.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))continue;
           const id=this.physics.sourceSolidIdForCollider(c.collider),w=c.witness1;
           if(!id||Math.abs(p.y-PlayerController.humanFootOffset-w.y)>.12||
              Math.hypot(w.x-p.x,w.z-p.z)>radius+.075)continue;
+          // Prefer the contact closest to the actual foot center, rather
+          // than an arbitrary first triangle at a ramp/step seam.
+          const cost=Math.abs(p.y-PlayerController.humanFootOffset-w.y)+
+            Math.hypot(w.x-p.x,w.z-p.z);
+          if(this.f4ProvisionalControls&&cost>=bestSupportCost)continue;
+          bestSupportCost=cost;
           hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
-            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};break;
+            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};
+          if(!this.f4ProvisionalControls)break;
         }
       }
       this.sourceSupportedSolidId=hit?.solidId??null;
+      this.sourceFloorNormal=hit?.normal??null;
       // Read the ink cell at the actual registered Rapier support point.
       // Projecting the elevated capsule/ball foot onto a slope shifts UV
       // downhill/uphill across ink-cell and surface boundaries. Reuse this
@@ -1239,7 +1276,12 @@ export class PlayerController {
     }
     // Ownership cannot survive a real departure from a painted wall for
     // even one resource-update tick. No state/velocity/position change.
-    if(this.physics.hasF4WholeResearchTrimesh&&this.wallSurfaceId.startsWith('F4ProvisionalWall:')&&
+    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
+       (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')){
+      const wall=this.findF4PhysicalOwnWall(p);
+      this.inkRelation=wall?'OWN':'NONE';
+      if(wall)this.wallSurfaceId=wall.sample.surface.id;
+    }else if(this.physics.hasF4WholeResearchTrimesh&&this.wallSurfaceId.startsWith('F4ProvisionalWall:')&&
        (this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')&&
        !this.findOwnWallSample(p))this.inkRelation='NONE';
     this.stats.playerInkRelation = this.currentInkRelation;
@@ -1373,7 +1415,10 @@ export class PlayerController {
 
   private applyWallSwim(wall: OwnWallSample): void {
     const tuning = GAME_CONFIG.player;
-    const tangent = wall.sample.surface.uAxis;
+    // Retained wall UVs need not have a horizontal U axis.
+    const live=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh;
+    const tangent = live?new Vec3(-wall.outward.z,0,wall.outward.x):wall.sample.surface.uAxis;
+    const speedScale=live?(this.mistSpeedScale??1):1;
     const lateralAmount = clamp(
       this.desired.x * tangent.x + this.desired.z * tangent.z,
       -1,
@@ -1382,12 +1427,12 @@ export class PlayerController {
     const climbAmount = clamp(wall.towardAmount, 0, 1);
 
     this.velocity.x =
-      tangent.x * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond -
+      tangent.x * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond * speedScale -
       wall.outward.x * tuning.wallStickSpeedMetersPerSecond;
     this.velocity.z =
-      tangent.z * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond -
+      tangent.z * lateralAmount * tuning.squidWallLateralSpeedMetersPerSecond * speedScale -
       wall.outward.z * tuning.wallStickSpeedMetersPerSecond;
-    this.verticalVelocity = climbAmount * tuning.squidWallClimbSpeedMetersPerSecond;
+    this.verticalVelocity = climbAmount * tuning.squidWallClimbSpeedMetersPerSecond * speedScale;
     this.grounded = false;
   }
 
@@ -1420,10 +1465,10 @@ export class PlayerController {
   // the next movement; floor ray is only a gate, not a landing guarantee.
   private f4CanCarryWallCrest(body:{x:number;y:number;z:number}):boolean{
     if(!this.physics.hasF4WholeResearchTrimesh||this.locomotionState!=='SWIM_WALL'||
-       !this.wallSurfaceId.startsWith('F4ProvisionalWall:')||this.verticalVelocity<=0||
+       (!this.f4ProvisionalControls&&!this.wallSurfaceId.startsWith('F4ProvisionalWall:'))||this.verticalVelocity<=0||
        !this.input.sourceLiveInputAvailable)return false;
     const surface=this.gameplayInk.getSurface(this.wallSurfaceId);
-    if(!surface)return false;
+    if(!surface||!(surface.baseFlags&SurfaceFlags.Wall))return false;
     const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
     const signed=surface.projectWorldPoint(center).signedPlaneDistance;
     if(Math.abs(signed)>PlayerController.squidRadius+.20)return false;
@@ -1439,7 +1484,56 @@ export class PlayerController {
       this.verticalVelocity,toward,GAME_CONFIG.player.gravityMetersPerSecond2,clear);
   }
 
+  /** Live F4: first physical contact, including sideways wall travel. */
+  private findF4PhysicalOwnWall(body:{x:number;y:number;z:number}):OwnWallSample|null{
+    const tuning=GAME_CONFIG.player;
+    const from=new Vec3(body.x,body.y+PlayerController.squidCenterOffsetY,body.z);
+    const reach=PlayerController.squidRadius+.20;
+    const previous=(this.locomotionState==='SWIM_WALL'||this.locomotionState==='SURGE_CHARGE')
+      ?this.gameplayInk.getSurface(this.wallSurfaceId):null;
+    const directions:{direction:Vec3;continuing:boolean}[]=[];
+    if(previous){
+      const side=previous.projectWorldPoint(from).signedPlaneDistance;
+      const inward=previous.normal.clone().mulScalar(side>=0?-1:1);
+      inward.y=0;
+      if(inward.lengthSq()>1e-8){
+        inward.normalize();
+        // No grace through an unpainted wall or after moving away.
+        if(this.desired.dot(inward)>=-.12)
+          directions.push({direction:inward,continuing:true});
+      }
+    }
+    if(this.desired.lengthSq()>=.04)
+      directions.push({direction:this.desired.clone().normalize(),continuing:false});
+    if(!directions.length)return null;
+    const candidates=this.gameplayInk.f4NearbyPaintSurfaces(from,reach+F4_PAINT_PLANE_TOLERANCE)
+      .filter(s=>(s.baseFlags&(SurfaceFlags.Swimmable|SurfaceFlags.Wall))===
+        (SurfaceFlags.Swimmable|SurfaceFlags.Wall));
+    for(const {direction,continuing} of directions){
+      const to=from.clone().add(direction.clone().mulScalar(reach));
+      const physical=this.physics.castStageSegment(from,to,'ink-projectile');
+      if(!physical?.normal||!Number.isFinite(physical.distance)||
+         physical.distance<0||physical.distance>reach||Math.abs(physical.normal.y)>.15)continue;
+      const hit=this.physics.f4PaintAtStageHit(physical,candidates);
+      if(!hit)continue;
+      const actual=this.gameplayInk.sampleWorld(hit.worldPoint,F4_PAINT_PLANE_TOLERANCE,
+        SurfaceFlags.Swimmable|SurfaceFlags.Wall,0,s=>s===hit.surface);
+      if(!actual||actual.owner!==this.team)continue;
+      const outward=physical.normal.clone();
+      outward.y=0;
+      if(outward.lengthSq()<1e-8)continue;
+      outward.normalize();
+      if(outward.dot(direction)>0)outward.mulScalar(-1);
+      const towardAmount=-this.desired.dot(outward);
+      if(towardAmount<(continuing?-.12:tuning.wallAttachInputThreshold))continue;
+      return {sample:actual,outward,towardAmount};
+    }
+    return null;
+  }
+
   private findOwnWallSample(bodyPosition: { x: number; y: number; z: number }): OwnWallSample | null {
+    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh)
+      return this.findF4PhysicalOwnWall(bodyPosition);
     if (this.desired.lengthSq() < 0.04) return null;
 
     const tuning = GAME_CONFIG.player;
