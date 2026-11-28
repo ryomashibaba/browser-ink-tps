@@ -1,0 +1,59 @@
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -58,7 +58,31 @@
+   return true;
+ }
+ 
+-export class PaintCoordinator {
++// F4 provisional play balance only. Keep hit locations, direction, damage,
++// cadence and ink consumption untouched. The CPU raster remains the authority.
++function f4PlayableBrush(request: PaintRequest): PaintRequest {
++  if (request.source !== PaintSource.Human && request.source !== PaintSource.Cpu &&
++      request.source !== PaintSource.Special) return request;
++  if (!Number.isFinite(request.radiusU) || !Number.isFinite(request.radiusV) ||
++      request.radiusU <= 0 || request.radiusV <= 0) return request;
++  let factor = 1, maxGrowth = 0;
++  switch (request.type) {
++    case PaintEventType.Impact: factor = 1.5; maxGrowth = .75; break;
++    case PaintEventType.MidDroplet: factor = 1.45; maxGrowth = .65; break;
++    case PaintEventType.Foot: factor = 1.2; maxGrowth = .15; break;
++    case PaintEventType.WallImpact: factor = 1.3; maxGrowth = .4; break;
++    case PaintEventType.Bomb:
++    case PaintEventType.Special: factor = 1.55; maxGrowth = 1; break;
++    default: return request;
++  }
++  const u = request.radiusU, v = request.radiusV;
++  const grow = (r: number) => r + Math.min(r * (factor - 1), maxGrowth);
++  // Long narrow charger/trail stamps become wider, never longer.
++  return {...request, radiusU: u > 3*v ? u : grow(u),
++    radiusV: v > 3*u ? v : grow(v)};
++}
++
++export class PaintCoordinator {
+   private readonly requests: Readonly<PaintRequest>[] = [];
+   public lastEvent: PaintEvent | null = null;
+   private f4WallAtlas:GpuInkAtlas|null=null;
+@@ -106,7 +130,8 @@
+     // The weapon/projectile side may reuse its request object later in this
+     // tick. Capture the actual impact now, rather than painting at its next
+     // location after the pooled request has been mutated.
+-    this.requests.push(Object.freeze({ ...request }));
++    const brush = this.f4FloorAtlases.size ? f4PlayableBrush(request) : request;
++    this.requests.push(Object.freeze({ ...brush }));
+   }
+ 
+   public enqueueMany(requests: readonly PaintRequest[]): void {
+@@ -164,8 +189,10 @@
+       // boundary. Reproject onto neighboring coplanar registered surfaces;
+       // each continuation still passes the same live raster/backing authority.
+       if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
+-         (source===PaintSource.Human||source===PaintSource.Cpu)&&
+-         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||event.type===PaintEventType.MidDroplet)){
++         (source===PaintSource.Human||source===PaintSource.Cpu||source===PaintSource.Special)&&
++         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||
++          event.type===PaintEventType.MidDroplet||event.type===PaintEventType.Bomb||
++          event.type===PaintEventType.Special)){
+         const from=this.gameplay.getSurface(event.surfaceId);
+         if(from&&!(from.baseFlags&SurfaceFlags.Wall)){
+           const center=from.localToWorld(event.centerU,event.centerV);
