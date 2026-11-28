@@ -1,0 +1,22 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -222,18 +222,6 @@
+   request?: CpuFireRequest;
+ }
+ 
+-// Local playable tuning only. No combat, cadence or reference-weapon edits.
+-function f4PlayableShooterPaint(profile:ShooterProfile):ShooterProfile{
+- return {...profile,
+-  impactNear:[profile.impactNear[0],profile.impactNear[1]*1.22],
+-  impactMiddle:[profile.impactMiddle[0],profile.impactMiddle[1]*1.22],
+-  impactFar:[profile.impactFar[0],profile.impactFar[1]*1.22],
+-  splashRadius:profile.splashRadius*1.35,
+-  splashSpacing:profile.splashSpacing*.78,
+-  footRadius:profile.footRadius*1.10
+- };
+-}
+-
+ // A camera target behind a physical muzzle must not reverse the gun.
+ function f4ForwardAimTarget(origin:Vec3,target:Vec3,forward:Vec3):boolean{
+  const x=target.x-origin.x,y=target.y-origin.y,z=target.z-origin.z;
