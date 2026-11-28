@@ -1,0 +1,102 @@
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -33,7 +33,33 @@
+   planeDistance: number;
+ }
+ 
+-export class GameplayInkSystem {
++// Static XZ buckets are a conservative broadphase only. No owner, mask,
++// floor support, ray, registration ordering or scoring decision is cached.
++type PaintSampleBound={surface:PaintSurface;radiusMeters:number};
++const F4_SAMPLE_BUCKET_M=8,F4_SAMPLE_MARGIN_M=2;
++function buildF4SampleBuckets(rows:readonly PaintSampleBound[]):Map<string,PaintSampleBound[]>|null{
++ const bins=new Map<string,PaintSampleBound[]>();
++ for(const row of rows){
++  const {x,z}=row.surface.center,r=row.radiusMeters+F4_SAMPLE_MARGIN_M;
++  if(![x,z,r].every(Number.isFinite)||r<0)return null;
++  const x0=Math.floor((x-r)/F4_SAMPLE_BUCKET_M),x1=Math.floor((x+r)/F4_SAMPLE_BUCKET_M);
++  const z0=Math.floor((z-r)/F4_SAMPLE_BUCKET_M),z1=Math.floor((z+r)/F4_SAMPLE_BUCKET_M);
++  if(![x0,x1,z0,z1].every(Number.isSafeInteger)||(x1-x0+1)*(z1-z0+1)>4096)return null;
++  for(let ix=x0;ix<=x1;ix++)for(let iz=z0;iz<=z1;iz++){
++   const key=ix+':'+iz,old=bins.get(key);
++   if(old)old.push(row);else bins.set(key,[row]);
++  }
++ }
++ return bins;
++}
++function queryF4SampleBuckets(rows:readonly PaintSampleBound[],bins:Map<string,PaintSampleBound[]>|null,point:{x:number;y:number;z:number},padding:number):readonly PaintSampleBound[]{
++ if(!bins||![point.x,point.y,point.z,padding].every(Number.isFinite)||padding<0||padding>F4_SAMPLE_MARGIN_M)return rows;
++ const x=Math.floor(point.x/F4_SAMPLE_BUCKET_M),z=Math.floor(point.z/F4_SAMPLE_BUCKET_M);
++ if(!Number.isSafeInteger(x)||!Number.isSafeInteger(z))return rows;
++ return bins.get(x+':'+z)??[];
++}
++
++export class GameplayInkSystem {
+   private readonly surfaces = new Map<string, PaintSurface>();
+   private backedCell:((surface:PaintSurface,u:number,v:number)=>boolean)|null=null;
+   private readonly backingCache=new Map<string,Uint8Array>();
+@@ -82,7 +108,18 @@
+   // Reuse registration order without allocating projected-point objects
+   // for distant ink planes in the 60Hz player/7 CPU sampling hot path.
+   // Radius is an oversized enclosing sphere, NOT physical paint authority.
+-  private readonly sampleBounds: Array<{
++  // undefined = rebuild after registration; null = conservative linear fallback.
++  private f4SampleBuckets:Map<string,PaintSampleBound[]>|null|undefined;
++  private f4SampleCandidates(point:Vec3,padding:number):readonly PaintSampleBound[]{
++    if(!this.backedCell||this.sampleBounds.length<=64)return this.sampleBounds;
++    if(this.f4SampleBuckets===undefined)this.f4SampleBuckets=buildF4SampleBuckets(this.sampleBounds);
++    return queryF4SampleBuckets(this.sampleBounds,this.f4SampleBuckets,point,padding);
++  }
++  /** Only a candidate list. Callers still apply actual local plane and raster gates. */
++  public f4NearbyPaintSurfaces(point:Vec3,padding:number):readonly PaintSurface[]{
++    return this.f4SampleCandidates(point,padding).map(row=>row.surface);
++  }
++  private readonly sampleBounds: Array<{
+     surface: PaintSurface; radiusMeters: number
+   }> = [];
+   // One synchronous 60Hz foot sample uses this for all nearby SOURCE planes.
+@@ -100,7 +137,8 @@
+   public registerSurface(surface: PaintSurface): void {
+     if (this.surfaces.has(surface.id)) throw new Error(`Duplicate PaintSurface id: ${surface.id}`);
+     this.f4ProvisionalTurf=null;
+-    this.surfaces.set(surface.id, surface);
++    this.surfaces.set(surface.id, surface);
++    this.f4SampleBuckets=undefined;
+     // Orthogonal normalized original basis gives rectangle half-diagonal.
+     // Add 0.2% + 2cm to cover footprint edge epsilon and float roundoff.
+     // A real candidate with plane distance <= requested maxDistance
+@@ -130,7 +168,8 @@
+     this.surfaces.delete(surface.id);
+     this.backingCache.delete(surface.id);
+     const index=this.sampleBounds.findIndex(row=>row.surface===surface);
+-    if(index>=0)this.sampleBounds.splice(index,1);
++    if(index>=0)this.sampleBounds.splice(index,1);
++    this.f4SampleBuckets=undefined;
+     this.f4ProvisionalTurf=null;
+   }
+ 
+@@ -160,7 +199,7 @@
+     let bestV = 0;
+     let bestDistance = Number.POSITIVE_INFINITY;
+ 
+-    for (const {surface,radiusMeters} of this.sampleBounds) {
++    for (const {surface,radiusMeters} of this.f4SampleCandidates(point,maxPlaneDistance)) {
+       if (acceptSurface && !acceptSurface(surface)) continue;
+       if (requiredFlags !== 0 && (surface.baseFlags & requiredFlags) !== requiredFlags) continue;
+       if (excludedFlags !== 0 && (surface.baseFlags & excludedFlags) !== 0) continue;
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -171,7 +171,10 @@
+           const center=from.localToWorld(event.centerU,event.centerV);
+           const axis=from.uAxis.clone().mulScalar(Math.cos(event.angle)).add(from.vAxis.clone().mulScalar(Math.sin(event.angle)));
+           const radius=Math.max(event.radiusU,event.radiusV),extra:Readonly<PaintRequest>[]=[];
+-          for(const to of this.gameplay.getSurfaces()){
++          // The old local rectangle gate allows up to radius beyond each
++          // of two axes plus 2.5cm plane tolerance. The larger spherical
++          // padding is conservative, including rotated and sloped tiles.
++          for(const to of this.gameplay.f4NearbyPaintSurfaces(center,Math.SQRT2*radius+.025)){
+             if(to===from||(!(to.id.startsWith('F4ProvisionalFloor:'))&&!from.id.startsWith('F4ProvisionalFloor:'))||
+                !(to.baseFlags&SurfaceFlags.Paintable)||(to.baseFlags&SurfaceFlags.Wall)||Math.abs(to.normal.dot(from.normal))<.999)continue;
+             const p=to.projectWorldPoint(center);
