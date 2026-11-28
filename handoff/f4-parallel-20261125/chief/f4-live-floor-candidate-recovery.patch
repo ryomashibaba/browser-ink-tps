@@ -1,0 +1,241 @@
+diff --git a/src/stage/F4FloorTiles.mjs b/src/stage/F4FloorTiles.mjs
+--- a/src/stage/F4FloorTiles.mjs
++++ b/src/stage/F4FloorTiles.mjs
+@@ -1,6 +1,6 @@
+ // F4 provisional raster candidates. Actual verified floor triangles only; no collider creation.
+ export function extractF4FloorTiles(vertices,maxSlopeRadians){
+- const cell=.125,tile=8,n=64,groups=new Map(),bins=new Map();
++ const cell=.125,tile=8,n=64,groups=new Map();
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const sub=(a,b)=>a.map((x,i)=>x-b[i]);
+@@ -20,12 +20,19 @@
+   if([a,b,c].some(p=>Math.abs(dot(nv,p)-offset)>.012))continue;
+   const key=[...q,offset].join(":");
+   let g=groups.get(key);
+-  if(!g){const u=norm([nv[1],-nv[0],0]),v=cross(nv,u);g={normal:nv,u,v,offset,key};groups.set(key,g);}
+-  const t=[a,b,c].map(p=>[dot(g.u,p),dot(g.v,p)]);
+-  const minU=Math.min(...t.map(p=>p[0])),maxU=Math.max(...t.map(p=>p[0])),minV=Math.min(...t.map(p=>p[1])),maxV=Math.max(...t.map(p=>p[1]));
+-  for(let x=Math.floor(minU/tile);x<Math.ceil(maxU/tile);x++)for(let y=Math.floor(minV/tile);y<Math.ceil(maxV/tile);y++){
+-   const id=key+":"+x+":"+y;let row=bins.get(id);
+-   if(!row){if(bins.size>=2048)throw Error("F4 floor candidate limit");row={...g,id,minU:x*tile,minV:y*tile,width:tile,height:tile,mask:new Uint8Array(n*n),positions:[]};bins.set(id,row);}
++  if(!g){const u=norm([nv[1],-nv[0],0]),v=cross(nv,u);g={normal:nv,u,v,offset,key,triangles:[]};groups.set(key,g);}
++  g.triangles.push([a,b,c]);
++ }
++ // Transient candidates belong to one plane only, not a global quota.
++ const result=[];
++ for(const g of groups.values()){
++  const bins=new Map(),key=g.key;
++  for(const [a,b,c] of g.triangles){
++  const t=[a,b,c].map(p=>[dot(g.u,p),dot(g.v,p)]);
++  const minU=Math.min(...t.map(p=>p[0])),maxU=Math.max(...t.map(p=>p[0])),minV=Math.min(...t.map(p=>p[1])),maxV=Math.max(...t.map(p=>p[1]));
++  for(let x=Math.floor(minU/tile);x<Math.ceil(maxU/tile);x++)for(let y=Math.floor(minV/tile);y<Math.ceil(maxV/tile);y++){
++   const id=key+":"+x+":"+y;let row=bins.get(id);
++   if(!row){if(bins.size>=2048)throw Error("F4 floor single-plane extent limit");row={normal:g.normal,u:g.u,v:g.v,offset:g.offset,id,minU:x*tile,minV:y*tile,width:tile,height:tile,mask:new Uint8Array(n*n),positions:[]};bins.set(id,row);}
+    row.positions.push(...a,...b,...c);
+    const x0=Math.max(0,Math.floor((minU-row.minU)/cell)),x1=Math.min(n-1,Math.floor((maxU-row.minU)/cell)),y0=Math.max(0,Math.floor((minV-row.minV)/cell)),y1=Math.min(n-1,Math.floor((maxV-row.minV)/cell));
+    for(let iy=y0;iy<=y1;iy++)for(let ix=x0;ix<=x1;ix++){
+@@ -34,8 +41,22 @@
+     for(let j=0;j<5;j++)if(inside(U+probes[j][0],V+probes[j][1],t))row.mask[k]|=1<<j;
+    }
+   }
+- }
+- const result=[];
+- for(const row of bins.values()){let cells=0;for(let i=0;i<row.mask.length;i++){row.mask[i]=row.mask[i]===31?1:0;cells+=row.mask[i];}if(cells)result.push({...row,cells});}
+- return result;
++  }
++  for(const row of bins.values()){
++   let cells=0,x0=n,y0=n,x1=-1,y1=-1;
++   for(let i=0;i<row.mask.length;i++){
++    if(row.mask[i]!==31)continue;
++    cells++;const x=i%n,y=Math.floor(i/n);
++    x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);
++   }
++   if(!cells)continue;
++   const w=x1-x0+1,h=y1-y0+1,mask=new Uint8Array(w*h);
++   for(let y=0;y<h;y++)for(let x=0;x<w;x++)
++    mask[y*w+x]=row.mask[(y+y0)*n+x+x0]===31?1:0;
++   result.push({...row,minU:row.minU+x0*cell,minV:row.minV+y0*cell,
++    width:w*cell,height:h*cell,mask,cells});
++  }
++ }
++ // Prefer broader coverage in the existing near-coplanar duplicate gate.
++ return result.sort((a,b)=>b.cells-a.cells);
+ }
+diff --git a/src/stage/F4ProvisionalFloors.ts b/src/stage/F4ProvisionalFloors.ts
+--- a/src/stage/F4ProvisionalFloors.ts
++++ b/src/stage/F4ProvisionalFloors.ts
+@@ -34,7 +34,7 @@
+   const overlap=original.filter(s=>Math.abs(s.normal.dot(n))>.999&&
+    s.center.distance(center)<Math.hypot(s.widthMeters,s.heightMeters)/2+Math.hypot(row.width,row.height)/2+.12);
+   const prior=entries.map(e=>e.surface).filter(s=>Math.abs(s.normal.dot(n))>.999&&
+-   s.center.distance(center)<Math.hypot(row.width,row.height)+.12);
++   s.center.distance(center)<Math.hypot(s.widthMeters,s.heightMeters)/2+Math.hypot(row.width,row.height)/2+.12);
+   let active=0;
+   for(let y=0;y<surface.heightCells;y++)for(let x=0;x<surface.widthCells;x++){
+    const k=surface.index(x,y);
+@@ -50,15 +50,30 @@
+   if(active)entries.push({surface,positions:row.positions});
+  }
+  if(!entries.length)return null;
+- if(entries.length>576)throw Error('F4 floor atlas capacity exceeded');
+- const root=new Entity('F4ProvisionalFloorInk');
+- const pages:{atlas:GpuInkAtlas;surfaces:PaintSurface[]}[]=[];
+- try{
+-  // Four texels per 12.5cm cell, bounded atlas pages; no original atlas repack.
+-  const size=app.graphicsDevice.maxTextureSize>=4096&&entries.length>36?4096:2048;
+-  const pageSize=size===4096?144:36;
+-  for(let start=0;start<entries.length;start+=pageSize){
+-   const batch=entries.slice(start,start+pageSize),surfaces=batch.map(e=>e.surface);
++ // Limit actual retained geometry, never empty plane candidates.
++ if(entries.length>2048)throw Error('F4 retained floor surface limit '+entries.length);
++ const root=new Entity('F4ProvisionalFloorInk');
++ const pages:{atlas:GpuInkAtlas;surfaces:PaintSurface[]}[]=[];
++ try{
++  // Four texels per 12.5cm cell, bounded atlas pages; no original atlas repack.
++  const size=app.graphicsDevice.maxTextureSize>=4096&&entries.length>36?4096:2048;
++  // Pack cropped surfaces by the same descending-height shelf rule as
++  // AtlasAllocator. Bound total texture bytes rather than empty rectangles.
++  const gutter=GAME_CONFIG.ink.atlasGutterPixels;
++  const sorted=[...entries].sort((a,b)=>b.surface.heightMeters-a.surface.heightMeters);
++  const batches:(typeof entries)[]=[];
++  let batch:typeof entries=[],x=gutter,y=gutter,shelf=0;
++  for(const entry of sorted){
++   const w=Math.ceil(entry.surface.widthMeters*32),h=Math.ceil(entry.surface.heightMeters*32);
++   if(x+w+gutter>size){x=gutter;y+=shelf+gutter;shelf=0;}
++   if(y+h+gutter>size){batches.push(batch);batch=[];x=gutter;y=gutter;shelf=0;}
++   batch.push(entry);x+=w+gutter;shelf=Math.max(shelf,h);
++  }
++  if(batch.length)batches.push(batch);
++  if(batches.length*size*size*4>256*1024*1024)
++   throw Error('F4 cropped floor atlas capacity '+entries.length+' surfaces / '+batches.length+' pages');
++  for(const batch of batches){
++   const surfaces=batch.map(e=>e.surface);
+    const atlas=new GpuInkAtlas(app,surfaces,size,32,GAME_CONFIG.ink.atlasGutterPixels,true);
+    pages.push({atlas,surfaces});
+    for(const {surface,positions} of batch){
+diff --git a/src/ink/F4ProvisionalTurf.mjs b/src/ink/F4ProvisionalTurf.mjs
+--- a/src/ink/F4ProvisionalTurf.mjs
++++ b/src/ink/F4ProvisionalTurf.mjs
+@@ -1,9 +1,9 @@
+ // F4 provisional research scoring only. Neither source flags nor owner grids are written here.
+ const PAINT=1,WALL=8,FLOOR=16,RAMP=32;
+ export class F4ProvisionalTurf {
+- #rows=new Map();#queue=[];#row=0;#cursor=0;#backed;#total=0;#a=0;#b=0;#scanned=0;#count=0;#final=null;
+- constructor(surfaces,backed){
+-  this.#backed=backed;
++ #rows=new Map();#queue=[];#row=0;#cursor=0;#backed;#total=0;#a=0;#b=0;#scanned=0;#count=0;#final=null;#extraTotal=0;#extraA=0;#extraB=0;#extraTiles=0;#requireExtra;
++ constructor(surfaces,backed,requireExtra=false){
++  this.#backed=backed;this.#requireExtra=requireExtra;
+   for(const s of surfaces){
+    if(!(s.baseFlags&PAINT)||(s.baseFlags&WALL)||!(s.baseFlags&(FLOOR|RAMP))||
+       !Number.isFinite(s.normal.y)||Math.abs(s.normal.y)<.1)continue;
+@@ -16,7 +16,9 @@
+    const u=new Float64Array(s.widthCells),v=new Float64Array(s.heightCells);
+    for(let x=0;x<u.length;x++)u[x]=Math.max(0,Math.min(s.cellSize,s.widthMeters-x*s.cellSize));
+    for(let y=0;y<v.length;y++)v[y]=Math.max(0,Math.min(s.cellSize,s.heightMeters-y*s.cellSize));
+-   const row={s,state,u,v,normalY:Math.abs(s.normal.y)};this.#rows.set(s,row);this.#queue.push(row);this.#count+=n;
++   const extra=typeof s.id==='string'&&s.id.startsWith('F4ProvisionalFloor:');
++   if(extra)this.#extraTiles++;
++   const row={s,state,u,v,normalY:Math.abs(s.normal.y),extra};this.#rows.set(s,row);this.#queue.push(row);this.#count+=n;
+   }
+  }
+  #visit(row,index){
+@@ -32,6 +34,7 @@
+   }
+   state[index]=w>0?2:1;this.#scanned++;this.#total+=w;
+   if(s.ownerGrid[index]===1)this.#a+=w;else if(s.ownerGrid[index]===-1)this.#b+=w;
++  if(row.extra){this.#extraTotal+=w;if(s.ownerGrid[index]===1)this.#extraA+=w;else if(s.ownerGrid[index]===-1)this.#extraB+=w;}
+   return w
+  }
+  scan(limit,keepGoing=()=>true){
+@@ -49,21 +52,25 @@
+   const w=this.#visit(row,index);
+   if(oldOwner===1)this.#a-=w;else if(oldOwner===-1)this.#b-=w;
+   if(newOwner===1)this.#a+=w;else this.#b+=w;
+-  return w
+- }
+- read(){
+-  if(this.#final)return {...this.#final};
+-  const progress=this.#count?this.#scanned/this.#count:0;
+-  if(this.#scanned!==this.#count)return {status:'BUILDING',winner:'NONE',progress};
+-  if(this.#total<=0)return {status:'HOLD',winner:'NONE',progress,reason:'NO_BACKED_FLOOR'};
+-  const total=this.#total,epsilon=Math.max(1e-8,total*1e-8);
+-  if(![total,this.#a,this.#b].every(Number.isFinite)||this.#a < -epsilon||this.#b < -epsilon||
+-     this.#a+this.#b>total+epsilon)return {status:'HOLD',winner:'NONE',progress:1,reason:'OWNERSHIP_AREA_INCONSISTENT'};
+-  // Independent scan/paint summation can differ by a few ULPs. Correct only
+-  // tolerance-sized drift; never turn a materially inconsistent tally into a winner.
+-  let a=Math.min(total,Math.max(0,this.#a)),b=Math.min(total,Math.max(0,this.#b));
+-  if(a+b>total){const scale=total/(a+b);a*=scale;b*=scale;}
+-  return {status:'LIVE',winner:'NONE',progress:1,areaA:a,areaB:b,neutralArea:Math.max(0,total-a-b),
++  if(row.extra){if(oldOwner===1)this.#extraA-=w;else if(oldOwner===-1)this.#extraB-=w;
++   if(newOwner===1)this.#extraA+=w;else this.#extraB+=w;}
++  return w
++ }
++ read(){
++  if(this.#final)return {...this.#final};
++  const progress=this.#count?this.#scanned/this.#count:0;
++  const extraFloor={registeredTiles:this.#extraTiles,backedProjectedM2:this.#extraTotal,areaA:this.#extraA,areaB:this.#extraB};
++  if(this.#scanned!==this.#count)return {status:'BUILDING',winner:'NONE',progress,extraFloor};
++  if(this.#requireExtra&&this.#extraTotal<=0)return {status:'HOLD',winner:'NONE',progress,reason:'NO_BACKED_ADDITIONAL_FLOOR',extraFloor};
++  if(this.#total<=0)return {status:'HOLD',winner:'NONE',progress,reason:'NO_BACKED_FLOOR',extraFloor};
++  const total=this.#total,epsilon=Math.max(1e-8,total*1e-8);
++  if(![total,this.#a,this.#b].every(Number.isFinite)||this.#a < -epsilon||this.#b < -epsilon||
++     this.#a+this.#b>total+epsilon)return {status:'HOLD',winner:'NONE',progress:1,reason:'OWNERSHIP_AREA_INCONSISTENT',extraFloor};
++  // Independent scan/paint summation can differ by a few ULPs. Correct only
++  // tolerance-sized drift; never turn a materially inconsistent tally into a winner.
++  let a=Math.min(total,Math.max(0,this.#a)),b=Math.min(total,Math.max(0,this.#b));
++  if(a+b>total){const scale=total/(a+b);a*=scale;b*=scale;}
++  return {status:'LIVE',winner:'NONE',progress:1,extraFloor,areaA:a,areaB:b,neutralArea:Math.max(0,total-a-b),
+    totalProjectedM2:total,percentA:Math.min(100,(a/total)*100),percentB:Math.min(100,(b/total)*100)}
+  }
+  finish(tick){
+diff --git a/src/ink/F4ProvisionalTurf.d.mts b/src/ink/F4ProvisionalTurf.d.mts
+--- a/src/ink/F4ProvisionalTurf.d.mts
++++ b/src/ink/F4ProvisionalTurf.d.mts
+@@ -1,10 +1,11 @@
+ import type {PaintSurface} from './PaintSurface';
+ export interface F4ProvisionalScore {
+  status:'BUILDING'|'LIVE'|'FINAL'|'HOLD';winner:'NONE'|'A'|'B'|'DRAW';progress:number;reason?:string;
+- areaA?:number;areaB?:number;neutralArea?:number;totalProjectedM2?:number;percentA?:number;percentB?:number;
+-}
+-export class F4ProvisionalTurf {
+- constructor(surfaces:readonly PaintSurface[],backed:(s:PaintSurface,x:number,y:number,index:number)=>boolean);
++ extraFloor?:{registeredTiles:number;backedProjectedM2:number;areaA:number;areaB:number};
++ areaA?:number;areaB?:number;neutralArea?:number;totalProjectedM2?:number;percentA?:number;percentB?:number;
++}
++export class F4ProvisionalTurf {
++ constructor(surfaces:readonly PaintSurface[],backed:(s:PaintSurface,x:number,y:number,index:number)=>boolean,requireExtra?:boolean);
+  scan(limit:number,keepGoing?:()=>boolean):void;
+  beforeChange(surface:PaintSurface,index:number,oldOwner:number,newOwner:number):number;
+  read():F4ProvisionalScore;
+diff --git a/src/ink/GameplayInkSystem.ts b/src/ink/GameplayInkSystem.ts
+--- a/src/ink/GameplayInkSystem.ts
++++ b/src/ink/GameplayInkSystem.ts
+@@ -39,10 +39,10 @@
+   private readonly backingCache=new Map<string,Uint8Array>();
+   private f4ProvisionalTurf:F4ProvisionalTurf|null=null;
+ 
+-  public enableF4ProvisionalTurf():boolean{
+-    if(!this.backedCell||this.f4ProvisionalTurf)return false;
+-    this.f4ProvisionalTurf=new F4ProvisionalTurf([...this.surfaces.values()],
+-      (s,x,y,index)=>this.isPhysicallyBacked(s,x,y,index));
++  public enableF4ProvisionalTurf(requireExtra=false):boolean{
++    if(!this.backedCell||this.f4ProvisionalTurf)return false;
++    this.f4ProvisionalTurf=new F4ProvisionalTurf([...this.surfaces.values()],
++      (s,x,y,index)=>this.isPhysicallyBacked(s,x,y,index),requireExtra);
+     return true;
+   }
+   public scanF4ProvisionalTurf(limit:number,keepGoing:()=>boolean):void{
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -3519,7 +3519,7 @@
+     }
+     // registerSurface invalidates the provisional accumulator. Initialize
+     // only after the complete surface set is fixed, before first live tick.
+-    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf();
++    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
+    }
+    // Optical only: retain the existing single directional light and draw budget.
+    // Apply only after the actual F4 geometry and CPU world are connected.
