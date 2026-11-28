@@ -1,0 +1,229 @@
+diff --git a/src/feedback/GameFeedback.ts b/src/feedback/GameFeedback.ts
+--- a/src/feedback/GameFeedback.ts
++++ b/src/feedback/GameFeedback.ts
+@@ -7,7 +7,7 @@
+ import {sourceShotTone,type SourceCue} from '../audio/SourcePracticeAudio';
+ import {f4AudioBus,weaponTexture,type F4Texture} from './F4AudioBus.mjs';
+ 
+-type FxMode = 'BURST' | 'FUSE' | 'DROP';
++type FxMode = 'BURST' | 'FUSE' | 'DROP' | 'FLASH' | 'BEAM';
+ 
+ interface FxSlot {
+   entity: Entity;
+@@ -15,8 +15,9 @@
+   duration: number;
+   baseScale: number;
+   mode: FxMode;
+-  priority?:number;
+-  motion?:{x:number;y:number;z:number;vx:number;vy:number;vz:number};
++  priority?:number;
++  beamLength?:number;
++  motion?:{x:number;y:number;z:number;vx:number;vy:number;vz:number};
+ }
+ 
+ export class GameFeedback {
+@@ -127,7 +128,13 @@
+         const m=slot.motion;
+         const [x,y,z,s]=pose(m.x,m.y,m.z,m.vx,m.vy,m.vz,slot.duration-slot.ttl,slot.duration,slot.baseScale);
+         slot.entity.setPosition(x,y,z);slot.entity.setLocalScale(s,s*1.25,s);
+-      } else if (slot.mode === 'FUSE') {
++      } else if(slot.mode==='FLASH'){
++        const scale=slot.baseScale*Math.max(0,1-progress)*(.85+.15*(1-progress));
++        slot.entity.setLocalScale(scale,scale,scale);
++      } else if(slot.mode==='BEAM'){
++        const width=slot.baseScale*Math.max(0,1-progress);
++        slot.entity.setLocalScale(width,width,(slot.beamLength??0)*Math.max(0,1-progress*.25));
++      } else if (slot.mode === 'FUSE') {
+         const pulse = 0.74 + Math.abs(Math.sin(progress * Math.PI * 9)) * 0.7;
+         const grow = 1 + progress * 0.75;
+         const scale = slot.baseScale * pulse * grow;
+@@ -145,8 +152,9 @@
+     origin: Vec3,
+     direction: Vec3,
+     charge: number,
+-    active: boolean
+-  ): void {
++    active: boolean,
++    guideLimit?:number
++  ): void {
+     const chargeClass = isChargeClass(profile.weaponClass)
+       ? profile.weaponClass
+       : null;
+@@ -183,10 +191,10 @@
+ 
+     switch (chargeClass) {
+       case 'CHARGER':
+-        this.updateChargerCharge(origin, forward, right, up, t);
++        this.updateChargerCharge(origin, forward, right, up, t,guideLimit);
+         break;
+       case 'SPLATLING':
+-        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing);
++        this.updateSplatlingCharge(origin, forward, right, up, t, firstRing,guideLimit);
+         break;
+       case 'STRINGER':
+         this.updateStringerCharge(origin, forward, right, up, t, firstRing);
+@@ -223,8 +231,12 @@
+     profile: WeaponProfile,
+     localPlayer: boolean
+   ): void {
+-    this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
+-    if(this.f4Presentation){
++    // Brief shrinking muzzle flash, rather than an expanding impact sphere.
++    if(this.f4Presentation){
++      const scale=Math.min(.18,.09*profile.fxScale*(localPlayer?1.35:1));
++      this.spawnFx(team,position,scale,.065,'FLASH',localPlayer?1:0);
++    }else this.spawnFx(team, position, 0.09 * profile.fxScale, 0.085);
++    if(this.f4Presentation){
+       const tone=sourceShotTone(profile.id);
+       if(this.playTone(245*profile.audioPitch,(localPlayer?.025:.014)*tone.volume,.065*tone.length,tone.wave,130/245,localPlayer?1:0,localPlayer?undefined:position,weaponTexture(profile.weaponClass),localPlayer?'local-shot':'remote-shot')&&localPlayer)this.handledCues.add('SHOT');
+       return;
+@@ -399,8 +411,28 @@
+     to: Vec3,
+     profile: WeaponProfile
+   ): void {
+-    const samples = 11;
+-    for (let i = 0; i < samples; i += 1) {
++    if(this.f4Presentation){
++      // Reuse the capped sphere pool as short connected beam segments.
++      // The endpoints come from the resolved physical ray, never nominal range.
++      const length=from.distance(to);
++      if(Number.isFinite(length)&&length>.015){
++        const count=Math.min(8,Math.max(1,Math.ceil(length/1.8)));
++        const step=length/count;
++        const axis=to.clone().sub(from).mulScalar(1/length);
++        for(let i=0;i<count;i++){
++          const center=from.clone().add(axis.clone().mulScalar((i+.5)*step));
++          const slot=this.spawnFx(team,center,Math.min(.10,.055*profile.fxScale),.095,'BEAM',1);
++          if(!slot)break;
++          slot.beamLength=step;
++          slot.entity.lookAt(center.clone().add(axis));
++          slot.entity.setLocalScale(slot.baseScale,slot.baseScale,step);
++        }
++      }
++      this.playTone(720*profile.audioPitch,.028,.07,'sawtooth',.74,0,from);
++      return;
++    }
++    const samples = 11;
++    for (let i = 0; i < samples; i += 1) {
+       const t = samples <= 1 ? 0 : i / (samples - 1);
+       const point = new Vec3(
+         from.x + (to.x - from.x) * t,
+@@ -427,17 +459,18 @@
+     forward: Vec3,
+     right: Vec3,
+     up: Vec3,
+-    charge: number
+-  ): void {
+-    const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
++    charge: number,
++    guideLimit?:number
++  ): void {
++    const corePoint = origin.clone().add(forward.clone().mulScalar(0.22));
+     this.chargeCore.setPosition(corePoint);
+     const coreScale = 0.08 + charge * 0.13;
+     this.chargeCore.setLocalScale(coreScale, coreScale, coreScale);
+ 
+     const guide = this.chargeBars[0]!;
+-    guide.enabled = true;
+-    const guideLength = 4 + charge * 14;
+-    placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
++    const guideLength = guideLimit===undefined?4+charge*14:Math.min(4+charge*14,guideLimit);
++    guide.enabled = guideLength>.02;
++    if(guide.enabled)placeBarAlong(guide, origin, forward, guideLength, 0.018 + charge * 0.008);
+ 
+     for (let i = 0; i < 3; i += 1) {
+       const dot = this.chargeDots[i]!;
+@@ -459,16 +492,17 @@
+     right: Vec3,
+     up: Vec3,
+     charge: number,
+-    firstRing: number
+-  ): void {
+-    const firstProgress = firstRing > 0
+-      ? clamp01(charge / firstRing)
+-      : charge;
+-    const secondProgress = firstRing > 0 && firstRing < 1
+-      ? clamp01((charge - firstRing) / (1 - firstRing))
+-      : 0;
+-
+-    // Ring 1 establishes maximum effective range; ring 2 mainly stores fire duration.
++    firstRing: number,
++    guideLimit?:number
++  ): void {
++    const firstProgress = firstRing > 0
++      ? clamp01(charge / firstRing)
++      : charge;
++    const secondProgress = firstRing > 0 && firstRing < 1
++      ? clamp01((charge - firstRing) / (1 - firstRing))
++      : 0;
++
++    // Ring 1 establishes maximum effective range; ring 2 mainly stores fire duration.
+     const corePoint = origin.clone().add(forward.clone().mulScalar(0.20));
+     this.chargeCore.setPosition(corePoint);
+     const pulse = 0.075 + firstProgress * 0.075 + secondProgress * 0.055 +
+@@ -476,10 +510,10 @@
+     this.chargeCore.setLocalScale(pulse, pulse, pulse);
+ 
+     const guide = this.chargeBars[0]!;
+-    guide.enabled = true;
+-    const guideLength = 3.2 + firstProgress * 10.8;
+-    placeBarAlong(
+-      guide,
++    const guideLength = guideLimit===undefined?3.2+firstProgress*10.8:Math.min(3.2+firstProgress*10.8,guideLimit);
++    guide.enabled = guideLength>.02;
++    if(guide.enabled)placeBarAlong(
++      guide,
+       origin,
+       forward,
+       guideLength,
+@@ -626,8 +660,10 @@
+     slot.baseScale = baseScale;
+     slot.mode = mode;
+     slot.priority=mode==='FUSE'?2:priority;
+-    slot.motion=undefined;
+-    slot.entity.setPosition(position);
++    slot.motion=undefined;
++    slot.beamLength=undefined;
++    if(this.f4Presentation)slot.entity.setLocalEulerAngles(0,0,0);
++    slot.entity.setPosition(position);
+     slot.entity.setLocalScale(baseScale, baseScale, baseScale);
+     slot.entity.enabled = true;
+     return slot;
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -1425,14 +1425,26 @@
+ 
+     if (f4) this.f4ConsumeInstantTrigger(f4InstantShotsBefore, f4InstantCooldownBefore);
+ 
+-    this.feedback.updateChargeVisual(
+-      profile,
+-      team,
+-      muzzlePosition,
+-      aimDirection,
+-      chargeFraction(profile, this.chargeSeconds),
+-      playerDamageable && fireHeld && isChargeWeaponClass(profile.weaponClass)
+-    );
++    const chargeVisualActive=playerDamageable&&fireHeld&&isChargeWeaponClass(profile.weaponClass)&&
++      (!this.f4PlayableShooterControls||f4HumanAllowed);
++    let guideLimit:number|undefined;
++    if(this.f4PlayableShooterControls&&chargeVisualActive&&
++       (profile.weaponClass==='CHARGER'||profile.weaponClass==='SPLATLING')){
++      // Visual charge guide is NOT a promised projectile path. Stop it at
++      // the first real stage contact; do not draw a laser through cover.
++      const length=profile.weaponClass==='CHARGER'?18:14;
++      const end=muzzlePosition.clone().add(aimDirection.clone().normalize().mulScalar(length));
++      const hit=this.physics.castStageSegment(muzzlePosition,end,'ink-projectile');
++      guideLimit=hit?Math.max(0,Math.min(length,hit.distance-.025)):length;
++    }
++    this.feedback.updateChargeVisual(
++      profile,
++      team,
++      muzzlePosition,
++      aimDirection,
++      chargeFraction(profile, this.chargeSeconds),
++      chargeVisualActive,guideLimit
++    );
+     this.wasFireHeld = fireHeld && (!this.physics.hasF4WholeResearchTrimesh ||
+       (playerWeaponEnabled && playerDamageable && this.nativeSourceHumanPhysicalMode?.() !== 'SQUID'));
+ 
