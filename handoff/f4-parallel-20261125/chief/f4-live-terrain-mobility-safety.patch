@@ -1,0 +1,144 @@
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -826,7 +826,13 @@
+     // step; no extra floor, paint ownership, collision or wall authority.
+     const squidHeldForTick=this.nativeSourceGroundInkGuard
+       ? this.input.consumeSquidHeldForPlayerTick():this.input.squidHeld;
++    if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
++    // Releasing Shift must not materialize a taller capsule inside a ceiling.
++    // Keep actual squid movement until the requested human shape fits.
++    const blockedHumanForm=this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++      this.mode==='SQUID'&&!squidHeldForTick&&
++      !this.physics.f4HumanFormClear(bodyPosition,PlayerController.humanHalfHeight,
++        PlayerController.humanRadius,this.body);
+-    if(this.f4ProvisionalControls)this.f4ConsumedIntent.squid=squidHeldForTick;
+     // A genuine Space tap one fixed tick before landing used to disappear.
+     // Buffered intent can execute ONLY after existing Rapier KCC says grounded.
+     // No extra ground/coyote-time/stepping or changes to frozen T20.
+@@ -964,9 +970,9 @@
+       this.surgeRemainingSeconds = Math.max(0, this.surgeRemainingSeconds - dt);
+       this.verticalVelocity -= GAME_CONFIG.player.surgeGravityMetersPerSecond2 * dt;
+       this.setSnapToGround(false);
++    } else if (squidHeldForTick || blockedHumanForm) {
++      this.setMode('SQUID');
++      const wall = squidHeldForTick?this.findOwnWallSample(bodyPosition):null;
+-    } else if (squidHeldForTick) {
+-      this.setMode('SQUID');
+-      const wall = this.findOwnWallSample(bodyPosition);
+       // A wall swim/charge owns its Space semantics; do not carry a floor
+       // jump tap into a later unrelated ground contact.
+       if (wall) this.sourceJumpBufferSeconds = 0;
+@@ -1006,7 +1012,7 @@
+         // when releasing Shift into HUMAN. Do not create airborne ascent
+         // from a missing wall or change genuine SURGE/roll jump impulses.
+         if(this.nativeSourceGroundInkGuard&&
++           (blockedHumanForm||!this.f4CanCarryWallCrest(bodyPosition)))
+-           !this.f4CanCarryWallCrest(bodyPosition))
+           this.verticalVelocity=nativeSourceWallReleaseVerticalVelocity(
+             this.locomotionState,this.verticalVelocity);
+         this.surgeChargeSeconds = 0;
+@@ -1029,8 +1035,8 @@
+           this.captureSquidRollTurnIntent();
+ 
+           if (nativeSourceSquidRollJumpRequested(
++            jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
++          ) && !blockedHumanForm && this.grounded && this.squidRollTurnWindowSeconds > 0) {
+-            jumpPressed,this.nativeSourceGroundInkGuard,this.sourceJumpBufferSeconds
+-          ) && this.grounded && this.squidRollTurnWindowSeconds > 0) {
+             this.startSquidRoll();
+           } else {
+             this.applyHorizontalTarget(
+@@ -1129,8 +1135,19 @@
+       this.characterCollisionFilter
+     );
+     const corrected = this.character.computedMovement();
++    this.grounded = this.character.computedGrounded();
++    // Real overhead contact terminates upward momentum, not the entire jump.
++    // Keep normal slope/autostep results and intentional wall drive intact.
++    if(this.f4ProvisionalControls&&this.physics.hasF4WholeResearchTrimesh&&
++       this.verticalVelocity>0&&movement.y>0&&movement.y-corrected.y>.005&&
++       this.locomotionState!=='SWIM_WALL'&&this.locomotionState!=='SURGE_CHARGE'){
++      for(let i=0;i<this.character.numComputedCollisions();i++){
++        const contact=this.character.computedCollision(i);
++        if(contact?.collider&&this.physics.sourceSolidIdForCollider(contact.collider)&&
++           contact.normal1.y<-.5){this.verticalVelocity=0;break;}
++      }
++    }
++    if(this.f4KccAuditEnabled){
+-    this.grounded = this.character.computedGrounded();
+-    if(this.f4KccAuditEnabled){
+       const contacts:{colliderHandle:number;solidId:string|null;normal:number[]}[]=[];
+       for(let i=0;i<this.character.numComputedCollisions();i++){
+         const hit=this.character.computedCollision(i);
+@@ -1217,16 +1234,24 @@
+          !candidate||Math.abs(p.y-PlayerController.humanFootOffset-candidate.point.y)>.12)?null:candidate;
+       // At an actual floor seam, use a real grounded KCC contact, not
+       // an invented center floor ray. Restrict its witness to current foot.
++      if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
++        const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
++        let bestSupportCost=Infinity;
+-      if(!hit&&this.grounded&&this.physics.hasF4WholeResearchTrimesh){
+-        const radius=this.mode==='SQUID'?PlayerController.squidRadius:PlayerController.humanRadius;
+         for(let i=0;i<this.character.numComputedCollisions();i++){
+           const c=this.character.computedCollision(i);
+           if(!c?.collider||!f4WalkableSupportNormal(c.normal1.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))continue;
+           const id=this.physics.sourceSolidIdForCollider(c.collider),w=c.witness1;
+           if(!id||Math.abs(p.y-PlayerController.humanFootOffset-w.y)>.12||
+              Math.hypot(w.x-p.x,w.z-p.z)>radius+.075)continue;
++          // Prefer the contact closest to the actual foot center, rather
++          // than an arbitrary first triangle at a ramp/step seam.
++          const cost=Math.abs(p.y-PlayerController.humanFootOffset-w.y)+
++            Math.hypot(w.x-p.x,w.z-p.z);
++          if(this.f4ProvisionalControls&&cost>=bestSupportCost)continue;
++          bestSupportCost=cost;
++          hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
++            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};
++          if(!this.f4ProvisionalControls)break;
+-          hit={distance:0,point:new Vec3(w.x,w.y,w.z),collider:c.collider,solidId:id,
+-            normal:new Vec3(c.normal1.x,c.normal1.y,c.normal1.z)};break;
+         }
+       }
+       this.sourceSupportedSolidId=hit?.solidId??null;
+diff --git a/src/physics/RapierStagePhysics.ts b/src/physics/RapierStagePhysics.ts
+--- a/src/physics/RapierStagePhysics.ts
++++ b/src/physics/RapierStagePhysics.ts
+@@ -1,4 +1,4 @@
++import RAPIER, { type Collider, type RigidBody, type World } from '@dimforge/rapier3d-compat';
+-import RAPIER, { type Collider, type World } from '@dimforge/rapier3d-compat';
+ import { f4MeshBottom } from '../stage/F4PhysicalStageSafety.mjs';
+ import { Quat, Vec3 } from 'playcanvas';
+ import {
+@@ -233,7 +233,16 @@
+     };
+   }
+ 
++  /** Exact prospective human capsule overlap; no movement or collider writes. */
++  public f4HumanFormClear(center:{x:number;y:number;z:number},halfHeight:number,radius:number,body:RigidBody):boolean{
++    if(!this.f4WholeResearchTrimeshActive||
++       ![center.x,center.y,center.z,halfHeight,radius].every(Number.isFinite)||halfHeight<=0||radius<=0)return false;
++    return !this.world.intersectionWithShape(center,this.cameraSweepRotation,
++      new RAPIER.Capsule(halfHeight,radius),undefined,undefined,undefined,body,
++      collider=>this.shouldCharacterCollide(collider,'HUMAN'));
++  }
++
++  /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */
+-  /** Read-only Zipcaster candidate clearance. This does not authorize a grapple or move the KCC. */
+   public auditF4HumanCapsuleSegment(
+     from:Vec3,to:Vec3,halfHeight:number,radius:number,ownCollider:Collider
+   ) {
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -6304,8 +6304,9 @@
+     if(alive&&this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&
+        this.matchState==='PLAYING'&&f4BelowInstalledGeometry(
+         this.physics.f4ResearchBottomY,
++        this.player.getPosition(this.p).y+(this.player.currentMode==='SQUID'?
++         PLAYER_CHARACTER_PHYSICS.squidTopOffsetFromBodyMeters:PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters),
++        this.stats.playerGrounded)){
+-        this.player.getPosition(this.p).y+PLAYER_CHARACTER_PHYSICS.humanFootOffsetMeters,
+-        this.stats.playerGrounded)){
+      this.resources.applyDamage(this.resources.currentHp);
+      alive=false;
+      this.canvas.dataset.t21F4LastVoidSplatTick=String(frame);
