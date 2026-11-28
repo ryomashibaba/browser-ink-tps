@@ -8,7 +8,7 @@ import tempfile
 
 BRANCH = 'handoff/windows-v28-live-combat-20261125'
 REF = 'refs/heads/' + BRANCH
-EXPECTED = '8c0ae2121df3b0a87e68707f08d321ab95df8aed'
+EXPECTED = '5e0a503a4e0229720755c7bdf40cf3a7f2b8df6d'
 DEST = BRANCH + '/live/'
 ORIGIN = 'ryomashibaba/browser-ink-tps'
 
@@ -64,7 +64,7 @@ def main(paths):
     parser.add_argument('--publish', action='store_true')
     parser.add_argument('--expected-sha', default=EXPECTED,
                         help='Reviewed Windows shared HEAD (40 lowercase hex digits)')
-    parser.add_argument('--path', action='append', choices=paths,
+    parser.add_argument('--path', action='append', choices=paths + OPTIONAL_PATHS,
                         help='Publish only this allowlisted source; repeat as needed')
     args = parser.parse_args()
     expected = args.expected_sha
@@ -190,6 +190,12 @@ PATHS = (
     'src/stage/TestStage.ts',
     'src/stage/undertow/UndertowPhase14QSharedActorCollision.ts',
     'src/subweapon/SubWeaponSystem.ts',
+)
+
+# Select explicitly after applying the corresponding F4 patch.
+OPTIONAL_PATHS = (
+    'src/physics/F4PaintHitIndex.mjs',
+    'src/physics/F4PaintHitIndex.d.mts',
 )
 
 if __name__ == '__main__':
