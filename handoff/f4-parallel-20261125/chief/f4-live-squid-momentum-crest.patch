@@ -1,0 +1,92 @@
+diff --git a/src/player/F4PlayerIntent.mjs b/src/player/F4PlayerIntent.mjs
+--- a/src/player/F4PlayerIntent.mjs
++++ b/src/player/F4PlayerIntent.mjs
+@@ -10,5 +10,20 @@
+ }
+ 
+-export function f4AirborneSquidSpeed(humanSpeed,ownSpeed,vx,vz){
+-  return Math.max(humanSpeed,Math.min(ownSpeed,Math.hypot(vx,vz)));
+-}
++export function f4AirborneSquidSpeed(humanSpeed,ownSpeed,vx,vz,speedScale=1){
++  // Actual velocity already includes the movement scale. Return a target
++  // before scaling because applyHorizontalTarget applies it once.
++  if(!Number.isFinite(speedScale)||speedScale<=0)return humanSpeed;
++  return Math.max(humanSpeed,Math.min(ownSpeed,Math.hypot(vx,vz)/speedScale));
++}
++
++// Geometry only: intersect the actual wall plane along a horizontal ray.
++export function f4WallCrestHorizontalProbe(normal,signedDistance,radius,extra){
++  if(!normal||![normal.x,normal.y,normal.z,signedDistance,radius,extra].every(Number.isFinite)||
++     radius<=0||extra<0)return null;
++  const horizontal=Math.hypot(normal.x,normal.z);
++  if(horizontal<1e-6||Math.abs(normal.y)>.15)return null;
++  const distance=Math.abs(signedDistance)/horizontal;
++  if(distance>radius+.20)return null;
++  const sign=signedDistance>=0?-1:1;
++  return {x:sign*normal.x/horizontal,z:sign*normal.z/horizontal,distance:distance+radius+extra};
++}
+diff --git a/src/player/F4PlayerIntent.d.mts b/src/player/F4PlayerIntent.d.mts
+--- a/src/player/F4PlayerIntent.d.mts
++++ b/src/player/F4PlayerIntent.d.mts
+@@ -2,3 +2,4 @@
+ export function f4MouseHeldAfterMask(held:boolean,buttons:number,bit:1|2):boolean;
+ export function f4KeepRollIntent(desired:XZ,armedDirection:XZ):boolean;
+-export function f4AirborneSquidSpeed(humanSpeed:number,ownSpeed:number,vx:number,vz:number):number;
++export function f4AirborneSquidSpeed(humanSpeed:number,ownSpeed:number,vx:number,vz:number,speedScale?:number):number;
++export function f4WallCrestHorizontalProbe(normal:Readonly<{x:number;y:number;z:number}>,signedDistance:number,radius:number,extra:number):{x:number;z:number;distance:number}|null;
+diff --git a/src/player/PlayerController.ts b/src/player/PlayerController.ts
+--- a/src/player/PlayerController.ts
++++ b/src/player/PlayerController.ts
+@@ -6,5 +6,5 @@
+ import { Color, Entity, StandardMaterial, Vec3, type AppBase } from 'playcanvas';
+ import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+-import {f4KeepRollIntent,f4AirborneSquidSpeed} from './F4PlayerIntent.mjs';
++import {f4KeepRollIntent,f4AirborneSquidSpeed,f4WallCrestHorizontalProbe} from './F4PlayerIntent.mjs';
+ import {f4ZipReticleWitnessMatches} from './F4ZipReticleAim.mjs';
+ import {decorateB248Actor,B248_SOURCE_GROUNDED_SQUID_VISUAL_Y_OFFSET_METERS,
+@@ -1059,5 +1059,5 @@
+             this.applyHorizontalTarget(
+               f4AirborneSquidSpeed(tuning.humanSpeedMetersPerSecond,
+-                tuning.squidOwnInkSpeedMetersPerSecond,this.velocity.x,this.velocity.z),
++                tuning.squidOwnInkSpeedMetersPerSecond,this.velocity.x,this.velocity.z,this.mistSpeedScale),
+               tuning.groundAccelerationMetersPerSecond2*.5,dt
+             );
+@@ -1472,9 +1472,12 @@
+     const center=new Vec3(body.x,body.y+PLAYER_CHARACTER_PHYSICS.squidCenterOffsetYMeters,body.z);
+     const signed=surface.projectWorldPoint(center).signedPlaneDistance;
+-    if(Math.abs(signed)>PlayerController.squidRadius+.20)return false;
+-    const inward=surface.normal.clone().mulScalar(signed>=0?-1:1);
+-    const toward=this.desired.dot(inward);
+-    if(toward<GAME_CONFIG.player.wallAttachInputThreshold)return false;
+-    const across=center.clone().add(inward.mulScalar(Math.abs(signed)+PlayerController.squidRadius+.14));
++    const probe=this.f4ProvisionalControls?
++      f4WallCrestHorizontalProbe(surface.normal,signed,PlayerController.squidRadius,.14):null;
++    if(this.f4ProvisionalControls&&!probe)return false;
++    if(!probe&&Math.abs(signed)>PlayerController.squidRadius+.20)return false;
++    const inward=probe?new Vec3(probe.x,0,probe.z):surface.normal.clone().mulScalar(signed>=0?-1:1);
++    const toward=this.desired.dot(inward);
++    if(toward<GAME_CONFIG.player.wallAttachInputThreshold)return false;
++    const across=center.clone().add(inward.mulScalar(probe?.distance??(Math.abs(signed)+PlayerController.squidRadius+.14)));
+     const footY=body.y-PlayerController.humanFootOffset;
+     const support=this.physics.castCharacterFootSupport(new Vec3(across.x,footY+.42,across.z),0,'SQUID');
+diff --git a/src/player/F4SquidMomentumCrest.test.mjs b/src/player/F4SquidMomentumCrest.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/src/player/F4SquidMomentumCrest.test.mjs
+@@ -0,0 +1,16 @@
++import {describe,it,expect} from 'vitest';
++import {f4AirborneSquidSpeed,f4WallCrestHorizontalProbe} from './F4PlayerIntent.mjs';
++describe('F4 squid momentum and physical crest geometry',()=>{
++ it('does not repeatedly apply mist to actual airborne momentum',()=>{
++  expect(f4AirborneSquidSpeed(4,8,3,0,.5)*.5).toBe(3);
++  expect(f4AirborneSquidSpeed(4,8,9,0,.5)*.5).toBe(4);
++  expect(f4AirborneSquidSpeed(4,8,0,0,.5)*.5).toBe(2);
++ });
++ it('crosses an inclined plane horizontally with the existing reach',()=>{
++  const n={x:Math.sqrt(1-.1**2),y:.1,z:0};
++  const p=f4WallCrestHorizontalProbe(n,.4,.34,.14);
++  expect(p.x).toBe(-1);expect(p.z).toBeCloseTo(0);
++  expect(.4+n.x*p.x*p.distance).toBeCloseTo(-n.x*.48);
++  expect(f4WallCrestHorizontalProbe(n,.6,.34,.14)).toBeNull();
++ });
++});
