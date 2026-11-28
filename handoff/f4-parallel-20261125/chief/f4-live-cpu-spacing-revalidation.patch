@@ -1,0 +1,86 @@
+diff --git a/src/app/F4LocalCombat.mjs b/src/app/F4LocalCombat.mjs
+--- a/src/app/F4LocalCombat.mjs
++++ b/src/app/F4LocalCombat.mjs
+@@ -21,5 +21,17 @@
+ }
+ 
+-export function rankCombatCandidate({distance:next,band,covered,ownInk,recovering,lateral,recentlyHit}){
++// A retained or projected goal must still suit the current physical target.
++// Never grant movement here: Recast/Rapier/KCC admission remains mandatory.
++export function f4CombatGoalFitsSpacing(plan,currentDistance,nextDistance){
++ if(!plan||!plan.band||![currentDistance,nextDistance,plan.band.near,plan.band.far].every(Number.isFinite)||
++    currentDistance<0||nextDistance<0||plan.band.near<0||plan.band.far<plan.band.near)return false;
++ const slack=.12;
++ if(plan.advance===-1)return nextDistance>=currentDistance-slack;
++ if(plan.advance===1)return nextDistance<=currentDistance+slack&&nextDistance>=Math.min(currentDistance,plan.band.near)-slack;
++ if(plan.advance===0)return nextDistance>=plan.band.near-slack&&nextDistance<=plan.band.far+slack;
++ return false;
++}
++
++export function rankCombatCandidate({distance:next,band,covered,ownInk,recovering,lateral,recentlyHit}){
+  if(!finite(next)||!band||!finite(band.ideal)||!finite(lateral)||typeof covered!=="boolean")return -Infinity;
+  if(recovering)return (covered?6:0)+(ownInk?2:0)+Math.min(next,band.far+3)*.2;
+diff --git a/src/app/F4LocalCombat.d.mts b/src/app/F4LocalCombat.d.mts
+--- a/src/app/F4LocalCombat.d.mts
++++ b/src/app/F4LocalCombat.d.mts
+@@ -5,5 +5,6 @@
+ export function preferredBand(weaponClass:string,rangeM:number):Band|null;
+ export function combatSpacing(weaponClass:string,rangeM:number,d:number,visible:boolean,recovering:boolean):{band:Band;advance:-1|0|1}|null;
+-export function rankCombatCandidate(input:{distance:number;band:Band;covered:boolean;ownInk:boolean;recovering:boolean;lateral:number;recentlyHit:boolean}):number;
++export function f4CombatGoalFitsSpacing(plan:{band:Band;advance:-1|0|1}|null,currentDistance:number,nextDistance:number):boolean;
++export function rankCombatCandidate(input:{distance:number;band:Band;covered:boolean;ownInk:boolean;recovering:boolean;lateral:number;recentlyHit:boolean}):number;
+ export function tacticalIntent(state:State):{mode:'BASELINE'}|{mode:'RETREAT'|'APPROACH'|'HOLD_RANGE';band:Band;distance:number;recovering:boolean};
+ export function chooseLocalCombatGoal(state:State,candidates:ReadonlyArray<{foot:Point;existingNativePoint:boolean;localTrafficAllowed:boolean;inkRelation:F4InkRelation;coveredFromEnemy?:boolean}>,admit:(foot:Point,mode:'APPROACH'|'RETREAT'|'HOLD_RANGE')=>{reached:boolean;staticSupport:boolean;trafficAllowed:boolean;step:Point;inkRelation?:F4InkRelation;coveredFromEnemy?:boolean}|null,options?:{maxChecks?:number}):{mode:'APPROACH'|'RETREAT'|'HOLD_RANGE';step:Point;checks:number}|null;
+diff --git a/src/app/UndertowF3SourceTraffic.ts b/src/app/UndertowF3SourceTraffic.ts
+--- a/src/app/UndertowF3SourceTraffic.ts
++++ b/src/app/UndertowF3SourceTraffic.ts
+@@ -71,5 +71,5 @@
+  originalNativeRightLowFootReprojection}
+  from '../stage/undertow/UndertowOriginalNativeLandingFootReprojection';
+-import {combatSpacing,rankCombatCandidate} from './F4LocalCombat.mjs';
++import {combatSpacing,rankCombatCandidate,f4CombatGoalFitsSpacing} from './F4LocalCombat.mjs';
+ 
+ import {chooseLocalCombatGoal,type F4InkRelation} from './F4LocalCombat.mjs';
+@@ -1707,5 +1707,9 @@
+    (previous?.recovering===true&&(bot.hp??100)<GAME_CONFIG.combat.playerMaxHp*.65))||
+    (bot.ink??Infinity)<GAME_CONFIG.inkEconomy.capacity*.18||bot.f4RecoveringInk===true;
+-  const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
++  const result=(point:Vec3|null)=>({point,opponent:seen.id,recovering});
++  const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
++  if(!spacingPlan)return null;
++  const fitsSpacing=(point:Vec3)=>!this.f4WholeSupport||f4CombatGoalFitsSpacing(spacingPlan,distance,
++   Math.hypot(point.x-target.x,point.y+GAME_CONFIG.cpu.muzzleHeightMeters-target.y,point.z-target.z));
+   // Use the same physically supported swimmable owner cell as CPU resources.
+   const inkRelation=(point:Vec3)=>{
+@@ -1726,10 +1730,8 @@
+   if(previous?.opponent===seen.id&&previous.recovering===recovering&&!previous.patrolVeto&&
+      !this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,previous.point)&&
+-     foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
+-     this.b137NativeTick-previous.advanced<30)return result(previous.point);
+-
+-  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+-  const spacingPlan=combatSpacing(weaponProfile(bot.weaponId,true).weaponClass,range,distance,visible,recovering);
+-  if(!spacingPlan)return null;
++     foot.distance(previous.point)>.35&&this.b137NativeTick-previous.issued<42&&
++     this.b137NativeTick-previous.advanced<30&&fitsSpacing(previous.point))return result(previous.point);
++
++  const forwardX=dx/horizontal,forwardZ=dz/horizontal;
+   const advance=spacingPlan.advance;
+   const recentlyHit=(bot.b213ActualHitTick??-1)>=0&&
+@@ -1751,6 +1753,7 @@
+    // Healthy CPUs keep or regain a real firing lane. Wounded CPUs favor
+    // existing cover and owned ink, even if that puts their own gun offline.
+-   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
+-   const score=rankCombatCandidate
++   const spacing=Math.hypot(muzzle.x-target.x,muzzle.y-target.y,muzzle.z-target.z);
++   if(!fitsSpacing(floor.point))continue;
++   const score=rankCombatCandidate
+     covered,ownInk:ownsInk(floor.point),recovering,lateral,recentlyHit})-
+     (inkRelation(floor.point)==='ENEMY'?(recovering?3:1.6):0);
+@@ -1774,5 +1777,5 @@
+    if(this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,point))continue;
+    const walk=this.f4WholeWalkTarget(foot,point);
+-   if(walk&&!this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,walk))return result(walk);
++   if(walk&&fitsSpacing(walk)&&!this.f4PatrolNavigation.avoids(bot.id,this.b137NativeTick,foot,walk))return result(walk);
+   }
+   return visible&&distance<=range?result(null):null;
