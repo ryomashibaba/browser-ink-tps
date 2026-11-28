@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-28",
+  "target": {
+    "project": "Browser Ink TPS / T21 V28",
+    "repo": "ryomashibaba/browser-ink-tps",
+    "branch": "handoff/windows-v28-live-combat-20261125",
+    "baseHead": "81a48cf2a387e6fa10b24ef6bcfe9097cc4c04db",
+    "researchHead": "5dd98ac354c8c178de869955237584cb62fd60bc"
+  },
+  "validation": {
+    "browser": "Chrome/158.0.8127.38 isolated via read-only CDP",
+    "webgl": "WebGL2",
+    "renderer": "ANGLE D3D11 AMD Radeon 890M",
+    "scoreStatus": "LIVE",
+    "scoreProgress": 100,
+    "rapierMeshStatus": "READY",
+    "rapierSourceTriangles": 57840,
+    "build": "PASS: npm run build; TypeScript + Vite, 1585 modules",
+    "targetedTests": "PASS: 13 files, 117 tests",
+    "diffCheck": "PASS"
+  },
+  "startupMs": {
+    "terrainSeedFetchParse": 7,
+    "rapierWasmInit": 15.4,
+    "recastWasmInit": 82.9,
+    "nativeWasmInitWall": 83,
+    "graphicsDevice": 42.9,
+    "researchTerrainDefinitionBuild": 0.6,
+    "recastPrimaryMeshBuild": 146.8,
+    "rapierPrimaryStageBuild": 91.1,
+    "sourceAuditNavRapier": 191,
+    "testStageConstruction": 114.7,
+    "appSynchronousConstruction": 802.4,
+    "bootToAppConstructed": 944,
+    "manifestFetchAudit": 506.1,
+    "textureFetchDecodeUpload": 259.1,
+    "geometryFetchAndHashParallel": 52.4,
+    "terrainMeshConstruction": 13.5,
+    "f3lTotal": 831.6,
+    "worldVertexExtraction": 7.1,
+    "recastWholeGeometryBuild": 109.4,
+    "rapierWholeTrimeshInstall": 53.7,
+    "additionalFloorExtractionRegistration": 1284.4,
+    "wallSeedRegistration": 14.1,
+    "scorePreparation": 4357.8,
+    "scorePreparationBeforeQueryOptimization": 7714
+  },
+  "floor": {
+    "registeredTiles": 896,
+    "backedProjectedM2": 4279.242628215686,
+    "beforeQueryOptimizationM2": 4240.715818291484,
+    "deltaM2": 38.526809924202,
+    "earlierCandidateProbeM2": 3244.887693293978,
+    "deltaFromEarlierCandidateProbeM2": 1034.354934921708,
+    "totalProjectedM2": 6727.7602370027535,
+    "ownershipOrScoredCoverage": "NOT MEASURED"
+  },
+  "wallProbe": {
+    "sourceTriangles": 40,
+    "rapierBackedTriangles": 40,
+    "axisAlignedVerticalTriangles": 0,
+    "axisWallCandidates": 17,
+    "physicallyBackedCandidates": 8,
+    "selectedTiles": 8,
+    "registeredSurfaces": 8
+  },
+  "limits": [
+    "No genuine gameplay input, pointer lock, firing, paint ownership, or FPS sample in this CDP run.",
+    "No claim that the user's remaining dry spot is resolved.",
+    "Replay still creates a fresh world; replay timing was not measured.",
+    "GPU paint queue load was not measured."
+  ],
+  "rawEvidence": [
+    "work/f4-cdp-startup-throughput-20261128-optimized-raw.json",
+    "work/f4-cdp-startup-throughput-20261128-raw.json",
+    "work/f4-cdp-score-ready-raw.json"
+  ]
+}

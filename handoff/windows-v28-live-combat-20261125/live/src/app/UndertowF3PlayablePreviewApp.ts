@@ -271,6 +271,13 @@ import {buildF3OriginalOpticalStructures}
  from './UndertowF3OriginalSourceContext';
 
 const STEP=1/60;
+function recordF4StartupTiming(canvas:HTMLCanvasElement,name:string,start:number){
+ if(!new URL(location.href).searchParams.has('t21F4Central'))return;
+ let timing:Record<string,number>={};
+ try{timing=JSON.parse(canvas.dataset.t21F4StartupTiming??'{}');}catch{}
+ timing[name]=Math.round((performance.now()-start)*10)/10;
+ canvas.dataset.t21F4StartupTiming=JSON.stringify(timing);
+}
 type W10B14Actor={
  id:string;position:Vec3;previousPosition:Vec3;entity:Entity;
  lifeState:'ACTIVE'|'SPLATTED';hp:number;
@@ -282,6 +289,7 @@ const PROJECT='Undertow T21 · F3 Play Lab';
 export class UndertowF3PlayablePreviewApp{
  static async boot(canvas:HTMLCanvasElement,ui:HTMLElement){
   const qaParams=new URL(location.href).searchParams;
+  const bootStarted=performance.now();
   if(qaParams.has('t21F4Central')&&
     (qaParams.get('t21F4Central')!=='research'||
      qaParams.get('t21Play')!=='preview'||
@@ -306,18 +314,27 @@ export class UndertowF3PlayablePreviewApp{
       qaParams.has('production')||qaParams.has('scoreable')||
       !['localhost','127.0.0.1','[::1]'].includes(location.hostname))
     throw Error('F4_ORIGINAL_TERRAIN_LOCAL_RESEARCH_ONLY');
+   const terrainStarted=performance.now();
    const response=await fetch('/__t21-f4-original-terrain',{
     cache:'no-store',mode:'same-origin',redirect:'error'
    });
    if(!response.ok||!response.headers.get('Content-Type')?.startsWith('application/json'))
     throw Error('F4_ORIGINAL_TERRAIN_LOCAL_SEED_REQUIRED');
    terrain=parseT21F4OriginalTerrain(await response.json());
+   recordF4StartupTiming(canvas,'terrainSeedFetchParseMs',terrainStarted);
   }
-  await Promise.all([initializeRapier(),initializeRecastNavigation()]);
+  const rapierInitStarted=performance.now(),recastInitStarted=performance.now();
+  await Promise.all([
+   initializeRapier().then(()=>recordF4StartupTiming(canvas,'rapierWasmInitMs',rapierInitStarted)),
+   initializeRecastNavigation().then(()=>recordF4StartupTiming(canvas,'recastWasmInitMs',recastInitStarted))
+  ]);
+  recordF4StartupTiming(canvas,'nativeWasmInitWallMs',rapierInitStarted);
+  const deviceStarted=performance.now();
   const device=await createGraphicsDevice(canvas,{
    deviceTypes:[DEVICETYPE_WEBGL2],antialias:true,depth:true,
    stencil:false,powerPreference:'high-performance'
   });
+  recordF4StartupTiming(canvas,'graphicsDeviceMs',deviceStarted);
   const options=new AppOptions();
   options.graphicsDevice=device;
   options.componentSystems=[
@@ -328,7 +345,11 @@ export class UndertowF3PlayablePreviewApp{
   app.init(options);
   app.setCanvasFillMode(FILLMODE_FILL_WINDOW);
   app.setCanvasResolution(RESOLUTION_AUTO);
-  return new UndertowF3PlayablePreviewApp(app,canvas,ui,terrain);
+  const sceneStarted=performance.now();
+  const preview=new UndertowF3PlayablePreviewApp(app,canvas,ui,terrain);
+  recordF4StartupTiming(canvas,'appSynchronousConstructionMs',sceneStarted);
+  recordF4StartupTiming(canvas,'bootToAppConstructedMs',bootStarted);
+  return preview;
  }
 
  private readonly stats=new PerformanceStats();
@@ -671,6 +692,7 @@ export class UndertowF3PlayablePreviewApp{
  private readonly b401LiveSourceInk=new B401NativeLiveSourceInkOwnership();
  private readonly sourcePracticeInkBalance:ReturnType<typeof createSourcePracticeInkBalance>;
  private b203EverLockedRealPointer=false;
+ private f4ScorePreparationStartedAt=0;
  private renderedFrames=0;
  // Live frame callback intervals, bounded; not a GPU timer or RTX FPS claim.
  /** Profiling is strictly opt-in on the source QA route; no global game hooks. */
@@ -763,8 +785,10 @@ export class UndertowF3PlayablePreviewApp{
   this.playerCameraEntity=cameraEntity;
   if(this.b27KineticEnabled&&cameraEntity.camera?.fov!==B27_SOURCE_BASE_FOV_DEGREES)
    throw Error('T21_B27_ORIGINAL_CAMERA_BASE_FOV_CHANGED');
+  const terrainBuildStarted=performance.now();
   const physicalStage=this.f4ResearchMode
    ?buildT21F4ResearchStage(this.rawStage,terrain):this.rawStage;
+  recordF4StartupTiming(canvas,'researchTerrainDefinitionBuildMs',terrainBuildStarted);
   const originalCorridors=f4OriginalCorridorEndpoints(physicalStage);
   this.f4OriginalCorridorsPresent=originalCorridors.length>0;
   this.f4HumanResearchGuide=terrain?
@@ -785,10 +809,15 @@ export class UndertowF3PlayablePreviewApp{
   // F3E optical survey MUST retain its original frozen 25-solid authority;
   // the real F4 Recast/Rapier simulation already uses physicalStage.
   this.survey=new UndertowF3ESourceSurvey(app,cameraEntity,world.id,this.rawStage);
+  const recastStageStarted=performance.now();
   this.nav=new RecastStageNavigation(physicalStage,this.stats);
+  recordF4StartupTiming(canvas,'recastPrimaryMeshBuildMs',recastStageStarted);
+  const rapierStageStarted=performance.now();
   this.physics=new RapierStagePhysics(STEP,physicalStage);
   this.physics.step();
+  recordF4StartupTiming(canvas,'rapierPrimaryStageBuildMs',rapierStageStarted);
   // Preserve independent original-source audit, even in 51-solid play.
+  const sourceAuditStarted=performance.now();
   const sourceAuditNav=this.f4ResearchMode
    ?new RecastStageNavigation(this.rawStage,new PerformanceStats()):this.nav;
   const sourceAuditPhysics=this.f4ResearchMode
@@ -838,6 +867,7 @@ export class UndertowF3PlayablePreviewApp{
    sourceAuditNav.destroy();
    sourceAuditPhysics.world.free();
   }
+  recordF4StartupTiming(canvas,'sourceAuditNavRapierMs',sourceAuditStarted);
   const originalStage=withProvisionalT21QaSpawnMetadata(this.rawStage,slots);
   const stage=this.f4ResearchMode
    ?buildT21F4ResearchStage(originalStage,terrain):originalStage;
@@ -863,7 +893,9 @@ export class UndertowF3PlayablePreviewApp{
   const visibleSurfaces=originalCorridors.length&&!this.f4WholeTrimeshRequested?surfaces.filter(surface=>
    !stage.paintSurfaces.some(s=>s.id===surface.id&&s.backingSolidId&&
     !stage.solids.some(solid=>solid.id===s.backingSolidId))):surfaces;
+  const testStageStarted=performance.now();
   buildTestStage(app,stage,visibleSurfaces,this.atlas,realSourceWetInkLook);
+  recordF4StartupTiming(canvas,'testStageConstructionMs',testStageStarted);
   this.canvas.dataset.t21SourceWetInkLook=
    realSourceWetInkLook?'SOURCE_VISUAL_ONLY':'OFF';
   if(this.b203FullRound&&
@@ -3480,14 +3512,18 @@ export class UndertowF3PlayablePreviewApp{
     f4WallVertices=wallConcreteWorld;
     // Keep F4 paused unless Recast accepts the exact world geometry
     // about to be installed in Rapier.
+    const wholeRecastStarted=performance.now();
     try{
      this.f4WholeStudyNav=new RecastStageNavigation(
       this.rawStage,new PerformanceStats(),wholeNavWorld);
+     recordF4StartupTiming(this.canvas,'recastWholeGeometryBuildMs',wholeRecastStarted);
     }catch(error){
      this.canvas.dataset.t21F4FullNavError=String(error).slice(0,240);
      throw error;
     }
+    const wholeRapierStarted=performance.now();
     const triangles=this.physics.installF4WholeResearchTrimesh(originalStatic,retainedSeed);
+    recordF4StartupTiming(this.canvas,'rapierWholeTrimeshInstallMs',wholeRapierStarted);
     this.f4WholeTrimeshInstalled=true;
     // The F3L root draws all stage geometry. Existing backed ink cells
     // render over it without the old opaque neutral paint planes.
@@ -3495,8 +3531,10 @@ export class UndertowF3PlayablePreviewApp{
      this.physics.hasF4PaintBacking(surface,u,v));
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
      try{
+      const floorBuildStarted=performance.now();
       const floors=floorInstallation=prepareF4ProvisionalFloors(this.app,this.ink,floorConcreteWorld,
        f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined);
+      recordF4StartupTiming(this.canvas,'additionalFloorExtractionRegistrationMs',floorBuildStarted);
       if(floors){
        for(const surface of floors.surfaces)if(this.ink.getSurface(surface.id))throw Error('F4_DUPLICATE_FLOOR');
        for(const page of floors.pages)this.coordinator.attachF4FloorAtlas(page.atlas,page.surfaces);
@@ -3558,9 +3596,11 @@ export class UndertowF3PlayablePreviewApp{
     this.canvas.dataset.t21F4StageStudy='SAME_WORLD_CPU';
     if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe&&f4WallVertices){
      try{
+      const wallBuildStarted=performance.now();
       const walls=wallInstallation=prepareF4ProvisionalWalls(this.app,this.physics,f4WallVertices,
        f4VisualPolish,visualKey instanceof Entity?visualKey.up:undefined,
        probe=>{this.canvas.dataset.t21F4WallProbe=JSON.stringify(probe);});
+      recordF4StartupTiming(this.canvas,'wallSeedRegistrationMs',wallBuildStarted);
       if(walls){
        // Original 17-surface QA list remains separate. Existing weapon
        // runtimes share the mutable physical array, not a copied snapshot.
@@ -3575,7 +3615,10 @@ export class UndertowF3PlayablePreviewApp{
     }
     // registerSurface invalidates the provisional accumulator. Initialize
     // only after the complete surface set is fixed, before first live tick.
-    if(this.f4ProvisionalTurfEnabled)this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
+    if(this.f4ProvisionalTurfEnabled){
+     this.f4ScorePreparationStartedAt=performance.now();
+     this.ink.enableF4ProvisionalTurf(!this.f4SpecialProbe);
+    }
    }
    // Optical only: retain the existing single directional light and draw budget.
    // Apply only after the actual F4 geometry and CPU world are connected.
@@ -7385,8 +7428,18 @@ export class UndertowF3PlayablePreviewApp{
   try{
   this.updateW10B22OwnerTrial();
   if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
-   const deadline=performance.now()+3;
-   this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
+   // While waiting for START, prioritize real score/backing preparation.
+   // Keep the existing tight active-play budget and all admission gates.
+   const staging=this.matchState==='STAGING'&&this.paused&&!this.f4SpecialProbe;
+   const deadline=performance.now()+(staging?12:3);
+   this.ink.scanF4ProvisionalTurf(staging?8192:1024,()=>performance.now()<deadline);
+   const score=this.ink.readF4ProvisionalTurf();
+   if(score&&score.status!=='BUILDING'&&this.f4ScorePreparationStartedAt>0&&
+      !this.canvas.dataset.t21F4ScorePreparationMs){
+    recordF4StartupTiming(this.canvas,'scorePreparationMs',this.f4ScorePreparationStartedAt);
+    this.canvas.dataset.t21F4ScorePreparationMs=String(Math.round(
+     (performance.now()-this.f4ScorePreparationStartedAt)*10)/10);
+   }
   }
   // No player/CPU physics ticks with old colliders while F3L verifies.
   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled||this.f4LiveWorldPending())

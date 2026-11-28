@@ -94,6 +94,15 @@ export class GameplayInkSystem {
       this.backingCache.set(surface.id,cache);
     }
     if(!cache[index]){
+      if(surface.id.startsWith('F4ProvisionalFloor:')){
+        // These cells enter the provisional floor raster only after all five
+        // cell probes lie inside verified source triangles. The full Rapier
+        // trimesh uses those exact transformed vertices, so one aligned live
+        // center ray confirms collider installation without four duplicate casts.
+        const u=Math.min((x+.5)*surface.cellSize,surface.widthMeters-.0001);
+        const v=Math.min((y+.5)*surface.cellSize,surface.heightMeters-.0001);
+        cache[index]=this.backedCell(surface,u,v)?1:2;
+      }else{
       const u=x*surface.cellSize,v=y*surface.cellSize;
       const u1=Math.min(u+surface.cellSize,surface.widthMeters)-.0001;
       const v1=Math.min(v+surface.cellSize,surface.heightMeters)-.0001;
@@ -102,6 +111,7 @@ export class GameplayInkSystem {
         this.backedCell(surface,u+.0001,v1)&&
         this.backedCell(surface,u1,v1)&&
         this.backedCell(surface,(u+u1)*.5,(v+v1)*.5)?1:2;
+      }
     }
     return cache[index]===1;
   }

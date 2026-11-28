@@ -243,18 +243,33 @@ const BASE_COLOR:Record<Kind,[number,number,number]>={
  GLASS:[.32,.67,.76],SUPPORT:[.54,.57,.59],STRUCTURE:[.49,.53,.56],
  DETAIL:[.66,.65,.56]
 };
+function recordF4StartupTiming(app:AppBase,name:string,start:number){
+ const canvas=app.graphicsDevice.canvas as HTMLCanvasElement|null;
+ if(!canvas||!new URL(location.href).searchParams.has('t21F4Central'))return;
+ let timing:Record<string,number>={};
+ try{timing=JSON.parse(canvas.dataset.t21F4StartupTiming??'{}');}catch{}
+ timing[name]=Math.round((performance.now()-start)*10)/10;
+ canvas.dataset.t21F4StartupTiming=JSON.stringify(timing);
+}
+export function f4OriginalFloorMaterialCandidate(kind:Kind,name:string):boolean{
+ return kind==='FLOOR'||kind==='SLOPE'||
+  /^Fld_Temple01_FloorLine[0-9]{2}$/.test(name);
+}
 export async function loadF3lTexturedSource(
  app:AppBase,b256Research=false,b257Research=false,
  f4RetainedSeedModelVertices?:{
   center:Float32Array;ingress:Float32Array;walkable:Float32Array;
   materials:readonly {kind:Kind;positions:Float32Array}[]
  },f4VisualPolish=false){
+ const f3lStarted=performance.now();
  const base=new URL('t21-f3g-source/',document.baseURI).toString();
+ let phaseStarted=performance.now();
  const response=await fetch(base+'f3l-original-textured.json',{cache:'no-store'});
  if(response.status===404)return null;
  if(!response.ok)throw Error('T21_F3L_ORIGINAL_MATERIAL_PACK_HTTP_'+response.status);
  const manifest=await response.json() as F3lManifest;
  const gate=auditF3lManifest(manifest);
+ recordF4StartupTiming(app,'manifestFetchAuditMs',phaseStarted);
  const polish=!!f4RetainedSeedModelVertices&&f4VisualPolish&&!b256Research&&!b257Research;
  const floorTextures=new Set(polish?manifest.materials.filter(m=>
   m.kind==='FLOOR'||m.kind==='SLOPE').map(m=>m.texture):[]);
@@ -283,6 +298,7 @@ export async function loadF3lTexturedSource(
  let visualMode:F3lStageReadabilityMode='ORIGINAL_UV';
  let registeredFloorPriority=false;
  try{
+  phaseStarted=performance.now();
   const textures=await Promise.all(manifest.textures.map(async file=>{
    const bytes=await verifiedBuffer(base+'f3l-textures/'+file.file,file.bytes,file.sha256);
    const blobUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
@@ -306,8 +322,19 @@ export async function loadF3lTexturedSource(
    return [file.file,t] as const;
   }));
   for(const [name,tex] of textures)textureMap.set(name,tex);
-  for(const material of manifest.materials){
-   const buf=await verifiedBuffer(base+material.file,material.bytes,material.sha256);
+  recordF4StartupTiming(app,'textureFetchDecodeUploadMs',phaseStarted);
+  // F4: all material buffers total exactly 57,578 * 60 bytes after the
+  // manifest gate. Fetch/hash in parallel, then install in manifest order.
+  // Each buffer still passes its existing byte-length and SHA-256 checks.
+  phaseStarted=performance.now();
+  const f4VerifiedGeometry=f4RetainedSeedModelVertices?
+   await Promise.all(manifest.materials.map(material=>
+    verifiedBuffer(base+material.file,material.bytes,material.sha256))):null;
+  if(f4VerifiedGeometry)recordF4StartupTiming(app,'geometryFetchAndHashMs',phaseStarted);
+  phaseStarted=performance.now();
+  for(const [materialIndex,material] of manifest.materials.entries()){
+   const buf=f4VerifiedGeometry?f4VerifiedGeometry[materialIndex]!
+    :await verifiedBuffer(base+material.file,material.bytes,material.sha256);
    const floats=new Float32Array(buf);
    const pos=new Float32Array(material.triangles*9);
    const uv=new Float32Array(material.triangles*6);
@@ -367,6 +394,7 @@ export async function loadF3lTexturedSource(
    materialInstances.push({kind:material.kind,name:material.name,
     material:m,entity:object});
   }
+  recordF4StartupTiming(app,'terrainMeshConstructionMs',phaseStarted);
   if(f4RetainedSeedModelVertices){
    for(const {kind,positions} of f4RetainedSeedModelVertices.materials){
     const material=new StandardMaterial();
@@ -394,6 +422,7 @@ export async function loadF3lTexturedSource(
   throw err;
  }
  app.root.addChild(root);
+ recordF4StartupTiming(app,'f3lTotalMs',f3lStarted);
  return {
   root,manifest,gate,disable(){root.enabled=false;},
   /** Verified F3L positions transformed with the very same matrix as the
@@ -402,6 +431,7 @@ export async function loadF3lTexturedSource(
    if(!f4RetainedSeedModelVertices||
       f4ResearchPositionGroups.length!==manifest.materials.length)
     throw Error('T21_F4_RESEARCH_F3L_MESH_NOT_COLLECTED');
+   const transformStarted=performance.now();
    const worldTransform=root.getWorldTransform();
    const local=new Vec3(),global=new Vec3();
    const toWorld=(groups:readonly Float32Array[],length:number)=>{
@@ -419,13 +449,14 @@ export async function loadF3lTexturedSource(
    const originalStatic=toWorld(f4ResearchPositionGroups,manifest.totalTriangles*9);
    const concreteGroups=f4ResearchPositionGroups.filter((_,i)=>manifest.materials[i]?.name==='Fld_Temple01_WallConcrete00');
    const wallConcreteWorld=toWorld(concreteGroups,concreteGroups.reduce((n,g)=>n+g.length,0));
-   // Whole F4 physically installs the verified FloorLine faces too.
-   // Admit their actual walkable triangles to the provisional raster, not
-   // the old 25-solid SOURCE authority. Concrete first preserves its
-   // ownership at coplanar markings; the existing raster/backing gate
-   // still denies unsupported cells. Do not admit Fence/BridgeMetal.
-   const floorGroups=f4ResearchPositionGroups.filter((_,i)=>
-    /^Fld_Temple01_Floor(?:Concrete[0-9]{2}|Slope[0-9]{2})$/.test(manifest.materials[i]?.name??''));
+   // Whole F4 physically installs every verified original source material.
+   // Admit source FLOOR/SLOPE classes and original FloorLine faces; each
+   // raster cell still needs geometric mask and live Rapier support. The
+   // material class alone never grants a paintable cell.
+   const floorGroups=f4ResearchPositionGroups.filter((_,i)=>{
+    const material=manifest.materials[i];
+    return !!material&&f4OriginalFloorMaterialCandidate(material.kind,material.name);
+   });
    floorGroups.push(...f4ResearchPositionGroups.filter((_,i)=>
     /^Fld_Temple01_FloorLine[0-9]{2}$/.test(manifest.materials[i]?.name??'')));
    // The retained center/ingress faces are also in the installed collider.
@@ -445,6 +476,7 @@ export async function loadF3lTexturedSource(
    wholeNavWorld.set(originalStatic);
    wholeNavWorld.set(retainedSeed,originalStatic.length);
    f4ResearchPositionGroups.length=0;
+   recordF4StartupTiming(app,'worldVertexExtractionMs',transformStarted);
    return {originalStatic,retainedSeed,walkableTriangleCount,wholeNavWorld,wallConcreteWorld,floorConcreteWorld};
   },
   getReadabilityMode:()=>visualMode,

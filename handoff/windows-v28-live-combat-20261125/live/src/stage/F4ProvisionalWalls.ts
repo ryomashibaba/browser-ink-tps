@@ -73,10 +73,12 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
    let y=0;while(y<n&&!row.mask[y*n+x])y++;
    if(y===n)continue;
    const u=row.minU+(x+.5)*cell,v=row.minV+y*cell;
+   // Local wall V is not world Y for a slightly inclined source plane.
+   const baseY=point(row,u,v).y;
    for(const side of [-1,1]){
     const probe=point(row,u,v+.22,side*.48);
     const floor=physics.castCharacterFootSupport(probe,0,'HUMAN');
-    if(floor&&Math.abs(floor.point.y-v)<=.36&&
+    if(floor&&Math.abs(floor.point.y-baseY)<=.36&&
        f4WalkableSupportNormal(floor.normal?.y,PLAYER_CHARACTER_PHYSICS.maxSlopeClimbAngleRadians))return true;
    }
   }
