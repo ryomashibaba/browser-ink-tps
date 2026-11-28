@@ -1,0 +1,44 @@
+diff --git a/src/app/UndertowF3LTexturedSourcePreview.ts b/src/app/UndertowF3LTexturedSourcePreview.ts
+--- a/src/app/UndertowF3LTexturedSourcePreview.ts
++++ b/src/app/UndertowF3LTexturedSourcePreview.ts
+@@ -305,9 +305,16 @@
+    gpuTextures.push(t);
+    return [file.file,t] as const;
+   }));
+-  for(const [name,tex] of textures)textureMap.set(name,tex);
+-  for(const material of manifest.materials){
+-   const buf=await verifiedBuffer(base+material.file,material.bytes,material.sha256);
++  for(const [name,tex] of textures)textureMap.set(name,tex);
++  // F4: all material buffers total exactly 57,578 * 60 bytes after the
++  // manifest gate. Fetch/hash in parallel, then install in manifest order.
++  // Each buffer still passes its existing byte-length and SHA-256 checks.
++  const f4VerifiedGeometry=f4RetainedSeedModelVertices?
++   await Promise.all(manifest.materials.map(material=>
++    verifiedBuffer(base+material.file,material.bytes,material.sha256))):null;
++  for(const [materialIndex,material] of manifest.materials.entries()){
++   const buf=f4VerifiedGeometry?f4VerifiedGeometry[materialIndex]!:
++    await verifiedBuffer(base+material.file,material.bytes,material.sha256);
+    const floats=new Float32Array(buf);
+    const pos=new Float32Array(material.triangles*9);
+    const uv=new Float32Array(material.triangles*6);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -7384,10 +7384,13 @@
+  private update(dt:number){
+   try{
+   this.updateW10B22OwnerTrial();
+-  if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
+-   const deadline=performance.now()+3;
+-   this.ink.scanF4ProvisionalTurf(1024,()=>performance.now()<deadline);
+-  }
++  if(this.f4ProvisionalTurfEnabled&&this.f4WholeTrimeshInstalled&&!this.stopReason&&this.matchState!=='TIME_UP'){
++   // While waiting for START, prioritize real score/backing preparation.
++   // Keep the existing tight active-play budget and all admission gates.
++   const staging=this.matchState==='STAGING'&&this.paused&&!this.f4SpecialProbe;
++   const deadline=performance.now()+(staging?12:3);
++   this.ink.scanF4ProvisionalTurf(staging?8192:1024,()=>performance.now()<deadline);
++  }
+   // No player/CPU physics ticks with old colliders while F3L verifies.
+   if(this.f4WholeTrimeshRequested&&!this.f4WholeTrimeshInstalled||this.f4LiveWorldPending())
+    this.paused=true;
