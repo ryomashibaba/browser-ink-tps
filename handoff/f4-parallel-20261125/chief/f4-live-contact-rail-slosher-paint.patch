@@ -1,0 +1,190 @@
+diff --git a/src/projectile/ProjectileSystem.ts b/src/projectile/ProjectileSystem.ts
+--- a/src/projectile/ProjectileSystem.ts
++++ b/src/projectile/ProjectileSystem.ts
+@@ -136,11 +136,12 @@
+   slosherFlight?: {
+     droplet: SlosherDroplet;
+     resolvedTargets: Set<string>;
+-    launchY: number;
+-    age: number;
+-    distance: number;
+-  };
+-  canopyPellet?: ShooterFlight & {
++    launchY: number;
++    age: number;
++    distance: number;
++    paintDropMask?: number;
++  };
++  canopyPellet?: ShooterFlight & {
+     index: number;
+     distance: number;
+     acceptedDamage: Map<string, number>;
+@@ -2294,7 +2295,8 @@
+   ): boolean {
+     const contact = profile.contactWeapon!;
+     const settings = contactPaintSettings(contact, motion.distance * 60);
+-    const cells = collectContactPaint(motion, settings.halfWidth, this.physics, this.surfaces);
++    const halfWidth=this.f4PlayableShooterControls?settings.halfWidth*1.25:settings.halfWidth;
++    const cells = collectContactPaint(motion, halfWidth, this.physics, this.surfaces);
+     if (!cells || !pay(settings.ink, contact.rollRecovery)) return false;
+     for (const hit of cells) {
+       this.enqueueF4ContactCell(hit, team, actor);
+@@ -2305,10 +2307,10 @@
+ 
+   private enqueueF4ContactCell(hit: SurfaceRayHit, team: Team.A | Team.B, actor: string): void {
+     // The raster can select only this independently verified cell.
+-    const radius = hit.surface.cellSize * 0.72;
+-    this.enqueueF4Stamp(hit, team, actor, PaintEventType.Foot, {
+-      radiusU: radius, radiusV: radius, angle: 0
+-    });
++    const radius = hit.surface.cellSize * 0.72;
++    this.enqueueF4Stamp(hit, team, actor, PaintEventType.Foot, {
++      radiusU: radius, radiusV: radius, angle: 0, f4ExactContactCell:true
++    });
+   }
+ 
+   private resolveContactDamage(
+@@ -2540,17 +2542,26 @@
+ 
+   private enqueueSlosherMidDrop(slot: ProjectileSlot, from: Vec3, to: Vec3, terminal: number): void {
+     const flight = slot.slosherFlight!;
+-    if (flight.droplet.head || flight.droplet.index !== 2 || flight.distance >= 1.05) return;
+-    const at = 1.05 - flight.distance;
+-    if (at >= Math.min(from.distance(to), terminal)) return;
+-    const point = pointOnSegment(from, to, at);
+-    const hit = this.castF4Paint(point, point.clone().add(new Vec3(0, -1.05, 0)));
+-    if (hit && (hit.surface.baseFlags & SurfaceFlags.Wall) === 0) {
+-      this.enqueueF4Stamp(hit, slot.team, slot.sourceId, PaintEventType.MidDroplet, {
+-        radiusU: 0.37, radiusV: 0.21,
+-        angle: Math.atan2(slot.velocity.dot(hit.surface.vAxis), slot.velocity.dot(hit.surface.uAxis))
+-      },slot.f4GaugeLaunchLife);
+-    }
++    if (flight.droplet.head || flight.droplet.index !== 2) return;
++    const playable=this.f4PlayableShooterControls;
++    const targets=playable?[1.05,2.10]:[1.05];
++    for(let i=0;i<targets.length;i++){
++      const at=targets[i]!-flight.distance;
++      if(at<0||(!playable&&at===0)||at>=Math.min(from.distance(to),terminal))continue;
++      // Piercing contacts can revisit this segment; release each sample once.
++      if(playable){
++        const bit=1<<i;if((flight.paintDropMask??0)&bit)continue;
++        flight.paintDropMask=(flight.paintDropMask??0)|bit;
++      }
++      const point=pointOnSegment(from,to,at);
++      const hit=this.castF4Paint(point,point.clone().add(new Vec3(0,playable?-1.65:-1.05,0)));
++      if(hit&&(hit.surface.baseFlags&SurfaceFlags.Wall)===0){
++        this.enqueueF4Stamp(hit,slot.team,slot.sourceId,PaintEventType.MidDroplet,{
++          radiusU:0.37,radiusV:0.21,
++          angle:Math.atan2(slot.velocity.dot(hit.surface.vAxis),slot.velocity.dot(hit.surface.uAxis))
++        },slot.f4GaugeLaunchLife);
++      }
++    }
+   }
+ 
+   private enqueueSlosherWallRunoff(slot: ProjectileSlot, wall: SurfaceRayHit): void {
+@@ -3308,9 +3319,12 @@
+     const length = axis.length();
+     if (length <= 1e-8) return;
+     axis.mulScalar(1 / length);
+-    for (let d = rail.depth * 0.55; d < length; d += rail.spacing) {
+-      const point = origin.clone().add(axis.clone().mulScalar(d));
+-      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - 1.8, point.z));
++    // Sample only the actual terminated beam; limit extra ray count.
++    const spacing=this.f4PlayableShooterControls?Math.max(rail.spacing*.6,Math.min(rail.spacing,rail.depth*.85)):rail.spacing;
++    if(!Number.isFinite(spacing)||spacing<=0)return;
++    for (let d = rail.depth * 0.55; d < length; d += spacing) {
++      const point = origin.clone().add(axis.clone().mulScalar(d));
++      const hit = this.castF4Paint(point, new Vec3(point.x, point.y - (this.f4PlayableShooterControls?2.4:1.8), point.z));
+       if (!hit) continue;
+       const angle = Math.atan2(axis.dot(hit.surface.vAxis), axis.dot(hit.surface.uAxis));
+       this.enqueueF4Stamp(hit, team, actor, PaintEventType.MidDroplet, {
+@@ -4923,8 +4937,8 @@
+ 
+   private enqueueF4Stamp(
+     hit: SurfaceRayHit, team: Team.A | Team.B, actor: string, type: PaintEventType,
+-    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle'>,
+-    f4GaugeLaunchLife?:string|null
++    brush: Pick<PaintRequest, 'radiusU' | 'radiusV' | 'angle' | 'f4ExactContactCell'>,
++    f4GaugeLaunchLife?:string|null
+   ): void {
+     this.coordinator.enqueue({
+       source: type === PaintEventType.Special ? PaintSource.Special :
+diff --git a/src/ink/PaintCoordinator.ts b/src/ink/PaintCoordinator.ts
+--- a/src/ink/PaintCoordinator.ts
++++ b/src/ink/PaintCoordinator.ts
+@@ -10,7 +10,9 @@
+   actorId?: string;
+   /** B152 informational only; forwarded to the immutable PaintEvent. */
+   qaSourceAim?: 'A1_ORIGINAL_ALLY_SUPPORT_INK';
+-  gaugeEligible?: boolean;
++  gaugeEligible?: boolean;
++  /** Contact travel already sampled this individual physical cell. */
++  f4ExactContactCell?: boolean;
+   /** F4 natural gauge only: null is invalid launch life; undefined is legacy/immediate paint. */
+   f4GaugeLaunchLife?: string|null;
+   team: Team.A | Team.B;
+@@ -61,7 +63,8 @@
+ // F4 provisional play balance only. Keep hit locations, direction, damage,
+ // cadence and ink consumption untouched. The CPU raster remains the authority.
+ function f4PlayableBrush(request: PaintRequest): PaintRequest {
+-  if (request.source !== PaintSource.Human && request.source !== PaintSource.Cpu &&
++  if (request.f4ExactContactCell) return request;
++  if (request.source !== PaintSource.Human && request.source !== PaintSource.Cpu &&
+       request.source !== PaintSource.Special) return request;
+   if (!Number.isFinite(request.radiusU) || !Number.isFinite(request.radiusV) ||
+       request.radiusU <= 0 || request.radiusV <= 0) return request;
+@@ -83,7 +86,9 @@
+ }
+ 
+ export class PaintCoordinator {
+-  private readonly requests: Readonly<PaintRequest>[] = [];
++  private f4PlayablePaint=false;
++  public enableF4PlayablePaint():void{this.f4PlayablePaint=true;}
++  private readonly requests: Readonly<PaintRequest>[] = [];
+   public lastEvent: PaintEvent | null = null;
+   private f4WallAtlas:GpuInkAtlas|null=null;
+   public attachF4WallAtlas(atlas:GpuInkAtlas):void{
+@@ -130,7 +135,7 @@
+     // The weapon/projectile side may reuse its request object later in this
+     // tick. Capture the actual impact now, rather than painting at its next
+     // location after the pooled request has been mutated.
+-    const brush = this.f4FloorAtlases.size ? f4PlayableBrush(request) : request;
++    const brush = this.f4PlayablePaint&&this.f4FloorAtlases.size ? f4PlayableBrush(request) : request;
+     this.requests.push(Object.freeze({ ...brush }));
+   }
+ 
+@@ -188,11 +193,13 @@
+       // One genuine floor brush can straddle a new tile or the old SOURCE
+       // boundary. Reproject onto neighboring coplanar registered surfaces;
+       // each continuation still passes the same live raster/backing authority.
+-      if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
+-         (source===PaintSource.Human||source===PaintSource.Cpu||source===PaintSource.Special)&&
+-         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||
+-          event.type===PaintEventType.MidDroplet||event.type===PaintEventType.Bomb||
+-          event.type===PaintEventType.Special)){
++      if(this.f4FloorAtlases.size&&result.rasterEligibleCells>0&&!continuations?.has(request)&&
++         !(this.f4PlayablePaint&&request.f4ExactContactCell)&&
++         (source===PaintSource.Human||source===PaintSource.Cpu||
++          (this.f4PlayablePaint&&source===PaintSource.Special))&&
++         (event.type===PaintEventType.Impact||event.type===PaintEventType.Foot||
++          event.type===PaintEventType.MidDroplet||(this.f4PlayablePaint&&
++          (event.type===PaintEventType.Bomb||event.type===PaintEventType.Special)))){
+         const from=this.gameplay.getSurface(event.surfaceId);
+         if(from&&!(from.baseFlags&SurfaceFlags.Wall)){
+           const center=from.localToWorld(event.centerU,event.centerV);
+diff --git a/src/app/UndertowF3PlayablePreviewApp.ts b/src/app/UndertowF3PlayablePreviewApp.ts
+--- a/src/app/UndertowF3PlayablePreviewApp.ts
++++ b/src/app/UndertowF3PlayablePreviewApp.ts
+@@ -1337,8 +1337,10 @@
+   this.f4SpecialProbe=Boolean(this.f4Special)&&import.meta.env.DEV&&
+    ['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&
+    sessionStorage.getItem('t21F4SpecialProbe')==='physical'&&b31Params.get('t21QaInput')!=='deterministic';
+-  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe)
+-   this.projectiles.enableF4PlayableShooterControls();
++  if(this.f4ProvisionalTurfEnabled&&!this.f4SpecialProbe){
++   this.projectiles.enableF4PlayableShooterControls();
++   this.coordinator.enableF4PlayablePaint();
++  }
+   const zipResearchMode=sessionStorage.getItem('t21F4ZipKccResearch');
+   this.f4ZipResearchAimed=this.f4SpecialProbe&&zipResearchMode==='wall-return-aimed';
+   this.f4ZipResearchEnabled=this.f4SpecialProbe&&
