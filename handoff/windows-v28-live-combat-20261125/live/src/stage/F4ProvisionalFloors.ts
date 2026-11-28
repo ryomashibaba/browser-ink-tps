@@ -2,7 +2,7 @@ import {Entity,Mesh,MeshInstance,Vec3,type AppBase} from 'playcanvas';
 import {GAME_CONFIG} from '../config/game/gameConfig';
 import {GpuInkAtlas} from '../ink/GpuInkAtlas';
 import {createInkSurfaceMaterial,configureF4InkVisual} from '../ink/InkSurfaceMaterial';
-import {PaintSurface,F4_PAINT_PLANE_TOLERANCE,sourceRegisteredPaintCellActive} from '../ink/PaintSurface';
+import {PaintSurface,F4_PAINT_PLANE_TOLERANCE} from '../ink/PaintSurface';
 import {SurfaceFlags} from '../ink/types';
 import type {GameplayInkSystem} from '../ink/GameplayInkSystem';
 import {PLAYER_CHARACTER_PHYSICS} from '../player/PlayerCharacterPhysics';
@@ -43,7 +43,9 @@ export function prepareF4ProvisionalFloors(app:AppBase,ink:GameplayInkSystem,
    const existing=overlap.length&&ink.sampleWorld(point,F4_PAINT_PLANE_TOLERANCE,
     SurfaceFlags.Paintable,SurfaceFlags.Wall,s=>overlap.includes(s));
    const duplicate=prior.some(s=>{const p=s.projectWorldPoint(point);
-    return p.inside&&p.planeDistance<=.018&&sourceRegisteredPaintCellActive(s,p.u,p.v);});
+    // Only a genuinely supported prior cell may suppress this candidate.
+    // Geometry masks alone can include a triangle with no live Rapier backing.
+    return p.inside&&p.planeDistance<=.018&&ink.isCellPhysicallyBackedAt(s,p.u,p.v);});
    if(existing||duplicate){surface.flagsGrid[k]=0;continue;}
    active++;
   }
@@ -84,7 +86,7 @@ export function prepareF4ProvisionalFloors(app:AppBase,ink:GameplayInkSystem,
     }
     const mesh=new Mesh(app.graphicsDevice);mesh.setPositions(positions);mesh.setUvs(0,uvs);mesh.update();
     const mat=createInkSurfaceMaterial(surface,atlas.texture,true);
-    mat.setParameter('uInkOnly',1);mat.depthBias=-2;configureF4InkVisual(mat,visualPolish,light);
+    mat.setParameter('uInkOnly',1);mat.depthBias=-4;mat.slopeDepthBias=-1;configureF4InkVisual(mat,visualPolish,light);
     const entity=new Entity('F4ProvisionalFloorInk:'+surface.id);
     entity.addComponent('render',{meshInstances:[new MeshInstance(mesh,mat)],castShadows:false,receiveShadows:false});
     root.addChild(entity);

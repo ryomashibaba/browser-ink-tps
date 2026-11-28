@@ -1,0 +1,65 @@
+{
+  "schema": "F4_P0_PATCH_VERIFICATION_V1",
+  "recordedAt": "2026-11-28T16:56:20+09:00",
+  "officialCertification": false,
+  "scope": {
+    "repository": "ryomashibaba/browser-ink-tps",
+    "canonicalSourceHead": "b2e41bde14bc744231e4c16fd9300ce3db49f244",
+    "confirmedPatchHead": "006c64bc6307297078e34e86e6fdddc918586538",
+    "patchPath": "handoff/f4-parallel-20261125/chief/f4-live-floor-render-and-retained-coverage.patch",
+    "patchApplied": true,
+    "patchFiles": [
+      "src/app/UndertowF3LTexturedSourcePreview.ts",
+      "src/stage/TestStage.ts",
+      "src/stage/F4ProvisionalFloors.ts",
+      "src/stage/F4ProvisionalWalls.ts"
+    ]
+  },
+  "repairs": [
+    {
+      "area": "terrain depth ordering",
+      "change": "Applied the authorized seven-hunk patch: bias verified floor markings and retained terrain at shared-depth seams; submit the exact retained center and ingress triangles to the existing floor candidate extractor; bias provisional ink geometry forward.",
+      "runtimeStatus": "Not assessed over time because a playable round did not start."
+    },
+    {
+      "area": "overlapping floor candidate exclusion",
+      "finding": "Earlier candidate cells entered the exclusion list based on geometric mask and paintable flags. The mask was not proof of Rapier support, so an unsupported earlier face could suppress a later backed face.",
+      "change": "Earlier candidates now suppress an overlapping cell only after the existing cached five-point Rapier backing gate passes for that prior cell.",
+      "runtimeStatus": "Source path reviewed; live candidate and support counts were not captured."
+    }
+  ],
+  "build": {
+    "command": "npm run build",
+    "status": "PASS",
+    "typescript": "PASS",
+    "vite": "PASS",
+    "modulesTransformed": 1585,
+    "durationSeconds": 6.08,
+    "warning": "Vite reports several JavaScript chunks larger than 500 kB."
+  },
+  "chrome": {
+    "previewLoaded": true,
+    "visualObservation": "Textured terrain was visible in a still frame. A still frame cannot establish whether flicker remains.",
+    "startAttempt": "The start control returned WrongDocumentError: The root document of this element is not valid for pointer lock.",
+    "roundStarted": false,
+    "manualMovementOrPainting": "NOT_OBSERVED",
+    "prestartScoreReadiness": "The UI displayed '暫定得点の準備完了' and 0.0% for A and B before start; no in-match score change was observed.",
+    "terrainFlicker": "NOT_VERIFIED",
+    "floorRegistrationCount": "NOT_CAPTURED",
+    "backedSupportArea": "NOT_CAPTURED",
+    "gpuAtlasPageCount": "NOT_CAPTURED",
+    "inMatchScoreLive": "NOT_VERIFIED",
+    "interactionStoppedAfter": "Chrome input changed to a different foreground tab; no further browser interaction was performed."
+  },
+  "sourceReview": {
+    "candidateCellMask": "The extractor forms 12.5 cm cells from triangles and requires all four near-corners plus the center probe to fall inside triangle geometry.",
+    "physicalPaintGate": "Actual provisional floor writes and score scanning also require five sample-point Rapier backing rays per cell.",
+    "gpuAtlasSourceLimit": "Floor pages are 2048 or 4096 pixels depending on device size and entry count, with a 256 MiB total floor-atlas allocation cap; runtime page usage was not captured.",
+    "ownershipAndScoring": "No collider, ownership, or score authority was added or bypassed."
+  },
+  "remaining": [
+    "Verify terrain flicker during camera motion in a foreground Chrome round.",
+    "Manually paint the formerly unpaintable floor regions and confirm PaintEvent, ownerGrid, and GPU atlas changes.",
+    "Capture registration count, Rapier-backed area, runtime atlas pages, and score LIVE during play."
+  ]
+}

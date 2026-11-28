@@ -335,8 +335,12 @@ export async function loadF3lTexturedSource(
    // FloorLine04 meets FloorConcrete03 at the exact same height on the
    // first landing. Give the original marking stable depth priority over
    // the concrete, with the registered ink pass in front of both.
-   if(f4RetainedSeedModelVertices&&material.name==='Fld_Temple01_FloorLine04')
+   // All verified floor markings can meet the underlying concrete at
+   // the same depth, not just the original first-drop marking.
+   if(f4RetainedSeedModelVertices&&/^Fld_Temple01_FloorLine[0-9]{2}$/.test(material.name)){
     m.depthBias=-1;
+    m.slopeDepthBias=-.25;
+   }
    // Keep the verified albedo/UV and the original render batches. The
    // pack's generic METAL bucket also contains WallConcrete00.
    const matteTerrain=!!f4RetainedSeedModelVertices&&
@@ -373,6 +377,10 @@ export async function loadF3lTexturedSource(
     if(look){material.useMetalness=true;material.metalness=look.metalness;material.gloss=look.gloss;}
     const name='T21F4:RETAINED_LOCAL_TERRAIN_'+kind;
     applyF3lReadability(material,kind,visualMode);
+    // Retained local pieces are part of the physical mesh but may share
+    // a coplanar seam with the textured original. Prefer original albedo
+    // at such seams; keep the real depth test on for raised pieces.
+    material.depthBias=1;material.slopeDepthBias=.25;
     const mesh=createSourceTriangleMesh(app,positions,undefined,true);
     const terrain=new Entity(name);
     terrain.addComponent('render',{meshInstances:[new MeshInstance(mesh,material)],
@@ -420,6 +428,11 @@ export async function loadF3lTexturedSource(
     /^Fld_Temple01_Floor(?:Concrete[0-9]{2}|Slope[0-9]{2})$/.test(manifest.materials[i]?.name??''));
    floorGroups.push(...f4ResearchPositionGroups.filter((_,i)=>
     /^Fld_Temple01_FloorLine[0-9]{2}$/.test(manifest.materials[i]?.name??'')));
+   // The retained center/ingress faces are also in the installed collider.
+   // Previously they were omitted from the additional-floor candidates.
+   // Submit exactly those same faces; extractor slope/mask and Rapier
+   // backing, not a material guess, decide which cells are admitted.
+   floorGroups.push(f4RetainedSeedModelVertices.center,f4RetainedSeedModelVertices.ingress);
    const floorConcreteWorld=toWorld(floorGroups,floorGroups.reduce((n,g)=>n+g.length,0));
    const {center,ingress,walkable}=f4RetainedSeedModelVertices;
    const retainedSeed=toWorld([center,ingress],center.length+ingress.length);

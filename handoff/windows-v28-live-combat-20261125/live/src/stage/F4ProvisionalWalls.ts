@@ -78,7 +78,7 @@ export function prepareF4ProvisionalWalls(app:AppBase,physics:RapierStagePhysics
    const mesh=new Mesh(app.graphicsDevice);
    mesh.setPositions(vertices);mesh.setUvs(0,uvs);mesh.update();
    const mat=createInkSurfaceMaterial(surface,atlas.texture,true);
-   mat.setParameter('uInkOnly',1);mat.depthBias=-2;
+   mat.setParameter('uInkOnly',1);mat.depthBias=-4;mat.slopeDepthBias=-1;
    configureF4InkVisual(mat,visualPolish,visualLightDirection);
    const entity=new Entity('F4ProvisionalWallInk:'+surface.id);
    entity.addComponent('render',{meshInstances:[new MeshInstance(mesh,mat)],castShadows:false,receiveShadows:false});

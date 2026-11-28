@@ -105,6 +105,19 @@ export class GameplayInkSystem {
     }
     return cache[index]===1;
   }
+  /** Check the live physical backing for the cell containing a surface-local point.
+   * Candidate preparation uses this before surfaces are registered, so an
+   * unsupported provisional tile cannot suppress a backed overlapping tile. */
+  public isCellPhysicallyBackedAt(surface:PaintSurface,u:number,v:number):boolean{
+    if((surface.baseFlags&SurfaceFlags.Paintable)===0||
+       !Number.isFinite(u)||!Number.isFinite(v)||
+       u<0||v<0||u>surface.widthMeters||v>surface.heightMeters)return false;
+    const x=Math.min(surface.widthCells-1,Math.max(0,Math.floor(u/surface.cellSize)));
+    const y=Math.min(surface.heightCells-1,Math.max(0,Math.floor(v/surface.cellSize)));
+    const index=surface.index(x,y),flags=surface.flagsGrid[index]??0;
+    if(!surface.isCellActive(x,y)||(flags&SurfaceFlags.Paintable)===0)return false;
+    return this.isPhysicallyBacked(surface,x,y,index);
+  }
   // Reuse registration order without allocating projected-point objects
   // for distant ink planes in the 60Hz player/7 CPU sampling hot path.
   // Radius is an oversized enclosing sphere, NOT physical paint authority.

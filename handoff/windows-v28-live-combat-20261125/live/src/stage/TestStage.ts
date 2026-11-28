@@ -128,6 +128,7 @@ export function installF4InkGeometry(
       instance.material.setParameter('uInkOnly', 0);
       instance.material.setParameter('uF4VisualPolish', 0);
       instance.material.depthBias = 0;
+      instance.material.slopeDepthBias = 0;
       entity.enabled = true;
       ink?.destroy();
     }
@@ -168,7 +169,8 @@ export function installF4InkGeometry(
       instance.mesh = ink;
       instance.material.setParameter('uInkOnly', 1);
       configureF4InkVisual(instance.material,visualPolish,visualLightDirection);
-      instance.material.depthBias = -2;
+      instance.material.depthBias = -4;
+      instance.material.slopeDepthBias = -1;
     }
     for (const { child } of solids) child.enabled = false;
   } catch (error) {
